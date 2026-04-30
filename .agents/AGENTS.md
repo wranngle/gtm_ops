@@ -1,5 +1,7 @@
 # Abstract Agent Imperatives
 
+Root operating map: [../AGENTS.md](../AGENTS.md)
+
 1. Never trust or tolerate errors; deeper truth must always be aggressively researched and addressed.
 2. Architecture must be organically robust. Do not use brittle API key fallbacks when local environment context (CLI tokens, D-Bus) is natively available.
 3. Strict determinism is required across programmatic JSON pipelines. Always use structured output bounding.

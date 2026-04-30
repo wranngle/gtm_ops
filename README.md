@@ -8,11 +8,19 @@ A clean-room flagship monorepo for ElevenLabs agent evals, GTM automation, inter
 
 This repo starts from a clean public-safe baseline. Existing private operational repos are source material only; public code and fixtures here should be sanitized, synthetic, and reviewable from the first commit.
 
+The repository is also built as an agent-first engineering harness: humans steer, agents execute, and repo-local knowledge is the system of record. See [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [docs/index.md](docs/index.md).
+
 This is a greenfield project. Interfaces and internals are still settling; expect breaking changes.
 
 ## Usage
 
 Setup and usage docs will land here once the first runnable surface is in place. Until then, the source tree is the source of truth.
+
+Current validation:
+
+```bash
+scripts/validate-knowledge-base.sh
+```
 
 ## Maintenance
 
