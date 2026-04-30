@@ -4,7 +4,6 @@ This file tracks debt that should be garbage-collected continuously.
 
 | ID | Area | Debt | Severity | Target |
 | --- | --- | --- | --- | --- |
-| TD-001 | Validation | Knowledge-base validator only checks required docs and basic links. Architecture lint now exists for `packages/`; per-domain structural tests still missing. | Medium | Add structural tests once a second domain (`data-reconciliation`) lands. |
 | TD-002 | Observability | No local logs/metrics/traces stack. Harness post calls for per-worktree Vector + Victoria Logs/Metrics/Traces with LogQL/PromQL/TraceQL access. | High | Add structured logs first, then fixture-backed metrics; full stack deferred until an app exists to instrument. |
 | TD-003 | UI validation | No ops-console UI exists yet, so there are no screenshot or DOM validation loops. | Medium | Add when `apps/ops-console` lands. |
 | TD-004 | Runtime | No per-worktree app boot. Harness post requires `bun run dev` (or equivalent) per worktree so agents can drive an isolated instance. | High | Land with `apps/ops-console`. |

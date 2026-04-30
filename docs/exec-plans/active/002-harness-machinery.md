@@ -34,6 +34,7 @@ These pieces from the source material require multi-day infrastructure decisions
 - Chrome DevTools MCP wiring for agent-driven UI validation (TD-005).
 - Per-worktree observability stack (Vector + Victoria Logs/Metrics/Traces) with LogQL/PromQL/TraceQL access (TD-002, expanded).
 - ~~Recurring gardener agent~~ — wired as `.github/workflows/gardener.yml` running every Monday 09:17 UTC. Opens a tracking issue when findings exist.
+- ~~Per-domain structural tests~~ — `packages/agent-evals/tests/structure.test.ts` enforces layer presence, index.ts surfaces, no-stray-files, and node:* IO discipline.
 - Symphony spec fidelity: long-running daemon, nested YAML keys (`tracker`, `polling`, `workspace`, `hooks`, `agent`, `codex`), Codex app-server JSON-RPC protocol, state machine, reconciliation, retry queue, hooks, Liquid template engine, token accounting, snapshot interface (TD-007).
 - Agent-to-agent review loop and PR shepherding (TD-008).
 
