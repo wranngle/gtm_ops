@@ -18,3 +18,9 @@ build/
 .assessment.cache
 logs/*.jsonl
 !logs/.gitkeep
+.symphony/logs/*.jsonl
+!.symphony/logs/.gitkeep
+.symphony/workspaces/*
+!.symphony/workspaces/.gitkeep
+.symphony/runtime/*
+!.symphony/runtime/.gitkeep

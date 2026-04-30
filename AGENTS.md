@@ -8,9 +8,10 @@ Keep this file short. It is a table of contents, not the system manual. The sour
 
 1. Read [README.md](README.md) for the public project frame.
 2. Read [ARCHITECTURE.md](ARCHITECTURE.md) before changing code layout, package boundaries, or dependency direction.
-3. Read [docs/PLANS.md](docs/PLANS.md) before starting non-trivial work.
-4. Read [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md), [docs/RELIABILITY.md](docs/RELIABILITY.md), and [docs/SECURITY.md](docs/SECURITY.md) before claiming a task is done.
-5. Read the active execution plan in [docs/exec-plans/active](docs/exec-plans/active/) if one exists.
+3. Read [WORKFLOW.md](WORKFLOW.md) and [docs/ORCHESTRATION.md](docs/ORCHESTRATION.md) before using the Symphony task runner.
+4. Read [docs/PLANS.md](docs/PLANS.md) before starting non-trivial work.
+5. Read [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md), [docs/RELIABILITY.md](docs/RELIABILITY.md), and [docs/SECURITY.md](docs/SECURITY.md) before claiming a task is done.
+6. Read the active execution plan in [docs/exec-plans/active](docs/exec-plans/active/) if one exists.
 
 ## Core Rules
 
@@ -44,8 +45,9 @@ pytest
 - [docs/exec-plans](docs/exec-plans/): active plans, completed plans, tech debt.
 - [docs/product-specs](docs/product-specs/): user-facing and operator-facing specs.
 - [docs/references](docs/references/): source material encoded for agents.
+- [WORKFLOW.md](WORKFLOW.md): Symphony orchestration policy.
+- [.symphony/issues](.symphony/issues/): local Markdown task tracker.
 - [docs/generated](docs/generated/): generated schemas and reports.
 - [apps/ops-console](apps/ops-console/): planned Python-first internal operator UI.
 - [packages/agent-evals](packages/agent-evals/): planned ElevenLabs agent evaluation harness.
 - [packages/data-reconciliation](packages/data-reconciliation/): planned Python/SQL usage and revenue reconciliation.
-

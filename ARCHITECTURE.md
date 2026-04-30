@@ -20,7 +20,24 @@ workflows/                  # Sanitized n8n workflow examples
 fixtures/                   # Synthetic leads, calls, transcripts, usage events
 docs/                       # System of record for agents and humans
 tests/                      # Cross-package smoke and contract tests
+.symphony/
+  issues/                   # Local Markdown task tracker
+  workspaces/               # Ignored per-issue agent workspaces
+  logs/                     # Ignored Symphony JSONL runtime logs
+  runtime/                  # Ignored transient runtime state
 ```
+
+## Orchestration Layer
+
+The repo includes a Symphony-inspired orchestration layer:
+
+```text
+WORKFLOW.md -> scripts/symphony.sh -> .symphony/issues -> .symphony/workspaces -> scripts/bin/llm.sh
+```
+
+This first adapter is intentionally codex-independent. It can use `scripts/bin/llm.sh` as the agent command and does not require Linear, GitHub Issues, or Codex App Server credentials.
+
+The orchestration layer must preserve the Harness rule that repository-local knowledge is the system of record. Symphony task files should link or update docs when they establish behavior future agents need.
 
 ## Layer Rule
 
@@ -86,8 +103,8 @@ This repo should become legible to agents through runnable feedback:
 - unit and contract tests
 - synthetic fixtures
 - knowledge-base validation
+- Symphony validation and dry-run prompt rendering
 - screenshots for UI changes once the ops console exists
 - local logs and metrics once the app runtime exists
 
 Do not rely on external chat, private repos, or human memory for behavior that future agents need to preserve.
-

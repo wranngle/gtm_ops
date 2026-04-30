@@ -10,8 +10,10 @@ This directory is the system of record for `wranngle-gtm-engine`.
 - [exec-plans/tech-debt-tracker.md](exec-plans/tech-debt-tracker.md): known debt and cleanup loops.
 - [generated](generated/): generated schemas, reports, and inventories.
 - [product-specs/index.md](product-specs/index.md): product and operator specs.
+- [ORCHESTRATION.md](ORCHESTRATION.md): Symphony-inspired task orchestration layer.
 - [references/dotfiles-hydration.md](references/dotfiles-hydration.md): primitive dotfiles baseline and integration contract.
 - [references/harness-engineering.md](references/harness-engineering.md): OpenAI Harness Engineering notes encoded for this repo.
+- [references/symphony-orchestration.md](references/symphony-orchestration.md): OpenAI Symphony notes and local adaptation.
 - [DESIGN.md](DESIGN.md): product and interaction design constraints.
 - [FRONTEND.md](FRONTEND.md): UI implementation rules.
 - [PLANS.md](PLANS.md): execution-plan rules.

@@ -1,0 +1,55 @@
+---
+workflow_name: wranngle-gtm-engine-local-symphony
+tracker_kind: local_markdown
+issues_root: .symphony/issues
+active_states: todo,in_progress
+terminal_states: done,cancelled,duplicate
+handoff_state: human_review
+workspace_root: .symphony/workspaces
+log_path: .symphony/logs/symphony.jsonl
+agent_command: scripts/bin/llm.sh
+max_concurrent_agents: 1
+max_retry_backoff_ms: 300000
+require_explicit_agent_run: true
+---
+# Wranngle GTM Engine Symphony Workflow
+
+You are operating inside the `wranngle-gtm-engine` agent-first Harness repository.
+
+## Objective
+
+Complete the assigned task using the repository's local knowledge base and validation loops.
+
+## Required Context
+
+Read these files before proposing or changing behavior:
+
+- `AGENTS.md`
+- `ARCHITECTURE.md`
+- `docs/index.md`
+- `docs/QUALITY_SCORE.md`
+- `docs/RELIABILITY.md`
+- `docs/SECURITY.md`
+- `docs/references/harness-engineering.md`
+- `docs/references/symphony-orchestration.md`
+
+## Operating Rules
+
+- Preserve the primitive dotfiles layer and the Harness Engineering layer.
+- Keep public data synthetic and clean-room.
+- Do not copy private operational repo history into this repo.
+- Validate data shapes at boundaries.
+- Prefer small, reviewable changes with updated docs and tests.
+- Run `scripts/validate-knowledge-base.sh` before handoff.
+
+## Handoff
+
+Successful work should produce one of:
+
+- a committed code/doc change
+- an implementation plan under `docs/exec-plans/active/`
+- a review packet in the issue workspace
+- a clear blocker with the missing capability named
+
+Move or recommend moving the task to `human_review` when the work is ready for human inspection.
+

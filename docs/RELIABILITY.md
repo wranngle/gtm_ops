@@ -6,6 +6,8 @@ Reliability means future agents and reviewers can reproduce the same result from
 
 ```bash
 scripts/validate-knowledge-base.sh
+scripts/symphony.sh validate
+scripts/symphony.sh once --dry-run
 ```
 
 ## Planned Checks
@@ -22,4 +24,5 @@ pytest
 - Test output should identify the failing domain and next remediation step.
 - UI validation should include before/after screenshots once the ops console exists.
 - Runtime logs should be structured once runtime services exist.
-
+- Symphony workspaces must stay under `.symphony/workspaces`.
+- Symphony actual agent execution must remain opt-in.

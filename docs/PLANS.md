@@ -23,3 +23,8 @@ Each plan should include:
 
 Small one-file changes can use a lightweight checklist in the PR body instead.
 
+## Symphony Tasks
+
+Local Symphony tasks live under `.symphony/issues/<state>/`.
+
+Use Symphony task files when the unit of work should be picked up by an agent runner rather than managed as a one-off interactive session. Keep task descriptions concrete and include acceptance criteria.

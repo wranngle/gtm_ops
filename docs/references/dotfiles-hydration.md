@@ -33,6 +33,7 @@ The dotfiles baseline owns repository hygiene. The Harness Engineering layer own
 - `SECURITY.md` and `docs/SECURITY.md` agree that public artifacts are synthetic and clean-room.
 - `demo/cassette.tape` should demonstrate a real local validation command, not a placeholder.
 - `scripts/validate-knowledge-base.sh` checks that both layers remain present.
+- `scripts/symphony.sh` uses `scripts/bin/llm.sh` as its default codex-independent agent command.
 
 ## Rehydration Rule
 

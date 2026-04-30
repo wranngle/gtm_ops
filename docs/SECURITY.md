@@ -9,6 +9,8 @@ This public repo must be safe from the first commit.
 - Never commit live ElevenLabs agent IDs, phone numbers, webhook URLs, API keys, credential IDs, customer data, employer data, or real transcripts.
 - Public workflows and fixtures must be synthetic.
 - Public n8n workflow JSON must be sanitized before commit.
+- Symphony logs and workspaces must remain ignored by git.
+- Symphony actual agent execution must require explicit operator opt-in.
 
 `SECURITY.md` at the repo root is the public reporting policy. This file is the implementation posture agents should preserve while editing.
 
