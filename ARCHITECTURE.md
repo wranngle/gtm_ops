@@ -41,7 +41,7 @@ The orchestration layer must preserve the Harness rule that repository-local kno
 
 ## Layer Rule
 
-Each business domain should follow a small layered model:
+Each business domain follows a forward-only layered model:
 
 ```text
 types -> config -> repo -> service -> runtime -> ui
@@ -59,6 +59,8 @@ Rules:
 - `ui` renders operator-facing views and must not bypass services.
 - `providers` are explicit boundaries for cross-cutting integrations such as telemetry, clocks, secrets, external APIs, and filesystem access.
 - `utils` must stay generic and must not import business domains.
+
+This rule is mechanically enforced by `scripts/lint-layered-architecture.sh`. The full allowed-import table and remediation guidance live in `docs/references/layered-domain-architecture.md`. The reference implementation is `packages/agent-evals/`.
 
 When in doubt, add a small boundary parser instead of probing data by assumption.
 

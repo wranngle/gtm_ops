@@ -13,6 +13,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate repository knowledge base
         run: scripts/validate-knowledge-base.sh
+      - name: Lint layered domain architecture
+        run: scripts/lint-layered-architecture.sh
+      - name: Run doc gardener (non-blocking)
+        run: scripts/gardener.sh || true
       - name: Validate Symphony workflow
         run: scripts/symphony.sh validate
       - name: Render Symphony dry run

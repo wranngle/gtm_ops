@@ -29,6 +29,8 @@ Run:
 
 ```bash
 scripts/validate-knowledge-base.sh
+scripts/lint-layered-architecture.sh
+scripts/gardener.sh
 ```
 
 Future runnable surfaces should add their own checks here as they land:
@@ -45,6 +47,8 @@ pytest
 - [docs/exec-plans](docs/exec-plans/): active plans, completed plans, tech debt.
 - [docs/product-specs](docs/product-specs/): user-facing and operator-facing specs.
 - [docs/references](docs/references/): source material encoded for agents.
+- [docs/references/layered-domain-architecture.md](docs/references/layered-domain-architecture.md): per-domain import-direction rule, enforced by `scripts/lint-layered-architecture.sh`.
+- [docs/references/doc-gardener.md](docs/references/doc-gardener.md): contract for the recurring docs-staleness scan.
 - [WORKFLOW.md](WORKFLOW.md): Symphony orchestration policy.
 - [.symphony/issues](.symphony/issues/): local Markdown task tracker.
 - [docs/generated](docs/generated/): generated schemas and reports.

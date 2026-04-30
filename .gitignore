@@ -24,3 +24,6 @@ logs/*.jsonl
 !.symphony/workspaces/.gitkeep
 .symphony/runtime/*
 !.symphony/runtime/.gitkeep
+
+# Claude Code agent worktrees (transient, not for git)
+.claude/worktrees/

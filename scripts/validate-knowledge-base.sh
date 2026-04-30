@@ -39,6 +39,20 @@ required_files=(
   "docs/references/dotfiles-hydration.md"
   "docs/references/harness-engineering.md"
   "docs/references/symphony-orchestration.md"
+  "docs/references/layered-domain-architecture.md"
+  "docs/references/doc-gardener.md"
+  "docs/exec-plans/active/002-harness-machinery.md"
+  "scripts/lint-layered-architecture.sh"
+  "scripts/gardener.sh"
+  "packages/agent-evals/README.md"
+  "packages/agent-evals/package.json"
+  "packages/agent-evals/src/types/index.ts"
+  "packages/agent-evals/src/config/index.ts"
+  "packages/agent-evals/src/repo/index.ts"
+  "packages/agent-evals/src/providers/index.ts"
+  "packages/agent-evals/src/service/index.ts"
+  "packages/agent-evals/src/runtime/cli.ts"
+  "packages/agent-evals/src/ui/index.ts"
   "docs/DESIGN.md"
   "docs/FRONTEND.md"
   "docs/PLANS.md"
@@ -83,6 +97,8 @@ required_agent_links=(
   "docs/exec-plans/active"
   "WORKFLOW.md"
   "docs/ORCHESTRATION.md"
+  "docs/references/layered-domain-architecture.md"
+  "docs/references/doc-gardener.md"
 )
 
 for needle in "${required_agent_links[@]}"; do
@@ -119,6 +135,11 @@ fi
 
 if ! grep -Fq '.symphony/workspaces/*' .gitignore || ! grep -Fq '.symphony/logs/*.jsonl' .gitignore; then
   printf '.gitignore must keep Symphony workspaces and logs out of git\n' >&2
+  exit 1
+fi
+
+if ! scripts/lint-layered-architecture.sh; then
+  printf 'layered-architecture lint failed; fix the import-direction violations above\n' >&2
   exit 1
 fi
 
