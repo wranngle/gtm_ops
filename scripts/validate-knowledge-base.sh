@@ -129,8 +129,12 @@ if grep -R -n -E 'REPO_URL_NOT_DETECTED|bot@gemini.com|Replace this with a real 
   exit 1
 fi
 
-if ! grep -Fq 'agent_command: scripts/bin/llm.sh' WORKFLOW.md; then
-  printf 'WORKFLOW.md must keep scripts/bin/llm.sh as the default codex-independent agent command\n' >&2
+if ! grep -Fq 'command: scripts/bin/llm.sh' WORKFLOW.md; then
+  printf 'WORKFLOW.md must keep scripts/bin/llm.sh as the default codex-independent agent command (now under agent.command)\n' >&2
+  exit 1
+fi
+if ! grep -Eq '^tracker:[[:space:]]*$' WORKFLOW.md; then
+  printf 'WORKFLOW.md must use the Symphony spec nested schema (top-level tracker:, polling:, workspace:, hooks:, agent:, codex:)\n' >&2
   exit 1
 fi
 

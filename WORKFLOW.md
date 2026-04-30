@@ -1,16 +1,35 @@
 ---
 workflow_name: wranngle-gtm-engine-local-symphony
-tracker_kind: local_markdown
-issues_root: .symphony/issues
-active_states: todo,in_progress
-terminal_states: done,cancelled,duplicate
-handoff_state: human_review
-workspace_root: .symphony/workspaces
+
+tracker:
+  kind: local_markdown
+  issues_root: .symphony/issues
+  active_states: todo,in_progress
+  terminal_states: done,cancelled,duplicate
+  handoff_state: human_review
+
+polling:
+  interval_ms: 30000
+
+workspace:
+  root: .symphony/workspaces
+
+hooks:
+  timeout_ms: 60000
+
+agent:
+  command: scripts/bin/llm.sh
+  max_concurrent_agents: 1
+  max_retry_backoff_ms: 300000
+  require_explicit_run: true
+
+codex:
+  command: scripts/bin/llm.sh
+  read_timeout_ms: 5000
+  turn_timeout_ms: 3600000
+  stall_timeout_ms: 300000
+
 log_path: .symphony/logs/symphony.jsonl
-agent_command: scripts/bin/llm.sh
-max_concurrent_agents: 1
-max_retry_backoff_ms: 300000
-require_explicit_agent_run: true
 ---
 # Wranngle GTM Engine Symphony Workflow
 
@@ -19,6 +38,12 @@ You are operating inside the `wranngle-gtm-engine` agent-first Harness repositor
 ## Objective
 
 Complete the assigned task using the repository's local knowledge base and validation loops.
+
+## Schema
+
+This file uses the Symphony spec's nested top-level keys (`tracker`, `polling`, `workspace`, `hooks`, `agent`, `codex`). The current local adapter is a one-shot Bash CLI; the daemon-shaped reference implementation is deferred (see `docs/exec-plans/tech-debt-tracker.md` TD-007).
+
+The local adapter substitutes `scripts/bin/llm.sh` for the spec's `codex app-server` command. Both `agent.command` and `codex.command` point at it for now; once a real Codex app-server adapter is added, `codex.command` will diverge.
 
 ## Required Context
 
@@ -32,6 +57,7 @@ Read these files before proposing or changing behavior:
 - `docs/SECURITY.md`
 - `docs/references/harness-engineering.md`
 - `docs/references/symphony-orchestration.md`
+- `docs/references/layered-domain-architecture.md`
 
 ## Operating Rules
 
@@ -41,6 +67,7 @@ Read these files before proposing or changing behavior:
 - Validate data shapes at boundaries.
 - Prefer small, reviewable changes with updated docs and tests.
 - Run `scripts/validate-knowledge-base.sh` before handoff.
+- Run `scripts/lint-layered-architecture.sh` for any change under `packages/`.
 
 ## Handoff
 
@@ -52,4 +79,3 @@ Successful work should produce one of:
 - a clear blocker with the missing capability named
 
 Move or recommend moving the task to `human_review` when the work is ready for human inspection.
-

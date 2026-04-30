@@ -4,17 +4,48 @@ symphony_repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.."&&pwd)";cd "$s
 symphony_workflow_file_path="${SYMPHONY_WORKFLOW_FILE:-WORKFLOW.md}"
 symphony_now_utc(){ date -u +%Y-%m-%dT%H:%M:%SZ;}
 symphony_json_escape(){ local raw="${1:-}";raw="${raw//\\/\\\\}";raw="${raw//\"/\\\"}";raw="${raw//$'\n'/\\n}";printf '%s' "$raw";}
-symphony_workflow_value(){ local key="$1" default="${2:-}";awk -v k="$key" 'BEGIN{i=0}NR==1&&$0=="---"{i=1;next}i&&$0=="---"{exit}i{line=$0;sub(/^[[:space:]]*/,"",line);if(index(line,k ":")==1){sub("^[^:]+:[[:space:]]*","",line);gsub(/^["'\'']|["'\'']$/,"",line);print line;exit}}' "$symphony_workflow_file_path" 2>/dev/null||printf '%s' "$default";}
-symphony_tracker_kind="$(symphony_workflow_value tracker_kind local_markdown)"
-symphony_issues_root="$(symphony_workflow_value issues_root .symphony/issues)"
-symphony_active_states_csv="$(symphony_workflow_value active_states todo,in_progress)"
-symphony_terminal_states_csv="$(symphony_workflow_value terminal_states done,cancelled,duplicate)"
-symphony_handoff_state="$(symphony_workflow_value handoff_state human_review)"
-symphony_workspace_root="$(symphony_workflow_value workspace_root .symphony/workspaces)"
+# symphony_workflow_value reads dotted YAML paths from WORKFLOW.md front matter.
+# Examples:
+#   symphony_workflow_value tracker.kind local_markdown
+#   symphony_workflow_value workflow_name        (top-level scalar)
+#   symphony_workflow_value agent.command scripts/bin/llm.sh
+symphony_workflow_value(){ local path="$1" default="${2:-}" top key;
+  if [[ "$path" == *.* ]]; then top="${path%%.*}"; key="${path#*.}"; else top=""; key="$path"; fi
+  local value;
+  value="$(awk -v top="$top" -v k="$key" '
+    BEGIN { in_fm = 0; in_block = (top == "") }
+    NR == 1 && $0 == "---" { in_fm = 1; next }
+    in_fm && $0 == "---" { exit }
+    !in_fm { next }
+    {
+      if (top != "") {
+        if (match($0, "^" top ":[[:space:]]*$")) { in_block = 1; next }
+        if (match($0, /^[A-Za-z_]/)) { in_block = 0 }
+      }
+      if (!in_block) next
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      if (top == "" && match($0, /^[[:space:]]/)) next
+      if (index(line, k ":") == 1) {
+        sub("^[^:]+:[[:space:]]*", "", line)
+        gsub(/^["'\'']|["'\'']$/, "", line)
+        print line
+        exit
+      }
+    }
+  ' "$symphony_workflow_file_path" 2>/dev/null)"
+  if [[ -n "$value" ]]; then printf '%s' "$value"; else printf '%s' "$default"; fi
+}
+symphony_tracker_kind="$(symphony_workflow_value tracker.kind local_markdown)"
+symphony_issues_root="$(symphony_workflow_value tracker.issues_root .symphony/issues)"
+symphony_active_states_csv="$(symphony_workflow_value tracker.active_states todo,in_progress)"
+symphony_terminal_states_csv="$(symphony_workflow_value tracker.terminal_states done,cancelled,duplicate)"
+symphony_handoff_state="$(symphony_workflow_value tracker.handoff_state human_review)"
+symphony_workspace_root="$(symphony_workflow_value workspace.root .symphony/workspaces)"
 symphony_log_path="$(symphony_workflow_value log_path .symphony/logs/symphony.jsonl)"
-symphony_agent_command_configured="$(symphony_workflow_value agent_command scripts/bin/llm.sh)"
-symphony_max_concurrent_agents="$(symphony_workflow_value max_concurrent_agents 1)"
-symphony_require_explicit_agent_run="$(symphony_workflow_value require_explicit_agent_run true)"
+symphony_agent_command_configured="$(symphony_workflow_value agent.command scripts/bin/llm.sh)"
+symphony_max_concurrent_agents="$(symphony_workflow_value agent.max_concurrent_agents 1)"
+symphony_require_explicit_agent_run="$(symphony_workflow_value agent.require_explicit_run true)"
 symphony_emit_log(){ local level="$1" action="$2" outcome="$3" detail="${4:-}" issue="${5:-}";mkdir -p "$(dirname "$symphony_log_path")";local json;json="{\"@timestamp\":\"$(symphony_now_utc)\",\"log.level\":\"$(symphony_json_escape "$level")\",\"event.action\":\"$(symphony_json_escape "$action")\",\"event.outcome\":\"$(symphony_json_escape "$outcome")\",\"service.name\":\"wranngle-local-symphony\",\"issue.identifier\":\"$(symphony_json_escape "$issue")\",\"message\":\"$(symphony_json_escape "$detail")\"}";printf '%s\n' "$json" >&2;printf '%s\n' "$json" >> "$symphony_log_path";}
 symphony_fail(){ symphony_emit_log error "$1" failure "${2:-}" "${3:-}";exit 1;}
 symphony_contains_csv_value(){ local csv="$1" value="$2" item;IFS=',' read -r -a symphony_csv_items <<< "$csv";for item in "${symphony_csv_items[@]}";do [[ "${item// /}" == "$value" ]]&&return 0;done;return 1;}
