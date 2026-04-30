@@ -1,0 +1,20 @@
+# Fallback gitignore (offline or unknown language)
+.env
+.env.*
+*.log
+.DS_Store
+*.swp
+*.tmp
+node_modules/
+__pycache__/
+.venv/
+target/
+dist/
+build/
+
+# Project-local
+.env
+.env.*
+.assessment.cache
+logs/*.jsonl
+!logs/.gitkeep

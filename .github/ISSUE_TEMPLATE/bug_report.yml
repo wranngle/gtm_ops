@@ -1,0 +1,43 @@
+name: "🐛 Bug report"
+description: "Report a reproducible problem in wranngle-gtm-engine so we can fix it."
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill out the sections below so we can investigate quickly.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug — what went wrong?
+      placeholder: When I run ..., I see ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: Describe the behavior you expected instead.
+      placeholder: I expected ...
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Provide a minimal, step-by-step recipe to reproduce the issue.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, version, and runtime (e.g. macOS 14.5, Node.js 20.11).
+      placeholder: macOS 14.5, Node.js 20.11
+  - type: input
+    id: version
+    attributes:
+      label: wranngle-gtm-engine version
+      description: Which version of wranngle-gtm-engine are you running?
+      placeholder: 0.1.0

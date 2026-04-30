@@ -1,0 +1,32 @@
+name: "✨ Feature request"
+description: "Suggest an idea or enhancement for wranngle-gtm-engine."
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a feature for **wranngle-gtm-engine**! Please fill out the sections below so we can understand your idea and evaluate it effectively.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: Is your feature request related to a problem? Please describe the pain point or use case.
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the solution you'd like to see. Be as specific as possible about behavior, API surface, or UX.
+      placeholder: "I'd like wranngle-gtm-engine to..."
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternative solutions, workarounds, or features you've considered.
+      placeholder: "I also thought about..."
+    validations:
+      required: false
