@@ -53,6 +53,7 @@ for chainSpec in "${chainEntries[@]}";do
       *) emitEcsEventOnStderr warn llm.unknown-provider failure "$providerName" "$modelId" 'unknown provider in chain';break 2;;
     esac
     exitCode=$?
+    if [[ -n ${DOTFILES_LOG_FILE:-} ]];then forensicDir="$(dirname "$DOTFILES_LOG_FILE")/attempts";mkdir -p "$forensicDir";attemptTag="${LLMSH_RUN_ID}-${providerName}-${modelId//\//_}-attempt$((retryCount+1))";printf '%s' "${modelOutput:-}" > "$forensicDir/$attemptTag.stdout";cp "$errorBufferFile" "$forensicDir/$attemptTag.stderr";fi
     if [[ $exitCode -eq 0 && -n ${modelOutput:-} ]];then emitEcsEventOnStderr info llm.success success "$providerName" "$modelId" '';printf '%s\n' "$modelOutput";exit 0;fi
     capturedError=$(cat "$errorBufferFile")
     [[ $exitCode -ne 0 && -n ${modelOutput:-} ]] && capturedError="${capturedError} ${modelOutput}"
