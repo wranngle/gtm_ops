@@ -102,6 +102,7 @@ placeholder_scan_targets=(
   "demo/cassette.tape"
   "WORKFLOW.md"
   "docs"
+  .symphony/issues/todo/*.md
 )
 
 if grep -R -n -E 'REPO_URL_NOT_DETECTED|bot@gemini.com|Replace this with a real demo|Created `.github/PULL_REQUEST_TEMPLATE.md`' \
