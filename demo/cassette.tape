@@ -1,5 +1,5 @@
 # demo/cassette.tape — VHS recording script (https://github.com/charmbracelet/vhs)
-# Edit this with the actual demo flow for wranngle-gtm-engine.
+# Baseline demo for wranngle-gtm-engine.
 
 Output demo/cassette.gif
 
@@ -9,6 +9,6 @@ Set Height 720
 Set Padding 20
 Set Theme "Catppuccin Frappé"
 
-Type "echo 'Replace this with a real demo of wranngle-gtm-engine'"
+Type "scripts/validate-knowledge-base.sh"
 Enter
-Sleep 2s
+Sleep 1s

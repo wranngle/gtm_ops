@@ -6,8 +6,21 @@ cd "$repo_root"
 
 required_files=(
   "AGENTS.md"
+  ".agents/AGENTS.md"
   "ARCHITECTURE.md"
   "README.md"
+  "CODE_OF_CONDUCT.md"
+  "CONTRIBUTING.md"
+  "LICENSE"
+  "SECURITY.md"
+  ".github/PULL_REQUEST_TEMPLATE.md"
+  ".github/dependabot.yml"
+  ".github/ISSUE_TEMPLATE/bug_report.yml"
+  ".github/ISSUE_TEMPLATE/feature_request.yml"
+  ".github/ISSUE_TEMPLATE/config.yml"
+  "demo/cassette.tape"
+  "scripts/hero.sh"
+  "scripts/bin/llm.sh"
   "docs/index.md"
   "docs/design-docs/index.md"
   "docs/design-docs/core-beliefs.md"
@@ -18,6 +31,7 @@ required_files=(
   "docs/generated/README.md"
   "docs/product-specs/index.md"
   "docs/product-specs/flagship-gtm-engine.md"
+  "docs/references/dotfiles-hydration.md"
   "docs/references/harness-engineering.md"
   "docs/DESIGN.md"
   "docs/FRONTEND.md"
@@ -62,5 +76,22 @@ for needle in "${required_agent_links[@]}"; do
   fi
 done
 
-printf 'knowledge base validation passed (%s required files, AGENTS.md %s lines)\n' "${#required_files[@]}" "$agent_lines"
+placeholder_scan_targets=(
+  "SECURITY.md"
+  "CODE_OF_CONDUCT.md"
+  "CONTRIBUTING.md"
+  "README.md"
+  ".github/PULL_REQUEST_TEMPLATE.md"
+  ".github/ISSUE_TEMPLATE/config.yml"
+  "demo/cassette.tape"
+  "docs"
+)
 
+if grep -R -n -E 'REPO_URL_NOT_DETECTED|bot@gemini.com|Replace this with a real demo|Created `.github/PULL_REQUEST_TEMPLATE.md`' \
+  "${placeholder_scan_targets[@]}" >/tmp/wranngle-gtm-engine-placeholder-scan.txt; then
+  cat /tmp/wranngle-gtm-engine-placeholder-scan.txt >&2
+  printf 'placeholder text from primitive hydration must be replaced before commit\n' >&2
+  exit 1
+fi
+
+printf 'knowledge base validation passed (%s required files, AGENTS.md %s lines)\n' "${#required_files[@]}" "$agent_lines"

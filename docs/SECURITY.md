@@ -10,6 +10,8 @@ This public repo must be safe from the first commit.
 - Public workflows and fixtures must be synthetic.
 - Public n8n workflow JSON must be sanitized before commit.
 
+`SECURITY.md` at the repo root is the public reporting policy. This file is the implementation posture agents should preserve while editing.
+
 ## Pre-Publish Scan
 
 Run:
@@ -33,4 +35,3 @@ trufflehog git file://. --only-verified
 - Replace production URLs with `https://example.invalid/...`.
 - Remove `meta.instanceId`.
 - Remove real execution payloads.
-
