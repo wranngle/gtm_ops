@@ -1,0 +1,71 @@
+name: gardener
+
+on:
+  schedule:
+    # Monday 09:17 UTC — off-the-hour to avoid the GitHub fleet's :00 stampede.
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run doc gardener
+        id: gardener
+        run: |
+          set +e
+          scripts/gardener.sh > findings.txt 2> events.jsonl
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          {
+            echo 'findings<<EOF'
+            cat findings.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload findings artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gardener-findings-${{ github.run_id }}
+          path: |
+            findings.txt
+            events.jsonl
+          retention-days: 30
+
+      - name: Open or update tracking issue
+        if: steps.gardener.outputs.exit != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FINDINGS: ${{ steps.gardener.outputs.findings }}
+        run: |
+          set -euo pipefail
+          title="doc-gardener: $(date -u +%Y-%m-%d) findings"
+          body=$(cat <<BODY
+          The recurring doc-gardener scan found staleness in the repository.
+
+          A future agent (or human) should triage these and either:
+          - resolve the marker if the underlying work has shipped,
+          - repoint or remove broken intra-repo links,
+          - open a follow-up exec-plan if the marker still represents real outstanding work.
+
+          See \`docs/references/doc-gardener.md\` for the contract and \`scripts/gardener.sh\` for the script.
+
+          ## Findings
+
+          \`\`\`
+          ${FINDINGS}
+          \`\`\`
+
+          Run ID: ${{ github.run_id }} — full output is on the run's artifacts.
+          BODY
+          )
+          gh issue create \
+            --title "$title" \
+            --body "$body" \
+            --label gardener \
+            --repo "${{ github.repository }}"

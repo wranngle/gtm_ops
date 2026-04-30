@@ -42,10 +42,10 @@ The Harness Engineering post (Lopopolo, 2026) describes a recurring "doc-gardeni
 
 ## Wiring
 
-The gardener is currently invoked manually:
+The gardener is invoked three ways:
 
-```bash
-scripts/gardener.sh
-```
+1. **Locally** — `scripts/gardener.sh` from repo root.
+2. **On every PR/push** — `.github/workflows/knowledge-base.yml` runs it non-blocking so reviewers see findings inline.
+3. **Recurring** — `.github/workflows/gardener.yml` runs every Monday 09:17 UTC. When findings exist, it opens a tracking issue labelled `gardener` and uploads `findings.txt` + `events.jsonl` as a 30-day artifact.
 
-A recurring schedule is deferred (see `docs/exec-plans/tech-debt-tracker.md` TD-006) until the docs surface is large enough to drift on its own.
+A future agent should pick up the gardener-labelled issues and open fix-up PRs per the contract above.

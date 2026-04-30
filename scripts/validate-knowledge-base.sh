@@ -44,6 +44,7 @@ required_files=(
   "docs/exec-plans/active/002-harness-machinery.md"
   "scripts/lint-layered-architecture.sh"
   "scripts/gardener.sh"
+  ".github/workflows/gardener.yml"
   "packages/agent-evals/README.md"
   "packages/agent-evals/package.json"
   "packages/agent-evals/src/types/index.ts"
