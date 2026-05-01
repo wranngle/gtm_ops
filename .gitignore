@@ -27,3 +27,10 @@ logs/*.jsonl
 
 # Claude Code agent worktrees (transient, not for git)
 .claude/worktrees/
+
+# Elixir / Mix
+tools/symphony-elixir/_build/
+tools/symphony-elixir/deps/
+tools/symphony-elixir/.elixir_ls/
+erl_crash.dump
+**/erl_crash.dump

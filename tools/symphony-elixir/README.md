@@ -15,11 +15,18 @@ through T-8).
 
 ## Run
 
-```bash
-# install Elixir + Erlang/OTP if not present:
-sudo apt-get install -y elixir erlang
+The repo's `.mise.toml` pins Erlang 27 + Elixir 1.19.5-otp-27. If you have
+[mise](https://mise.jdx.dev) installed, `cd` into the repo to auto-activate.
+First time only:
 
-# from this directory:
+```bash
+curl -fsSL https://mise.run | sh
+mise install                # reads .mise.toml in the repo
+```
+
+From this directory:
+
+```bash
 mix deps.get
 mix compile
 mix test
@@ -49,7 +56,9 @@ test/symphony/                   ExUnit tests per module.
 | 7 Orchestration state machine   | ✓ in-memory state (`running`, `claimed`, `retry_attempts`, `codex_totals`); real dispatch lands in T-6 |
 | 8 Polling, scheduling, reconciliation | ✓ poll tick honors `polling.interval_ms`, fetches candidates, sorts by `(priority, created_at, identifier)`, dispatches up to `agent.max_concurrent_agents`. Stall-detection lands in T-8 |
 | 9 Workspace management + safety | ✓ `Symphony.WorkspaceManager` — sanitized keys, `<root>/<key>` layout, `created_now` gate, `assert_inside_root!` + `assert_safe_cwd!`, hook execution with timeout |
+| 10.7 Agent runner               | ✓ `Symphony.AgentRunner.LocalShell` — pipes prompt through `agent.command`, captures stdout, fires `before_run`/`after_run` hooks. Codex JSON-RPC variant deferred |
 | 11 Tracker integration          | ✓ `Symphony.Tracker` behaviour + `Issue` struct + `Noop` adapter. `local_markdown` + `github_issues` adapters land in T-7 |
+| 12 Prompt rendering             | ✓ `Symphony.PromptRenderer` — strict `{{ var }}` substitution with unknown-variable rejection. Full Liquid filters/loops deferred |
 | 9 Workspace management          | not yet (T-5) |
 | 10 Agent runner protocol        | not yet (T-6) |
 | 11 Tracker integration          | not yet (T-7) |

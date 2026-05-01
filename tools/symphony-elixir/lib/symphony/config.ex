@@ -36,6 +36,9 @@ defmodule Symphony.Config do
   @defaults %{
     "tracker.kind" => "local_markdown",
     "tracker.endpoint" => "https://api.linear.app/graphql",
+    "tracker.api_key" => nil,
+    "tracker.project_slug" => nil,
+    "tracker.repo" => nil,
     "tracker.active_states" => "todo,in_progress",
     "tracker.terminal_states" => "done,cancelled,duplicate",
     "tracker.handoff_state" => "human_review",

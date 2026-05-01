@@ -144,8 +144,6 @@ defmodule Symphony.WorkspaceManager do
   # ============== Helpers ==============
 
   defp run_script(script, cwd, timeout_ms, name) do
-    cmd = ["bash", "-lc", script]
-
     task =
       Task.async(fn ->
         try do
@@ -179,13 +177,10 @@ defmodule Symphony.WorkspaceManager do
         Logger.warning("symphony.hook.#{name} outcome=timeout timeout_ms=#{timeout_ms} cwd=#{cwd}")
         {:error, :hook_timeout}
 
-      _ = other ->
+      other ->
         Logger.warning("symphony.hook.#{name} outcome=unknown #{inspect(other)}")
         {:error, {:hook_unknown, other}}
     end
-
-    # Suppress unused-variable warnings on `cmd` for static analysis runs.
-    _ = cmd
   end
 
   defp absolute(path) do
@@ -196,5 +191,4 @@ defmodule Symphony.WorkspaceManager do
   end
 
   defp wrap_invariant(:ok), do: :ok
-  defp wrap_invariant({:error, _} = err), do: err
 end
