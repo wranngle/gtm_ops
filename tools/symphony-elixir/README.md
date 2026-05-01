@@ -46,8 +46,9 @@ test/symphony/                   ExUnit tests per module.
 |---|---|
 | 5 Workflow file format          | ✓ loader parses front matter + body, dotted-path getters |
 | 5.3 + 6 Typed config layer      | ✓ `Symphony.Config` — defaults, env `$VAR` resolution, typed getters |
-| 7 Orchestration state machine   | scaffolded; running/retry/codex_totals tracked, no real dispatch yet |
-| 8 Polling, scheduling, reconciliation | poll tick scheduled; reconcile/dispatch land in T-3+ |
+| 7 Orchestration state machine   | ✓ in-memory state (`running`, `claimed`, `retry_attempts`, `codex_totals`); real dispatch lands in T-6 |
+| 8 Polling, scheduling, reconciliation | ✓ poll tick honors `polling.interval_ms`, fetches candidates, sorts by `(priority, created_at, identifier)`, dispatches up to `agent.max_concurrent_agents`. Stall-detection lands in T-8 |
+| 11 Tracker integration          | ✓ `Symphony.Tracker` behaviour + `Issue` struct + `Noop` adapter. `local_markdown` + `github_issues` adapters land in T-7 |
 | 9 Workspace management          | not yet (T-5) |
 | 10 Agent runner protocol        | not yet (T-6) |
 | 11 Tracker integration          | not yet (T-7) |
