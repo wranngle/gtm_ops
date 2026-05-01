@@ -1,0 +1,69 @@
+name: ${OBSERVABILITY_PROJECT:-wranngle-obs}
+
+# Per-worktree-friendly observability stack: Vector ships logs/metrics/traces
+# from local apps to Victoria* backends, each addressable by LogQL/PromQL/TraceQL.
+# Volumes namespace by ${OBSERVABILITY_PROJECT} so multiple worktrees can run in
+# parallel without stepping on each other.
+
+services:
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.5.0
+    container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-victorialogs
+    ports:
+      - "${VICTORIALOGS_PORT:-9428}:9428"
+    volumes:
+      - victorialogs-data:/victoria-logs-data
+    command:
+      - "--storageDataPath=/victoria-logs-data"
+      - "--httpListenAddr=:9428"
+      - "--retentionPeriod=14d"
+    restart: unless-stopped
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.108.0
+    container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-victoriametrics
+    ports:
+      - "${VICTORIAMETRICS_PORT:-8428}:8428"
+    volumes:
+      - victoriametrics-data:/victoria-metrics-data
+    command:
+      - "--storageDataPath=/victoria-metrics-data"
+      - "--httpListenAddr=:8428"
+      - "--retentionPeriod=14d"
+    restart: unless-stopped
+
+  victoriatraces:
+    # VictoriaTraces is newer and the image tag may need bumping.
+    image: victoriametrics/victoria-traces:v0.4.1
+    container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-victoriatraces
+    ports:
+      - "${VICTORIATRACES_PORT:-10428}:10428"
+    volumes:
+      - victoriatraces-data:/victoria-traces-data
+    command:
+      - "--storageDataPath=/victoria-traces-data"
+      - "--httpListenAddr=:10428"
+      - "--retentionPeriod=14d"
+    restart: unless-stopped
+
+  vector:
+    image: timberio/vector:0.43.1-debian
+    container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-vector
+    depends_on:
+      - victorialogs
+      - victoriametrics
+      - victoriatraces
+    volumes:
+      - ./vector.yaml:/etc/vector/vector.yaml:ro
+      # Read the host repo so Vector can tail .symphony/logs/*.jsonl etc.
+      - ${REPO_ROOT:-../..}:/repo:ro
+    command: ["--config", "/etc/vector/vector.yaml"]
+    ports:
+      # OTLP HTTP intake for apps that prefer pushing.
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+    restart: unless-stopped
+
+volumes:
+  victorialogs-data:
+  victoriametrics-data:
+  victoriatraces-data:

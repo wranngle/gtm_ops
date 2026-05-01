@@ -1,0 +1,54 @@
+# Vector configuration for the local Symphony/agent-evals/ops-console stack.
+# Reads ECS-jsonl from the repo's runtime log files and OTLP HTTP from apps,
+# fans out to Victoria* backends.
+
+sources:
+  symphony_logs:
+    type: file
+    include:
+      - /repo/.symphony/logs/*.jsonl
+    read_from: end
+    multiline:
+      start_pattern: '^\{'
+      mode: halt_before
+      condition_pattern: '^\{'
+      timeout_ms: 1000
+
+  agent_evals_logs:
+    type: file
+    include:
+      - /repo/packages/agent-evals/.logs/*.jsonl
+    read_from: end
+
+  otlp_http:
+    type: opentelemetry
+    grpc:
+      address: 0.0.0.0:4317
+    http:
+      address: 0.0.0.0:4318
+
+transforms:
+  parse_symphony_jsonl:
+    type: remap
+    inputs: [symphony_logs, agent_evals_logs]
+    source: |
+      . = parse_json!(.message)
+      .source = "vector-file"
+
+sinks:
+  victorialogs_logs:
+    type: elasticsearch
+    inputs: [parse_symphony_jsonl, otlp_http.logs]
+    endpoints: [http://victorialogs:9428/insert/elasticsearch/]
+    api_version: v8
+    mode: bulk
+
+  victoriametrics_metrics:
+    type: prometheus_remote_write
+    inputs: [otlp_http.metrics]
+    endpoint: http://victoriametrics:8428/api/v1/write
+
+  victoriatraces_traces:
+    type: opentelemetry
+    inputs: [otlp_http.traces]
+    endpoint: http://victoriatraces:10428/insert/opentelemetry/v1/traces
