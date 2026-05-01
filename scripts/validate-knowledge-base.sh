@@ -43,6 +43,7 @@ required_files=(
   "docs/references/doc-gardener.md"
   "docs/references/symphony-github-issues-adapter.md"
   "docs/exec-plans/active/002-harness-machinery.md"
+  "docs/exec-plans/active/003-stack-canonicalization.md"
   "scripts/lint-layered-architecture.sh"
   "scripts/gardener.sh"
   ".github/workflows/gardener.yml"
