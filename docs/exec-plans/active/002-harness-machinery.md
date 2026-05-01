@@ -30,7 +30,7 @@ This plan addresses the pieces those phases left unfinished.
 
 These pieces from the source material require multi-day infrastructure decisions and are explicitly deferred:
 
-- Per-worktree app boot for `apps/ops-console` (TD-004).
+- ~~`apps/ops-console` stub~~ — Streamlit page reads `EvaluationResult[]` JSON, renders summary metrics + failing-rule table + per-conversation expanders. `domain.py` is pure-Python and tested via pytest under CI; `main.py` is the Streamlit entry point. Per-worktree app boot wiring (run-on-PR) still deferred until Streamlit dev-server-per-worktree is wired (TD-005 prerequisite).
 - Chrome DevTools MCP wiring for agent-driven UI validation (TD-005).
 - ~~Structured-logs first slice~~ — `agent-evals` providers/logger now exposes a `LogSink` interface (Stderr default; `createFileSink(path)`; `AGENT_EVALS_LOG_FILE` env var). Per-worktree Vector + Victoria stack still deferred (TD-002 ongoing).
 - ~~Recurring gardener agent~~ — wired as `.github/workflows/gardener.yml` running every Monday 09:17 UTC. Opens a tracking issue when findings exist.

@@ -1,0 +1,32 @@
+[
+  {
+    "conversationId": "synth-001",
+    "evaluatedAt": "2026-04-30T18:00:00Z",
+    "findings": [
+      {"rule": "turn-duration-cap", "passed": true, "detail": "all turns within cap"},
+      {"rule": "agent-turn-ratio", "passed": true, "detail": "agent share 0.50"},
+      {"rule": "monotonic-timestamps", "passed": true, "detail": "ordered"}
+    ],
+    "passed": true
+  },
+  {
+    "conversationId": "synth-002",
+    "evaluatedAt": "2026-04-30T18:00:01Z",
+    "findings": [
+      {"rule": "turn-duration-cap", "passed": false, "detail": "turn at 0ms ran 60000ms (cap 30000ms)"},
+      {"rule": "agent-turn-ratio", "passed": true, "detail": "agent share 0.33"},
+      {"rule": "monotonic-timestamps", "passed": true, "detail": "ordered"}
+    ],
+    "passed": false
+  },
+  {
+    "conversationId": "synth-003",
+    "evaluatedAt": "2026-04-30T18:00:02Z",
+    "findings": [
+      {"rule": "turn-duration-cap", "passed": true, "detail": "all turns within cap"},
+      {"rule": "agent-turn-ratio", "passed": false, "detail": "agent share 0.20 below minimum 0.30"},
+      {"rule": "monotonic-timestamps", "passed": true, "detail": "ordered"}
+    ],
+    "passed": false
+  }
+]

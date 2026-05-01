@@ -1,0 +1,17 @@
+[project]
+name = "wranngle-ops-console"
+version = "0.0.1"
+description = "Internal operator UI for the Wranngle GTM engine. Reads agent-evals output and surfaces it in a Streamlit page."
+requires-python = ">=3.12"
+dependencies = [
+    "streamlit>=1.40,<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
