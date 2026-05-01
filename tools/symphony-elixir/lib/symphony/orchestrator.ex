@@ -28,7 +28,7 @@ defmodule Symphony.Orchestrator do
   use GenServer
   require Logger
 
-  alias Symphony.{Config, Tracker, WorkflowLoader}
+  alias Symphony.{Config, Logging, RetryQueue, Tracker, WorkflowLoader}
 
   @type state :: %{
           required(:config) => Config.t() | nil,
@@ -154,15 +154,73 @@ defmodule Symphony.Orchestrator do
   defp run_tick(state) do
     state
     |> reconcile_running()
+    |> redeem_retries()
     |> dispatch_eligible()
     |> Map.put(:last_tick_at, DateTime.utc_now())
   end
 
   defp reconcile_running(state) do
     # Spec section 8.5 part B: tracker state refresh for running issues.
-    # No running issues yet (T-6 wires real dispatch); this becomes a real
-    # state-refresh + workspace-cleanup pass once dispatch lands.
-    state
+    # The current state map has no real workers yet (dispatch is log-only
+    # until the orchestrator wires Task supervision in a follow-up slice),
+    # so the refresh path is a stub that exercises the tracker call to
+    # verify the adapter is healthy.
+    case state.adapter do
+      nil ->
+        state
+
+      adapter ->
+        if map_size(state.running) == 0 do
+          state
+        else
+          ids = Map.keys(state.running)
+
+          case adapter.fetch_issue_states_by_ids(state.config, ids) do
+            {:ok, states} ->
+              Logging.emit(:debug, "symphony.reconcile.refreshed", :success,
+                fields: %{
+                  refreshed_count: map_size(states),
+                  running_count: map_size(state.running)
+                }
+              )
+
+              state
+
+            {:error, reason} ->
+              Logging.emit(:warning, "symphony.reconcile.failed", :failure,
+                message: "tracker state refresh failed",
+                fields: %{reason: inspect(reason)}
+              )
+
+              state
+          end
+        end
+    end
+  end
+
+  defp redeem_retries(state) do
+    now_ms = System.monotonic_time(:millisecond)
+    due = RetryQueue.due(state.retry_attempts, now_ms)
+
+    if due == [] do
+      state
+    else
+      Logging.emit(:debug, "symphony.retry.redeem", :success,
+        fields: %{redeem_count: length(due)}
+      )
+
+      retries_after =
+        Enum.reduce(due, state.retry_attempts, fn entry, acc ->
+          Map.delete(acc, entry.issue_id)
+        end)
+
+      claimed_after =
+        Enum.reduce(due, state.claimed, fn entry, acc ->
+          MapSet.delete(acc, entry.issue_id)
+        end)
+
+      %{state | retry_attempts: retries_after, claimed: claimed_after}
+    end
   end
 
   defp dispatch_eligible(state) do
@@ -181,16 +239,29 @@ defmodule Symphony.Orchestrator do
             |> Enum.sort_by(&dispatch_sort_key/1)
             |> Enum.take(available)
 
+          Logging.emit(:info, "symphony.dispatch", :success,
+            fields: %{
+              ready: length(eligible),
+              candidates: length(candidates),
+              available: available
+            }
+          )
+
           Logger.info(
             "symphony.dispatch ready=#{length(eligible)} candidates=#{length(candidates)} available=#{available}"
           )
 
-          # T-4 stops at log-only. Real worker spawn lands in T-6.
+          # Real worker spawn lands in a follow-up slice. Each eligible
+          # issue is logged so operators can confirm dispatch decisions.
           Enum.each(eligible, &log_dispatch(&1, state))
 
           state
 
         {:error, reason} ->
+          Logging.emit(:warning, "symphony.candidate_fetch_failed", :failure,
+            message: inspect(reason)
+          )
+
           Logger.warning("symphony.candidate_fetch_failed reason=#{inspect(reason)}")
           state
       end
@@ -215,6 +286,15 @@ defmodule Symphony.Orchestrator do
   end
 
   defp log_dispatch(issue, _state) do
+    Logging.emit(:info, "symphony.dispatch.log_only", :success,
+      issue: issue.identifier,
+      fields: %{
+        id: issue.id,
+        state: issue.state,
+        priority: issue.priority
+      }
+    )
+
     Logger.info(
       "symphony.dispatch.log_only id=#{issue.id} identifier=#{issue.identifier} state=#{issue.state} priority=#{issue.priority}"
     )
@@ -240,7 +320,9 @@ defmodule Symphony.Orchestrator do
     %{
       running:
         for {id, entry} <- state.running do
-          Map.put(entry, :issue_id, id)
+          entry
+          |> Map.put(:issue_id, id)
+          |> Map.put_new(:turn_count, 0)
         end,
       retrying:
         for {id, entry} <- state.retry_attempts do

@@ -59,6 +59,9 @@ test/symphony/                   ExUnit tests per module.
 | 10.7 Agent runner               | ✓ `Symphony.AgentRunner.LocalShell` — pipes prompt through `agent.command`, captures stdout, fires `before_run`/`after_run` hooks. Codex JSON-RPC variant deferred |
 | 11 Tracker integration          | ✓ `Symphony.Tracker` + `Issue` struct + 3 adapters: `Noop`, `LocalMarkdown` (filesystem parity with `scripts/symphony.sh`), `GitHubIssues` (gh CLI) |
 | 12 Prompt rendering             | ✓ `Symphony.PromptRenderer` — strict `{{ var }}` substitution with unknown-variable rejection. Full Liquid filters/loops deferred |
+| 13.1–13.3 Logging + snapshot    | ✓ `Symphony.Logging` (ECS-jsonl), `Symphony.Logging.Sink` (stderr / file / multi), snapshot includes `running` (with `turn_count`), `retrying`, `codex_totals`, `rate_limits`, `tracker_kind`, `last_tick_at` |
+| 8.4 Retry + backoff             | ✓ `Symphony.RetryQueue` — continuation 1s, failure exponential `min(10·2^(n-1)·1000, agent.max_retry_backoff_ms)`, redeem on tick |
+| 8.5 Reconciliation              | ✓ tick passes call adapter `fetch_issue_states_by_ids/2` for currently-running issues. Stall-detection wires once Task supervision lands |
 | 9 Workspace management          | not yet (T-5) |
 | 10 Agent runner protocol        | not yet (T-6) |
 | 11 Tracker integration          | not yet (T-7) |
