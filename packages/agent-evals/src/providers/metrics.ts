@@ -16,14 +16,27 @@ interface CounterPoint {
   startTimeUnixNano: string;
 }
 
-export interface OtlpHttpMetricsSinkOptions {
+export interface PrometheusMetricsSinkOptions {
+  /**
+   * Endpoint that accepts Prometheus exposition format. For VictoriaMetrics:
+   * `http://<host>:8428/api/v1/import/prometheus`.
+   */
   endpoint: string;
   serviceName?: string;
   fetchImpl?: typeof fetch;
-  flushIntervalMs?: number;
 }
 
-export function createOtlpHttpMetricsSink(opts: OtlpHttpMetricsSinkOptions): MetricsSink {
+/**
+ * @deprecated Renamed — kept as an alias so existing callers keep working.
+ * The "OTLP" label was aspirational; the wire format we actually emit is
+ * Prometheus exposition because both Vector's OTLP source and
+ * VictoriaMetrics's OTLP intake reject JSON-encoded OTLP payloads.
+ */
+export const createOtlpHttpMetricsSink = createPrometheusMetricsSink;
+
+export function createPrometheusMetricsSink(
+  opts: PrometheusMetricsSinkOptions,
+): MetricsSink {
   const startTime = Date.now() * 1_000_000;
   const startTimeNs = startTime.toString();
   const serviceName = opts.serviceName ?? "agent-evals";
@@ -32,7 +45,8 @@ export function createOtlpHttpMetricsSink(opts: OtlpHttpMetricsSinkOptions): Met
 
   return {
     incrementCounter(name, value = 1, attributes = {}): void {
-      const key = counterKey(name, attributes);
+      const merged = { ...attributes, service_name: serviceName };
+      const key = counterKey(name, merged);
       const existing = counters.get(key);
       if (existing) {
         existing.value += value;
@@ -41,7 +55,7 @@ export function createOtlpHttpMetricsSink(opts: OtlpHttpMetricsSinkOptions): Met
         counters.set(key, {
           name,
           value,
-          attributes,
+          attributes: merged,
           timeUnixNano: (Date.now() * 1_000_000).toString(),
           startTimeUnixNano: startTimeNs,
         });
@@ -50,22 +64,41 @@ export function createOtlpHttpMetricsSink(opts: OtlpHttpMetricsSinkOptions): Met
     async flush(): Promise<void> {
       if (counters.size === 0) return;
 
-      const payload = buildOtlpPayload(serviceName, Array.from(counters.values()));
+      const payload = buildPrometheusPayload(Array.from(counters.values()));
       const response = await fetchImpl(opts.endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "text/plain" },
+        body: payload,
       });
       if (!response.ok) {
         throw new Error(
           `metrics export failed: ${response.status} ${response.statusText}`,
         );
       }
-      // OTLP counters are cumulative — leave the values in place for the
-      // next flush. Reset is not needed (and incorrect for cumulative
-      // semantics); aggregationTemporality=2 = CUMULATIVE.
+      // Counters are cumulative — leave values in place for the next flush.
     },
   };
+}
+
+function buildPrometheusPayload(points: CounterPoint[]): string {
+  const lines: string[] = [];
+  const seenNames = new Set<string>();
+  for (const point of points) {
+    if (!seenNames.has(point.name)) {
+      lines.push(`# TYPE ${point.name} counter`);
+      seenNames.add(point.name);
+    }
+    const labelStr = Object.entries(point.attributes)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k.replace(/[^A-Za-z0-9_]/g, "_")}="${escapePromValue(v)}"`)
+      .join(",");
+    lines.push(`${point.name}{${labelStr}} ${point.value}`);
+  }
+  return lines.join("\n") + "\n";
+}
+
+function escapePromValue(v: string): string {
+  return v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 }
 
 function counterKey(name: string, attributes: Record<string, string>): string {
@@ -76,87 +109,3 @@ function counterKey(name: string, attributes: Record<string, string>): string {
   return `${name}{${sortedAttrs}}`;
 }
 
-interface OtlpResource {
-  attributes: Array<{ key: string; value: { stringValue: string } }>;
-}
-
-interface OtlpScope {
-  name: string;
-}
-
-interface OtlpDataPoint {
-  attributes: Array<{ key: string; value: { stringValue: string } }>;
-  startTimeUnixNano: string;
-  timeUnixNano: string;
-  asInt: string;
-}
-
-interface OtlpMetric {
-  name: string;
-  sum: {
-    dataPoints: OtlpDataPoint[];
-    aggregationTemporality: number;
-    isMonotonic: boolean;
-  };
-}
-
-interface OtlpScopeMetrics {
-  scope: OtlpScope;
-  metrics: OtlpMetric[];
-}
-
-interface OtlpResourceMetrics {
-  resource: OtlpResource;
-  scopeMetrics: OtlpScopeMetrics[];
-}
-
-interface OtlpPayload {
-  resourceMetrics: OtlpResourceMetrics[];
-}
-
-function buildOtlpPayload(serviceName: string, points: CounterPoint[]): OtlpPayload {
-  const grouped = new Map<string, CounterPoint[]>();
-  for (const point of points) {
-    const list = grouped.get(point.name) ?? [];
-    list.push(point);
-    grouped.set(point.name, list);
-  }
-
-  const metrics: OtlpMetric[] = [];
-  for (const [name, group] of grouped) {
-    metrics.push({
-      name,
-      sum: {
-        dataPoints: group.map((p) => ({
-          attributes: Object.entries(p.attributes).map(([k, v]) => ({
-            key: k,
-            value: { stringValue: v },
-          })),
-          startTimeUnixNano: p.startTimeUnixNano,
-          timeUnixNano: p.timeUnixNano,
-          asInt: p.value.toString(),
-        })),
-        aggregationTemporality: 2, // CUMULATIVE
-        isMonotonic: true,
-      },
-    });
-  }
-
-  return {
-    resourceMetrics: [
-      {
-        resource: {
-          attributes: [
-            { key: "service.name", value: { stringValue: serviceName } },
-          ],
-        },
-        scopeMetrics: [
-          {
-            scope: { name: "agent-evals" },
-            metrics,
-          },
-        ],
-      },
-    ],
-  };
-}

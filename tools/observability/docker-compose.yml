@@ -7,7 +7,7 @@ name: ${OBSERVABILITY_PROJECT:-wranngle-obs}
 
 services:
   victorialogs:
-    image: victoriametrics/victoria-logs:v1.5.0
+    image: victoriametrics/victoria-logs:v1.50.0
     container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-victorialogs
     ports:
       - "${VICTORIALOGS_PORT:-9428}:9428"
@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   victoriametrics:
-    image: victoriametrics/victoria-metrics:v1.108.0
+    image: victoriametrics/victoria-metrics:v1.142.0
     container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-victoriametrics
     ports:
       - "${VICTORIAMETRICS_PORT:-8428}:8428"
@@ -34,7 +34,7 @@ services:
 
   victoriatraces:
     # VictoriaTraces is newer and the image tag may need bumping.
-    image: victoriametrics/victoria-traces:v0.4.1
+    image: victoriametrics/victoria-traces:v0.8.2
     container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-victoriatraces
     ports:
       - "${VICTORIATRACES_PORT:-10428}:10428"
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   vector:
-    image: timberio/vector:0.43.1-debian
+    image: timberio/vector:0.55.0-debian
     container_name: ${OBSERVABILITY_PROJECT:-wranngle-obs}-vector
     depends_on:
       - victorialogs
