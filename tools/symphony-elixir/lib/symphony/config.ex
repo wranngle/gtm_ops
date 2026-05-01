@@ -39,6 +39,7 @@ defmodule Symphony.Config do
     "tracker.api_key" => nil,
     "tracker.project_slug" => nil,
     "tracker.repo" => nil,
+    "tracker.issues_root" => ".symphony/issues",
     "tracker.active_states" => "todo,in_progress",
     "tracker.terminal_states" => "done,cancelled,duplicate",
     "tracker.handoff_state" => "human_review",

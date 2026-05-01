@@ -61,6 +61,8 @@ required_files=(
   "tools/symphony-elixir/test/symphony/config_test.exs"
   "tools/symphony-elixir/test/symphony/orchestrator_test.exs"
   "tools/symphony-elixir/test/symphony/prompt_renderer_test.exs"
+  "tools/symphony-elixir/test/symphony/tracker/github_issues_test.exs"
+  "tools/symphony-elixir/test/symphony/tracker/local_markdown_test.exs"
   "tools/symphony-elixir/test/symphony/workspace_manager_test.exs"
   "tools/symphony-elixir/config/test.exs"
   ".mise.toml"

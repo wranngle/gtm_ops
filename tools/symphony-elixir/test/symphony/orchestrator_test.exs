@@ -6,19 +6,41 @@ defmodule Symphony.OrchestratorTest do
   alias Symphony.{Config, Orchestrator, WorkflowLoader}
 
   setup do
+    # Defensive: a previously-failed test may have leaked the named
+    # Orchestrator process. Kill it before we start fresh.
+    stop_orchestrator()
+
     tmp = Path.join(System.tmp_dir!(), "symphony-orch-#{System.unique_integer([:positive])}")
     File.mkdir_p!(tmp)
 
     on_exit(fn ->
-      case GenServer.whereis(Orchestrator) do
-        nil -> :ok
-        pid -> GenServer.stop(pid)
-      end
-
+      stop_orchestrator()
       File.rm_rf!(tmp)
     end)
 
     {:ok, tmp: tmp}
+  end
+
+  defp stop_orchestrator do
+    case GenServer.whereis(Orchestrator) do
+      nil ->
+        :ok
+
+      pid ->
+        ref = Process.monitor(pid)
+
+        try do
+          GenServer.stop(pid, :normal, 1_000)
+        catch
+          :exit, _ -> :ok
+        end
+
+        receive do
+          {:DOWN, ^ref, :process, ^pid, _} -> :ok
+        after
+          1_000 -> :ok
+        end
+    end
   end
 
   defp boot_with_workflow(tmp, body) do
