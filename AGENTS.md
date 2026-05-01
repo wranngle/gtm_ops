@@ -53,5 +53,5 @@ pytest
 - [.symphony/issues](.symphony/issues/): local Markdown task tracker.
 - [docs/generated](docs/generated/): generated schemas and reports.
 - [apps/ops-console](apps/ops-console/): planned Python-first internal operator UI.
-- [packages/agent-evals](packages/agent-evals/): planned ElevenLabs agent evaluation harness.
+- [packages/agent-evals](packages/agent-evals/): ElevenLabs agent evaluation harness with layered architecture, synthetic fixtures, and runnable tests.
 - [packages/data-reconciliation](packages/data-reconciliation/): planned Python/SQL usage and revenue reconciliation.

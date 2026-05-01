@@ -8,7 +8,7 @@ Quality is tracked by domain and should improve through small garbage-collection
 | Dotfiles integration | B | Baseline files preserved, PR/security/contributing cleaned up, validator checks required files | Add renderable demo artifact once runnable surfaces exist. |
 | Symphony orchestration | B | `WORKFLOW.md`, local Markdown tracker, Bash runner, dry-run mode, validation hooks | Add daemon mode or external tracker only after local tasks prove useful. |
 | Public safety | B | Synthetic-data policy, never-public source repos | Install and run `gitleaks` and `trufflehog`. |
-| Agent evals | D | Planned only | Add `packages/agent-evals`. |
+| Agent evals | B | Layered architecture implemented, 15 tests passing, CLI runnable with synthetic fixtures, metrics/logging providers integrated | Add webhook contract tests for ElevenLabs integration endpoints. |
 | Data reconciliation | D | Planned only | Add Python CLI, SQL models, fixtures. |
 | Ops console | D | Planned only | Add Streamlit/FastAPI app and screenshot loop. |
 | Observability | D | Planned only | Add structured logs first. |

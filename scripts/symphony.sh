@@ -321,7 +321,7 @@ symphony_run_issue(){
     symphony_fail symphony.agent_run_not_allowed "set SYMPHONY_ALLOW_AGENT_RUN=1 to execute agent.command" "$identifier"
   fi
   agent_command="$(symphony_resolved_agent_command)"
-  (cd "$workspace" && symphony_render_prompt "$ref" "" "$workspace" | "$agent_command") > "$output_file"
+  symphony_render_prompt "$ref" "" "$workspace" | (cd "$workspace" && "$agent_command") > "$output_file"
   symphony_emit_log info symphony.agent_completed success "output=$output_file" "$identifier"
 }
 

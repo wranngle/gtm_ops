@@ -83,6 +83,8 @@ required_files=(
   "tools/edge-mcp/windows/edge-mcp-firewall.cmd"
   "tools/edge-mcp/windows/edge-mcp-portproxy.cmd"
   "tools/edge-mcp/windows/setup-elevated.sh"
+  "tools/edge-mcp/smoke/smoke.mjs"
+  "tools/symphony-elixir/scripts/boot_with_file_sink.exs"
   "docs/references/edge-devtools-mcp.md"
   "tools/observability/docker-compose.yml"
   "tools/observability/vector.yaml"

@@ -34,3 +34,9 @@ tools/symphony-elixir/deps/
 tools/symphony-elixir/.elixir_ls/
 erl_crash.dump
 **/erl_crash.dump
+
+# Python build artifacts
+**/*.egg-info/
+
+# Playwright MCP runtime artifacts (transient agent snapshots)
+.playwright-mcp/

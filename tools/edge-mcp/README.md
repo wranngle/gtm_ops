@@ -16,9 +16,16 @@ Chrome DevTools MCP" loop.
   Start Menu so a single click auto-launches Edge with the right flags.
   Run from PowerShell on Windows (or from WSL via `powershell.exe -File`).
 - `mcp.json` — MCP server registration template using
-  [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp). Provides
-  `browser_navigate`, `browser_snapshot` (accessibility tree),
-  `browser_screenshot`, `browser_click`, `browser_fill`, `browser_evaluate`.
+  [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp). The server
+  advertises 23 `browser_*` tools — see "Tools advertised" below for the full
+  list. Common ones: `browser_navigate`, `browser_snapshot` (accessibility
+  tree), `browser_take_screenshot`, `browser_click`, `browser_fill_form`,
+  `browser_evaluate`.
+- `smoke/smoke.mjs` — node-only JSON-RPC client that spawns
+  `launch-mcp.sh`, runs `initialize` + `tools/list` + `browser_navigate` +
+  `browser_snapshot` against `https://example.com`, and asserts the
+  accessibility tree contains "Example Domain". Run with
+  `node tools/edge-mcp/smoke/smoke.mjs`. No npm deps.
 - `install-mcp.sh` — idempotent merger: writes the `edge-devtools` MCP
   server entry into `~/.claude/settings.json` (or project-local
   `.claude/settings.json` with `--scope project`), preserving any other
@@ -119,9 +126,34 @@ Verify with `netsh interface portproxy show all`. Remove with
 - Fix B's portproxy exposes 9222 to the local network. Acceptable for a
   workstation behind a firewall; remove the rule if the box is shared.
 
+## Tools advertised
+
+Verified against `@playwright/mcp@1.60.0-alpha-1777669338000` (npm `@latest`)
+on 2026-05-01 via `tools/edge-mcp/smoke/smoke.mjs`:
+
+```
+browser_click            browser_close              browser_console_messages
+browser_drag             browser_drop               browser_evaluate
+browser_file_upload      browser_fill_form          browser_handle_dialog
+browser_hover            browser_navigate           browser_navigate_back
+browser_network_request  browser_network_requests   browser_press_key
+browser_resize           browser_run_code_unsafe    browser_select_option
+browser_snapshot         browser_tabs               browser_take_screenshot
+browser_type             browser_wait_for
+```
+
+Notes:
+- `browser_take_screenshot` (not `browser_screenshot`) is the screenshot tool.
+- `browser_fill_form` (not `browser_fill`) is the form-fill tool.
+- `browser_run_code_unsafe` evaluates arbitrary Playwright JS — treat
+  exposure to untrusted prompts accordingly.
+- `browser_navigate` returns the post-navigation accessibility snapshot
+  inline, so a separate `browser_snapshot` call is optional.
+
 ## Status
 
 - E-1 (launcher) ✓
 - E-2 (MCP server pick + wiring template + installer) ✓
 - E-3 (Start Menu shortcut) ✓
-- E-4 (live smoke test) deferred until owner picks Fix A or Fix B above
+- E-4 (live smoke test) ✓ — `tools/edge-mcp/smoke/smoke.mjs` drives the full
+  initialize → tools/list → navigate → snapshot loop end-to-end.

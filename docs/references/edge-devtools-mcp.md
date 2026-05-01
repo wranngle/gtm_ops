@@ -56,12 +56,39 @@ tools/edge-mcp/edge-debug-launch.sh
 # expected stdout: http://172.31.240.1:9222/json/version  (or similar)
 
 # Then drive Edge through Claude Code's `edge-devtools` MCP server.
-# The MCP exposes (via @playwright/mcp): browser_navigate,
-# browser_snapshot (accessibility tree), browser_screenshot,
-# browser_click, browser_fill, browser_evaluate.
+# The MCP exposes (via @playwright/mcp) 23 browser_* tools — see "Tools
+# advertised" below for the full list. Common ones: browser_navigate,
+# browser_snapshot (accessibility tree), browser_take_screenshot,
+# browser_click, browser_fill_form, browser_evaluate.
 ```
 
-## Verified smoke test (recorded 2026-04-30)
+## Tools advertised
+
+Verified against `@playwright/mcp@1.60.0-alpha-1777669338000` (npm `@latest`)
+on 2026-05-01 via `tools/edge-mcp/smoke/smoke.mjs`:
+
+```
+browser_click            browser_close              browser_console_messages
+browser_drag             browser_drop               browser_evaluate
+browser_file_upload      browser_fill_form          browser_handle_dialog
+browser_hover            browser_navigate           browser_navigate_back
+browser_network_request  browser_network_requests   browser_press_key
+browser_resize           browser_run_code_unsafe    browser_select_option
+browser_snapshot         browser_tabs               browser_take_screenshot
+browser_type             browser_wait_for
+```
+
+Naming gotchas an agent author needs to know up front:
+
+- Screenshot tool is `browser_take_screenshot`, not `browser_screenshot`.
+- Form-fill tool is `browser_fill_form`, not `browser_fill`.
+- `browser_navigate` already returns the post-navigation accessibility
+  snapshot inline — calling `browser_snapshot` afterward is optional.
+- `browser_run_code_unsafe` evaluates arbitrary Playwright JavaScript in
+  the page context. Treat exposure to untrusted prompt input as an RCE
+  vector for that tool.
+
+## Verified smoke test (recorded 2026-05-01)
 
 End-to-end smoke run after `setup-elevated.sh` + `edge-debug-launch.sh`:
 
@@ -75,17 +102,32 @@ http://172.31.240.1:9222/json/version
 $ curl -s http://172.31.240.1:9222/json/version | jq -r '.Browser, .webSocketDebuggerUrl'
 Edg/147.0.3912.98
 ws://172.31.240.1:9222/devtools/browser/<uuid>
-
-$ curl -s http://172.31.240.1:9222/json/list | jq '.[] | {url, type}' | head
-{ "url": "about:blank", "type": "page" }
-{ "url": "chrome-extension://...", "type": "background_page" }
-...
 ```
 
-The CDP endpoint returns the browser version, an active websocket
-debugger URL, and the live tab list — sufficient evidence the entire
-chain (Edge bind → portproxy forward → firewall allow → WSL host-IP
-route) is functioning.
+CDP transport health is the prerequisite. The actual MCP attach loop is
+exercised by `tools/edge-mcp/smoke/smoke.mjs`, which spawns
+`launch-mcp.sh` over stdio JSON-RPC and asserts:
+
+1. `initialize` returns a `2024-11-05` protocol envelope with a
+   `tools` capability and `serverInfo.name == "Playwright"`.
+2. `tools/list` advertises the 23 `browser_*` tools listed below
+   (including `browser_navigate`, `browser_snapshot`,
+   `browser_take_screenshot`).
+3. `tools/call browser_navigate {url: "https://example.com"}` succeeds
+   and returns Page URL `https://example.com/` and Page Title
+   `Example Domain`.
+4. `tools/call browser_snapshot` returns an accessibility tree whose
+   yaml contains the `heading "Example Domain"` node.
+
+```bash
+$ node tools/edge-mcp/smoke/smoke.mjs
+{ "pass": true, "failures": [], "toolNames": [ ...23 names... ] }
+```
+
+This is sufficient evidence the full chain (Edge bind → portproxy
+forward → firewall allow → WSL host-IP route → launch-mcp endpoint
+resolution → npx fetch → @playwright/mcp stdio → CDP attach → DOM)
+is functioning end-to-end.
 
 ## Why Edge binds `[::1]` instead of `127.0.0.1`
 
