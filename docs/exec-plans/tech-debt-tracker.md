@@ -4,7 +4,7 @@ This file tracks debt that should be garbage-collected continuously.
 
 | ID | Area | Debt | Severity | Target |
 | --- | --- | --- | --- | --- |
-| TD-002 | Observability | No local logs/metrics/traces stack. Harness post calls for per-worktree Vector + Victoria Logs/Metrics/Traces with LogQL/PromQL/TraceQL access. | High | Add structured logs first, then fixture-backed metrics; full stack deferred until an app exists to instrument. |
+| TD-002 | Observability | First slice landed: agent-evals' StderrJsonLogger now uses a configurable LogSink (StderrSink default; createFileSink(path) for file output, AGENT_EVALS_LOG_FILE env var). Still missing: metrics + traces, full Vector + Victoria stack with LogQL/PromQL/TraceQL access. | High | Add fixture-backed metrics next, then real stack once an app exists to instrument. |
 | TD-003 | UI validation | No ops-console UI exists yet, so there are no screenshot or DOM validation loops. | Medium | Add when `apps/ops-console` lands. |
 | TD-004 | Runtime | No per-worktree app boot. Harness post requires `bun run dev` (or equivalent) per worktree so agents can drive an isolated instance. | High | Land with `apps/ops-console`. |
 | TD-005 | Agent legibility | No Chrome DevTools MCP wiring. Harness post shows agents driving the UI via DevTools to snapshot before/after, validate fixes, and loop until clean. | High | Wire after `apps/ops-console` and worktree boot. |

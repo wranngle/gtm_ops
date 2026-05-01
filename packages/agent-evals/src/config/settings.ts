@@ -4,6 +4,7 @@ const SettingsSchema = z.object({
   maxTurnDurationMs: z.number().int().positive(),
   minAgentTurnRatio: z.number().min(0).max(1),
   fixturesDirectory: z.string().min(1),
+  logFile: z.string().optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;
@@ -24,6 +25,7 @@ export function loadSettings(env: NodeJS.ProcessEnv = process.env): Settings {
       : DEFAULT_SETTINGS.minAgentTurnRatio,
     fixturesDirectory:
       env.AGENT_EVALS_FIXTURES_DIRECTORY ?? DEFAULT_SETTINGS.fixturesDirectory,
+    logFile: env.AGENT_EVALS_LOG_FILE,
   };
   return SettingsSchema.parse(candidate);
 }

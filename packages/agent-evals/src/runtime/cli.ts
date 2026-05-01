@@ -1,6 +1,11 @@
 import { loadSettings } from "../config";
 import { createFileConversationRepository } from "../repo";
-import { SystemClock, StderrJsonLogger } from "../providers";
+import {
+  SystemClock,
+  StderrSink,
+  createFileSink,
+  createJsonLogger,
+} from "../providers";
 import { createEvaluator } from "../service";
 import { renderResultsMarkdown } from "../ui";
 
@@ -14,6 +19,8 @@ function main(): void {
   }
   const settings = loadSettings();
   const repository = createFileConversationRepository(settings, fixturePath);
+  const sink = settings.logFile ? createFileSink(settings.logFile) : StderrSink;
+  const logger = createJsonLogger(sink);
   const evaluator = createEvaluator(
     repository,
     {
@@ -21,7 +28,7 @@ function main(): void {
       minAgentTurnRatio: settings.minAgentTurnRatio,
     },
     SystemClock,
-    StderrJsonLogger,
+    logger,
   );
   const results = evaluator.evaluateAll();
   process.stdout.write(renderResultsMarkdown(results));
