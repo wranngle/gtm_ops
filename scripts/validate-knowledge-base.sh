@@ -42,6 +42,7 @@ required_files=(
   "docs/references/layered-domain-architecture.md"
   "docs/references/doc-gardener.md"
   "docs/references/symphony-github-issues-adapter.md"
+  "docs/references/local-observability.md"
   "docs/exec-plans/active/002-harness-machinery.md"
   "docs/exec-plans/active/003-stack-canonicalization.md"
   "docs/references/canonical-stack.md"
