@@ -86,6 +86,7 @@ emit_event info edge.launch success "port=$debug_port profile=$debug_profile_win
 
 cmd.exe /c start /B "" "$edge_exe_winpath" \
   --remote-debugging-port="$debug_port" \
+  --remote-debugging-address=0.0.0.0 \
   --user-data-dir="$debug_profile_winpath" \
   --no-first-run \
   --no-default-browser-check \
@@ -95,9 +96,24 @@ cmd.exe /c start /B "" "$edge_exe_winpath" \
   about:blank \
   >/dev/null 2>&1 &
 
-# Wait up to 5 seconds for the debug endpoint to come up.
-debug_url="http://127.0.0.1:${debug_port}/json/version"
-for _ in 1 2 3 4 5 6 7 8 9 10; do
+# Wait up to 30 seconds for the debug endpoint to come up. Edge cold-start
+# on Windows is routinely 8-15 seconds; the previous 5s ceiling consistently
+# fired before Edge bound the port.
+#
+# WSL2 in default (NAT) networking mode cannot reach Windows-internal
+# 127.0.0.1; we probe via the Windows host IP from /etc/resolv.conf or the
+# default-route gateway. With mirrored networking ($EDGE_DEBUG_USE_LOCALHOST=1
+# set after enabling mirrored mode in ~/.wslconfig), 127.0.0.1 works directly.
+host_ip=$(ip route | awk '/default/ {print $3; exit}')
+if [[ -z "$host_ip" ]]; then
+  host_ip=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf 2>/dev/null)
+fi
+[[ "${EDGE_DEBUG_USE_LOCALHOST:-0}" == "1" ]] && host_ip="127.0.0.1"
+
+debug_url="http://${host_ip}:${debug_port}/json/version"
+wait_max_seconds=${EDGE_DEBUG_WAIT_SECONDS:-30}
+deadline=$((SECONDS + wait_max_seconds))
+while ((SECONDS < deadline)); do
   if curl -fsS --max-time 1 "$debug_url" >/dev/null 2>&1; then
     emit_event info edge.debug-ready success "$debug_url"
     printf '%s\n' "$debug_url"
@@ -106,5 +122,5 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 0.5
 done
 
-emit_event error edge.debug-unreachable failure "$debug_url did not respond within 5s"
+emit_event error edge.debug-unreachable failure "$debug_url did not respond within ${wait_max_seconds}s (host_ip=${host_ip})"
 exit 1

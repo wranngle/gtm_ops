@@ -75,6 +75,8 @@ required_files=(
   "tools/symphony-elixir/README.md"
   "tools/edge-mcp/edge-debug-launch.sh"
   "tools/edge-mcp/install-edge-shortcut.ps1"
+  "tools/edge-mcp/install-mcp.sh"
+  "tools/edge-mcp/mcp.json"
   "tools/edge-mcp/README.md"
   "tools/observability/docker-compose.yml"
   "tools/observability/vector.yaml"

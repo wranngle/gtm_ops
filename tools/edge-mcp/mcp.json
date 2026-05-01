@@ -1,0 +1,19 @@
+{
+  "_comment": "MCP server registration template for the Edge DevTools loop. Merge this 'mcpServers' block into your Claude Code settings (~/.claude/settings.json or project-local .mcp.json). Requires that 'tools/edge-mcp/edge-debug-launch.sh' has been run first so port 9222 is reachable.",
+  "mcpServers": {
+    "edge-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--browser",
+        "msedge",
+        "--cdp-endpoint",
+        "http://127.0.0.1:9222"
+      ],
+      "env": {
+        "PLAYWRIGHT_MCP_DESCRIPTION": "Drives Microsoft Edge over the Chrome DevTools Protocol (port 9222) launched via tools/edge-mcp/edge-debug-launch.sh. Provides navigate, screenshot, accessibility tree, click, fill, and evaluate."
+      }
+    }
+  }
+}
