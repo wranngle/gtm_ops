@@ -84,13 +84,19 @@ sleep 0.5
 # the window onscreen if they want to see it.
 emit_event info edge.launch success "port=$debug_port profile=$debug_profile_winpath"
 
+# --remote-debugging-address=127.0.0.1 forces an IPv4 loopback bind. Without
+# this, recent Edge/Chromium can decide to bind ::1 only, which the WSL-side
+# portproxy (configured for v4tov4) cannot forward. The address override is
+# allowed by Chromium when targeting a loopback address; only non-loopback
+# overrides like 0.0.0.0 are silently dropped.
 cmd.exe /c start /B "" "$edge_exe_winpath" \
   --remote-debugging-port="$debug_port" \
-  --remote-debugging-address=0.0.0.0 \
+  --remote-debugging-address=127.0.0.1 \
   --user-data-dir="$debug_profile_winpath" \
   --no-first-run \
   --no-default-browser-check \
   --disable-default-apps \
+  --disable-features=msIPv6OnlyLoopback \
   --window-position=30000,30000 \
   --window-size=1280,800 \
   about:blank \
@@ -104,23 +110,37 @@ cmd.exe /c start /B "" "$edge_exe_winpath" \
 # 127.0.0.1; we probe via the Windows host IP from /etc/resolv.conf or the
 # default-route gateway. With mirrored networking ($EDGE_DEBUG_USE_LOCALHOST=1
 # set after enabling mirrored mode in ~/.wslconfig), 127.0.0.1 works directly.
+# Build a list of candidate URLs to probe. Edge's CDP binding varies:
+#   - Mirrored networking: 127.0.0.1 and [::1] both work directly
+#   - Default NAT mode: needs the Windows host IP from /etc/resolv.conf or
+#     the default-route gateway, AND a netsh portproxy on Windows
 host_ip=$(ip route | awk '/default/ {print $3; exit}')
 if [[ -z "$host_ip" ]]; then
   host_ip=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf 2>/dev/null)
 fi
-[[ "${EDGE_DEBUG_USE_LOCALHOST:-0}" == "1" ]] && host_ip="127.0.0.1"
 
-debug_url="http://${host_ip}:${debug_port}/json/version"
+candidates=()
+if [[ "${EDGE_DEBUG_USE_LOCALHOST:-0}" == "1" ]]; then
+  candidates+=("http://127.0.0.1:${debug_port}/json/version")
+  candidates+=("http://[::1]:${debug_port}/json/version")
+else
+  candidates+=("http://${host_ip}:${debug_port}/json/version")
+  candidates+=("http://127.0.0.1:${debug_port}/json/version")
+  candidates+=("http://[::1]:${debug_port}/json/version")
+fi
+
 wait_max_seconds=${EDGE_DEBUG_WAIT_SECONDS:-30}
 deadline=$((SECONDS + wait_max_seconds))
 while ((SECONDS < deadline)); do
-  if curl -fsS --max-time 1 "$debug_url" >/dev/null 2>&1; then
-    emit_event info edge.debug-ready success "$debug_url"
-    printf '%s\n' "$debug_url"
-    exit 0
-  fi
+  for url in "${candidates[@]}"; do
+    if curl -fsS --max-time 1 "$url" >/dev/null 2>&1; then
+      emit_event info edge.debug-ready success "$url"
+      printf '%s\n' "$url"
+      exit 0
+    fi
+  done
   sleep 0.5
 done
 
-emit_event error edge.debug-unreachable failure "$debug_url did not respond within ${wait_max_seconds}s (host_ip=${host_ip})"
+emit_event error edge.debug-unreachable failure "no candidate URL responded within ${wait_max_seconds}s (tried: ${candidates[*]})"
 exit 1
