@@ -41,6 +41,7 @@ required_files=(
   "docs/references/symphony-orchestration.md"
   "docs/references/layered-domain-architecture.md"
   "docs/references/doc-gardener.md"
+  "docs/references/symphony-github-issues-adapter.md"
   "docs/exec-plans/active/002-harness-machinery.md"
   "scripts/lint-layered-architecture.sh"
   "scripts/gardener.sh"
