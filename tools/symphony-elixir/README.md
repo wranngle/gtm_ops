@@ -45,6 +45,7 @@ test/symphony/                   ExUnit tests per module.
 | Section | Status |
 |---|---|
 | 5 Workflow file format          | ✓ loader parses front matter + body, dotted-path getters |
+| 5.3 + 6 Typed config layer      | ✓ `Symphony.Config` — defaults, env `$VAR` resolution, typed getters |
 | 7 Orchestration state machine   | scaffolded; running/retry/codex_totals tracked, no real dispatch yet |
 | 8 Polling, scheduling, reconciliation | poll tick scheduled; reconcile/dispatch land in T-3+ |
 | 9 Workspace management          | not yet (T-5) |
