@@ -90,6 +90,7 @@ required_files=(
   "packages/agent-evals/src/config/index.ts"
   "packages/agent-evals/src/repo/index.ts"
   "packages/agent-evals/src/providers/index.ts"
+  "packages/agent-evals/src/providers/metrics.ts"
   "packages/agent-evals/src/service/index.ts"
   "packages/agent-evals/src/runtime/cli.ts"
   "packages/agent-evals/src/ui/index.ts"

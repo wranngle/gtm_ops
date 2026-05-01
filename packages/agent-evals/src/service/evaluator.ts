@@ -4,7 +4,8 @@ import type {
   EvaluationResult,
 } from "../types";
 import type { ConversationRepository } from "../repo";
-import type { Clock, Logger } from "../providers";
+import type { Clock, Logger, MetricsSink } from "../providers";
+import { NoopMetricsSink } from "../providers";
 
 export interface EvaluationRules {
   maxTurnDurationMs: number;
@@ -20,6 +21,7 @@ export function createEvaluator(
   rules: EvaluationRules,
   clock: Clock,
   logger: Logger,
+  metrics: MetricsSink = NoopMetricsSink,
 ): Evaluator {
   return {
     evaluateAll(): EvaluationResult[] {
@@ -29,6 +31,24 @@ export function createEvaluator(
         evaluateOne(conversation, rules, clock),
       );
       const failed = results.filter((r) => !r.passed).length;
+
+      metrics.incrementCounter("agent_evals_evaluations_total", results.length);
+      if (failed > 0) {
+        metrics.incrementCounter(
+          "agent_evals_evaluations_failed_total",
+          failed,
+        );
+      }
+      for (const result of results) {
+        for (const finding of result.findings) {
+          if (!finding.passed) {
+            metrics.incrementCounter("agent_evals_findings_failed_total", 1, {
+              rule: finding.rule,
+            });
+          }
+        }
+      }
+
       logger.info("evaluator.done", { failed, total: results.length });
       return results;
     },
