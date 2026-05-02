@@ -20,7 +20,91 @@ defmodule Symphony.Config do
   startup or skip a tick.
   """
 
+  alias Symphony.Config.Schema
+  alias Symphony.Workflow
   alias Symphony.WorkflowLoader
+
+  @default_observability_settings %{
+    refresh_ms: 1_000,
+    render_interval_ms: 1_000,
+    dashboard_enabled: false
+  }
+
+  @default_server_settings %{
+    host: "127.0.0.1",
+    port: nil
+  }
+
+  @default_agent_settings %{
+    max_concurrent_agents: 10,
+    max_concurrent_agents_by_state: %{}
+  }
+
+  @default_tracker_settings %{
+    project_slug: nil,
+    kind: "local_markdown"
+  }
+
+  @doc """
+  Upstream-compatible accessor for `Symphony.StatusDashboard` and other
+  ported modules that expect `Config.settings!()` to return a typed
+  struct with nested fields (`tracker`, `polling`, `workspace`, `hooks`,
+  `agent`, `codex`, `server`, `observability`).
+
+  Tries `Symphony.Workflow.current/0` first (mirrors upstream); on
+  failure returns sensible defaults so the dashboard formatter can be
+  exercised in isolation (e.g. `StatusDashboardSnapshotTest`) without
+  a workflow file on disk.
+  """
+  @spec settings!() :: map() | Schema.t()
+  def settings! do
+    case maybe_settings() do
+      {:ok, settings} ->
+        settings
+
+      :default ->
+        %{
+          tracker: @default_tracker_settings,
+          server: @default_server_settings,
+          agent: @default_agent_settings,
+          observability: @default_observability_settings,
+          polling: %{interval_ms: 30_000}
+        }
+    end
+  end
+
+  @spec server_port() :: non_neg_integer() | nil
+  def server_port do
+    case Application.get_env(:symphony, :server_port_override) do
+      port when is_integer(port) and port >= 0 ->
+        port
+
+      _ ->
+        case settings!() do
+          %{server: %{port: port}} -> port
+          _ -> nil
+        end
+    end
+  end
+
+  defp maybe_settings do
+    if function_exported?(Workflow, :current, 0) do
+      case Workflow.current() do
+        {:ok, %{config: config}} when is_map(config) ->
+          case Schema.parse(config) do
+            {:ok, parsed} -> {:ok, parsed}
+            _ -> :default
+          end
+
+        _ ->
+          :default
+      end
+    else
+      :default
+    end
+  rescue
+    _ -> :default
+  end
 
   @env_resolvable [
     "tracker.endpoint",
