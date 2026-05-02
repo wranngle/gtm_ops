@@ -47,7 +47,8 @@ defmodule Symphony.Web.PresenterTest do
       rate_limits: nil,
       workflow_loaded: true,
       tracker_kind: :local_markdown,
-      last_tick_at: nil
+      last_tick_at: nil,
+      polling: %{poll_interval_ms: 30_000, next_poll_in_ms: 12_500}
     }
 
     payload = Presenter.state_payload(stub_snapshot(snapshot))
@@ -68,6 +69,29 @@ defmodule Symphony.Web.PresenterTest do
     assert payload.codex_totals.total_tokens == 300
     assert payload.rate_limits == nil
     assert is_list(payload.recent_events)
+
+    # Spec § 13.5 + STACK-075: poll-loop visibility surfaces through
+    # `polling: %{poll_interval_ms, next_poll_in_ms, checking?}`.
+    assert payload.polling.poll_interval_ms == 30_000
+    assert payload.polling.next_poll_in_ms == 12_500
+    assert payload.polling.checking? == false
+  end
+
+  test "state_payload/1 tolerates snapshots without a :polling key" do
+    snapshot = %{
+      running: [],
+      retrying: [],
+      codex_totals: %{input_tokens: 0, output_tokens: 0, total_tokens: 0, seconds_running: 0},
+      rate_limits: nil
+    }
+
+    payload = Presenter.state_payload(stub_snapshot(snapshot))
+
+    assert payload.polling == %{
+             poll_interval_ms: nil,
+             next_poll_in_ms: nil,
+             checking?: false
+           }
   end
 
   test "state_payload/1 surfaces :timeout error mode" do

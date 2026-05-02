@@ -6,7 +6,9 @@ defmodule Symphony.Web.Presenter do
   Adapts `Symphony.snapshot/0` (which returns `{:ok, map} |
   {:error, :timeout | :unavailable}`) into a stable JSON-friendly map
   with `running`, `retrying`, `codex_totals`, `rate_limits`, `counts`,
-  and a `recent_events` projection.
+  `polling` (poll-loop visibility — `poll_interval_ms` +
+  `next_poll_in_ms`, with `checking?` once the orchestrator emits it
+  per STACK-075), and a `recent_events` projection.
   """
 
   alias Symphony.StatusDashboard
@@ -34,6 +36,7 @@ defmodule Symphony.Web.Presenter do
           retrying: Enum.map(snapshot.retrying, &retry_entry/1),
           codex_totals: snapshot.codex_totals,
           rate_limits: snapshot.rate_limits,
+          polling: polling_payload(snapshot),
           recent_events: StatusDashboard.recent_events(snapshot, limit: 20)
         }
 
@@ -123,6 +126,25 @@ defmodule Symphony.Web.Presenter do
 
   defp summarize_message(nil), do: nil
   defp summarize_message(message), do: StatusDashboard.humanize_codex_message(message)
+
+  # Surface the orchestrator's poll-loop visibility (spec § 13.5 +
+  # STACK-075). `:polling` is always returned as a map so the LiveView
+  # and `/api/snapshot` consumers can render "next poll in N s" /
+  # "checking…" without nil-checks. Tolerates older snapshots that
+  # don't include `:polling` yet.
+  defp polling_payload(snapshot) do
+    case Map.get(snapshot, :polling) do
+      %{} = polling ->
+        %{
+          poll_interval_ms: Map.get(polling, :poll_interval_ms),
+          next_poll_in_ms: Map.get(polling, :next_poll_in_ms),
+          checking?: Map.get(polling, :checking?, false)
+        }
+
+      _ ->
+        %{poll_interval_ms: nil, next_poll_in_ms: nil, checking?: false}
+    end
+  end
 
   defp due_at_iso8601(due_in_ms) when is_integer(due_in_ms) do
     DateTime.utc_now()
