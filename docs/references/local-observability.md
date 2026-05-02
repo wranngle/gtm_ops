@@ -158,7 +158,7 @@ curl -fsS 'http://127.0.0.1:8428/api/v1/series' \
 > **Status**: VictoriaTraces is running and the Vector OTLP traces sink
 > is wired (see `tools/observability/vector.yaml`), but **nothing in
 > the codebase emits OTLP spans yet**. Queries below are documented as
-> placeholders so the path is obvious; until STACK-070 lands they will
+> planned examples so the path is obvious; until STACK-070 lands they will
 > all return empty.
 
 The Elixir daemon's snapshot interface exposes per-tick `last_tick_at`

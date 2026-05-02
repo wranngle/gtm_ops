@@ -7,7 +7,8 @@
 #      older than DOGFOOD_MIN_AGE_SECONDS (default 300s) — the age guard
 #      avoids racing with parallel auditors that just filed STACK-NNN
 #      issues.
-#   3. Dispatches the issue via `scripts/symphony.sh once --limit 1` with
+#   3. Dispatches that exact issue via
+#      `scripts/symphony.sh once --limit 1 --issue ID` with
 #      SYMPHONY_ALLOW_AGENT_RUN=1 and a tight LLM chain.
 #   4. Runs the full validator suite against the resulting tree.
 #   5. If green: commits + pushes, moves the issue to .symphony/issues/done/.
@@ -77,7 +78,7 @@ fi
 
 min_age_seconds=${DOGFOOD_MIN_AGE_SECONDS:-300}
 issue_prefix=${DOGFOOD_ISSUE_PREFIX:-STACK}
-followup_prefix=${DOGFOOD_FOLLOWUP_PREFIX:-$issue_prefix}
+followup_prefix=${DOGFOOD_FOLLOWUP_PREFIX:-${issue_prefix:-STACK}}
 
 # Candidate selection: the bash adapter sorts by priority asc; we additionally
 # require mtime older than the age guard so we don't pick up an issue another
@@ -123,7 +124,7 @@ emit_event info dogfood.selected success "id=${selected_id} ref=${selected_ref}"
 
 if [[ "${DOGFOOD_DRY_RUN:-0}" == "1" ]]; then
   emit_event info dogfood.dry_run success "DOGFOOD_DRY_RUN=1; skipping real dispatch" "$selected_id"
-  scripts/symphony.sh once --dry-run --limit 1 >/dev/null 2>&1 || true
+  scripts/symphony.sh once --dry-run --limit 1 --issue "$selected_id" >/dev/null 2>&1 || true
   exit 0
 fi
 
@@ -144,7 +145,7 @@ pre_dispatch_sha=$(git rev-parse HEAD)
 if ! SYMPHONY_ALLOW_AGENT_RUN=1 \
      LLM_CHAIN="$llm_chain" \
      LLM_TIMEOUT="$llm_timeout" \
-     scripts/symphony.sh once --limit 1; then
+     scripts/symphony.sh once --limit 1 --issue "$selected_id"; then
   emit_event warn dogfood.dispatch_failed failure "symphony.sh once exited non-zero" "$selected_id"
   workspace_key=$(printf '%s' "$selected_id" | sed -E 's/[^A-Za-z0-9._-]+/_/g; s/^_+//; s/_+$//')
   failure_dir=".symphony/issues/human_review"

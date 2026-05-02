@@ -377,14 +377,24 @@ symphony_run_issue(){
 }
 
 symphony_once(){
-  local dry_run="$1" limit="${2:-1}" count=0 ref
+  local dry_run="$1" limit="${2:-1}" only_issue="${3:-}" count=0 ref identifier
   while IFS= read -r ref; do
     [[ -z "$ref" ]] && continue
+    identifier="$(symphony_issue_identifier_from_ref "$ref")"
+    if [[ -n "$only_issue" && "$identifier" != "$only_issue" ]]; then
+      continue
+    fi
     (( count >= limit )) && break
     symphony_run_issue "$ref" "$dry_run"
     count=$((count + 1))
   done < <(symphony_candidate_refs)
-  [[ "$count" -gt 0 ]] || symphony_emit_log info symphony.no_candidates success "no active candidates from tracker.kind=$symphony_tracker_kind"
+  if [[ "$count" -eq 0 ]]; then
+    if [[ -n "$only_issue" ]]; then
+      symphony_emit_log info symphony.no_candidates success "no active candidate matched issue=$only_issue from tracker.kind=$symphony_tracker_kind"
+    else
+      symphony_emit_log info symphony.no_candidates success "no active candidates from tracker.kind=$symphony_tracker_kind"
+    fi
+  fi
 }
 
 symphony_usage(){
@@ -392,7 +402,7 @@ symphony_usage(){
 Usage:
   scripts/symphony.sh validate
   scripts/symphony.sh list
-  scripts/symphony.sh once [--dry-run] [--limit N]
+  scripts/symphony.sh once [--dry-run] [--limit N] [--issue ID]
 
 Tracker kinds (set via tracker.kind in WORKFLOW.md):
   local_markdown  — files under tracker.issues_root (default)
@@ -408,16 +418,17 @@ case "$symphony_command" in
   validate) symphony_validate ;;
   list) symphony_validate >/dev/null; symphony_list ;;
   once)
-    symphony_dry_run=false; symphony_limit=1
+    symphony_dry_run=false; symphony_limit=1; symphony_only_issue=""
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --dry-run) symphony_dry_run=true; shift ;;
         --limit) symphony_limit="$2"; shift 2 ;;
+        --issue) symphony_only_issue="$2"; shift 2 ;;
         *) symphony_fail symphony.unknown_arg "$1" ;;
       esac
     done
     symphony_validate >/dev/null
-    symphony_once "$symphony_dry_run" "$symphony_limit"
+    symphony_once "$symphony_dry_run" "$symphony_limit" "$symphony_only_issue"
     ;;
   help|-h|--help) symphony_usage ;;
   *) symphony_usage >&2; exit 2 ;;

@@ -25,9 +25,8 @@ See `quality-score-history.md` below.
 | Artifact | Source | Generator | Trigger |
 | --- | --- | --- | --- |
 | `quality-score-history.md` | `git log -- docs/QUALITY_SCORE.md` | `scripts/generate-quality-score-history.sh` | manual (pre-commit hook pending, STACK-001) |
-| `db-schema.md` | the warehouse layer once it exists | `scripts/generate-db-schema.sh` (TODO) | pre-commit + nightly |
-| `layer-inventory.md` | `packages/*/src/<layer>/` walk | `scripts/generate-layer-inventory.sh` (TODO) | weekly cron + on lint failure |
+| `db-schema.md` | the warehouse layer once it exists | `scripts/generate-db-schema.sh` (planned) | pre-commit + nightly |
+| `layer-inventory.md` | `packages/*/src/<layer>/` walk | `scripts/generate-layer-inventory.sh` (planned) | weekly cron + on lint failure |
 | `symphony-state-snapshot.md` | running daemon's snapshot API | the daemon itself, on shutdown | manual + per-tick if useful |
 
 See STACK-003 for the broader generated-artifacts pipeline.
-

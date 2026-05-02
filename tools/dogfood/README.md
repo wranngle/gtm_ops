@@ -5,8 +5,9 @@ The self-feeding stack-improvement loop. Each tick:
 1. Picks the next unblocked Symphony issue (highest priority, mtime past
    the race-guard window so parallel auditors can finish filing without
    getting stomped on).
-2. Dispatches it via `scripts/symphony.sh once --limit 1` with a
-   multi-provider LLM chain (Claude → Codex → Gemini → Claude by default).
+2. Dispatches that exact issue via `scripts/symphony.sh once --issue <id>`
+   with a multi-provider LLM chain (Claude → Codex → Gemini → Claude by
+   default).
 3. Runs every validator the harness owns — the bash syntax check,
    knowledge-base validator, layered-architecture lint, Symphony validate
    + dry-run, and the per-language test suites for whatever trees the
@@ -49,7 +50,7 @@ DOGFOOD_LLM_CHAIN=claude:claude-sonnet-4-6 DOGFOOD_LLM_TIMEOUT=300 \
 | `DOGFOOD_MIN_AGE_SECONDS` | `300` | minimum mtime age (seconds) before an issue is eligible — race guard against parallel auditors filing fresh STACK-NNN files |
 | `DOGFOOD_DRY_RUN` | `0` | if `1`, picks an issue and runs the dry-run path; never invokes the real LLM, never commits |
 | `DOGFOOD_ISSUE_PREFIX` | `STACK` | positive allow-list for autonomous pickup; set to empty only when intentionally allowing any tracker prefix |
-| `DOGFOOD_FOLLOWUP_PREFIX` | `$DOGFOOD_ISSUE_PREFIX` | prefix used when filing follow-up issues |
+| `DOGFOOD_FOLLOWUP_PREFIX` | `$DOGFOOD_ISSUE_PREFIX` or `STACK` when the issue prefix is empty | prefix used when filing follow-up issues |
 | `SYMPHONY_WORKFLOW_FILE` | repo `WORKFLOW.md` | passed through to `scripts/symphony.sh` |
 
 ## Exit codes

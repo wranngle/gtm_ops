@@ -42,12 +42,26 @@ scan_targets=(
   "apps"
 )
 
-# Marker patterns: (regex, human label, severity)
-declare -a markers=(
-  'TODO\|TKTK\|FIXME\|XXX|todo-marker|info'
-  'placeholder|placeholder-prose|info'
-  'coming soon|coming-soon|info'
-  'TBD|tbd|info'
+# Marker patterns: regex, human label, and severity are parallel arrays because
+# regexes themselves use `|`; packing all three fields into one delimited string
+# silently disabled the TODO/FIXME/XXX scan.
+declare -a marker_patterns=(
+  'TODO|TKTK|FIXME|XXX'
+  'placeholder'
+  'coming soon'
+  'TBD'
+)
+declare -a marker_labels=(
+  'todo-marker'
+  'placeholder-prose'
+  'coming-soon'
+  'tbd'
+)
+declare -a marker_severities=(
+  'info'
+  'info'
+  'info'
+  'info'
 )
 
 emit_event info gardener.start success "scanning ${#scan_targets[@]} targets"
@@ -80,8 +94,10 @@ filter_upstream_sources() {
 }
 
 findings=0
-for marker_spec in "${markers[@]}"; do
-  IFS='|' read -r pattern label severity <<<"$marker_spec"
+for i in "${!marker_patterns[@]}"; do
+  pattern=${marker_patterns[$i]}
+  label=${marker_labels[$i]}
+  severity=${marker_severities[$i]}
   while IFS= read -r hit; do
     [[ -z "$hit" ]] && continue
     findings=$((findings + 1))

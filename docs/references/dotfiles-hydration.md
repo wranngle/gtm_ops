@@ -34,7 +34,7 @@ The dotfiles baseline owns repository hygiene. The Harness Engineering layer own
 - `.agents/AGENTS.md` preserves dotfiles-level imperatives and points to root `AGENTS.md`.
 - `CONTRIBUTING.md` points contributors at the knowledge-base validator.
 - `SECURITY.md` and `docs/SECURITY.md` agree that public artifacts are synthetic and clean-room.
-- `demo/cassette.tape` demonstrates the real local validation loop (`scripts/validate-knowledge-base.sh`, `scripts/symphony.sh once --dry-run --limit 1`, `scripts/symphony.sh list`); it must not be a placeholder.
+- `demo/cassette.tape` demonstrates the real local validation loop (`scripts/validate-knowledge-base.sh`, `scripts/symphony.sh once --dry-run --limit 1`, `scripts/symphony.sh list`); it must stay concrete.
 - `scripts/validate-knowledge-base.sh` checks that both layers remain present.
 - `scripts/symphony.sh` uses `scripts/bin/llm.sh` as its default codex-independent `agent.command`. The Symphony spec defines `codex.command` (default `codex app-server`); this repo aliases both to the multi-provider chain until a real Codex app-server adapter lands.
 - The `.github/ISSUE_TEMPLATE/*.yml` forms apply `symphony:todo` plus `priority:N` labels so the github_issues adapter (`docs/references/symphony-github-issues-adapter.md`) can pick up issues filed by humans, Codex, Gemini, or Claude with no extra triage step.
@@ -64,4 +64,4 @@ LLM_CHAIN=claude:haiku LLM_TIMEOUT=30 scripts/bin/llm.sh "say hello"
 
 ## Rehydration Rule
 
-If `.dotfiles.sh` is rerun, inspect the diff before committing. Generated files must not reintroduce placeholder URLs, placeholder maintainer emails, or generic text that contradicts the clean-room public-safety model. Re-run `scripts/validate-knowledge-base.sh` after rehydration; its placeholder scan is the safety net.
+If `.dotfiles.sh` is rerun, inspect the diff before committing. Generated files must not reintroduce fake URLs, fake maintainer emails, or generic text that contradicts the clean-room public-safety model. Re-run `scripts/validate-knowledge-base.sh` after rehydration; its synthetic-content scan is the safety net.

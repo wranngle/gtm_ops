@@ -597,29 +597,39 @@ mirror_file() {
     local cur_labels="${existing_labels[$stack_id]}"
     local cur_title="${existing_title[$stack_id]:-}"
     local cur_project="${existing_project[$stack_id]:-}"
-    local cur_desc_hash desired_desc_hash
+    local cur_desc_hash desired_desc_hash drift_summary
+    local -a drift_fields=()
     cur_desc_hash=$(extract_mirror_hash "${existing_description[$stack_id]}")
     desired_desc_hash=$(extract_mirror_hash "$body")
 
-    if [[ "$cur_state" == "$desired_state_id" \
-       && "$cur_priority" == "$desired_priority" \
-       && "$cur_labels" == "$desired_label_ids" \
-       && "$cur_title" == "$full_title" \
-       && "$cur_project" == "$desired_project_id" \
-       && -n "$cur_desc_hash" \
-       && "$cur_desc_hash" == "$desired_desc_hash" ]]; then
+    [[ "$cur_state" != "$desired_state_id" ]] && drift_fields+=("state")
+    [[ "$cur_priority" != "$desired_priority" ]] && drift_fields+=("priority")
+    [[ "$cur_labels" != "$desired_label_ids" ]] && drift_fields+=("labels")
+    [[ "$cur_title" != "$full_title" ]] && drift_fields+=("title")
+    [[ "$cur_project" != "$desired_project_id" ]] && drift_fields+=("project")
+    if [[ -z "$cur_desc_hash" ]]; then
+      drift_fields+=("description_hash_missing")
+    elif [[ "$cur_desc_hash" != "$desired_desc_hash" ]]; then
+      drift_fields+=("description")
+    fi
+
+    if (( ${#drift_fields[@]} == 0 )); then
       skipped=$((skipped + 1))
       return 0
     fi
+    drift_summary=$(IFS=,; printf '%s' "${drift_fields[*]}")
 
     if (( DRY_RUN )); then
-      printf 'WOULD UPDATE %s state=%s priority=%s labels=%d-ids project=%s title="%s"\n' \
-        "$stack_id" "$desired_state" "$desired_priority" \
+      printf 'WOULD UPDATE %s drift=%s state=%s priority=%s labels=%d-ids project=%s title="%s"\n' \
+        "$stack_id" "$drift_summary" \
+        "$desired_state" "$desired_priority" \
         "$(printf '%s' "$desired_label_ids" | tr ',' '\n' | grep -c .)" \
         "${desired_project_id:0:8}" "$full_title"
       updated=$((updated + 1))
       return 0
     fi
+
+    printf 'DRIFT %s fields=%s\n' "$stack_id" "$drift_summary" >&2
 
     local payload result label_ids_json
     label_ids_json=$(printf '%s' "$desired_label_ids" \
@@ -638,8 +648,9 @@ mirror_file() {
       }')
     result=$(linear "$payload")
     if echo "$result" | jq -e '.data.issueUpdate.success' >/dev/null; then
-      printf 'UPDATED %s -> state=%s pri=%s labels=%d project=%s\n' \
-        "$stack_id" "$desired_state" "$desired_priority" \
+      printf 'UPDATED %s drift=%s -> state=%s pri=%s labels=%d project=%s\n' \
+        "$stack_id" "$drift_summary" \
+        "$desired_state" "$desired_priority" \
         "$(echo "$label_ids_json" | jq 'length')" \
         "${desired_project_id:0:8}"
       updated=$((updated + 1))

@@ -22,6 +22,12 @@ Render the next task prompt without executing an agent:
 scripts/symphony.sh once --dry-run
 ```
 
+Render one explicit issue by identifier:
+
+```bash
+scripts/symphony.sh once --dry-run --issue STACK-002
+```
+
 Run the configured agent command for one task:
 
 ```bash
@@ -62,4 +68,3 @@ The layers are:
 1. Dotfiles hydration: repository hygiene and scripts.
 2. Harness Engineering: repo-local knowledge, docs, plans, checks.
 3. Symphony: task control plane, workspaces, workflow prompt, agent execution adapter.
-
