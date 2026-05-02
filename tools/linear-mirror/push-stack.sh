@@ -136,6 +136,181 @@ ensure_label_id() {
   printf '%s' "$id"
 }
 
+# ============== STACK-file derivation: type, area, scope ==============
+#
+# Mirrors the github conventions documented at ~/.dotfiles/docs/github-
+# conventions.md so a single-operator viewing Linear sees the same static
+# facets they'd see on a github repo. Linear's native flow surface (state,
+# priority, project) maps to the github "Projects v2 fields" tier; the
+# t.<type> + a/<area> labels are the "static facets only" tier.
+#
+# Title format: `STACK-NNN <type>(<scope>): <imperative summary>` (matches
+# conventional-commits, with `STACK-NNN` retained as a grep-stable prefix).
+# Scope = first derived area (most specific facet).
+#
+# Type derivation (exactly 1 per issue, in priority order):
+#   bug         → labels include "bug"
+#   security    → labels include "security" or "gating"
+#   perf        → labels include "performance" or "perf"
+#   chore       → labels include "lint" or "audit" or "validation"
+#   docs        → labels include "docs"
+#   refactor    → labels include "refactor"
+#   feat        → default (any STACK that doesn't fit above is treated as
+#                  net-new functionality on the canonical stack)
+#
+# Area derivation (0-N per issue, deduped):
+#   cli           cli, escript
+#   api           providers, llm-chain, codex, anthropic, prompt-renderer
+#   dashboard     dashboard(s), ui, ops-console, live-session, snapshot
+#   observability observability, tracing, telemetry, logging, metrics, smoke
+#   quality       lint, layered-architecture, naming, maintainability,
+#                 reliability, validation, validator, validators
+#   tracker       tracker, linear, github
+#   infra         docker-compose, worktree, per-worktree, infrastructure,
+#                 self-hosted-runner, ci, hooks, edge-mcp, gating
+#   docs          docs, references, generated, spec-section-*
+#   core          symphony-elixir, agent-runner, agent-command, schedulers,
+#                 scheduler, orchestrator, worker, retry-queue,
+#                 reconciliation, run-attempt, stall, preflight,
+#                 startup-cleanup, token-accounting, rate-limits, workspace,
+#                 stack (default)
+
+extract_raw_stack_labels() {
+  local file=$1 raw
+  raw=$(awk '/^---/{n++;next} n==1 && /^labels:/{sub(/^labels:[[:space:]]*/, ""); print; exit}' "$file")
+  printf '%s' "$raw" | tr ',' ' ' | tr -s ' \t'
+}
+
+derive_type() {
+  local file=$1
+  local labels_str
+  labels_str=" $(extract_raw_stack_labels "$file") "
+  case "$labels_str" in
+    *" bug "*)                            printf 'bug' ;;
+    *" security "*|*" gating "*)          printf 'security' ;;
+    *" performance "*|*" perf "*)         printf 'perf' ;;
+    *" lint "*|*" audit "*|*" validation "*)
+                                          printf 'chore' ;;
+    *" docs "*)                           printf 'docs' ;;
+    *" refactor "*)                       printf 'refactor' ;;
+    *)                                    printf 'feat' ;;
+  esac
+}
+
+derive_areas() {
+  local file=$1
+  local labels_str
+  labels_str=$(extract_raw_stack_labels "$file")
+  declare -A area_seen
+  local areas=()
+
+  add_area() {
+    local a=$1
+    [[ -n "${area_seen[$a]:-}" ]] && return 0
+    area_seen[$a]=1
+    areas+=("$a")
+  }
+
+  for label in $labels_str; do
+    case "$label" in
+      cli|escript) add_area cli ;;
+      providers|llm-chain|codex|anthropic|prompt-renderer|liquid)
+        add_area api ;;
+      dashboard|dashboards|ui|ops-console|live-session|snapshot)
+        add_area dashboard ;;
+      observability|tracing|telemetry|logging|metrics|smoke)
+        add_area observability ;;
+      lint|layered-architecture|naming|maintainability|reliability|validation|validator|validators|knowledge-base)
+        add_area quality ;;
+      tracker|linear|github|filesystem-watcher|reload)
+        add_area tracker ;;
+      docker-compose|worktree|per-worktree|infrastructure|self-hosted-runner|ci|hooks|edge-mcp|gating)
+        add_area infra ;;
+      security|sanitization)
+        add_area security ;;
+      docs|references|generated|harness)
+        add_area docs ;;
+      spec-section-*)
+        add_area docs ;;
+      symphony-elixir|agent-runner|agent-command|schedulers|scheduler|orchestrator|worker|retry-queue|reconciliation|run-attempt|stall|preflight|startup-cleanup|token-accounting|rate-limits|workspace)
+        add_area core ;;
+      stack|""|" ")
+        # Mirror metadata, not an area — every STACK file carries it. If
+        # we treated it as `a/core` here, scope-derivation would pick
+        # `core` even for issues that are clearly e.g. quality / cli.
+        : ;;
+      *) ;;
+    esac
+  done
+
+  # Default to core only if nothing else stuck — stops issues from being
+  # area-less, but does not drown out a more specific facet.
+  (( ${#areas[@]} == 0 )) && areas+=(core)
+  printf '%s' "${areas[*]}"
+}
+
+build_full_title() {
+  local file=$1 stack_id=$2
+  local title type areas first_area
+  title=$(grep -m1 '^# ' "$file" | sed 's/^# //' | head -c 200)
+  [[ -z "$title" ]] && title="(no title)"
+  type=$(derive_type "$file")
+  areas=$(derive_areas "$file")
+  first_area=$(printf '%s' "$areas" | awk '{print $1}')
+  if [[ -n "$first_area" ]]; then
+    printf '%s %s(%s): %s' "$stack_id" "$type" "$first_area" "$title"
+  else
+    printf '%s %s: %s' "$stack_id" "$type" "$title"
+  fi
+}
+
+# ============== Symphony Stack project ==============
+#
+# Group every mirrored issue under one Linear Project so an operator can
+# filter "all stack work" without label-juggling. Project is created on
+# first run; subsequent runs hit the cached id.
+
+readonly STACK_PROJECT_NAME="Symphony Stack"
+SYMPHONY_PROJECT_ID=""
+
+ensure_symphony_project_id() {
+  if [[ -n "$SYMPHONY_PROJECT_ID" ]]; then
+    printf '%s' "$SYMPHONY_PROJECT_ID"
+    return 0
+  fi
+  local payload result id
+  payload=$(jq -nc --arg name "$STACK_PROJECT_NAME" --arg team "$TEAM_ID" '{
+    query: "query($team:String!,$name:String!){team(id:$team){projects(filter:{name:{eq:$name}},first:1){nodes{id}}}}",
+    variables: {team: $team, name: $name}
+  }')
+  result=$(linear "$payload")
+  id=$(echo "$result" | jq -r '.data.team.projects.nodes[0].id // empty')
+  if [[ -n "$id" ]]; then
+    SYMPHONY_PROJECT_ID="$id"
+    printf '%s' "$id"
+    return 0
+  fi
+  if (( DRY_RUN )); then
+    SYMPHONY_PROJECT_ID="WOULD-CREATE-PROJECT"
+    printf '%s' "WOULD-CREATE-PROJECT"
+    return 0
+  fi
+  payload=$(jq -nc --arg team "$TEAM_ID" --arg name "$STACK_PROJECT_NAME" \
+    --arg desc "Auto-mirror target for every STACK-NNN issue. The dogfood loop closes against .symphony/issues/ on the filesystem; this project is the operator-facing surface (sortable kanban, cycles, etc)." '{
+    query: "mutation($team:String!,$name:String!,$desc:String){projectCreate(input:{teamIds:[$team],name:$name,description:$desc}){success project{id}}}",
+    variables: {team: $team, name: $name, desc: $desc}
+  }')
+  result=$(linear "$payload")
+  id=$(echo "$result" | jq -r '.data.projectCreate.project.id // empty')
+  if [[ -z "$id" ]]; then
+    printf 'PROJECT CREATE FAILED: %s\n' "$result" >&2
+    return 1
+  fi
+  SYMPHONY_PROJECT_ID="$id"
+  printf 'CREATED-PROJECT %s (%s)\n' "$STACK_PROJECT_NAME" "$id" >&2
+  printf '%s' "$id"
+}
+
 # ============== Existing-issue index ==============
 #
 # Fetches all STACK-prefixed Linear issues with the fields we need to do
@@ -148,23 +323,24 @@ declare -A existing_id existing_state existing_ident existing_priority \
 
 declare -a dupes_to_archive=()
 
+declare -A existing_title existing_project
 prime_existing_cache() {
   local payload
   payload=$(jq -nc --arg team "$TEAM_ID" '{
-    query: "query($team:String!){team(id:$team){issues(filter:{title:{startsWith:\"STACK-\"}},first:250){nodes{id identifier title state{id} priority description labels{nodes{id name}}}}}}",
+    query: "query($team:String!){team(id:$team){issues(filter:{title:{startsWith:\"STACK-\"}},first:250){nodes{id identifier title state{id} priority description labels{nodes{id name}} project{id}}}}}",
     variables: {team: $team}
   }')
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
-    local id ident title state_id priority desc labels stack_id
+    local id ident title state_id priority desc labels project_id stack_id
     id=$(echo "$line" | jq -r '.id')
     ident=$(echo "$line" | jq -r '.identifier')
     title=$(echo "$line" | jq -r '.title')
     state_id=$(echo "$line" | jq -r '.state.id')
     priority=$(echo "$line" | jq -r '.priority // 0')
     desc=$(echo "$line" | jq -r '.description // ""')
-    # Sort label IDs so the comparison is order-stable.
     labels=$(echo "$line" | jq -r '[.labels.nodes[].id] | sort | join(",")')
+    project_id=$(echo "$line" | jq -r '.project.id // ""')
     stack_id=$(printf '%s' "$title" | grep -oE 'STACK-[0-9]+' | head -n1)
     [[ -z "$stack_id" ]] && continue
 
@@ -175,6 +351,8 @@ prime_existing_cache() {
       existing_priority["$stack_id"]="$priority"
       existing_description["$stack_id"]="$desc"
       existing_labels["$stack_id"]="$labels"
+      existing_title["$stack_id"]="$title"
+      existing_project["$stack_id"]="$project_id"
       continue
     fi
 
@@ -190,6 +368,8 @@ prime_existing_cache() {
       existing_priority["$stack_id"]="$priority"
       existing_description["$stack_id"]="$desc"
       existing_labels["$stack_id"]="$labels"
+      existing_title["$stack_id"]="$title"
+      existing_project["$stack_id"]="$project_id"
     else
       dupes_to_archive+=("$id")
     fi
@@ -223,17 +403,23 @@ pre_resolve_all_labels() {
   done
 }
 
-# extract_labels is defined later, so we forward-declare via re-source. Simpler
-# fix: define a minimal inline parser here that mirrors extract_labels' output.
+# extract_labels_inline mirrors the canonical extract_labels output so the
+# pre-resolve pass and the per-issue mirror call agree on which labels need
+# to exist in Linear. derive_type / derive_areas / extract_raw_stack_labels
+# are defined further down — sourcing them inline here would duplicate
+# logic, so we accept the forward reference (bash resolves function names
+# at call time, not parse time).
 extract_labels_inline() {
-  local file=$1 raw
-  raw=$(awk '/^---/{n++;next} n==1 && /^labels:/{sub(/^labels:[[:space:]]*/, ""); print; exit}' "$file")
-  raw=$(printf '%s' "$raw" | tr ',' ' ' | tr -s ' \t')
-  printf '%s stack auto-mirror' "$raw"
+  local file=$1
+  local type areas
+  type=$(derive_type "$file")
+  areas=$(derive_areas "$file")
+  printf 'stack auto-mirror t.%s' "$type"
+  for area in $areas; do
+    printf ' a/%s' "$area"
+  done
 }
 
-# Replace the forward call with the inline version so we don't depend on
-# definition order.
 declare -A seen_label
 for f in .symphony/issues/todo/STACK-*.md .symphony/issues/done/STACK-*.md; do
   [[ -f "$f" ]] || continue
@@ -246,6 +432,10 @@ for f in .symphony/issues/todo/STACK-*.md .symphony/issues/done/STACK-*.md; do
   done
 done
 unset seen_label
+
+# Also pre-resolve the Symphony Stack project so per-issue mirroring just
+# reads the cached id instead of doing a fetch-or-create per call.
+ensure_symphony_project_id >/dev/null 2>&1 || true
 
 if (( CLEAN_DUPES )); then
   if (( ${#dupes_to_archive[@]} == 0 )); then
@@ -283,14 +473,23 @@ extract_priority() {
 }
 
 extract_labels() {
-  # STACK frontmatter `labels: a,b,c` → space-separated label names, plus
-  # `stack` and `auto-mirror` appended to every issue so an operator can
-  # filter "all mirrored" issues separately from native Linear ones.
-  local file=$1 raw
-  raw=$(awk '/^---/{n++;next} n==1 && /^labels:/{sub(/^labels:[[:space:]]*/, ""); print; exit}' "$file")
-  # Replace commas with spaces, normalize whitespace.
-  raw=$(printf '%s' "$raw" | tr ',' ' ' | tr -s ' \t')
-  printf '%s stack auto-mirror' "$raw"
+  # Mirrors github-conventions.md "static facets only" tier. Emits:
+  #   - `stack`, `auto-mirror`     (mirror metadata)
+  #   - `t.<type>`                  (exactly 1, derived)
+  #   - `a/<area>` for each area    (0-N, derived; deduped)
+  #
+  # Raw STACK frontmatter labels are NOT emitted directly — they map
+  # through derive_areas into the canonical `a/<area>` taxonomy so an
+  # operator browsing Linear sees a stable, filterable surface.
+  local file=$1
+  local type areas
+  type=$(derive_type "$file")
+  areas=$(derive_areas "$file")
+
+  printf 'stack auto-mirror t.%s' "$type"
+  for area in $areas; do
+    printf ' a/%s' "$area"
+  done
 }
 
 extract_full_body() {
@@ -370,13 +569,12 @@ skipped=0
 
 mirror_file() {
   local file=$1 desired_state=$2
-  local stack_id title body desired_state_id desired_priority \
-        desired_labels_str desired_label_ids full_title
+  local stack_id body desired_state_id desired_priority \
+        desired_labels_str desired_label_ids full_title \
+        desired_project_id
 
   stack_id=$(basename "$file" .md)
-  title=$(grep -m1 '^# ' "$file" | sed 's/^# //' | head -c 200)
-  [[ -z "$title" ]] && title="(no title)"
-  full_title="${stack_id}: ${title}"
+  full_title=$(build_full_title "$file" "$stack_id")
 
   case "$desired_state" in
     todo) desired_state_id="$STATE_TODO" ;;
@@ -388,6 +586,7 @@ mirror_file() {
   desired_labels_str=$(extract_labels "$file")
   desired_label_ids=$(build_label_ids_csv "$desired_labels_str")
   body=$(build_description "$file" "$desired_state" "$stack_id")
+  desired_project_id="${SYMPHONY_PROJECT_ID:-}"
 
   if [[ -n "${existing_id[$stack_id]:-}" ]]; then
     # Drift detection: compare every tracked field. Description comparison
@@ -396,6 +595,8 @@ mirror_file() {
     local cur_state="${existing_state[$stack_id]}"
     local cur_priority="${existing_priority[$stack_id]}"
     local cur_labels="${existing_labels[$stack_id]}"
+    local cur_title="${existing_title[$stack_id]:-}"
+    local cur_project="${existing_project[$stack_id]:-}"
     local cur_desc_hash desired_desc_hash
     cur_desc_hash=$(extract_mirror_hash "${existing_description[$stack_id]}")
     desired_desc_hash=$(extract_mirror_hash "$body")
@@ -403,6 +604,8 @@ mirror_file() {
     if [[ "$cur_state" == "$desired_state_id" \
        && "$cur_priority" == "$desired_priority" \
        && "$cur_labels" == "$desired_label_ids" \
+       && "$cur_title" == "$full_title" \
+       && "$cur_project" == "$desired_project_id" \
        && -n "$cur_desc_hash" \
        && "$cur_desc_hash" == "$desired_desc_hash" ]]; then
       skipped=$((skipped + 1))
@@ -410,9 +613,10 @@ mirror_file() {
     fi
 
     if (( DRY_RUN )); then
-      printf 'WOULD UPDATE %s state=%s priority=%s labels=%d-ids\n' \
+      printf 'WOULD UPDATE %s state=%s priority=%s labels=%d-ids project=%s title="%s"\n' \
         "$stack_id" "$desired_state" "$desired_priority" \
-        "$(printf '%s' "$desired_label_ids" | tr ',' '\n' | grep -c .)"
+        "$(printf '%s' "$desired_label_ids" | tr ',' '\n' | grep -c .)" \
+        "${desired_project_id:0:8}" "$full_title"
       updated=$((updated + 1))
       return 0
     fi
@@ -427,15 +631,17 @@ mirror_file() {
       --arg desc "$body" \
       --argjson priority "$desired_priority" \
       --argjson labels "$label_ids_json" \
+      --arg project "$desired_project_id" \
       '{
-        query: "mutation($id:String!,$state:String!,$title:String!,$desc:String,$priority:Int,$labels:[String!]){issueUpdate(id:$id,input:{stateId:$state,title:$title,description:$desc,priority:$priority,labelIds:$labels}){success}}",
-        variables: {id:$id,state:$state,title:$title,desc:$desc,priority:$priority,labels:$labels}
+        query: "mutation($id:String!,$state:String!,$title:String!,$desc:String,$priority:Int,$labels:[String!],$project:String){issueUpdate(id:$id,input:{stateId:$state,title:$title,description:$desc,priority:$priority,labelIds:$labels,projectId:$project}){success}}",
+        variables: {id:$id,state:$state,title:$title,desc:$desc,priority:$priority,labels:$labels,project:$project}
       }')
     result=$(linear "$payload")
     if echo "$result" | jq -e '.data.issueUpdate.success' >/dev/null; then
-      printf 'UPDATED %s -> state=%s pri=%s labels=%d\n' \
+      printf 'UPDATED %s -> state=%s pri=%s labels=%d project=%s\n' \
         "$stack_id" "$desired_state" "$desired_priority" \
-        "$(echo "$label_ids_json" | jq 'length')"
+        "$(echo "$label_ids_json" | jq 'length')" \
+        "${desired_project_id:0:8}"
       updated=$((updated + 1))
     else
       printf 'UPDATE FAILED %s: %s\n' "$stack_id" "$result" >&2
@@ -460,9 +666,10 @@ mirror_file() {
     --arg desc "$body" \
     --argjson priority "$desired_priority" \
     --argjson labels "$label_ids_json" \
+    --arg project "$desired_project_id" \
     '{
-      query: "mutation($team:String!,$state:String!,$title:String!,$desc:String,$priority:Int,$labels:[String!]){issueCreate(input:{teamId:$team,stateId:$state,title:$title,description:$desc,priority:$priority,labelIds:$labels}){success issue{identifier}}}",
-      variables: {team:$team,state:$state,title:$title,desc:$desc,priority:$priority,labels:$labels}
+      query: "mutation($team:String!,$state:String!,$title:String!,$desc:String,$priority:Int,$labels:[String!],$project:String){issueCreate(input:{teamId:$team,stateId:$state,title:$title,description:$desc,priority:$priority,labelIds:$labels,projectId:$project}){success issue{identifier}}}",
+      variables: {team:$team,state:$state,title:$title,desc:$desc,priority:$priority,labels:$labels,project:$project}
     }')
   result=$(linear "$payload")
   if echo "$result" | jq -e '.data.issueCreate.success' >/dev/null; then
