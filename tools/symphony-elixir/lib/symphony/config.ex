@@ -24,6 +24,24 @@ defmodule Symphony.Config do
   alias Symphony.Workflow
   alias Symphony.WorkflowLoader
 
+  # Upstream-compatible default prompt used by `workflow_prompt/0` when the
+  # workflow file is missing or its prompt body is blank. Mirrors the
+  # template baked into upstream `SymphonyElixir.Config` so prompt-builder
+  # tests can rely on the same fallback contract.
+  @default_prompt_template """
+  You are working on a Linear issue.
+
+  Identifier: {{ issue.identifier }}
+  Title: {{ issue.title }}
+
+  Body:
+  {% if issue.description %}
+  {{ issue.description }}
+  {% else %}
+  No description provided.
+  {% endif %}
+  """
+
   @default_observability_settings %{
     refresh_ms: 1_000,
     render_interval_ms: 1_000,
@@ -62,6 +80,9 @@ defmodule Symphony.Config do
       {:ok, settings} ->
         settings
 
+      {:error, reason} ->
+        raise ArgumentError, message: format_config_error(reason)
+
       :default ->
         %{
           tracker: @default_tracker_settings,
@@ -70,6 +91,109 @@ defmodule Symphony.Config do
           observability: @default_observability_settings,
           polling: %{interval_ms: 30_000}
         }
+    end
+  end
+
+  @doc """
+  Upstream-compatible result variant of `settings!/0`. Returns
+  `{:ok, schema}` when the workflow loads and parses cleanly; otherwise
+  returns the raw error tuple from `Workflow.current/0` or
+  `Schema.parse/1` so callers (most notably `validate!/0`) can pattern
+  match on validation failures without catching `ArgumentError`.
+  """
+  @spec settings() :: {:ok, Schema.t()} | {:error, term()}
+  def settings do
+    case Workflow.current() do
+      {:ok, %{config: config}} when is_map(config) ->
+        Schema.parse(config)
+
+      {:ok, _other} ->
+        {:error, :workflow_front_matter_not_a_map}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Upstream-compatible workflow-prompt accessor. Returns the prompt body
+  from `WORKFLOW.md` when present and non-blank, otherwise falls back to
+  the built-in `@default_prompt_template` so prompt rendering can still
+  proceed with a sensible default (spec § 5.5 / § 12).
+  """
+  @spec workflow_prompt() :: String.t()
+  def workflow_prompt do
+    case Workflow.current() do
+      {:ok, %{prompt_template: prompt}} when is_binary(prompt) ->
+        if String.trim(prompt) == "", do: @default_prompt_template, else: prompt
+
+      _ ->
+        @default_prompt_template
+    end
+  end
+
+  @doc """
+  Upstream-compatible semantic validator. Combines schema-level parsing
+  (`Schema.parse/1`) with cross-field rules that the typed schema cannot
+  express on its own (e.g. `tracker.kind == "linear"` requires an API
+  key + project slug).
+
+  Returns `:ok` when the workflow is dispatch-ready, or `{:error,
+  reason}` where `reason` is one of:
+
+    * `{:invalid_workflow_config, message}` — schema parse failure or
+      missing-required-field rejection from the changeset pipeline.
+    * `{:unsupported_tracker_kind, kind}` — `tracker.kind` is set but
+      not in the supported set.
+    * `:missing_tracker_kind` — `tracker.kind` resolved to `nil`.
+    * `:missing_linear_api_token` — `tracker.kind == "linear"` but the
+      api key is unset.
+    * `:missing_linear_project_slug` — `tracker.kind == "linear"` but
+      the project slug is unset.
+    * passthroughs from `Workflow.current/0` failure modes.
+  """
+  @spec validate!() :: :ok | {:error, term()}
+  def validate! do
+    with {:ok, settings} <- settings() do
+      validate_semantics(settings)
+    end
+  end
+
+  defp validate_semantics(settings) do
+    cond do
+      is_nil(settings.tracker.kind) ->
+        {:error, :missing_tracker_kind}
+
+      settings.tracker.kind not in ["linear", "memory"] ->
+        {:error, {:unsupported_tracker_kind, settings.tracker.kind}}
+
+      settings.tracker.kind == "linear" and not is_binary(settings.tracker.api_key) ->
+        {:error, :missing_linear_api_token}
+
+      settings.tracker.kind == "linear" and not is_binary(settings.tracker.project_slug) ->
+        {:error, :missing_linear_project_slug}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp format_config_error(reason) do
+    case reason do
+      {:invalid_workflow_config, message} ->
+        "Invalid WORKFLOW.md config: #{message}"
+
+      {:missing_workflow_file, path, raw_reason} ->
+        "Missing WORKFLOW.md at #{path}: #{inspect(raw_reason)}"
+
+      {:workflow_parse_error, raw_reason} ->
+        "Failed to parse WORKFLOW.md: #{inspect(raw_reason)}"
+
+      :workflow_front_matter_not_a_map ->
+        "Failed to parse WORKFLOW.md: workflow front matter must decode to a map"
+
+      other ->
+        "Invalid WORKFLOW.md config: #{inspect(other)}"
     end
   end
 
@@ -93,8 +217,17 @@ defmodule Symphony.Config do
         {:ok, %{config: config}} when is_map(config) ->
           case Schema.parse(config) do
             {:ok, parsed} -> {:ok, parsed}
-            _ -> :default
+            {:error, _reason} = err -> err
           end
+
+        {:error, {:missing_workflow_file, _path, _reason}} ->
+          # No workflow file on disk at all — fall back to defaults so the
+          # dashboard formatter and other read-only surfaces remain usable
+          # in isolation (e.g. StatusDashboardSnapshotTest).
+          :default
+
+        {:error, _reason} = err ->
+          err
 
         _ ->
           :default
