@@ -27,6 +27,11 @@ agent:
   command: bash $(git rev-parse --show-toplevel)/examples/csv-validator/validate.sh {{issue.identifier}}
   max_concurrent_agents: 2
   require_explicit_run: false
+  # Force the LocalShell adapter; the default heuristic picks
+  # CodexAppServer (which expects JSON-RPC) when `codex.command`
+  # doesn't contain `scripts/bin/llm.sh`. This workload is a plain
+  # shell command, no Codex protocol involved.
+  runner_kind: local_shell
 
 codex:
   command: "true"
