@@ -29,6 +29,16 @@ logs/*.jsonl
 .symphony/runtime/*
 !.symphony/runtime/.gitkeep
 
+# CSV-validator demo runtime state
+examples/csv-validator/queue/in_progress/*
+!examples/csv-validator/queue/in_progress/.gitkeep
+examples/csv-validator/queue/done/*
+!examples/csv-validator/queue/done/.gitkeep
+examples/csv-validator/queue/human_review/*
+!examples/csv-validator/queue/human_review/.gitkeep
+examples/csv-validator/workspaces/*
+!examples/csv-validator/workspaces/.gitkeep
+
 # Claude Code agent worktrees (transient, not for git)
 .claude/worktrees/
 .claude/*.lock

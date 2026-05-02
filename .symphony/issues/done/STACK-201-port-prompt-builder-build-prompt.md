@@ -3,6 +3,8 @@ id: STACK-201
 priority: 1
 labels: stack,symphony-elixir,test-port,prompt-builder
 blocked_by:
+resolved_by: 8ccb3fd
+resolved_at: 2026-05-02
 ---
 # Port PromptBuilder.build_prompt/1 from upstream so prompt rendering covers the parked test
 

@@ -3,6 +3,8 @@ id: STACK-200
 priority: 1
 labels: stack,symphony-elixir,test-port,config
 blocked_by:
+resolved_by: 8ccb3fd
+resolved_at: 2026-05-02
 ---
 # Port Symphony.Config.validate!/0 from upstream so the parked core_test passes
 

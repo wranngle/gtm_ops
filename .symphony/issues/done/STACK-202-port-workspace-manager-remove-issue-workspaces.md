@@ -3,6 +3,8 @@ id: STACK-202
 priority: 1
 labels: stack,symphony-elixir,test-port,workspace-manager
 blocked_by:
+resolved_by: 8ccb3fd
+resolved_at: 2026-05-02
 ---
 # Port WorkspaceManager.remove_issue_workspaces/1,2 (and supporting workspace extensions) from upstream
 
