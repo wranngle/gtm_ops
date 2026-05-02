@@ -2,12 +2,21 @@
 
 Status: Active
 Source: https://openai.com/index/harness-engineering/
-Local diagram sources:
 
-- `/home/wranngle/.dotfiles/temp/OAI_Harness_engineering_Codex_drives_the_app_with_Chrome_DevTools_MCP_to_validate_its_work_desktop-dark.png`
-- `/home/wranngle/.dotfiles/temp/OAI_Harness_engineering_Layered_domain_architecture_with_explicit_cross-cutting_boundries_desktop-dark.png`
-- `/home/wranngle/.dotfiles/temp/OAI_Harness_engineering_The_limits_of_agent_knowledge_desktop-dark.png`
-- `/home/wranngle/.dotfiles/temp/OAI_Harness_engineering_Giving_Codex_a_full_observability_stack_desktop-dark.png`
+## Source material checked into this repo
+
+Authoritative source — what the agents and humans should consult when this
+derivative file is unclear:
+
+- [openai_harness_engineering_original_spec.txt](openai_harness_engineering_original_spec.txt) — full text of the Harness Engineering post
+- [openai_symphony_harness_engineering_stack_diagrams_explained.txt](openai_symphony_harness_engineering_stack_diagrams_explained.txt) — diagrams plus their narrative read
+
+Diagrams (PNG, also checked in):
+
+- [`OAI_Harness_engineering_Layered_domain_architecture_with_explicit_cross-cutting_boundries_desktop-dark.png`](OAI_Harness_engineering_Layered_domain_architecture_with_explicit_cross-cutting_boundries_desktop-dark.png) — the Types → Config → Repo → Service → Runtime → UI rule with Providers as cross-cutting boundary; implemented by [`layered-domain-architecture.md`](layered-domain-architecture.md) + `scripts/lint-layered-architecture.sh`
+- [`OAI_Harness_engineering_Codex_drives_the_app_with_Chrome_DevTools_MCP_to_validate_its_work_desktop-dark.png`](OAI_Harness_engineering_Codex_drives_the_app_with_Chrome_DevTools_MCP_to_validate_its_work_desktop-dark.png) — the snapshot/trigger/snapshot/fix/loop pattern; implemented by [`edge-devtools-mcp.md`](edge-devtools-mcp.md) + `tools/edge-mcp/`
+- [`OAI_Harness_engineering_Giving_Codex_a_full_observability_stack_desktop-dark.png`](OAI_Harness_engineering_Giving_Codex_a_full_observability_stack_desktop-dark.png) — Vector + Victoria* + per-worktree observability; implemented by [`local-observability.md`](local-observability.md) + `tools/observability/`
+- [`OAI_Harness_engineering_The_limits_of_agent_knowledge_desktop-dark.png`](OAI_Harness_engineering_The_limits_of_agent_knowledge_desktop-dark.png) — repo-as-system-of-record principle; informs the entire `docs/` layout
 
 ## Applied Takeaways
 

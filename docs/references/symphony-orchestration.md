@@ -1,11 +1,24 @@
 # Symphony Orchestration Reference
 
 Status: Active
-Sources:
+Sources (upstream):
 
 - OpenAI article: https://openai.com/index/open-source-codex-orchestration-symphony/
 - OpenAI repository: https://github.com/openai/symphony
 - Symphony spec: https://github.com/openai/symphony/blob/main/SPEC.md
+
+## Source material checked into this repo
+
+Authoritative when this derivative file is unclear:
+
+- [openai_symphony_original_spec.txt](openai_symphony_original_spec.txt) — full SPEC.md
+- [openai_symphony_github.txt](openai_symphony_github.txt) — Symphony repo / OpenAI announcement post text
+- [openai_symphony_harness_engineering_stack_diagrams_explained.txt](openai_symphony_harness_engineering_stack_diagrams_explained.txt) — diagrams with narrative read
+
+Diagrams (PNG, also checked in):
+
+- [`Coworking-Desktop-Dark-Symphony__1_.png`](Coworking-Desktop-Dark-Symphony__1_.png) — the Symphony control-plane/agent topology
+- [`BeforeAndAfter-Desktop-Dark-Symphony.png`](BeforeAndAfter-Desktop-Dark-Symphony.png) — the productivity-shift framing
 
 ## What This Repo Adopts
 

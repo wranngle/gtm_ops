@@ -40,3 +40,6 @@ erl_crash.dump
 
 # Playwright MCP runtime artifacts (transient agent snapshots)
 .playwright-mcp/
+
+# Windows alternate-data-stream metadata that comes through WSL copies
+**/*:Zone.Identifier

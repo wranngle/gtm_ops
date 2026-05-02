@@ -1,0 +1,828 @@
+howdy
+
+Below is a **structured extraction of the images**, focused on what each diagram visually communicates.
+
+---
+
+# 1. Codex drives the app with Chrome DevTools MCP to validate its work
+
+```yaml
+diagram:
+  title: "Codex drives the app with Chrome DevTools MCP to validate its work"
+  theme:
+    background: black
+    primary_color: neon green
+    secondary_color: white/gray
+    style: sequence diagram / swimlane timeline
+  actors:
+    - Codex
+    - App
+    - Chrome DevTools
+  layout:
+    type: horizontal swimlanes
+    columns:
+      left: Codex
+      center: App
+      right: Chrome DevTools
+    repeated_labels:
+      bottom:
+        - Codex
+        - App
+        - Chrome DevTools
+```
+
+## Flow
+
+```text
+Codex
+│
+├─ Select target + clear console ───────────────────────────────► Chrome DevTools
+│
+├─ Snapshot BEFORE ─────────────────────────────────────────────► Chrome DevTools
+│
+├─ Trigger UI path ─────────────────────────────────────────────► Chrome DevTools
+│                                │
+│                                └─ Runtime events
+│                                   during interaction ─────────► Chrome DevTools
+│
+├─ Snapshot AFTER ──────────────────────────────────────────────► Chrome DevTools
+│
+├─ Apply fix + restart ─────────────────────────────────────────► Chrome DevTools
+│
+└─ LOOP UNTIL CLEAN
+   └─ Re-run validation ────────────────────────────────────────► Chrome DevTools
+```
+
+## Verbose explanation
+
+This diagram shows Codex acting like an autonomous QA engineer and debugger.
+
+Codex is not merely editing files blindly. It is controlling the application through Chrome DevTools, using DevTools as an inspection and validation layer.
+
+The sequence begins with Codex selecting the correct browser/app target and clearing the console. Clearing the console removes stale noise so that new errors, warnings, logs, and runtime events can be attributed to the current test path.
+
+Codex then captures a **before snapshot**. This means it records the current UI state before taking action. The snapshot could include DOM structure, visual layout, console state, screenshots, accessibility tree, or other browser-observable data.
+
+Next, Codex triggers a UI path. This represents user-like interaction: clicking buttons, navigating screens, filling forms, opening menus, submitting workflows, or reproducing a bug.
+
+During that interaction, runtime events occur inside the app. The diagram shows these events happening between the App and Chrome DevTools. These could include console errors, network requests, JavaScript exceptions, performance events, route changes, failed API calls, or UI state transitions.
+
+After the interaction, Codex captures an **after snapshot**. By comparing before and after, Codex can determine whether the UI changed correctly, whether the bug reproduced, whether a fix worked, or whether unexpected behavior occurred.
+
+If the output is bad, Codex applies a fix to the codebase and restarts the app. The diagram then enters a boxed loop labeled **LOOP — UNTIL CLEAN**. Inside the loop, Codex re-runs validation until the observable app state is clean.
+
+“Clean” visually means the validation path passes: no unexpected console errors, no broken UI state, no failing interaction, no failed runtime events, and no mismatch between expected and observed behavior.
+
+The key idea is:
+
+```text
+Codex edits code
+→ launches/restarts app
+→ drives real UI
+→ observes browser/runtime evidence
+→ fixes based on evidence
+→ repeats until validated
+```
+
+This is harness engineering: the app becomes legible to the agent.
+
+---
+
+# 2. Giving Codex a full observability stack
+
+```yaml
+diagram:
+  title: "Giving Codex a full observability stack"
+  theme:
+    background: black
+    primary_color: white
+    accent_color: green
+    style: observability pipeline + agent feedback loop
+  major_regions:
+    - App telemetry emission
+    - Local Vector fan-out
+    - Observability stack services
+    - Query APIs
+    - Codex reasoning and implementation loop
+```
+
+## System tree
+
+```text
+App
+├─ emits LOGS over HTTP
+├─ emits OTLP METRICS
+└─ emits OTLP TRACES
+   │
+   ▼
+Vector
+└─ Fan out locally
+   ├─ Victoria Logs
+   │  └─ LogQL API
+   ├─ Victoria Metrics
+   │  └─ PromQL API
+   └─ Victoria Traces
+      └─ TraceQL API
+```
+
+## Codex feedback loop
+
+```text
+Observability APIs
+├─ LogQL API
+├─ PromQL API
+└─ TraceQL API
+   │
+   ▼
+Codex
+├─ Query
+├─ Correlate
+├─ Reason
+│
+├─ Implement change in codebase / PR
+├─ Restart app
+│
+▼
+Codebase
+└─ Re-run workload
+   └─ Test UI journey
+      └─ Feedback loop back to Codex
+```
+
+## Verbose explanation
+
+This diagram expands Codex’s visibility beyond the browser UI.
+
+The App emits three categories of telemetry:
+
+```text
+LOGS
+OTLP METRICS
+OTLP TRACES
+```
+
+**Logs** are event records: errors, warnings, debug messages, request summaries, and service startup messages.
+
+**Metrics** are numeric measurements over time: latency, request counts, memory usage, queue depth, startup duration, error rate, or span duration.
+
+**Traces** are request journeys across code paths or services. A trace shows how one operation moves through the system and where time is spent.
+
+All three telemetry streams flow into **Vector**. Vector acts as a local collector and router. Its job is to receive telemetry from the app and fan it out to dedicated observability backends.
+
+The observability stack contains:
+
+```text
+Victoria Logs   → queried through LogQL API
+Victoria Metrics → queried through PromQL API
+Victoria Traces  → queried through TraceQL API
+```
+
+Codex connects to the query APIs. It can ask questions such as:
+
+```text
+Which errors appeared during this test?
+Which endpoint is slow?
+Which trace span exceeded the limit?
+Did startup complete under the target threshold?
+Did the UI journey generate failed network calls?
+Are metrics worse after the change?
+```
+
+The right side of the diagram shows Codex using this observability stack to operate in a closed loop:
+
+```text
+Query
+→ Correlate
+→ Reason
+→ Implement change
+→ Restart app
+→ Re-run workload
+→ Test UI journey
+→ Feedback loop
+```
+
+The loop is important. Codex is not just reading logs passively. It uses logs, metrics, and traces as evidence, modifies the codebase, restarts the app, reruns the same workload, tests the same UI journey, and checks whether the signals improved.
+
+The system makes runtime behavior machine-readable to Codex.
+
+The practical architecture is:
+
+```text
+App telemetry
+→ local collector
+→ local observability backends
+→ query APIs
+→ Codex
+→ code change
+→ rerun workload
+→ observe again
+```
+
+This lets Codex debug performance, reliability, startup, tracing, and UI behavior without waiting for a human to manually inspect dashboards.
+
+---
+
+# 3. Layered domain architecture with explicit cross-cutting boundaries
+
+```yaml
+diagram:
+  title: "Layered domain architecture with explicit cross-cutting boundaries"
+  theme:
+    background: black
+    primary_color: white
+    style: dependency graph inside bounded domain
+  outer_modules:
+    - Utils
+  bounded_region:
+    name: Business logic domain
+```
+
+## Architecture tree
+
+```text
+Utils
+└─ feeds into Providers
+
+Business logic domain
+├─ Providers
+│  ├─ depends downward on Service
+│  └─ connects horizontally to App Wiring + UI
+│
+├─ Service
+│  └─ depends horizontally on Runtime
+│
+├─ Runtime
+│  ├─ depends horizontally on UI
+│  └─ feeds upward into App Wiring + UI
+│
+├─ UI
+│
+├─ Types
+│  └─ depends horizontally on Config
+│
+├─ Config
+│  └─ depends horizontally on Repo
+│
+├─ Repo
+│  └─ curves back upward into Service
+│
+└─ App Wiring + UI
+```
+
+## Dependency diagram in text
+
+```text
+          Utils
+            │
+            ▼
+┌───────────────────────────────────────────────────────────────┐
+│                   Business logic domain                       │
+│                                                               │
+│   Providers ─────────────────────► App Wiring + UI            │
+│      │                                      ▲                 │
+│      ▼                                      │                 │
+│   Service ───────────────► Runtime ─────────┘──► UI           │
+│      ▲                                                        │
+│      │                                                        │
+│   Types ───────────────► Config ───────────────► Repo         │
+│      └───────────────────────────────────────────────┐        │
+│                                                      │        │
+│                                                      ▼        │
+│                                                   Service     │
+└───────────────────────────────────────────────────────────────┘
+```
+
+## Verbose explanation
+
+This image describes a strict layered architecture for an agent-generated codebase.
+
+The large dotted rectangle is the **business logic domain**. Everything inside it is part of a controlled architectural boundary. The point is to make dependency direction explicit and mechanically enforceable.
+
+At the top, **Utils** sits outside the business logic domain. It feeds into **Providers**. That means general helper utilities may support provider construction, but the domain itself remains bounded.
+
+Inside the domain, the main layer names are:
+
+```text
+Types
+Config
+Repo
+Service
+Runtime
+UI
+Providers
+App Wiring + UI
+```
+
+The arrows show allowed dependency direction.
+
+The bottom row is:
+
+```text
+Types → Config → Repo
+```
+
+This means shared data definitions flow into configuration, and configuration flows into repository/data-access logic.
+
+The diagram also shows Repo curving back toward Service. That implies repository implementations are consumed by service logic, but through an explicit route rather than arbitrary imports.
+
+The middle row is:
+
+```text
+Service → Runtime → UI
+```
+
+Service contains domain behavior. Runtime coordinates execution behavior. UI consumes runtime-facing behavior.
+
+The upper-middle area shows:
+
+```text
+Providers → App Wiring + UI
+Runtime   → App Wiring + UI
+```
+
+This separates dependency injection and application composition from core business logic.
+
+**Providers** are the explicit cross-cutting boundary. Cross-cutting concerns are things that apply across many domains, such as authentication, telemetry, feature flags, connectors, or platform services. Instead of allowing those concerns to leak everywhere, the diagram funnels them through Providers.
+
+The architecture’s purpose is to prevent arbitrary imports like:
+
+```text
+UI directly importing database code
+Repo importing UI code
+Service reaching into platform globals
+Feature flags scattered through random modules
+Telemetry injected everywhere without boundary
+```
+
+For coding agents, this matters because agents are fast but can create architectural drift if the repo allows anything. This diagram encodes a constrained path so the agent can move quickly without damaging structure.
+
+The key rule is:
+
+```text
+Speed comes from constraints.
+Agents can ship quickly when the repo makes legal dependency paths obvious.
+```
+
+---
+
+# 4. The limits of agent knowledge: What Codex can’t see doesn’t exist
+
+```yaml
+diagram:
+  title: "The limits of agent knowledge: What Codex can’t see doesn’t exist"
+  theme:
+    background: black
+    primary_color: white
+    accent_color: green
+    style: knowledge boundary / visibility diagram
+```
+
+## Knowledge model
+
+```text
+                           ┌─────────────────────────────┐
+                           │      CODEX'S KNOWLEDGE      │
+                           └─────────────────────────────┘
+                                      │
+                                      │ blocked / invisible
+                                      ▼
+                         Unseen knowledge to Codex
+                                      │
+                                      ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ External / invisible knowledge sources                             │
+│                                                                    │
+│ ┌─────────────────────┐ ┌─────────────────────┐ ┌───────────────┐ │
+│ │ Google doc          │ │ Slack message        │ │ Tacit knowledge│ │
+│ │                     │ │                     │ │               │ │
+│ │ This document       │ │ We will follow      │ │ Ryan is       │ │
+│ │ outlines our        │ │ @PaulM’s guidance   │ │ responsible   │ │
+│ │ approach to feature │ │ on security posture │ │ for overall   │ │
+│ │ prioritization and  │ │ from now on.        │ │ architectural │ │
+│ │ planning.           │ │                     │ │ direction.    │ │
+│ └─────────────────────┘ └─────────────────────┘ └───────────────┘ │
+│                                                                    │
+│ …                                                                  │
+└────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      │ encode into codebase
+                                      │ as markdown
+                                      ▼
+                           ┌─────────────────────────────┐
+                           │      CODEX'S KNOWLEDGE      │
+                           └─────────────────────────────┘
+```
+
+## Verbose explanation
+
+This diagram shows that Codex’s effective knowledge is bounded by what is available inside its working context.
+
+At the top is a green-outlined capsule labeled:
+
+```text
+CODEX'S KNOWLEDGE
+```
+
+Below it is a blocked visibility path labeled:
+
+```text
+Unseen knowledge to Codex
+```
+
+The diagram then lists examples of knowledge that may exist in an organization but is invisible to Codex:
+
+```text
+Google doc
+Slack message
+Tacit knowledge
+...
+```
+
+The Google Doc card says it contains an approach to feature prioritization and planning.
+
+The Slack message card says the team will follow someone’s guidance on security posture going forward.
+
+The tacit knowledge card says Ryan is responsible for the overall architectural direction of the system.
+
+The point is that all of these may be real and important, but Codex cannot use them reliably if they are not inside the repository or available through its tools.
+
+The right-side arrow says:
+
+```text
+Encode into codebase as markdown
+```
+
+That is the solution. Important external decisions must be transformed into repo-local, versioned, discoverable artifacts.
+
+Examples:
+
+```text
+docs/architecture/security-posture.md
+docs/product/feature-prioritization.md
+docs/ownership/architecture-owners.md
+AGENTS.md
+ARCHITECTURE.md
+SECURITY.md
+WORKFLOW.md
+```
+
+The core idea is:
+
+```text
+If Codex cannot inspect it, it cannot reliably act on it.
+```
+
+So the repository becomes the source of truth. Google Docs, Slack decisions, meeting notes, and human assumptions need to be distilled into files that the agent can read.
+
+This does not mean dumping everything into one huge file. It means encoding knowledge into structured, navigable markdown so Codex can find the right rule at the right time.
+
+This image is about agent legibility.
+
+---
+
+# 5. Coding agents use Linear as a state machine to work alongside us
+
+```yaml
+diagram:
+  title: "Coding agents use Linear as a state machine to work alongside us"
+  theme:
+    background: black
+    card_style: white outlines
+    agent_icon: small blue robot
+    style: Linear workflow state machine
+  states:
+    - Todo / In Progress / Rework
+    - Human Review
+    - Merging
+    - Backlog
+```
+
+## State machine
+
+```text
+[1] TODO / IN PROGRESS / REWORK
+    Agent is working
+    │
+    │ The Codex agent works toward a goal:
+    │ implementing, testing, and refining as needed.
+    ▼
+[2] HUMAN REVIEW
+    Agent assigns us a task
+    │
+    │ The agent presents a convincing proof of work:
+    │ example: video walkthrough of the working feature.
+    ▼
+[3] MERGING
+    Agent finishes the last mile
+    │
+    │ Following human approval, the agent resolves conflicts,
+    │ passes CI, and lands the change cleanly.
+    ▼
+[4] BACKLOG
+    Agent files follow-ups
+    │
+    │ The agent logs future work ideas.
+    │ This keeps the model focused and prevents tasks from ballooning.
+```
+
+## Verbose explanation
+
+This diagram presents Linear as the control plane for agentic coding work.
+
+Each card is a state in a workflow. The agent moves work through the states, and humans interact at the points where judgment or approval is needed.
+
+The first state is:
+
+```text
+[1] TODO, IN PROGRESS, REWORK
+Agent is working
+```
+
+This represents active implementation. The agent has a goal and is responsible for implementing, testing, and refining the result. “Rework” means the task came back because something was incomplete, incorrect, or failed review.
+
+The second state is:
+
+```text
+[2] HUMAN REVIEW
+Agent assigns us a task
+```
+
+This reverses the usual relationship. Instead of the human constantly assigning micro-instructions to the agent, the agent does the implementation and then assigns the human a review task.
+
+The proof of work is emphasized. The card says the agent presents a convincing proof of work, such as a video walkthrough of the working feature. This means review is not just “trust me, I changed files.” The agent must show evidence.
+
+The third state is:
+
+```text
+[3] MERGING
+Agent finishes the last mile
+```
+
+After human approval, the agent handles the tedious merge process. This includes resolving conflicts, passing CI, and landing the change.
+
+The fourth state is:
+
+```text
+[4] BACKLOG
+Agent files follow-ups
+```
+
+This prevents scope creep. If the agent notices improvements outside the task, it does not necessarily expand the current task forever. It logs future work ideas into the backlog.
+
+The workflow creates a clean separation:
+
+```text
+Agent owns execution.
+Human owns review and priority.
+Linear owns state.
+Backlog owns future scope.
+```
+
+This is a state machine because the work item moves through explicit statuses, and each status implies a different responsibility.
+
+---
+
+# 6. Before and after Symphony
+
+```yaml
+diagram:
+  title: "Before and after Symphony"
+  theme:
+    background: black
+    matrix_style: 2x2 comparison grids
+    axes:
+      y_axis: Ambiguity
+      x_axis: Complexity
+  legend:
+    hollow_circle: Codex web
+    dark_blue_pattern: Interactive Codex session
+    solid_blue: Symphony
+```
+
+## Axes
+
+```text
+Y-axis: Ambiguity
+        low → high
+
+X-axis: Complexity
+        low → high
+```
+
+The chart compares what kind of work is handled before and after Symphony.
+
+## Before Symphony
+
+```text
+BEFORE
+
+High ambiguity / Low complexity:
+┌────────────────────────────────────┐
+│ Small bugs with non-obvious        │
+│ solutions                          │
+│ handled by Interactive Codex       │
+└────────────────────────────────────┘
+
+High ambiguity / High complexity:
+┌────────────────────────────────────┐
+│ Exploratory work                   │
+│ handled by Interactive Codex       │
+└────────────────────────────────────┘
+
+Low ambiguity / Low complexity:
+┌────────────────────────────────────┐
+│ Obvious bugfixes                   │
+│ handled by Codex web               │
+└────────────────────────────────────┘
+
+Low ambiguity / High complexity:
+┌────────────────────────────────────┐
+│ Well-specified major feature       │
+│ handled by Interactive Codex       │
+└────────────────────────────────────┘
+```
+
+## After Symphony
+
+```text
+AFTER
+
+High ambiguity / Low complexity:
+┌────────────────────────────────────┐
+│ Small bugs with non-obvious        │
+│ solutions                          │
+│ handled by Symphony                │
+└────────────────────────────────────┘
+
+High ambiguity / High complexity:
+┌────────────────────────────────────┐
+│ Exploratory work                   │
+│ handled by Interactive Codex       │
+└────────────────────────────────────┘
+
+Low ambiguity / Low complexity:
+┌────────────────────────────────────┐
+│ Obvious bugfixes                   │
+│ handled by Symphony                │
+└────────────────────────────────────┘
+
+Low ambiguity / High complexity:
+┌────────────────────────────────────┐
+│ Well-specified major feature       │
+│ handled by Symphony                │
+└────────────────────────────────────┘
+```
+
+## Verbose explanation
+
+This image compares the delegation model before and after Symphony.
+
+The chart uses two dimensions:
+
+```text
+Ambiguity = how unclear the problem/solution is
+Complexity = how much work or system depth is involved
+```
+
+Before Symphony, most work still required interactive Codex sessions.
+
+The only category shown as Codex web is:
+
+```text
+Obvious bugfixes
+```
+
+That means small, clear, low-complexity, low-ambiguity tasks could already be handled by simple Codex web workflows.
+
+But three categories were still handled interactively:
+
+```text
+Small bugs with non-obvious solutions
+Exploratory work
+Well-specified major features
+```
+
+Interactive Codex sessions require more human attention. The human starts sessions, steers them, checks progress, and nudges the model.
+
+After Symphony, the delegation boundary moves.
+
+Symphony now handles:
+
+```text
+Obvious bugfixes
+Small bugs with non-obvious solutions
+Well-specified major features
+```
+
+The only remaining category left to interactive Codex is:
+
+```text
+Exploratory work
+```
+
+This means humans and interactive sessions are reserved for the most ambiguous and complex tasks, where judgment, discovery, and steering matter most.
+
+The visual message is:
+
+```text
+Before:
+  Humans supervise most agent work.
+
+After:
+  Symphony absorbs routine and well-scoped work.
+  Humans focus on high-ambiguity exploration.
+```
+
+This is the economic shift. Symphony lowers the human attention cost of code changes, so more tasks can be delegated without micromanagement.
+
+---
+
+# Combined architecture summary
+
+```json
+{
+  "overall_system": {
+    "purpose": "Make coding agents reliable by surrounding them with observable, testable, stateful workflows.",
+    "core_pattern": [
+      "Expose the app to Codex through tools",
+      "Expose runtime behavior through observability",
+      "Constrain the codebase with architecture",
+      "Encode organizational knowledge into repository files",
+      "Use Linear as a state machine",
+      "Use Symphony to orchestrate agent work continuously"
+    ]
+  },
+  "images": [
+    {
+      "name": "Chrome DevTools MCP validation",
+      "main_message": "Codex can drive the real app through browser tooling and validate before/after behavior.",
+      "loop": [
+        "select target",
+        "clear console",
+        "snapshot before",
+        "trigger UI path",
+        "observe runtime events",
+        "snapshot after",
+        "apply fix",
+        "restart",
+        "rerun validation until clean"
+      ]
+    },
+    {
+      "name": "Full observability stack",
+      "main_message": "Codex becomes more capable when logs, metrics, and traces are queryable from local dev.",
+      "pipeline": {
+        "app": ["logs", "OTLP metrics", "OTLP traces"],
+        "collector": "Vector",
+        "storage": ["Victoria Logs", "Victoria Metrics", "Victoria Traces"],
+        "query_apis": ["LogQL", "PromQL", "TraceQL"],
+        "agent_actions": ["query", "correlate", "reason", "implement", "restart", "rerun workload", "test UI journey"]
+      }
+    },
+    {
+      "name": "Layered domain architecture",
+      "main_message": "Agent-generated systems need strict dependency boundaries to prevent architectural drift.",
+      "layers": ["Types", "Config", "Repo", "Service", "Runtime", "UI", "Providers", "App Wiring + UI", "Utils"],
+      "principle": "Cross-cutting concerns must enter through explicit providers instead of leaking everywhere."
+    },
+    {
+      "name": "Limits of agent knowledge",
+      "main_message": "Knowledge outside the repo is effectively invisible unless encoded into agent-readable files.",
+      "invisible_sources": ["Google Docs", "Slack messages", "Tacit human knowledge"],
+      "solution": "Convert important decisions into versioned markdown inside the codebase."
+    },
+    {
+      "name": "Linear state machine",
+      "main_message": "Linear statuses coordinate agents and humans.",
+      "states": {
+        "todo_in_progress_rework": "Agent implements, tests, and refines.",
+        "human_review": "Agent presents proof of work and asks humans to review.",
+        "merging": "Agent resolves conflicts, passes CI, and lands the PR.",
+        "backlog": "Agent files follow-up ideas without bloating the current task."
+      }
+    },
+    {
+      "name": "Before and after Symphony",
+      "main_message": "Symphony shifts routine and well-scoped work away from interactive supervision.",
+      "before": {
+        "codex_web": ["obvious bugfixes"],
+        "interactive_codex": [
+          "small bugs with non-obvious solutions",
+          "exploratory work",
+          "well-specified major features"
+        ]
+      },
+      "after": {
+        "symphony": [
+          "obvious bugfixes",
+          "small bugs with non-obvious solutions",
+          "well-specified major features"
+        ],
+        "interactive_codex": ["exploratory work"]
+      }
+    }
+  ]
+}
+```
+
+Context source attached: 
