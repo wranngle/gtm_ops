@@ -218,7 +218,7 @@ Current panels:
 - Recent events from VictoriaLogs via `/select/logsql/query`.
 - `agent_evals_evaluations_total` rate over the last hour via
   VictoriaMetrics `/api/v1/query_range`.
-- Slow span placeholder/query surface via VictoriaTraces'
+- Pending slow-span query surface via VictoriaTraces'
   Jaeger-compatible `/select/jaeger/api/traces` endpoint.
 
 The page degrades gracefully when the stack is offline. Trace rows remain

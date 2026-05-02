@@ -1,8 +1,8 @@
 # Architecture
 
-`wranngle-gtm-engine` is a clean-room monorepo for a synthetic, public-safe GTM automation system. It should prove four things in one inspectable place:
+This repository is a clean-room monorepo for a synthetic, public-safe GTM automation system. It should prove four things in one inspectable place:
 
-1. ElevenLabs agent evaluation and webhook contracts.
+1. Voice-agent evaluation and webhook contracts.
 2. GTM workflow orchestration with sanitized n8n examples.
 3. Python-first internal operator tooling.
 4. Python/SQL usage and revenue reconciliation.
@@ -13,7 +13,7 @@
 apps/
   ops-console/              # Streamlit or FastAPI+Jinja2 operator UI
 packages/
-  agent-evals/              # Bun/TypeScript ElevenLabs eval harness
+  agent-evals/              # Bun/TypeScript voice-agent eval harness
   data-reconciliation/      # Python CLI, DuckDB/SQLite fixtures, SQL models
   shared/                   # Shared schemas, test helpers, fixtures
 workflows/                  # Sanitized n8n workflow examples
@@ -68,7 +68,7 @@ When in doubt, add a small boundary parser instead of probing data by assumption
 
 ### `packages/agent-evals`
 
-Owns synthetic ElevenLabs Conversational AI evaluation flow:
+Owns synthetic voice-agent evaluation flow:
 
 - simulated conversation fixtures
 - webhook contract tests
@@ -76,7 +76,7 @@ Owns synthetic ElevenLabs Conversational AI evaluation flow:
 - golden transcript regressions
 - eval summaries used by the ops console
 
-### `packages/data-reconciliation`
+### Planned Data Reconciliation Package
 
 Owns Python/SQL proof for GTM/Ops/Finance:
 

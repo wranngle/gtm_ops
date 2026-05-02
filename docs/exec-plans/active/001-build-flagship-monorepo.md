@@ -29,15 +29,15 @@ closes.
 
 - `packages/agent-evals` (DONE — layered package + tests + CLI runnable)
 - `apps/ops-console` (PARTIAL — Streamlit stub + pure-Python `domain.py` + pytest)
-- `packages/data-reconciliation` (DEFERRED — directory not yet created)
+- Data reconciliation package (DEFERRED — directory not yet created)
 - `fixtures/` (DEFERRED — currently inlined per-package)
 - `workflows/` (DEFERRED — sanitized n8n examples)
 - `docs/` (CONTINUOUS — updated as slices land)
 
 ## Acceptance Criteria
 
-- [x] `packages/agent-evals` contains synthetic ElevenLabs-style eval fixtures and contract tests.
-- [ ] `packages/data-reconciliation` contains Python CLI, local DuckDB or SQLite fixtures, SQL models, and pytest coverage.
+- [x] `packages/agent-evals` contains synthetic voice-agent eval fixtures and contract tests.
+- [ ] Data reconciliation contains a Python CLI, local DuckDB or SQLite fixtures, SQL models, and pytest coverage.
 - [partial] `apps/ops-console` runs locally without external services (Streamlit stub does; full UI not yet).
 - [ ] README includes run commands, architecture diagram, and an ops-console screenshot.
 - [x] `scripts/validate-knowledge-base.sh` passes.
@@ -49,4 +49,3 @@ closes.
 - Use DuckDB or SQLite before Postgres to keep reviewer setup friction low.
 - Use Streamlit unless FastAPI+Jinja2 becomes clearly more appropriate.
 - Pause showcase-only slices until the canonical stack closes (per plan 003 directive 2026-04-30).
-

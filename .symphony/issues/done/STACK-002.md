@@ -37,3 +37,10 @@ will need a one-shot rename pass that breaks every existing pointer.
 Cross-cuts every stack-level file. Touching all of them in one PR is a
 restructure that warrants a dedicated plan in `docs/exec-plans/active/`, not
 an in-line edit during an audit pass.
+
+## Completion note
+
+Moved stack-facing prose to project-neutral language and added a
+source-only portability scan to `scripts/validate-knowledge-base.sh` for
+the orchestration/control-plane artifacts. Repository URLs and
+`docs/references/canonical-stack.md` remain the explicit exceptions.

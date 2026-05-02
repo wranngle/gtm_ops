@@ -42,7 +42,7 @@ defmodule Symphony.ConfigTest do
       workflow_name: custom
       tracker:
         kind: github_issues
-        repo: wranngle/wranngle-gtm-engine
+        repo: owner/repo
         active_states: todo,in_progress,human_review
       polling:
         interval_ms: 5000
@@ -55,7 +55,7 @@ defmodule Symphony.ConfigTest do
       """)
 
     assert Config.tracker_kind(config) == :github_issues
-    assert Config.tracker_repo(config) == "wranngle/wranngle-gtm-engine"
+    assert Config.tracker_repo(config) == "owner/repo"
     assert Config.tracker_active_states(config) == ["todo", "in_progress", "human_review"]
     assert Config.polling_interval_ms(config) == 5_000
     assert Config.agent_command(config) == "scripts/bin/llm.sh"

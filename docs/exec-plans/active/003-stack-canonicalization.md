@@ -6,7 +6,7 @@ Created: 2026-04-30
 
 ## Goal
 
-Move the dotfiles + harness + symphony stack from "demonstrated in this repo" to **canonical**: spec-faithful, reusable across projects, free of `wranngle-gtm-engine`-specific assumptions. Per the owner's directive (2026-04-30):
+Move the dotfiles + harness + symphony stack from "demonstrated in this repo" to **canonical**: spec-faithful, reusable across projects, free of showcase-repo-specific assumptions. Per the owner's directive (2026-04-30):
 
 > The harness/symphony machinery comes first to enable proper development of the actual project. Avoid polluting the harness/symphony stack with the project-specific. In the end the dotfiles/harness/symphony stack must be canonical. If you wrap all that up then and only then can you begin the showcase project, which will mean repairing the stack along the way to make it truly working and universal.
 
@@ -29,7 +29,7 @@ Move the dotfiles + harness + symphony stack from "demonstrated in this repo" to
 
 ## Out of Scope (Until Stack Canonicalization Wraps)
 
-- The ElevenLabs showcase project itself. Once stack is canonical, the showcase work begins; expect to surface stack gaps and repair them inline. That's the explicit working model.
+- The voice-agent showcase project itself. Once stack is canonical, the showcase work begins; expect to surface stack gaps and repair them inline. That's the explicit working model.
 
 ## Decision Log (Owner-Provided 2026-04-30)
 
@@ -42,11 +42,11 @@ Move the dotfiles + harness + symphony stack from "demonstrated in this repo" to
 ## Acceptance Criteria
 
 - `tools/symphony-elixir/` runs as a daemon: `mix run --no-halt` boots the supervision tree, polls a configured tracker, dispatches per-issue agent runs into per-issue workspaces, retries with exponential backoff, reconciles every tick, exposes a snapshot API.
-- `scripts/edge-debug-launch.sh` (or equivalent) starts Edge with `--remote-debugging-port=<n>` outside the active window and writes a desktop shortcut into the user's Windows profile.
+- `tools/edge-mcp/edge-debug-launch.sh` (or equivalent) starts Edge with `--remote-debugging-port=<n>` outside the active window and writes a desktop shortcut into the user's Windows profile.
 - An MCP server is registered in `~/.claude/settings.json` (or project-local) that connects to that debug port; a sample agent run proves a screenshot can be captured.
 - `tools/observability/docker-compose.yml` brings up Vector + Victoria stack; `apps/ops-console` and `packages/agent-evals` emit to it; example LogQL/PromQL/TraceQL queries documented.
 - The new artifacts pass `scripts/validate-knowledge-base.sh`, `scripts/lint-layered-architecture.sh`, `scripts/gardener.sh`, and CI.
-- A doc clearly distinguishes canonical-stack artifacts from `wranngle-gtm-engine`-specific showcase artifacts.
+- A doc clearly distinguishes canonical-stack artifacts from showcase-project artifacts.
 
 ## Owner Authorizations Recorded
 

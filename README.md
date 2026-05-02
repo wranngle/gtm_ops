@@ -1,10 +1,10 @@
-# wranngle-gtm-engine
+# Agent-First GTM Engine Harness
 
-A clean-room flagship monorepo for ElevenLabs agent evals, GTM automation, internal ops tooling, and Python/SQL revenue reconciliation.
+A clean-room flagship monorepo for voice-agent evals, GTM automation, internal ops tooling, and Python/SQL revenue reconciliation.
 
 ## What it does
 
-`wranngle-gtm-engine` will coordinate the moving parts of an AI-first GTM and operations workflow: synthetic lead intake, enrichment, CRM-style routing, ElevenLabs agent evaluation, webhook validation, post-call processing, internal operator review, and usage/revenue reconciliation.
+This repo coordinates the moving parts of an AI-first GTM and operations workflow: synthetic lead intake, enrichment, CRM-style routing, voice-agent evaluation, webhook validation, post-call processing, internal operator review, and usage/revenue reconciliation.
 
 This repo starts from a clean public-safe baseline. Existing private operational repos are source material only; public code and fixtures here should be sanitized, synthetic, and reviewable from the first commit.
 

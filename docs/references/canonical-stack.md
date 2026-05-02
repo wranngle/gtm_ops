@@ -54,12 +54,12 @@ These are project-specific demonstrations. They prove the stack works on a
 real domain (ElevenLabs Conversational AI evaluation + GTM ops). When the
 stack is extracted to dotfiles, these stay in the project repo.
 
-- `packages/agent-evals/` — TypeScript ElevenLabs eval contract package
+- `packages/agent-evals/` — TypeScript voice-agent eval contract package
 - `apps/ops-console/` — Streamlit operator UI
 - `fixtures/`, `workflows/` (planned per ARCHITECTURE.md)
 - `docs/exec-plans/active/001-build-flagship-monorepo.md` — the project plan
 - `docs/product-specs/flagship-gtm-engine.md` — project spec
-- `.symphony/issues/todo/WGTE-001.md` — project task
+- `.symphony/issues/**/WGTE-001.md` — project task
 
 ## Working model (per owner directive 2026-04-30)
 

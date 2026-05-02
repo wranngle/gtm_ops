@@ -144,6 +144,7 @@ required_files=(
   ".symphony/issues/human_review/.gitkeep"
   ".symphony/issues/done/.gitkeep"
   ".symphony/issues/cancelled/.gitkeep"
+  ".symphony/issues/duplicate/.gitkeep"
   ".symphony/logs/.gitkeep"
   ".symphony/workspaces/.gitkeep"
   ".symphony/runtime/.gitkeep"
@@ -209,10 +210,89 @@ placeholder_scan_targets=(
   .symphony/issues/todo/*.md
 )
 
+placeholder_scan_tmp="$(mktemp)"
+trap 'rm -f "$placeholder_scan_tmp" "${stack_neutral_scan_tmp:-}"' EXIT
 if grep -R -n -E 'REPO_URL_NOT_DETECTED|bot@gemini.com|Replace this with a real demo|Created `.github/PULL_REQUEST_TEMPLATE.md`' \
-  "${placeholder_scan_targets[@]}" >/tmp/wranngle-gtm-engine-placeholder-scan.txt; then
-  cat /tmp/wranngle-gtm-engine-placeholder-scan.txt >&2
+  "${placeholder_scan_targets[@]}" >"$placeholder_scan_tmp"; then
+  cat "$placeholder_scan_tmp" >&2
   printf 'placeholder text from primitive hydration must be replaced before commit\n' >&2
+  exit 1
+fi
+
+stack_neutral_scan_targets=(
+  "AGENTS.md"
+  ".agents/AGENTS.md"
+  "ARCHITECTURE.md"
+  "WORKFLOW.md"
+  "README.md"
+  "CODE_OF_CONDUCT.md"
+  "CONTRIBUTING.md"
+  "LICENSE"
+  "SECURITY.md"
+  ".github/PULL_REQUEST_TEMPLATE.md"
+  ".github/dependabot.yml"
+  ".github/ISSUE_TEMPLATE/bug_report.yml"
+  ".github/ISSUE_TEMPLATE/feature_request.yml"
+  "demo/cassette.tape"
+  "scripts/hero.sh"
+  "scripts/bin/llm.sh"
+  "scripts/symphony.sh"
+  "scripts/lint-layered-architecture.sh"
+  "scripts/gardener.sh"
+  "scripts/validate-knowledge-base.sh"
+  "scripts/generate-layer-inventory.sh"
+  "docs/index.md"
+  "docs/ORCHESTRATION.md"
+  "docs/DESIGN.md"
+  "docs/FRONTEND.md"
+  "docs/PLANS.md"
+  "docs/PRODUCT_SENSE.md"
+  "docs/QUALITY_SCORE.md"
+  "docs/RELIABILITY.md"
+  "docs/SECURITY.md"
+  "docs/design-docs"
+  "docs/exec-plans/active/003-stack-canonicalization.md"
+  "docs/generated"
+  "docs/references/dotfiles-hydration.md"
+  "docs/references/harness-engineering.md"
+  "docs/references/symphony-orchestration.md"
+  "docs/references/layered-domain-architecture.md"
+  "docs/references/doc-gardener.md"
+  "docs/references/symphony-github-issues-adapter.md"
+  "docs/references/local-observability.md"
+  "docs/references/README.md"
+  "docs/references/streamlit-llms.txt"
+  "docs/references/edge-devtools-mcp.md"
+  "tools/symphony-elixir/README.md"
+  "tools/symphony-elixir/config"
+  "tools/symphony-elixir/lib"
+  "tools/symphony-elixir/scripts"
+  "tools/symphony-elixir/test"
+  "tools/edge-mcp/README.md"
+  "tools/edge-mcp/edge-debug-launch.sh"
+  "tools/edge-mcp/install-edge-shortcut.ps1"
+  "tools/edge-mcp/install-mcp.sh"
+  "tools/edge-mcp/filter-unsafe-tools.mjs"
+  "tools/edge-mcp/launch-mcp.sh"
+  "tools/edge-mcp/mcp.json"
+  "tools/edge-mcp/smoke"
+  "tools/edge-mcp/windows"
+  "tools/observability/README.md"
+  "tools/observability/docker-compose.yml"
+  "tools/observability/vector.yaml"
+  "tools/observability/test-namespace-isolation.sh"
+)
+
+stack_neutral_scan_tmp="$(mktemp)"
+stack_neutral_pattern='wranngle-gtm''-engine|Eleven''Labs|Wranngle GTM ''Engine'
+if find "${stack_neutral_scan_targets[@]}" \
+  \( -path '*/_build/*' -o -path '*/deps/*' -o -path '*/node_modules/*' -o -path '*/.git/*' -o -path '*/__pycache__/*' -o -path '*/.pytest_cache/*' \) -prune \
+  -o -type f \
+  \( -name '*.md' -o -name '*.txt' -o -name '*.sh' -o -name '*.ex' -o -name '*.exs' -o -name '*.js' -o -name '*.mjs' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' -o -name '*.toml' -o -name '*.ps1' -o -name '*.cmd' -o -name '*.tape' \) \
+  -print0 \
+  | xargs -0 grep -n -E "$stack_neutral_pattern" >"$stack_neutral_scan_tmp"; then
+  cat "$stack_neutral_scan_tmp" >&2
+  printf 'stack-level artifacts must stay project-name-agnostic; update prose or narrow the artifact boundary in docs/references/canonical-stack.md\n' >&2
   exit 1
 fi
 

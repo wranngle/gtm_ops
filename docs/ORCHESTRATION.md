@@ -1,6 +1,6 @@
 # Orchestration
 
-`wranngle-gtm-engine` uses a Symphony-inspired orchestration layer over the dotfiles and Harness Engineering foundation.
+This repository uses a Symphony-inspired orchestration layer over the dotfiles and Harness Engineering foundation.
 
 ## Commands
 

@@ -14,8 +14,7 @@ This repo exists to make a specific capability legible:
 ## Reviewer Questions To Answer Fast
 
 - Can this person build internal tools for GTM/Ops/Finance?
-- Can this person work with ElevenLabs agent workflows?
+- Can this person work with voice-agent workflows?
 - Can this person use Python and SQL in a business automation context?
 - Can this person design safe integration boundaries?
 - Can this person make an agent-readable engineering environment?
-

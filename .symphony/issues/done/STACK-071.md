@@ -35,3 +35,10 @@ When agents start working in worktrees, multiple stacks will run in parallel. A 
 
 - `tools/observability/docker-compose.yml` — current namespacing surfaces
 - `docs/references/openai_harness_engineering_original_spec.txt` lines 49-51 ("ephemeral for any given worktree")
+
+## Completion note
+
+Added `tools/observability/test-namespace-isolation.sh`, documented the
+static check, and wired it into `scripts/validate-knowledge-base.sh` when
+Docker Compose is available. The full knowledge-base validation now passes
+with the generated layer inventory present.

@@ -8,7 +8,7 @@ blocked_by:
 
 `@playwright/mcp@latest` exposes `browser_run_code_unsafe`, which evaluates arbitrary Playwright JavaScript in the Playwright server process — RCE-equivalent against the workstation. Upstream provides no flag or config key to drop a single tool: the `core` capability bundles it and the `capabilities` field in `--config` is purely additive (verified empirically 2026-05-01 by running `@playwright/mcp@0.0.73` with `{"capabilities": ["core-navigation", "core-tabs"]}` and observing the unsafe tool still in `tools/list`).
 
-Our current mitigations are:
+Original mitigations before the 2026-05-02 repair were:
 
 1. Documentation in `docs/references/edge-devtools-mcp.md` "Security".
 2. Marker-only `EDGE_MCP_NO_UNSAFE_TOOLS=1` env var in `tools/edge-mcp/launch-mcp.sh` that emits a stderr warning naming the gating mechanisms.
@@ -35,5 +35,16 @@ Either path satisfies the security requirement. Path A is preferred unless we di
 ## References
 
 - `docs/references/edge-devtools-mcp.md` ("Security" section)
-- `tools/edge-mcp/launch-mcp.sh` (current marker behavior)
+- `tools/edge-mcp/launch-mcp.sh` (current safe-default mediator behavior)
 - `tools/edge-mcp/smoke/smoke.mjs` `SECURITY_GATED_TOOLS` constant
+
+## Progress
+
+- 2026-05-02: Path B landed in code. `tools/edge-mcp/filter-unsafe-tools.mjs`
+  mediates JSON-RPC stdio, hides `browser_run_code_unsafe` from `tools/list`,
+  and rejects direct `tools/call` requests before upstream Playwright MCP sees
+  them. `EDGE_MCP_NO_UNSAFE_TOOLS=1` is now the default in
+  `tools/edge-mcp/launch-mcp.sh` and `tools/edge-mcp/mcp.json`.
+- Still todo: run the live Edge MCP smoke against a real Edge debug session and
+  capture proof that the mediated `tools/list` has 22 tools and direct unsafe
+  calls are denied on the actual transport.

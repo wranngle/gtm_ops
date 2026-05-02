@@ -1,4 +1,4 @@
-# Contributing to wranngle-gtm-engine
+# Contributing
 
 This repo is a public-safe, agent-first flagship monorepo. Contributions should preserve both layers of the setup:
 
@@ -9,8 +9,8 @@ This repo is a public-safe, agent-first flagship monorepo. Contributions should 
 
 To get your local environment set up, clone the repository and run the current validation:
 
-    git clone https://github.com/wranngle/wranngle-gtm-engine.git
-    cd wranngle-gtm-engine
+    git clone <repo-url>
+    cd <repo-dir>
     scripts/validate-knowledge-base.sh
 
 ## Running Tests

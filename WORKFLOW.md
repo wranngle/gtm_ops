@@ -1,5 +1,5 @@
 ---
-workflow_name: wranngle-gtm-engine-local-symphony
+workflow_name: local-symphony-stack
 
 tracker:
   kind: local_markdown
@@ -31,9 +31,9 @@ codex:
 
 log_path: .symphony/logs/symphony.jsonl
 ---
-# Wranngle GTM Engine Symphony Workflow
+# Local Symphony Workflow
 
-You are operating inside the `wranngle-gtm-engine` agent-first Harness repository.
+You are operating inside this agent-first Harness repository.
 
 ## Objective
 

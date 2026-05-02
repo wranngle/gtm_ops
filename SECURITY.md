@@ -4,11 +4,9 @@ This public repo must remain clean-room and synthetic from commit one.
 
 ## Reporting a Vulnerability
 
-If you believe you've found a security vulnerability in `wranngle-gtm-engine`, please report it privately. **Do not open a public issue.**
+If you believe you've found a security vulnerability in this repository, please report it privately. **Do not open a public issue.**
 
-**Preferred:** Use GitHub Private Vulnerability Reporting for this repository:
-
-https://github.com/wranngle/wranngle-gtm-engine/security/advisories/new
+**Preferred:** Use GitHub Private Vulnerability Reporting for this repository.
 
 **Fallback:** Contact the maintainer through the `wranngle` GitHub profile and do not include sensitive details until a private channel is established.
 

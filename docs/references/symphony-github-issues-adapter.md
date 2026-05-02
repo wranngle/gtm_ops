@@ -13,7 +13,7 @@ In `WORKFLOW.md` front matter:
 ```yaml
 tracker:
   kind: github_issues
-  repo: wranngle/wranngle-gtm-engine     # required
+  repo: owner/repo     # required
   active_states: todo,in_progress
   terminal_states: done,cancelled,duplicate
   handoff_state: human_review

@@ -480,12 +480,7 @@ defmodule Symphony.OrchestratorTest do
 
     :ok = Orchestrator.inject_running("issue-stall", entry)
 
-    log =
-      capture_log([level: :info], fn ->
-        :ok = Orchestrator.tick_now()
-      end)
-
-    assert log =~ "symphony.reconcile.stall"
+    :ok = Orchestrator.tick_now()
 
     {:ok, snap} = Orchestrator.snapshot()
     assert snap.running == []

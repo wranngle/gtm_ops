@@ -91,7 +91,7 @@ External imports (npm packages, Node built-ins) are always allowed. Imports that
 
 The lint currently rejects every cross-domain import. There is no allow-list — once a second domain needs to consume something from another, the right move is one of:
 
-1. **Promote the shared piece to a `packages/shared` (or similar) package** that both domains depend on through their normal dependency graph.
+1. **Promote the shared piece to a shared package** that both domains depend on through their normal dependency graph.
 2. **Wrap the other domain behind a `providers/` adapter** in the consumer, so the integration is explicit and replaceable in tests.
 3. **Define the inter-domain contract here first**, then extend the lint with an allowed-edges table keyed on `(from-package, from-layer) → (to-package, to-layer)` before the import is permitted.
 
