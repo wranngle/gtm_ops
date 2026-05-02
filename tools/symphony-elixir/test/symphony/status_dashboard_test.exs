@@ -169,12 +169,18 @@ defmodule Symphony.StatusDashboardTest do
   end
 
   describe "spec § 13.6 invariant — observability only" do
-    test "module exports only pure helpers (no GenServer behaviour)" do
-      # The orchestrator must not depend on humanized strings, so this
-      # module must not be a stateful process the orchestrator calls
-      # into. Assert it's not a GenServer.
-      refute function_exported?(StatusDashboard, :start_link, 1)
-      refute function_exported?(StatusDashboard, :init, 1)
+    test "humanized helpers stay pure (orchestrator must not depend on them)" do
+      # Originally this asserted that `StatusDashboard` was a pure-helpers
+      # module (no `start_link/1`). After we ported upstream's status
+      # dashboard wholesale, `StatusDashboard` is now a GenServer that
+      # owns terminal rendering, token sampling, and throttled re-renders.
+      # The spec § 13.6 invariant we still uphold: the orchestrator must
+      # never depend on humanized strings. Enforced as a static check
+      # against `lib/symphony/orchestrator.ex` source.
+      orchestrator_source = File.read!("lib/symphony/orchestrator.ex")
+      refute orchestrator_source =~ "StatusDashboard.humanize"
+      refute orchestrator_source =~ "StatusDashboard.recent_events"
+      refute orchestrator_source =~ "StatusDashboard.format_snapshot_content"
     end
   end
 end
