@@ -40,7 +40,10 @@ defmodule Symphony.StatusDashboardSnapshotTest do
          rate_limits: nil
        }}
 
-    Snapshot.assert_dashboard_snapshot!("idle_with_dashboard_url", render_snapshot(snapshot_data, 0.0))
+    Snapshot.assert_dashboard_snapshot!(
+      "idle_with_dashboard_url",
+      render_snapshot(snapshot_data, 0.0)
+    )
   end
 
   test "snapshot fixture: super busy dashboard" do
@@ -126,7 +129,12 @@ defmodule Symphony.StatusDashboardSnapshotTest do
              error: "fourth queued retry should also render after removing the top-three limit"
            })
          ],
-         codex_totals: %{input_tokens: 18_000, output_tokens: 2_200, total_tokens: 20_200, seconds_running: 2_700},
+         codex_totals: %{
+           input_tokens: 18_000,
+           output_tokens: 2_200,
+           total_tokens: 20_200,
+           seconds_running: 2_700
+         },
          rate_limits: %{
            limit_id: "gpt-5",
            primary: %{remaining: 0, limit: 20_000, reset_in_seconds: 95},
@@ -182,7 +190,12 @@ defmodule Symphony.StatusDashboardSnapshotTest do
            })
          ],
          retrying: [],
-         codex_totals: %{input_tokens: 90, output_tokens: 12, total_tokens: 102, seconds_running: 75},
+         codex_totals: %{
+           input_tokens: 90,
+           output_tokens: 12,
+           total_tokens: 102,
+           seconds_running: 75
+         },
          rate_limits: %{
            limit_id: "priority-tier",
            primary: %{remaining: 100, limit: 100, reset_in_seconds: 1},

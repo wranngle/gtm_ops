@@ -36,7 +36,8 @@ defmodule Symphony.Tracker.Memory do
   end
 
   @impl true
-  @spec fetch_issue_states_by_ids(Config.t(), [String.t()]) :: {:ok, [Issue.t()]} | {:error, term()}
+  @spec fetch_issue_states_by_ids(Config.t(), [String.t()]) ::
+          {:ok, [Issue.t()]} | {:error, term()}
   def fetch_issue_states_by_ids(_config, issue_ids) do
     wanted_ids = MapSet.new(issue_ids)
 

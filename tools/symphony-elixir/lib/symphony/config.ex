@@ -354,8 +354,11 @@ defmodule Symphony.Config do
   @spec polling_interval_ms(t()) :: pos_integer()
   def polling_interval_ms(config) do
     case schema(config).polling.interval_ms do
-      v when is_integer(v) and v > 0 -> v
-      v -> raise ArgumentError, "config: polling.interval_ms not a positive integer (#{inspect(v)})"
+      v when is_integer(v) and v > 0 ->
+        v
+
+      v ->
+        raise ArgumentError, "config: polling.interval_ms not a positive integer (#{inspect(v)})"
     end
   end
 
@@ -393,10 +396,12 @@ defmodule Symphony.Config do
   end
 
   @spec agent_max_concurrent_agents(t()) :: pos_integer()
-  def agent_max_concurrent_agents(config), do: pos_int!(schema(config).agent.max_concurrent_agents, "agent.max_concurrent_agents")
+  def agent_max_concurrent_agents(config),
+    do: pos_int!(schema(config).agent.max_concurrent_agents, "agent.max_concurrent_agents")
 
   @spec agent_max_retry_backoff_ms(t()) :: pos_integer()
-  def agent_max_retry_backoff_ms(config), do: pos_int!(schema(config).agent.max_retry_backoff_ms, "agent.max_retry_backoff_ms")
+  def agent_max_retry_backoff_ms(config),
+    do: pos_int!(schema(config).agent.max_retry_backoff_ms, "agent.max_retry_backoff_ms")
 
   @spec agent_max_turns(t()) :: pos_integer()
   def agent_max_turns(config), do: pos_int!(schema(config).agent.max_turns, "agent.max_turns")
@@ -418,10 +423,12 @@ defmodule Symphony.Config do
   end
 
   @spec codex_read_timeout_ms(t()) :: pos_integer()
-  def codex_read_timeout_ms(config), do: pos_int_or_default(schema(config).codex.read_timeout_ms, 5_000)
+  def codex_read_timeout_ms(config),
+    do: pos_int_or_default(schema(config).codex.read_timeout_ms, 5_000)
 
   @spec codex_turn_timeout_ms(t()) :: pos_integer()
-  def codex_turn_timeout_ms(config), do: pos_int_or_default(schema(config).codex.turn_timeout_ms, 3_600_000)
+  def codex_turn_timeout_ms(config),
+    do: pos_int_or_default(schema(config).codex.turn_timeout_ms, 3_600_000)
 
   @spec codex_stall_timeout_ms(t()) :: non_neg_integer()
   def codex_stall_timeout_ms(config) do

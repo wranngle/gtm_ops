@@ -129,6 +129,14 @@ defmodule Symphony.SpecsCheck do
     consume_def(head_ast, meta, state, module_name, file, exemptions)
   end
 
+  defp consume_form({:defp, _, _}, state, _module_name, _file, _exemptions) do
+    %{state | pending_specs: MapSet.new(), pending_impl: false}
+  end
+
+  defp consume_form(_form, state, _module_name, _file, _exemptions) do
+    %{state | pending_specs: MapSet.new(), pending_impl: false}
+  end
+
   defp consume_def(head_ast, meta, state, module_name, file, exemptions) do
     {name, arity} = def_head_to_identifier(head_ast)
 
@@ -160,14 +168,6 @@ defmodule Symphony.SpecsCheck do
     end
   end
 
-  defp consume_form({:defp, _, _}, state, _module_name, _file, _exemptions) do
-    %{state | pending_specs: MapSet.new(), pending_impl: false}
-  end
-
-  defp consume_form(_form, state, _module_name, _file, _exemptions) do
-    %{state | pending_specs: MapSet.new(), pending_impl: false}
-  end
-
   defp compliant?(finding, state, exemptions) do
     id = {finding.name, finding.arity}
 
@@ -196,11 +196,17 @@ defmodule Symphony.SpecsCheck do
   defp extract_spec_identifiers(_), do: []
 
   defp spec_head_to_identifier({:when, _, [inner | _guards]}), do: spec_head_to_identifier(inner)
-  defp spec_head_to_identifier({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
+
+  defp spec_head_to_identifier({name, _, args}) when is_atom(name) and is_list(args),
+    do: {name, length(args)}
+
   defp spec_head_to_identifier({name, _, nil}) when is_atom(name), do: {name, 0}
   defp spec_head_to_identifier(_), do: nil
 
   defp def_head_to_identifier({:when, _, [head | _guards]}), do: def_head_to_identifier(head)
-  defp def_head_to_identifier({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
+
+  defp def_head_to_identifier({name, _, args}) when is_atom(name) and is_list(args),
+    do: {name, length(args)}
+
   defp def_head_to_identifier({name, _, nil}) when is_atom(name), do: {name, 0}
 end

@@ -83,7 +83,11 @@ defmodule Symphony.CLITest do
 
       workflow = %{
         config: %{
-          "tracker" => %{"kind" => "local_markdown", "issues_root" => issues_dir, "active_states" => ["todo", "in_progress"]},
+          "tracker" => %{
+            "kind" => "local_markdown",
+            "issues_root" => issues_dir,
+            "active_states" => ["todo", "in_progress"]
+          },
           "agent" => %{"command" => "scripts/bin/llm.sh"},
           "codex" => %{"command" => "codex app-server"},
           "workspace" => %{"root" => tmp_root}
@@ -115,7 +119,11 @@ defmodule Symphony.CLITest do
 
       workflow = %{
         config: %{
-          "tracker" => %{"kind" => "local_markdown", "issues_root" => issues_dir, "active_states" => ["todo", "in_progress"]},
+          "tracker" => %{
+            "kind" => "local_markdown",
+            "issues_root" => issues_dir,
+            "active_states" => ["todo", "in_progress"]
+          },
           "agent" => %{"command" => "scripts/bin/llm.sh"},
           "codex" => %{"command" => "codex app-server"},
           "workspace" => %{"root" => tmp}
@@ -148,7 +156,11 @@ defmodule Symphony.CLITest do
 
       workflow = %{
         config: %{
-          "tracker" => %{"kind" => "local_markdown", "issues_root" => issues_dir, "active_states" => ["todo", "in_progress"]},
+          "tracker" => %{
+            "kind" => "local_markdown",
+            "issues_root" => issues_dir,
+            "active_states" => ["todo", "in_progress"]
+          },
           "agent" => %{"command" => "scripts/bin/llm.sh"},
           "codex" => %{"command" => "codex app-server"},
           "workspace" => %{"root" => tmp}

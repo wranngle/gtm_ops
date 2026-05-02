@@ -1,7 +1,8 @@
 defmodule Symphony.SSH do
   @moduledoc false
 
-  @spec run(String.t(), String.t(), keyword()) :: {:ok, {String.t(), non_neg_integer()}} | {:error, term()}
+  @spec run(String.t(), String.t(), keyword()) ::
+          {:ok, {String.t(), non_neg_integer()}} | {:error, term()}
   def run(host, command, opts \\ []) when is_binary(host) and is_binary(command) do
     with {:ok, executable} <- ssh_executable() do
       {:ok, System.cmd(executable, ssh_args(host, command), opts)}

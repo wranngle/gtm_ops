@@ -122,7 +122,8 @@ defmodule Symphony.PathSafety do
     {root, segments}
   end
 
-  defp resolve_segments(root, resolved_segments, []), do: {:ok, join_canonical(root, resolved_segments)}
+  defp resolve_segments(root, resolved_segments, []),
+    do: {:ok, join_canonical(root, resolved_segments)}
 
   defp resolve_segments(root, resolved_segments, [segment | rest]) do
     candidate_path = join_canonical(root, resolved_segments ++ [segment])
@@ -130,7 +131,9 @@ defmodule Symphony.PathSafety do
     case File.lstat(candidate_path) do
       {:ok, %File.Stat{type: :symlink}} ->
         with {:ok, target} <- :file.read_link_all(String.to_charlist(candidate_path)) do
-          resolved_target = Path.expand(IO.chardata_to_string(target), join_canonical(root, resolved_segments))
+          resolved_target =
+            Path.expand(IO.chardata_to_string(target), join_canonical(root, resolved_segments))
+
           {target_root, target_segments} = split_absolute_path(resolved_target)
           resolve_segments(target_root, [], target_segments ++ rest)
         end

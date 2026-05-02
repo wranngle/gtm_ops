@@ -141,6 +141,7 @@ defmodule Symphony.Web.ObservabilityApiControllerTest do
       conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
 
       assert conn.status == 405
+
       assert Jason.decode!(conn.resp_body) ==
                %{"error" => %{"code" => "method_not_allowed", "message" => "Method not allowed"}}
     end
@@ -225,6 +226,7 @@ defmodule Symphony.Web.ObservabilityApiControllerTest do
       conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
 
       assert conn.status == 404
+
       assert Jason.decode!(conn.resp_body) ==
                %{"error" => %{"code" => "issue_not_found", "message" => "Issue not found"}}
     end

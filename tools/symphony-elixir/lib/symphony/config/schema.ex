@@ -51,7 +51,11 @@ defmodule Symphony.Config.Schema do
       field(:project_slug, :string)
       field(:assignee, :string)
       field(:active_states, {:array, :string}, default: ["Todo", "In Progress"])
-      field(:terminal_states, {:array, :string}, default: ["Closed", "Cancelled", "Canceled", "Duplicate", "Done"])
+
+      field(:terminal_states, {:array, :string},
+        default: ["Closed", "Cancelled", "Canceled", "Duplicate", "Done"]
+      )
+
       # Ours-only fields. `repo` is the `owner/repo` slug used by the
       # `:github_issues` tracker. `issues_root` is the on-disk path read
       # by the `:local_markdown` tracker (resolved against the workflow
@@ -248,7 +252,9 @@ defmodule Symphony.Config.Schema do
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
     def changeset(schema, attrs) do
       schema
-      |> cast(attrs, [:after_create, :before_run, :after_run, :before_remove, :timeout_ms], empty_values: [])
+      |> cast(attrs, [:after_create, :before_run, :after_run, :before_remove, :timeout_ms],
+        empty_values: []
+      )
       |> validate_number(:timeout_ms, greater_than: 0)
     end
   end
@@ -409,8 +415,10 @@ defmodule Symphony.Config.Schema do
   defp finalize_settings(settings, workflow_dir) do
     tracker = %{
       settings.tracker
-      | api_key: resolve_secret_setting(settings.tracker.api_key, System.get_env("LINEAR_API_KEY")),
-        assignee: resolve_secret_setting(settings.tracker.assignee, System.get_env("LINEAR_ASSIGNEE")),
+      | api_key:
+          resolve_secret_setting(settings.tracker.api_key, System.get_env("LINEAR_API_KEY")),
+        assignee:
+          resolve_secret_setting(settings.tracker.assignee, System.get_env("LINEAR_ASSIGNEE")),
         repo: resolve_env_string(settings.tracker.repo),
         issues_root: anchor_relative_path(settings.tracker.issues_root, workflow_dir)
     }

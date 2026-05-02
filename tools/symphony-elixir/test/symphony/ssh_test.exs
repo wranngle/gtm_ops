@@ -4,7 +4,9 @@ defmodule Symphony.SSHTest do
   alias Symphony.SSH
 
   test "run/3 keeps bracketed IPv6 host:port targets intact" do
-    test_root = Path.join(System.tmp_dir!(), "symphony-ssh-ipv6-test-#{System.unique_integer([:positive])}")
+    test_root =
+      Path.join(System.tmp_dir!(), "symphony-ssh-ipv6-test-#{System.unique_integer([:positive])}")
+
     trace_file = Path.join(test_root, "ssh.trace")
     previous_path = System.get_env("PATH")
 
@@ -24,7 +26,12 @@ defmodule Symphony.SSHTest do
   end
 
   test "run/3 leaves unbracketed IPv6-style targets unchanged" do
-    test_root = Path.join(System.tmp_dir!(), "symphony-ssh-ipv6-raw-test-#{System.unique_integer([:positive])}")
+    test_root =
+      Path.join(
+        System.tmp_dir!(),
+        "symphony-ssh-ipv6-raw-test-#{System.unique_integer([:positive])}"
+      )
+
     trace_file = Path.join(test_root, "ssh.trace")
     previous_path = System.get_env("PATH")
 
@@ -44,7 +51,9 @@ defmodule Symphony.SSHTest do
   end
 
   test "run/3 passes host:port targets through ssh -p" do
-    test_root = Path.join(System.tmp_dir!(), "symphony-ssh-test-#{System.unique_integer([:positive])}")
+    test_root =
+      Path.join(System.tmp_dir!(), "symphony-ssh-test-#{System.unique_integer([:positive])}")
+
     trace_file = Path.join(test_root, "ssh.trace")
     previous_path = System.get_env("PATH")
     previous_ssh_config = System.get_env("SYMPHONY_SSH_CONFIG")
@@ -68,7 +77,9 @@ defmodule Symphony.SSHTest do
   end
 
   test "run/3 keeps the user prefix when parsing user@host:port targets" do
-    test_root = Path.join(System.tmp_dir!(), "symphony-ssh-user-test-#{System.unique_integer([:positive])}")
+    test_root =
+      Path.join(System.tmp_dir!(), "symphony-ssh-user-test-#{System.unique_integer([:positive])}")
+
     trace_file = Path.join(test_root, "ssh.trace")
     previous_path = System.get_env("PATH")
 
@@ -88,7 +99,12 @@ defmodule Symphony.SSHTest do
   end
 
   test "run/3 returns an error when ssh is unavailable" do
-    test_root = Path.join(System.tmp_dir!(), "symphony-ssh-missing-test-#{System.unique_integer([:positive])}")
+    test_root =
+      Path.join(
+        System.tmp_dir!(),
+        "symphony-ssh-missing-test-#{System.unique_integer([:positive])}"
+      )
+
     previous_path = System.get_env("PATH")
 
     on_exit(fn ->
@@ -103,7 +119,9 @@ defmodule Symphony.SSHTest do
   end
 
   test "start_port/3 supports binary output without line mode" do
-    test_root = Path.join(System.tmp_dir!(), "symphony-ssh-port-test-#{System.unique_integer([:positive])}")
+    test_root =
+      Path.join(System.tmp_dir!(), "symphony-ssh-port-test-#{System.unique_integer([:positive])}")
+
     trace_file = Path.join(test_root, "ssh.trace")
     previous_path = System.get_env("PATH")
     previous_ssh_config = System.get_env("SYMPHONY_SSH_CONFIG")
@@ -133,7 +151,12 @@ defmodule Symphony.SSHTest do
   end
 
   test "start_port/3 supports line mode" do
-    test_root = Path.join(System.tmp_dir!(), "symphony-ssh-line-port-test-#{System.unique_integer([:positive])}")
+    test_root =
+      Path.join(
+        System.tmp_dir!(),
+        "symphony-ssh-line-port-test-#{System.unique_integer([:positive])}"
+      )
+
     trace_file = Path.join(test_root, "ssh.trace")
     previous_path = System.get_env("PATH")
 
@@ -183,7 +206,9 @@ defmodule Symphony.SSHTest do
   end
 
   defp wait_for_trace!(trace_file, attempts \\ 20)
-  defp wait_for_trace!(trace_file, 0), do: flunk("timed out waiting for fake ssh trace at #{trace_file}")
+
+  defp wait_for_trace!(trace_file, 0),
+    do: flunk("timed out waiting for fake ssh trace at #{trace_file}")
 
   defp wait_for_trace!(trace_file, attempts) do
     if File.exists?(trace_file) and File.read!(trace_file) != "" do

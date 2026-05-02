@@ -114,8 +114,8 @@ defmodule Symphony.AgentRunner.LocalShell do
     # open_supervised_port/3 below) gives us a kill-the-whole-group
     # cleanup path on timeout/error; on graceful BEAM shutdown the
     # in-BEAM watchdog (also below) handles cleanup. SIGKILL on BEAM
-    # leaks orphans — we accept that and rely on a startup-time scan
-    # to reap stale workspace processes (TODO).
+    # leaks orphans — those get reaped at next boot by
+    # `Symphony.Orchestrator.reap_orphan_workspace_processes/1`.
     shell_command = "exec #{command} < " <> shell_quote(prompt_path)
 
     spawn_executable = System.find_executable("setsid") || "/usr/bin/setsid"

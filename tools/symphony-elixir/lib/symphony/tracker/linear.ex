@@ -81,7 +81,8 @@ defmodule Symphony.Tracker.Linear do
   def update_issue_state(issue_id, state_name)
       when is_binary(issue_id) and is_binary(state_name) do
     if function_exported?(resolve_client(), :update_issue_state, 3) do
-      case resolve_client() |> apply(:update_issue_state, [resolve_config(), issue_id, state_name]) do
+      case resolve_client()
+           |> apply(:update_issue_state, [resolve_config(), issue_id, state_name]) do
         :ok -> :ok
         {:error, _} = err -> err
       end
