@@ -1,32 +1,76 @@
-name: "✨ Feature request"
-description: "Suggest an idea or enhancement for wranngle-gtm-engine."
-labels: ["enhancement"]
+name: "Feature request"
+description: "Suggest an enhancement so an agent or human can pick it up."
+title: "feat: <one-line summary>"
+labels: ["enhancement", "symphony:todo"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to suggest a feature for **wranngle-gtm-engine**! Please fill out the sections below so we can understand your idea and evaluate it effectively.
+        Thanks for proposing an idea. This template is shaped for both human and agent consumption.
+
+        - Symphony reads issues with the `symphony:todo` label as candidate work (see `docs/references/symphony-github-issues-adapter.md`).
+        - Add a `priority:N` label (lower = higher priority) to influence dispatch ordering.
+        - For multi-step work, an agent should produce an execution plan under `docs/exec-plans/active/` first.
+        - Do not include private operational details, customer identifiers, or live URLs. This repo is public.
+
   - type: textarea
     id: problem
     attributes:
       label: Problem statement
-      description: Is your feature request related to a problem? Please describe the pain point or use case.
-      placeholder: "I'm always frustrated when..."
+      description: What pain point or use case motivates this? Be concrete.
+      placeholder: Today, agents pulling tasks from .symphony/issues/ cannot ...
     validations:
       required: true
+
   - type: textarea
     id: solution
     attributes:
       label: Proposed solution
-      description: Describe the solution you'd like to see. Be as specific as possible about behavior, API surface, or UX.
-      placeholder: "I'd like wranngle-gtm-engine to..."
+      description: Sketch the desired behavior. APIs, CLI surface, file layout, or repo conventions.
+      placeholder: Add a `scripts/foo.sh` that does ...
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Bulleted, mechanically checkable conditions. An agent should be able to verify each one.
+      placeholder: |
+        - `scripts/foo.sh --help` prints usage.
+        - `scripts/validate-knowledge-base.sh` still passes.
+        - New behavior is covered by tests under `packages/<area>/tests/` or `apps/<area>/tests/`.
+        - Docs updated under `docs/` if a new command or boundary is introduced.
     validations:
-      required: false
+      required: true
+
   - type: textarea
     id: alternatives
     attributes:
       label: Alternatives considered
-      description: Describe any alternative solutions, workarounds, or features you've considered.
-      placeholder: "I also thought about..."
+      description: What else did you consider? Why is the proposed solution better?
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      description: Which area would change? Agents use this to scope their work.
+      multiple: true
+      options:
+        - "L0 dotfiles primitives (LICENSE, .github/, demo/, scripts/bin/llm.sh, scripts/hero.sh)"
+        - "Domain 1 LLM fallback chain (scripts/bin/llm.sh)"
+        - "Symphony orchestrator (scripts/symphony.sh, tools/symphony-elixir/)"
+        - "Knowledge-base validators (scripts/validate-knowledge-base.sh, scripts/lint-layered-architecture.sh, scripts/gardener.sh)"
+        - "agent-evals (packages/agent-evals/)"
+        - "ops-console (apps/ops-console/)"
+        - "Edge MCP (tools/edge-mcp/)"
+        - "Local observability (tools/observability/)"
+        - "CI workflows (.github/workflows/)"
+        - "Documentation only"
     validations:
-      required: false
+      required: true
+
+  - type: textarea
+    id: blocked-by
+    attributes:
+      label: Blocked-by (optional)
+      description: "If this depends on another open issue, write `Blocked-by: #N` on a single line so Symphony can detect the dependency."
+      placeholder: "Blocked-by: #42"

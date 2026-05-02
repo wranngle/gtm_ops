@@ -172,4 +172,33 @@ defmodule Symphony.OrchestratorTest do
     available = Config.agent_max_concurrent_agents(state.config) - map_size(state.running)
     assert available == 1
   end
+
+  test "tick skips dispatch when preflight validation fails", %{tmp: tmp} do
+    # `linear` tracker without api_key/project_slug should fail preflight.
+    # The orchestrator must keep running but skip dispatch for that tick.
+    boot_with_workflow(tmp, """
+    ---
+    tracker:
+      kind: linear
+    polling:
+      interval_ms: 60000
+    agent:
+      command: scripts/bin/llm.sh
+      max_concurrent_agents: 1
+    ---
+    """)
+
+    log =
+      capture_log([level: :info], fn ->
+        :ok = Orchestrator.tick_now()
+      end)
+
+    assert log =~ "symphony.dispatch.preflight_failed"
+    refute log =~ "symphony.dispatch ready="
+  end
+
+  test "snapshot returns :unavailable when daemon is not running" do
+    # No orchestrator started in this test; snapshot must report it.
+    assert {:error, :unavailable} = Orchestrator.snapshot()
+  end
 end

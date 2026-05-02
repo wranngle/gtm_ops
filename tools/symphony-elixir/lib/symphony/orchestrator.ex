@@ -63,11 +63,22 @@ defmodule Symphony.Orchestrator do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  @spec snapshot() :: {:ok, map()} | {:error, :unavailable}
+  # Spec § 13.3 recommends returning either `:timeout` or `:unavailable`
+  # for snapshot error modes so monitoring callers can distinguish "the
+  # daemon isn't running" from "the daemon is busy".
+  @spec snapshot() :: {:ok, map()} | {:error, :unavailable | :timeout}
   def snapshot do
     case GenServer.whereis(__MODULE__) do
-      nil -> {:error, :unavailable}
-      pid -> GenServer.call(pid, :snapshot, 5_000)
+      nil ->
+        {:error, :unavailable}
+
+      pid ->
+        try do
+          GenServer.call(pid, :snapshot, 5_000)
+        catch
+          :exit, {:timeout, _} -> {:error, :timeout}
+          :exit, {:noproc, _} -> {:error, :unavailable}
+        end
     end
   end
 
@@ -155,8 +166,30 @@ defmodule Symphony.Orchestrator do
     state
     |> reconcile_running()
     |> redeem_retries()
-    |> dispatch_eligible()
+    |> dispatch_with_preflight()
     |> Map.put(:last_tick_at, DateTime.utc_now())
+  end
+
+  # Spec § 6.3 / § 8.1: per-tick dispatch preflight validation. On
+  # failure, skip dispatch but keep reconciliation active and emit an
+  # operator-visible warning.
+  defp dispatch_with_preflight(state) do
+    case Config.validate_dispatch_preflight(state.config) do
+      :ok ->
+        dispatch_eligible(state)
+
+      {:error, {:dispatch_preflight, reasons}} ->
+        Logging.emit(:warning, "symphony.dispatch.preflight_failed", :failure,
+          message: "dispatch skipped",
+          fields: %{reasons: Enum.map(reasons, &Atom.to_string/1)}
+        )
+
+        Logger.warning(
+          "symphony.dispatch.preflight_failed reasons=#{Enum.join(Enum.map(reasons, &Atom.to_string/1), ",")}"
+        )
+
+        state
+    end
   end
 
   defp reconcile_running(state) do
@@ -236,7 +269,9 @@ defmodule Symphony.Orchestrator do
           eligible =
             candidates
             |> Enum.reject(&already_claimed?(state, &1))
+            |> Enum.reject(&blocked_todo?/1)
             |> Enum.sort_by(&dispatch_sort_key/1)
+            |> filter_per_state_caps(state)
             |> Enum.take(available)
 
           Logging.emit(:info, "symphony.dispatch", :success,
@@ -272,6 +307,79 @@ defmodule Symphony.Orchestrator do
     max = Config.agent_max_concurrent_agents(state.config)
     max - map_size(state.running)
   end
+
+  # Spec § 8.2 blocker rule: when an issue is in the `todo` state, do
+  # not dispatch if any blocker is non-terminal. Lowercased states.
+  defp blocked_todo?(%Tracker.Issue{state: state, blocked_by: blockers}) do
+    cond do
+      String.downcase(state || "") != "todo" -> false
+      blockers == nil or blockers == [] -> false
+      true -> Enum.any?(blockers, &blocker_active?/1)
+    end
+  end
+
+  defp blocker_active?(%{state: nil}), do: true
+
+  defp blocker_active?(%{state: state}) when is_binary(state) do
+    String.downcase(state) not in ["done", "cancelled", "canceled", "duplicate", "closed"]
+  end
+
+  defp blocker_active?(_), do: true
+
+  # Spec § 5.3.5 / § 8.3 per-state concurrency: cap dispatch per
+  # tracker state via `agent.max_concurrent_agents_by_state`. State keys
+  # are normalized lowercase. Missing entries fall back to the global
+  # cap, which is already enforced by `Enum.take(available)`.
+  defp filter_per_state_caps(eligible, state) do
+    raw = Map.get(state.config.raw, "agent", %{})
+    by_state_raw = Map.get(raw, "max_concurrent_agents_by_state", %{}) || %{}
+
+    by_state =
+      by_state_raw
+      |> Enum.into(%{}, fn {k, v} -> {String.downcase(to_string(k)), normalize_pos_int(v)} end)
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Enum.into(%{})
+
+    if by_state == %{} do
+      eligible
+    else
+      running_by_state =
+        Enum.reduce(state.running, %{}, fn {_id, entry}, acc ->
+          s = String.downcase(to_string(Map.get(entry, :state) || ""))
+          Map.update(acc, s, 1, &(&1 + 1))
+        end)
+
+      {kept, _} =
+        Enum.reduce(eligible, {[], running_by_state}, fn issue, {acc, counts} ->
+          s = String.downcase(issue.state || "")
+
+          case Map.get(by_state, s) do
+            nil ->
+              {[issue | acc], counts}
+
+            cap ->
+              already = Map.get(counts, s, 0)
+
+              if already < cap do
+                {[issue | acc], Map.put(counts, s, already + 1)}
+              else
+                {acc, counts}
+              end
+          end
+        end)
+
+      Enum.reverse(kept)
+    end
+  end
+
+  defp normalize_pos_int(n) when is_integer(n) and n > 0, do: n
+  defp normalize_pos_int(s) when is_binary(s) do
+    case Integer.parse(s) do
+      {n, ""} when n > 0 -> n
+      _ -> nil
+    end
+  end
+  defp normalize_pos_int(_), do: nil
 
   defp already_claimed?(state, %Tracker.Issue{id: id, identifier: ident}) do
     MapSet.member?(state.claimed, id) or MapSet.member?(state.claimed, ident)

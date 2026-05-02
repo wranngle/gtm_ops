@@ -37,6 +37,36 @@ defmodule Symphony.LoggingTest do
     assert is_binary(event["@timestamp"])
   end
 
+  test "emit threads issue.id and session.id when provided (spec § 13.1)" do
+    captured =
+      ExUnit.CaptureIO.capture_io(:standard_error, fn ->
+        Logging.emit(:info, "symphony.session.event", :success,
+          issue: "WGTE-2",
+          issue_id: "id-abc-123",
+          session_id: "thread-xyz-turn-1",
+          message: "started"
+        )
+      end)
+
+    [line] = String.split(captured, "\n", trim: true)
+    event = Jason.decode!(line)
+    assert event["issue.identifier"] == "WGTE-2"
+    assert event["issue.id"] == "id-abc-123"
+    assert event["session.id"] == "thread-xyz-turn-1"
+  end
+
+  test "emit omits issue.id and session.id when not provided" do
+    captured =
+      ExUnit.CaptureIO.capture_io(:standard_error, fn ->
+        Logging.emit(:info, "symphony.basic", :success, issue: "WGTE-3")
+      end)
+
+    [line] = String.split(captured, "\n", trim: true)
+    event = Jason.decode!(line)
+    refute Map.has_key?(event, "issue.id")
+    refute Map.has_key?(event, "session.id")
+  end
+
   test "configure {:file, path} appends one line per event" do
     tmp = Path.join(System.tmp_dir!(), "symphony-log-#{System.unique_integer([:positive])}.jsonl")
     on_exit(fn -> File.rm(tmp) end)

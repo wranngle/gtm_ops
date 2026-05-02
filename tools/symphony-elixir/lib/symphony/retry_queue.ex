@@ -15,13 +15,39 @@ defmodule Symphony.RetryQueue do
   @continuation_delay_ms 1_000
   @failure_base_ms 10_000
 
+  # Spec § 4.1.7 RetryEntry. We keep the historical map shape so existing
+  # callers in Symphony.Orchestrator continue to work, and expose the
+  # struct as a parallel public domain type for future code paths.
+  defmodule Entry do
+    @moduledoc "Domain struct for a scheduled retry, per spec § 4.1.7."
+
+    @type t :: %__MODULE__{
+            issue_id: binary(),
+            identifier: binary(),
+            attempt: pos_integer(),
+            due_at_ms: integer(),
+            timer_handle: reference() | nil,
+            reason: :continuation | :failure,
+            error: term() | nil
+          }
+
+    defstruct issue_id: "",
+              identifier: "",
+              attempt: 1,
+              due_at_ms: 0,
+              timer_handle: nil,
+              reason: :failure,
+              error: nil
+  end
+
   @type entry :: %{
           required(:issue_id) => binary(),
           required(:identifier) => binary(),
           required(:attempt) => pos_integer(),
           required(:due_at_ms) => integer(),
           required(:reason) => :continuation | :failure,
-          optional(:error) => term()
+          optional(:error) => term(),
+          optional(:timer_handle) => reference() | nil
         }
 
   @doc """
@@ -50,7 +76,8 @@ defmodule Symphony.RetryQueue do
       attempt: next_attempt_number,
       due_at_ms: now + delay,
       reason: reason,
-      error: error
+      error: error,
+      timer_handle: nil
     }
   end
 

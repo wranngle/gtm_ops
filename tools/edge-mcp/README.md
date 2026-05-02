@@ -23,9 +23,13 @@ Chrome DevTools MCP" loop.
   `browser_evaluate`.
 - `smoke/smoke.mjs` — node-only JSON-RPC client that spawns
   `launch-mcp.sh`, runs `initialize` + `tools/list` + `browser_navigate` +
-  `browser_snapshot` against `https://example.com`, and asserts the
-  accessibility tree contains "Example Domain". Run with
-  `node tools/edge-mcp/smoke/smoke.mjs`. No npm deps.
+  `browser_console_messages` + `browser_take_screenshot` + `browser_snapshot`
+  against `https://example.com`, and asserts the accessibility tree contains
+  "Example Domain". Also fails LOUDLY when the upstream tool inventory
+  shrinks/expands or when the security-gated `browser_run_code_unsafe`
+  appears/disappears. Run with `node tools/edge-mcp/smoke/smoke.mjs`. No
+  npm deps. Use `--tool-snapshot` to dump the live tool list as JSON when
+  intentionally re-pinning the inventory.
 - `install-mcp.sh` — idempotent merger: writes the `edge-devtools` MCP
   server entry into `~/.claude/settings.json` (or project-local
   `.claude/settings.json` with `--scope project`), preserving any other
@@ -156,4 +160,12 @@ Notes:
 - E-2 (MCP server pick + wiring template + installer) ✓
 - E-3 (Start Menu shortcut) ✓
 - E-4 (live smoke test) ✓ — `tools/edge-mcp/smoke/smoke.mjs` drives the full
-  initialize → tools/list → navigate → snapshot loop end-to-end.
+  initialize → tools/list → navigate → console_messages → screenshot →
+  snapshot loop end-to-end and fails loudly on tool-inventory drift.
+
+For the full image-#3 loop coverage matrix (which tool implements which
+step of the OpenAI "Codex drives the app with Chrome DevTools MCP"
+diagram), the worked-example loop pseudocode, the failure-mode triage
+table, the security-gating mechanisms for `browser_run_code_unsafe`, and
+the CI-integration constraints, see
+[`docs/references/edge-devtools-mcp.md`](../../docs/references/edge-devtools-mcp.md).

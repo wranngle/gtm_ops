@@ -26,25 +26,34 @@ defmodule Symphony.Logging do
   def emit(level, action, outcome, opts \\ []) do
     fields = Keyword.get(opts, :fields, %{})
     issue = Keyword.get(opts, :issue, "")
+    issue_id = Keyword.get(opts, :issue_id, "")
+    session_id = Keyword.get(opts, :session_id, "")
     message = Keyword.get(opts, :message, "")
 
-    event =
-      Map.merge(
-        %{
-          "@timestamp" => iso_now(),
-          "log.level" => Atom.to_string(level),
-          "event.action" => action,
-          "event.outcome" => Atom.to_string(outcome),
-          "service.name" => @service_name,
-          "issue.identifier" => to_string(issue),
-          "message" => to_string(message)
-        },
-        stringify_keys(fields)
-      )
+    base = %{
+      "@timestamp" => iso_now(),
+      "log.level" => Atom.to_string(level),
+      "event.action" => action,
+      "event.outcome" => Atom.to_string(outcome),
+      "service.name" => @service_name,
+      "issue.identifier" => to_string(issue),
+      "message" => to_string(message)
+    }
+
+    base =
+      base
+      |> maybe_put("issue.id", issue_id)
+      |> maybe_put("session.id", session_id)
+
+    event = Map.merge(base, stringify_keys(fields))
 
     Sink.write(event)
     :ok
   end
+
+  defp maybe_put(map, _key, ""), do: map
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, to_string(value))
 
   defp iso_now do
     DateTime.utc_now()

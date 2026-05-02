@@ -1,10 +1,14 @@
-# Fallback gitignore (offline or unknown language)
+# wranngle-gtm-engine .gitignore — keep transient agent / build / log artifacts out of git.
+
+# Secrets and OS noise
 .env
 .env.*
-*.log
 .DS_Store
 *.swp
 *.tmp
+*.log
+
+# Generic build / install artifacts
 node_modules/
 __pycache__/
 .venv/
@@ -12,12 +16,12 @@ target/
 dist/
 build/
 
-# Project-local
-.env
-.env.*
+# Project-local runtime
 .assessment.cache
 logs/*.jsonl
 !logs/.gitkeep
+
+# Symphony orchestrator runtime (workspaces, logs, in-memory state snapshots)
 .symphony/logs/*.jsonl
 !.symphony/logs/.gitkeep
 .symphony/workspaces/*
@@ -28,6 +32,24 @@ logs/*.jsonl
 # Claude Code agent worktrees (transient, not for git)
 .claude/worktrees/
 
+# Bun
+.bun/
+bun.lockb
+
+# TypeScript incremental builds
+**/*.tsbuildinfo
+
+# Python build / test caches
+**/*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+pip-wheel-metadata/
+
 # Elixir / Mix
 tools/symphony-elixir/_build/
 tools/symphony-elixir/deps/
@@ -35,11 +57,20 @@ tools/symphony-elixir/.elixir_ls/
 erl_crash.dump
 **/erl_crash.dump
 
-# Python build artifacts
-**/*.egg-info/
-
 # Playwright MCP runtime artifacts (transient agent snapshots)
 .playwright-mcp/
+
+# Edge MCP smoke artifacts (screenshots, dom dumps)
+tools/edge-mcp/smoke/out/
+
+# Local observability volume mounts and tail offsets
+tools/observability/.data/
+tools/observability/vector-data/
+
+# Demo render artifacts (regenerate via scripts/hero.sh)
+demo/cassette.gif
+demo/hero.gif
+demo/hero.webp
 
 # Windows alternate-data-stream metadata that comes through WSL copies
 **/*:Zone.Identifier

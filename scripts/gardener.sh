@@ -63,6 +63,22 @@ excluded_dirs=(
   --exclude-dir=.symphony
 )
 
+# Files that are read-only, checked-in upstream source authority. They legitimately
+# contain placeholder words and relative links pointing outside this repo. Skipping
+# them keeps the gardener focused on docs THIS repo owns.
+upstream_source_excludes=(
+  -e 'docs/references/openai_'
+  -e 'docs/references/.*\.png'
+)
+
+filter_upstream_sources() {
+  if [[ ${#upstream_source_excludes[@]} -eq 0 ]]; then
+    cat
+  else
+    grep -v "${upstream_source_excludes[@]}"
+  fi
+}
+
 findings=0
 for marker_spec in "${markers[@]}"; do
   IFS='|' read -r pattern label severity <<<"$marker_spec"
@@ -72,8 +88,10 @@ for marker_spec in "${markers[@]}"; do
     printf '[%s] %s: %s\n' "$severity" "$label" "$hit"
   done < <(grep -RIn "${excluded_dirs[@]}" -E "$pattern" "${scan_targets[@]}" 2>/dev/null \
     | grep -v 'docs/exec-plans/active/' \
+    | grep -v 'docs/exec-plans/completed/' \
     | grep -v 'scripts/gardener.sh' \
     | grep -v 'docs/references/doc-gardener.md' \
+    | filter_upstream_sources \
     || true)
 done
 
@@ -86,6 +104,7 @@ done < <(
   grep -RInE "${excluded_dirs[@]}" '\]\(([^)]+\.md)\)' \
     docs/ AGENTS.md ARCHITECTURE.md README.md WORKFLOW.md 2>/dev/null \
     | grep -v 'docs/references/doc-gardener.md' \
+    | filter_upstream_sources \
     | while IFS=: read -r file line content; do
         target=$(printf '%s' "$content" | sed -nE 's/.*\]\(([^)]+\.md)\).*/\1/p' | head -n 1)
         [[ -z "$target" ]] && continue

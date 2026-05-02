@@ -1,3 +1,18 @@
+# Tool versions for the wranngle-gtm-engine stack.
+# Pinned so local devboxes and CI both use the same toolchain.
+# Update intentionally; let dependabot or a deliberate PR move these.
+
 [tools]
+# Symphony reference implementation (tools/symphony-elixir).
 erlang = "27"
 elixir = "1.19.5-otp-27"
+
+# Showcase eval harness (packages/agent-evals).
+node = "24"
+bun = "1.1"
+
+# Internal operator UI (apps/ops-console).
+python = "3.12"
+
+# Python deps installer used by some flows that prefer uv over pip.
+uv = "latest"

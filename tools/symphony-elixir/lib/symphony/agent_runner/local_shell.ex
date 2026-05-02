@@ -65,10 +65,16 @@ defmodule Symphony.AgentRunner.LocalShell do
 
   # ============== Helpers ==============
 
+  # Spec § 5.4 fallback: when the workflow body is empty the runtime may
+  # use a minimal default prompt. Read/parse failures stay errors and are
+  # surfaced via the calling pipeline rather than silently masked.
+  @default_fallback_prompt "You are working on an issue from Linear."
+
   defp default_template(config) do
     case WorkflowLoader.load(config.source_path) do
+      {:ok, %{prompt_template: ""}} -> @default_fallback_prompt
       {:ok, %{prompt_template: tpl}} -> tpl
-      _ -> ""
+      _ -> @default_fallback_prompt
     end
   end
 

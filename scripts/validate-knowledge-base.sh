@@ -112,6 +112,8 @@ required_files=(
   "packages/agent-evals/src/service/index.ts"
   "packages/agent-evals/src/runtime/cli.ts"
   "packages/agent-evals/src/ui/index.ts"
+  "packages/agent-evals/tests/structure.test.ts"
+  "packages/agent-evals/tests/lint-coverage.test.ts"
   "apps/ops-console/main.py"
   "apps/ops-console/domain.py"
   "apps/ops-console/pyproject.toml"
@@ -209,6 +211,62 @@ fi
 
 if ! scripts/lint-layered-architecture.sh; then
   printf 'layered-architecture lint failed; fix the import-direction violations above\n' >&2
+  exit 1
+fi
+
+# AGENTS.md link resolution: every Markdown link of the form ](path) where
+# path does not look like a URL must resolve to an existing file or directory.
+agents_link_failed=0
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  target="$line"
+  case "$target" in
+    http://*|https://*|mailto:*|''|'#'*) continue ;;
+  esac
+  # Strip optional anchor (e.g. file.md#section).
+  target_path="${target%%#*}"
+  [[ -z "$target_path" ]] && continue
+  if [[ ! -e "$target_path" ]]; then
+    printf 'AGENTS.md links to %s but it does not exist on disk\n' "$target" >&2
+    agents_link_failed=1
+  fi
+done < <(grep -oE '\]\([^)]+\)' AGENTS.md | sed -E 's/\]\(([^)]+)\)/\1/')
+if (( agents_link_failed )); then
+  exit 1
+fi
+
+# docs/index.md coverage: every top-level docs/*.md (excluding index itself)
+# must be mentioned by filename in docs/index.md so nothing goes orphaned.
+index_missing=0
+while IFS= read -r doc; do
+  base="$(basename "$doc")"
+  [[ "$base" == "index.md" ]] && continue
+  if ! grep -Fq "$base" docs/index.md; then
+    printf 'docs/index.md does not mention %s; add a link or remove the file\n' "$base" >&2
+    index_missing=1
+  fi
+done < <(find docs -maxdepth 1 -type f -name '*.md')
+if (( index_missing )); then
+  exit 1
+fi
+
+# Design-doc metadata: every design doc must declare verification status and a
+# last-reviewed date so an agent can spot rotted docs without reading them in
+# full. (Per the Harness post: "verification status".)
+design_meta_failed=0
+while IFS= read -r doc; do
+  base="$(basename "$doc")"
+  [[ "$base" == "index.md" ]] && continue
+  if ! grep -Eq '^Status:[[:space:]]+(Active|Draft|Deprecated|Completed)$' "$doc"; then
+    printf '%s missing `Status: Active|Draft|Deprecated|Completed` line\n' "$doc" >&2
+    design_meta_failed=1
+  fi
+  if ! grep -Eq '^Last reviewed:[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}$' "$doc"; then
+    printf '%s missing `Last reviewed: YYYY-MM-DD` line\n' "$doc" >&2
+    design_meta_failed=1
+  fi
+done < <(find docs/design-docs -maxdepth 1 -type f -name '*.md')
+if (( design_meta_failed )); then
   exit 1
 fi
 

@@ -15,7 +15,15 @@ The Harness Engineering post (Lopopolo, 2026) describes a recurring "doc-gardeni
 - Reports two classes of finding:
   - **Staleness markers** in prose: `TODO`, `TKTK`, `FIXME`, `XXX`, `placeholder`, `coming soon`, `TBD`.
   - **Broken intra-repo doc links**: any `](path/to/file.md)` whose target does not exist.
-- Excludes `docs/exec-plans/active/`, `scripts/gardener.sh`, and `docs/references/doc-gardener.md` from the marker scan because those files legitimately reference the markers.
+- Excludes from the marker scan:
+  - `docs/exec-plans/active/` and `docs/exec-plans/completed/` — plans
+    legitimately discuss markers and use words like "TODO" / "TBD" in scope
+    notes; completed plans are historical artifacts that don't change.
+  - `scripts/gardener.sh` and `docs/references/doc-gardener.md` — both
+    document the marker patterns themselves.
+  - `docs/references/openai_*.txt` and `docs/references/*.png` — read-only
+    upstream source authority. They legitimately contain placeholder words
+    and relative links pointing outside this repo. Do not edit them.
 - Emits ECS-jsonl events on stderr (`gardener.start`, `gardener.findings`, `gardener.clean`).
 - Exits 0 when clean, 1 when findings exist, 2 on invocation error.
 

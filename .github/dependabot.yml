@@ -1,8 +1,46 @@
 version: 2
 updates:
+  # GitHub Actions used by .github/workflows/.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
       prefix: "ci"
+    open-pull-requests-limit: 5
+
+  # npm / Bun showcase package: packages/agent-evals (zod, @types/bun, typescript).
+  - package-ecosystem: "npm"
+    directory: "/packages/agent-evals"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(agent-evals)"
+    open-pull-requests-limit: 5
+
+  # Python ops-console (streamlit, pytest).
+  - package-ecosystem: "pip"
+    directory: "/apps/ops-console"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(ops-console)"
+    open-pull-requests-limit: 5
+
+  # Elixir Symphony reference implementation (mix.exs).
+  - package-ecosystem: "mix"
+    directory: "/tools/symphony-elixir"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(symphony-elixir)"
+    open-pull-requests-limit: 5
+
+  # Local observability stack (timberio/vector, victoriametrics images).
+  - package-ecosystem: "docker"
+    directory: "/tools/observability"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(observability)"
+    open-pull-requests-limit: 5

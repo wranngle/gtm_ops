@@ -41,9 +41,16 @@ Complete the assigned task using the repository's local knowledge base and valid
 
 ## Schema
 
-This file uses the Symphony spec's nested top-level keys (`tracker`, `polling`, `workspace`, `hooks`, `agent`, `codex`). The current local adapter is a one-shot Bash CLI; the daemon-shaped reference implementation is deferred (see `docs/exec-plans/tech-debt-tracker.md` TD-007).
+This file uses the Symphony spec's nested top-level keys (`tracker`, `polling`, `workspace`, `hooks`, `agent`, `codex`). The current local adapter is a one-shot Bash CLI; the daemon-shaped reference implementation lives at `tools/symphony-elixir/` (see `docs/exec-plans/tech-debt-tracker.md` TD-007).
 
 The local adapter substitutes `scripts/bin/llm.sh` for the spec's `codex app-server` command. Both `agent.command` and `codex.command` point at it for now; once a real Codex app-server adapter is added, `codex.command` will diverge.
+
+Extensions used here that are NOT in the upstream Symphony spec (per §5.3 "Unknown keys should be ignored for forward compatibility"):
+
+- `log_path` (top-level path string) — sink path for the ECS-jsonl log stream emitted by `scripts/symphony.sh`.
+- `agent.require_explicit_run` (boolean) — when true, `scripts/symphony.sh once` refuses to dispatch the agent unless `SYMPHONY_ALLOW_AGENT_RUN=1` is set in the environment.
+
+`tracker.active_states` and `tracker.terminal_states` are written here as comma-separated strings instead of YAML block lists; the bash parser is intentionally limited to inline scalars (see `docs/references/symphony-orchestration.md` "Spec Coverage By Adapter"). The Elixir daemon accepts both shapes.
 
 ## Required Context
 

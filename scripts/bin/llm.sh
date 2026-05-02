@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]];do case "$1" in
 esac;done
 [[ -z $userPrompt && ! -t 0 ]]&&userPrompt=$(cat)
 [[ -z $userPrompt ]]&&{ emitEcsEventOnStderr error llm.usage failure '' '' 'no prompt provided';exit 2;}
-DEFAULT_FALLBACK_CHAIN='gemini:gemini-3.1-pro-preview,claude:opus,codex:o3-mini,gemini:gemini-3-pro-preview,gemini:gemini-pro-latest,gemini:gemini-3-flash-preview,gemini:gemini-3.1-flash-lite-preview,claude:sonnet,gemini:gemini-flash-latest,gemini:gemini-2.5-flash,gemini:gemma-3-27b-it'
+DEFAULT_FALLBACK_CHAIN='gemini:gemini-3.1-pro-preview,claude:claude-opus-4-7,claude:opus,codex:o3-mini,gemini:gemini-3-pro-preview,gemini:gemini-pro-latest,claude:claude-sonnet-4-6,claude:sonnet,gemini:gemini-3-flash-preview,gemini:gemini-3.1-flash-lite-preview,claude:claude-haiku-4-5,claude:haiku,gemini:gemini-flash-latest,gemini:gemini-2.5-flash,gemini:gemma-3-27b-it'
 fallbackChainSpec=${LLM_CHAIN:-$DEFAULT_FALLBACK_CHAIN};perCallTimeoutSeconds=${LLM_TIMEOUT:-120};systemPrompt=${LLM_SYSTEM:-}
 isQuotaOrRateLimitError(){ local err;err=$(printf %s "$1"|tr A-Z a-z);case "$err" in *429*|*quota*|*"rate limit"*|*"rate-limit"*|*exceeded*|*resource_exhausted*|*503*|*504*|*overloaded*|*capacity*) return 0;;*) return 1;;esac;}
 callGeminiGenerateContentApi(){ local modelId=$1 prompt=$2 system=$3 schema=$4 commandArgs fullPrompt

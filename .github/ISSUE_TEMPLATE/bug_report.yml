@@ -1,43 +1,85 @@
-name: "🐛 Bug report"
-description: "Report a reproducible problem in wranngle-gtm-engine so we can fix it."
-labels: ["bug"]
+name: "Bug report"
+description: "Report a reproducible problem so an agent or human can fix it."
+title: "bug: <one-line summary>"
+labels: ["bug", "symphony:todo"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a bug report! Please fill out the sections below so we can investigate quickly.
+        Thanks for filing a bug. This template is shaped for both human and agent consumption.
+
+        - Symphony reads issues with the `symphony:todo` label as candidate work (see `docs/references/symphony-github-issues-adapter.md`).
+        - Add a `priority:N` label (lower = higher priority) to influence dispatch ordering.
+        - To declare a blocker, write `Blocked-by: #123` on its own line in the description.
+        - Do not paste secrets, live customer data, production webhook URLs, or phone numbers. This repo is public.
+
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
-      description: Describe the bug — what went wrong?
-      placeholder: When I run ..., I see ...
+      description: One- to three-sentence summary of the broken behavior.
+      placeholder: When I run `scripts/symphony.sh once --dry-run`, it errors with ...
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
-      label: What did you expect?
-      description: Describe the behavior you expected instead.
-      placeholder: I expected ...
+      label: Expected behavior
+      description: What should have happened instead?
+      placeholder: I expected the dry run to render a prompt for WGTE-001 and exit 0.
+    validations:
+      required: true
+
   - type: textarea
     id: repro
     attributes:
       label: Reproduction steps
-      description: Provide a minimal, step-by-step recipe to reproduce the issue.
+      description: Minimal recipe an agent can replay verbatim. Prefer commands runnable from the repo root.
       placeholder: |
-        1. ...
-        2. ...
-        3. ...
+        1. `scripts/validate-knowledge-base.sh`
+        2. `scripts/symphony.sh once --dry-run --limit 1`
+        3. Observe error: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / output
+      description: Paste raw stderr, stdout, or `.symphony/logs/symphony.jsonl` lines. Use a fenced block.
+      render: shell
+
   - type: input
     id: environment
     attributes:
       label: Environment
-      description: OS, version, and runtime (e.g. macOS 14.5, Node.js 20.11).
-      placeholder: macOS 14.5, Node.js 20.11
+      description: OS, shell, and tool versions (output of `bash --version`, `node --version`, `bun --version`, `python3 --version`, `mise current` as relevant).
+      placeholder: WSL2 Ubuntu 24.04, bash 5.2, node 24.15, bun 1.1, python 3.12
+
   - type: input
-    id: version
+    id: commit
     attributes:
-      label: wranngle-gtm-engine version
-      description: Which version of wranngle-gtm-engine are you running?
-      placeholder: 0.1.0
+      label: Commit
+      description: Output of `git rev-parse --short HEAD`.
+      placeholder: a1b2c3d
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      description: Which area is broken? Pick the closest match; agents use this to scope their work.
+      multiple: true
+      options:
+        - "L0 dotfiles primitives (LICENSE, .github/, demo/, scripts/bin/llm.sh, scripts/hero.sh)"
+        - "Domain 1 LLM fallback chain (scripts/bin/llm.sh)"
+        - "Symphony orchestrator (scripts/symphony.sh, tools/symphony-elixir/)"
+        - "Knowledge-base validators (scripts/validate-knowledge-base.sh, scripts/lint-layered-architecture.sh, scripts/gardener.sh)"
+        - "agent-evals (packages/agent-evals/)"
+        - "ops-console (apps/ops-console/)"
+        - "Edge MCP (tools/edge-mcp/)"
+        - "Local observability (tools/observability/)"
+        - "CI workflows (.github/workflows/)"
+        - "Documentation only"
+    validations:
+      required: true

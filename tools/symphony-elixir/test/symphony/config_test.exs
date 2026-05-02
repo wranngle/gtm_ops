@@ -113,6 +113,91 @@ defmodule Symphony.ConfigTest do
     assert Config.hook_script(config, :after_run) == nil
   end
 
+  test "resolves relative tracker.issues_root against the workflow file's directory", %{tmp: tmp} do
+    config =
+      write_workflow(tmp, """
+      ---
+      tracker:
+        kind: local_markdown
+        issues_root: .symphony/issues
+      ---
+      body
+      """)
+
+    expected = Path.join(tmp, ".symphony/issues")
+    assert Map.fetch!(config.resolved, "tracker.issues_root") == expected
+  end
+
+  test "resolves relative workspace.root against the workflow file's directory", %{tmp: tmp} do
+    config =
+      write_workflow(tmp, """
+      ---
+      workspace:
+        root: .symphony/workspaces
+      ---
+      """)
+
+    expected = Path.join(tmp, ".symphony/workspaces")
+    assert Config.workspace_root(config) == expected
+  end
+
+  test "leaves absolute workspace.root paths untouched", %{tmp: tmp} do
+    abs = Path.join(tmp, "abs-ws")
+
+    config =
+      write_workflow(tmp, """
+      ---
+      workspace:
+        root: #{abs}
+      ---
+      """)
+
+    assert Config.workspace_root(config) == abs
+  end
+
+  test "validate_dispatch_preflight passes for noop tracker with default commands", %{tmp: tmp} do
+    config =
+      write_workflow(tmp, """
+      ---
+      tracker:
+        kind: noop
+      ---
+      """)
+
+    assert Config.validate_dispatch_preflight(config) == :ok
+  end
+
+  test "validate_dispatch_preflight reports missing linear api_key/project_slug", %{tmp: tmp} do
+    config =
+      write_workflow(tmp, """
+      ---
+      tracker:
+        kind: linear
+      ---
+      """)
+
+    assert {:error, {:dispatch_preflight, reasons}} =
+             Config.validate_dispatch_preflight(config)
+
+    assert :missing_tracker_api_key in reasons
+    assert :missing_tracker_project_slug in reasons
+  end
+
+  test "validate_dispatch_preflight reports missing github_issues repo", %{tmp: tmp} do
+    config =
+      write_workflow(tmp, """
+      ---
+      tracker:
+        kind: github_issues
+      ---
+      """)
+
+    assert {:error, {:dispatch_preflight, reasons}} =
+             Config.validate_dispatch_preflight(config)
+
+    assert :missing_tracker_repo in reasons
+  end
+
   test "tracker_active_states accepts both CSV string and YAML list", %{tmp: tmp} do
     csv_config =
       write_workflow(tmp, """

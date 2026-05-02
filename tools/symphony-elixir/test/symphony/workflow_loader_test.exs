@@ -63,4 +63,12 @@ defmodule Symphony.WorkflowLoaderTest do
 
     assert {:error, :workflow_front_matter_not_a_map} = WorkflowLoader.load(path)
   end
+
+  test "unterminated front matter is reported as workflow_parse_error", %{tmp: tmp} do
+    path = Path.join(tmp, "WORKFLOW.md")
+    File.write!(path, "---\nkey: value\nno closing fence\n")
+
+    assert {:error, {:workflow_parse_error, :unterminated_front_matter}} =
+             WorkflowLoader.load(path)
+  end
 end

@@ -74,7 +74,9 @@ defmodule Symphony.WorkflowLoader do
             {:ok, {Enum.join(fm, "\n"), Enum.join(body, "\n")}}
 
           {_fm, []} ->
-            {:error, :unterminated_front_matter}
+            # Spec § 5.5 error class `workflow_parse_error` covers
+            # malformed front matter, including unterminated `---`.
+            {:error, {:workflow_parse_error, :unterminated_front_matter}}
         end
 
       _ ->

@@ -20,6 +20,14 @@ export interface PrometheusMetricsSinkOptions {
   /**
    * Endpoint that accepts Prometheus exposition format. For VictoriaMetrics:
    * `http://<host>:8428/api/v1/import/prometheus`.
+   *
+   * NOTE: this sink does NOT speak OTLP. Vector's `opentelemetry` source
+   * and VictoriaMetrics's `/opentelemetry/api/v1/push` both reject the
+   * JSON-encoded OTLP envelopes earlier slices were emitting, so the wire
+   * format here is Prometheus exposition (text). To target the local
+   * stack via Vector, point this sink at the Prometheus-import endpoint
+   * directly, NOT at `http://127.0.0.1:4318/v1/metrics` — Vector's OTLP
+   * intake won't accept exposition-format payloads.
    */
   endpoint: string;
   serviceName?: string;
@@ -27,10 +35,20 @@ export interface PrometheusMetricsSinkOptions {
 }
 
 /**
- * @deprecated Renamed — kept as an alias so existing callers keep working.
- * The "OTLP" label was aspirational; the wire format we actually emit is
- * Prometheus exposition because both Vector's OTLP source and
- * VictoriaMetrics's OTLP intake reject JSON-encoded OTLP payloads.
+ * @deprecated Renamed to `createPrometheusMetricsSink`. The "OTLP" label
+ * was aspirational; the wire format we actually emit is Prometheus
+ * exposition (text), because both Vector's OTLP source and
+ * VictoriaMetrics's OTLP HTTP intake reject the JSON-encoded OTLP
+ * payloads earlier slices were emitting. Update your imports — this
+ * alias will be removed in a future slice.
+ *
+ * Migration:
+ *   - import { createOtlpHttpMetricsSink } from "...";   // OLD
+ *   + import { createPrometheusMetricsSink } from "..."; // NEW
+ *
+ *   // Endpoint also changes:
+ *   - http://127.0.0.1:4318/v1/metrics                       // OLD (OTLP-shaped, didn't work)
+ *   + http://127.0.0.1:8428/api/v1/import/prometheus         // NEW (works)
  */
 export const createOtlpHttpMetricsSink = createPrometheusMetricsSink;
 

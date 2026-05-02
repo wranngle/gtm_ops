@@ -1,0 +1,2 @@
+{"@timestamp":"2026-05-02T00:41:12.964484Z","available":1,"candidates":25,"event.action":"symphony.dispatch","event.outcome":"success","issue.identifier":"","log.level":"info","message":"","ready":1,"service.name":"wranngle-local-symphony"}
+{"@timestamp":"2026-05-02T00:41:12.969830Z","event.action":"symphony.dispatch.log_only","event.outcome":"success","id":"STACK-010","issue.identifier":"STACK-010","log.level":"info","message":"","priority":1,"service.name":"wranngle-local-symphony","state":"todo"}

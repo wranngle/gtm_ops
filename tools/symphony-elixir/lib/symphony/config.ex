@@ -33,6 +33,18 @@ defmodule Symphony.Config do
     "log_path"
   ]
 
+  # Spec § 6.1 / § 9.1: filesystem path values may be expressed as
+  # repo-relative strings inside WORKFLOW.md. Resolve them against the
+  # directory containing the workflow file so the daemon doesn't depend
+  # on whatever cwd `mix run` happened to inherit (the previous behavior
+  # silently broke `tracker.issues_root: .symphony/issues` when started
+  # from `tools/symphony-elixir/`).
+  @path_resolvable [
+    "tracker.issues_root",
+    "workspace.root",
+    "log_path"
+  ]
+
   @defaults %{
     "tracker.kind" => "local_markdown",
     "tracker.endpoint" => "https://api.linear.app/graphql",
@@ -65,6 +77,8 @@ defmodule Symphony.Config do
 
   @spec from_workflow(WorkflowLoader.workflow()) :: {:ok, t()} | {:error, term()}
   def from_workflow(%{config: raw, source_path: path}) do
+    workflow_dir = path && Path.dirname(path)
+
     resolved =
       Enum.reduce(@defaults, %{}, fn {dotted, default}, acc ->
         value =
@@ -73,7 +87,10 @@ defmodule Symphony.Config do
             {:ok, v} -> v
           end
 
-        Map.put(acc, dotted, maybe_resolve_env(dotted, value))
+        value
+        |> maybe_resolve_env(dotted)
+        |> maybe_resolve_path(dotted, workflow_dir)
+        |> then(&Map.put(acc, dotted, &1))
       end)
 
     {:ok, %{raw: raw, resolved: resolved, source_path: path}}
@@ -153,6 +170,64 @@ defmodule Symphony.Config do
   @spec log_path(t()) :: binary()
   def log_path(config), do: get_string!(config, "log_path")
 
+  @doc """
+  Spec § 6.3 dispatch preflight: validate the minimal config the
+  scheduler needs before launching work this tick. Returns `:ok` or
+  `{:error, {:dispatch_preflight, [reason, ...]}}` so the orchestrator
+  can skip dispatch (but keep reconciliation running) and emit an
+  operator-visible warning.
+
+  Checks performed:
+
+    * `tracker.kind` is present and supported (delegated to the tracker
+      adapter resolver elsewhere; this layer just rejects empty values).
+    * `tracker.api_key` is present after `$VAR` resolution when the
+      tracker requires it (`linear`, `github_issues`).
+    * `tracker.project_slug` is present when `tracker.kind == :linear`.
+    * `tracker.repo` is present when `tracker.kind == :github_issues`.
+    * `codex.command` is non-empty (or `agent.command` for kits that
+      stand in for codex).
+  """
+  @spec validate_dispatch_preflight(t()) :: :ok | {:error, {:dispatch_preflight, [atom()]}}
+  def validate_dispatch_preflight(config) do
+    kind = tracker_kind(config)
+    reasons = []
+
+    reasons =
+      case kind do
+        :linear ->
+          reasons
+          |> add_if_missing(tracker_api_key(config), :missing_tracker_api_key)
+          |> add_if_missing(get_string(config, "tracker.project_slug"), :missing_tracker_project_slug)
+
+        :github_issues ->
+          add_if_missing(reasons, get_string(config, "tracker.repo"), :missing_tracker_repo)
+
+        _ ->
+          reasons
+      end
+
+    reasons =
+      reasons
+      |> add_if_missing(safe_get_string(config, "codex.command"), :missing_codex_command)
+      |> add_if_missing(safe_get_string(config, "agent.command"), :missing_agent_command)
+
+    case reasons do
+      [] -> :ok
+      list -> {:error, {:dispatch_preflight, Enum.reverse(list)}}
+    end
+  end
+
+  defp add_if_missing(reasons, nil, atom), do: [atom | reasons]
+  defp add_if_missing(reasons, "", atom), do: [atom | reasons]
+  defp add_if_missing(reasons, _value, _atom), do: reasons
+
+  defp safe_get_string(config, dotted) do
+    get_string(config, dotted)
+  rescue
+    _ -> nil
+  end
+
   # ============== Helpers ==============
 
   defp fetch_raw(map, dotted) do
@@ -171,7 +246,7 @@ defmodule Symphony.Config do
   end
   defp do_fetch(_, _), do: :missing
 
-  defp maybe_resolve_env(dotted, value) when is_binary(value) do
+  defp maybe_resolve_env(value, dotted) when is_binary(value) do
     if dotted in @env_resolvable do
       resolve_env(value)
     else
@@ -179,13 +254,42 @@ defmodule Symphony.Config do
     end
   end
 
-  defp maybe_resolve_env(_dotted, value), do: value
+  defp maybe_resolve_env(value, _dotted), do: value
 
   defp resolve_env("$" <> var_name) do
     System.get_env(var_name) || ""
   end
 
   defp resolve_env(value), do: value
+
+  # Promote a relative filesystem path to absolute by resolving it against
+  # the directory of WORKFLOW.md. Absolute paths and non-binary values pass
+  # through unchanged. URLs and arbitrary command strings are not in
+  # `@path_resolvable` and are skipped.
+  defp maybe_resolve_path(value, dotted, workflow_dir)
+       when is_binary(value) and is_binary(workflow_dir) do
+    if dotted in @path_resolvable do
+      resolve_path(value, workflow_dir)
+    else
+      value
+    end
+  end
+
+  defp maybe_resolve_path(value, _dotted, _workflow_dir), do: value
+
+  defp resolve_path("", _workflow_dir), do: ""
+
+  defp resolve_path(<<"~", _::binary>> = path, _workflow_dir), do: Path.expand(path)
+
+  defp resolve_path(<<"$", _::binary>> = path, _workflow_dir),
+    do: path
+
+  defp resolve_path(path, workflow_dir) do
+    case Path.type(path) do
+      :absolute -> Path.expand(path)
+      _ -> Path.expand(path, workflow_dir)
+    end
+  end
 
   defp get_string(config, dotted) do
     case Map.fetch!(config.resolved, dotted) do

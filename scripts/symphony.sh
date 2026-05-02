@@ -7,7 +7,24 @@ symphony_workflow_file_path="${SYMPHONY_WORKFLOW_FILE:-WORKFLOW.md}"
 symphony_now_utc(){ date -u +%Y-%m-%dT%H:%M:%SZ; }
 symphony_json_escape(){ local raw="${1:-}";raw="${raw//\\/\\\\}";raw="${raw//\"/\\\"}";raw="${raw//$'\n'/\\n}";printf '%s' "$raw"; }
 
+# symphony_resolve_env_indirection expands a single leading `$VAR_NAME` token in
+# scalar workflow values (per spec §6.1). Values without the `$` prefix are
+# returned unchanged. If the named variable is unset or empty, an empty string
+# is returned so the caller's default kicks in.
+symphony_resolve_env_indirection(){
+  local raw="$1"
+  if [[ "$raw" =~ ^\$([A-Za-z_][A-Za-z0-9_]*)$ ]]; then
+    local var_name="${BASH_REMATCH[1]}"
+    printf '%s' "${!var_name-}"
+  else
+    printf '%s' "$raw"
+  fi
+}
+
 # symphony_workflow_value reads dotted YAML paths from WORKFLOW.md front matter.
+# Supports inline scalars (string, integer, quoted) and `$VAR` env indirection.
+# Block-list/block-map values are out of scope (the spec's list-of-strings
+# fields use CSV here); see docs/references/symphony-orchestration.md.
 symphony_workflow_value(){
   local path="$1" default="${2:-}" top key
   if [[ "$path" == *.* ]]; then top="${path%%.*}"; key="${path#*.}"; else top=""; key="$path"; fi
@@ -34,6 +51,7 @@ symphony_workflow_value(){
       }
     }
   ' "$symphony_workflow_file_path" 2>/dev/null)"
+  value="$(symphony_resolve_env_indirection "$value")"
   if [[ -n "$value" ]]; then printf '%s' "$value"; else printf '%s' "$default"; fi
 }
 
@@ -77,7 +95,18 @@ symphony_lm_issue_front_matter_value(){
     || printf '%s' "$default"
 }
 symphony_lm_issue_title_from_ref(){ awk '/^# /{sub(/^# /,"");print;exit}' "$1"; }
-symphony_lm_issue_description_from_ref(){ awk 'BEGIN{seen=0}/^---$/{f++;next}f>=2{print}' "$1"; }
+# Description is the body after the YAML front matter, with the leading `# Title`
+# heading and one separator blank line removed (the title is a separate field
+# per spec §4.1.1, and duplicating it in the prompt body wastes tokens).
+symphony_lm_issue_description_from_ref(){
+  awk '
+    /^---$/ { f++; next }
+    f < 2 { next }
+    !title_seen && /^# / { title_seen = 1; next }
+    title_seen && !blank_seen && /^[[:space:]]*$/ { blank_seen = 1; next }
+    { print }
+  ' "$1"
+}
 symphony_lm_issue_priority_from_ref(){
   local value
   value="$(symphony_lm_issue_front_matter_value "$1" priority 999)"
@@ -158,14 +187,19 @@ symphony_gh_issue_priority_from_ref(){
 symphony_gh_issue_title_from_ref(){ symphony_gh_issue_field "$1" '.title'; }
 symphony_gh_issue_body_from_ref(){ symphony_gh_issue_field "$1" '.body'; }
 symphony_gh_issue_blocked_by_csv_from_ref(){
-  local body
+  # Match a single `Blocked-by: #N[, #M]...` body line and emit a comma-joined
+  # CSV of bare issue numbers. Each pipeline stage tolerates a no-match by
+  # absorbing its own non-zero exit so the function stays pipefail-safe and
+  # returns success even when the issue declares no blockers.
+  local body line
   body="$(symphony_gh_issue_body_from_ref "$1")"
-  printf '%s' "$body" \
-    | grep -iE '^[[:space:]]*Blocked-by:[[:space:]]*#?[0-9]' \
-    | head -n 1 \
+  line="$(printf '%s\n' "$body" | grep -iE '^[[:space:]]*Blocked-by:[[:space:]]*#?[0-9]' | head -n 1 || true)"
+  [[ -z "$line" ]] && return 0
+  printf '%s' "$line" \
     | grep -oE '#?[0-9]+' \
     | sed 's/^#//' \
-    | paste -sd ',' - 2>/dev/null || true
+    | paste -sd ',' - \
+    || true
 }
 symphony_gh_blocker_is_open(){
   local blocker="$1" gh_state
@@ -301,7 +335,7 @@ PROMPT
 
 symphony_run_issue(){
   local ref="$1" dry_run="$2"
-  local identifier workspace_key workspace output_file agent_command
+  local identifier workspace_key workspace workspace_abs workspace_root_abs output_file agent_command rc
   identifier="$(symphony_issue_identifier_from_ref "$ref")"
   if symphony_issue_is_blocked "$ref"; then
     symphony_emit_log info symphony.issue_blocked success "blocked_by=$(symphony_issue_blocked_by_csv_from_ref "$ref")" "$identifier"
@@ -310,6 +344,15 @@ symphony_run_issue(){
   workspace_key="$(symphony_sanitize_workspace_key "$identifier")"
   workspace="$symphony_workspace_root/$workspace_key"
   mkdir -p "$workspace"
+  # Spec §9.5 invariant 2: workspace_path must stay inside workspace_root after
+  # absolute-path normalization. Sanitization already strips `/` from the key,
+  # so this is a defense-in-depth check, but the spec mandates it explicitly.
+  workspace_root_abs="$(cd "$symphony_workspace_root" && pwd)"
+  workspace_abs="$(cd "$workspace" && pwd)"
+  case "$workspace_abs/" in
+    "$workspace_root_abs/"*) : ;;
+    *) symphony_fail symphony.workspace_outside_root "workspace=$workspace_abs root=$workspace_root_abs" "$identifier" ;;
+  esac
   output_file="$workspace/agent-output-$(date -u +%Y%m%dT%H%M%SZ).md"
   symphony_emit_log info symphony.dispatch success "workspace=$workspace dry_run=$dry_run" "$identifier"
   if [[ "$dry_run" == true ]]; then
@@ -321,7 +364,15 @@ symphony_run_issue(){
     symphony_fail symphony.agent_run_not_allowed "set SYMPHONY_ALLOW_AGENT_RUN=1 to execute agent.command" "$identifier"
   fi
   agent_command="$(symphony_resolved_agent_command)"
-  symphony_render_prompt "$ref" "" "$workspace" | (cd "$workspace" && "$agent_command") > "$output_file"
+  # Spec §9.5 invariant 1: agent runs only with cwd == workspace_path. Render
+  # the prompt OUTSIDE the workspace (it reads repo-relative paths) and pipe
+  # into the agent subshell which sets cwd = workspace.
+  rc=0
+  symphony_render_prompt "$ref" "" "$workspace" | (cd "$workspace" && "$agent_command") > "$output_file" || rc=$?
+  if (( rc != 0 )); then
+    symphony_emit_log error symphony.agent_failed failure "exit=$rc output=$output_file" "$identifier"
+    return "$rc"
+  fi
   symphony_emit_log info symphony.agent_completed success "output=$output_file" "$identifier"
 }
 
