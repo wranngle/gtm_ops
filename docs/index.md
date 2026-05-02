@@ -36,6 +36,8 @@ Stack contracts owned by this repo:
 - [references/doc-gardener.md](references/doc-gardener.md): doc-gardener contract.
 - [references/local-observability.md](references/local-observability.md): LogsQL/PromQL/TraceQL cookbook.
 - [references/edge-devtools-mcp.md](references/edge-devtools-mcp.md): Edge DevTools MCP wiring contract.
+- [references/README.md](references/README.md): curation policy for dependency `*-llms.txt` snapshots.
+- [references/streamlit-llms.txt](references/streamlit-llms.txt): compact Streamlit API snapshot for the ops console.
 
 Checked-in OpenAI source material (authoritative when this repo's derivative docs disagree):
 

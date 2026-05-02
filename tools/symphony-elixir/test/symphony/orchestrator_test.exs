@@ -10,6 +10,7 @@ defmodule Symphony.OrchestratorTest do
     # Orchestrator process. Kill it before we start fresh.
     stop_orchestrator()
     reset_stub_tracker()
+    stop_blocking_tracker()
     ensure_worker_supervisor()
 
     tmp = Path.join(System.tmp_dir!(), "symphony-orch-#{System.unique_integer([:positive])}")
@@ -18,6 +19,7 @@ defmodule Symphony.OrchestratorTest do
     on_exit(fn ->
       stop_orchestrator()
       reset_stub_tracker()
+      stop_blocking_tracker()
       File.rm_rf!(tmp)
     end)
 
@@ -76,6 +78,21 @@ defmodule Symphony.OrchestratorTest do
     end
   end
 
+  defp stop_blocking_tracker do
+    try do
+      case Process.whereis(Symphony.Test.BlockingTracker) do
+        nil ->
+          :ok
+
+        pid when is_pid(pid) ->
+          Agent.stop(pid, :normal, 1_000)
+          :ok
+      end
+    catch
+      :exit, _ -> :ok
+    end
+  end
+
   defp boot_with_workflow(tmp, body) do
     path = Path.join(tmp, "WORKFLOW.md")
     File.write!(path, body)
@@ -103,6 +120,48 @@ defmodule Symphony.OrchestratorTest do
     assert snap.running == []
     assert snap.retrying == []
     assert snap.codex_totals.total_tokens == 0
+    assert snap.polling.checking? == false
+  end
+
+  test "request_refresh returns unavailable when daemon is not running" do
+    assert {:error, :unavailable} = Orchestrator.request_refresh()
+  end
+
+  test "request_refresh queues one tick and coalesces while check is in progress", %{tmp: tmp} do
+    {:ok, _blocking} = Symphony.Test.BlockingTracker.start_link(self())
+
+    boot_with_workflow(tmp, """
+    ---
+    tracker:
+      kind: noop
+    polling:
+      interval_ms: 60000
+    agent:
+      command: scripts/bin/llm.sh
+      max_concurrent_agents: 1
+    codex:
+      stall_timeout_ms: 0
+    ---
+    """)
+
+    Orchestrator.set_adapter(Symphony.Test.BlockingTracker)
+
+    assert {:ok, %{queued: true, coalesced: true}} = Orchestrator.request_refresh()
+    assert_receive {:blocking_fetch_started, orchestrator_pid}, 1_000
+
+    assert {:ok, snap} = Orchestrator.snapshot()
+    assert snap.polling.checking? == true
+
+    assert {:ok, %{queued: true, coalesced: true}} = Orchestrator.request_refresh()
+    send(orchestrator_pid, :release_blocking_fetch)
+
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             Symphony.Test.BlockingTracker.fetch_count() == 1 and snap.polling.checking? == false
+           end)
+
+    Process.sleep(50)
+    assert Symphony.Test.BlockingTracker.fetch_count() == 1
   end
 
   test "tick logs dispatch decision with available slots", %{tmp: tmp} do
@@ -668,4 +727,39 @@ defmodule Symphony.OrchestratorTest do
     File.chmod!(path, 0o755)
     path
   end
+end
+
+defmodule Symphony.Test.BlockingTracker do
+  @moduledoc false
+
+  @behaviour Symphony.Tracker
+
+  use Agent
+
+  def start_link(owner) when is_pid(owner) do
+    Agent.start_link(fn -> %{owner: owner, fetch_count: 0} end, name: __MODULE__)
+  end
+
+  def fetch_count do
+    Agent.get(__MODULE__, & &1.fetch_count)
+  end
+
+  @impl Symphony.Tracker
+  def fetch_candidate_issues(_config) do
+    owner = Agent.get(__MODULE__, & &1.owner)
+    Agent.update(__MODULE__, &Map.update!(&1, :fetch_count, fn count -> count + 1 end))
+    send(owner, {:blocking_fetch_started, self()})
+
+    receive do
+      :release_blocking_fetch -> {:ok, []}
+    after
+      5_000 -> {:error, :blocking_fetch_timeout}
+    end
+  end
+
+  @impl Symphony.Tracker
+  def fetch_issues_by_states(_config, _states), do: {:ok, []}
+
+  @impl Symphony.Tracker
+  def fetch_issue_states_by_ids(_config, _ids), do: {:ok, %{}}
 end

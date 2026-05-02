@@ -30,7 +30,10 @@ defmodule Symphony.Web.Live.DashboardLiveTest do
           codex_app_server_pid: nil,
           last_codex_event: :turn_started,
           last_codex_timestamp: DateTime.utc_now(),
-          last_codex_message: %{"method" => "turn/started", "params" => %{"turn" => %{"id" => "turn-2"}}},
+          last_codex_message: %{
+            "method" => "turn/started",
+            "params" => %{"turn" => %{"id" => "turn-2"}}
+          },
           codex_input_tokens: 1_234,
           codex_output_tokens: 5_678,
           codex_total_tokens: 6_912,
@@ -61,7 +64,8 @@ defmodule Symphony.Web.Live.DashboardLiveTest do
       rate_limits: nil,
       workflow_loaded: true,
       tracker_kind: :local_markdown,
-      last_tick_at: nil
+      last_tick_at: nil,
+      polling: %{poll_interval_ms: 60_000, next_poll_in_ms: 0, checking?: true}
     })
 
     conn = build_conn(:get, "/")
@@ -77,6 +81,8 @@ defmodule Symphony.Web.Live.DashboardLiveTest do
     # Token total formatted with thousands separators
     assert html =~ "6,912"
     assert html =~ "Total tokens"
+    assert html =~ "Polling"
+    assert html =~ "Checking now"
     assert html =~ "Recent events"
   end
 

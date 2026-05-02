@@ -134,6 +134,65 @@ done < <(
       done
 )
 
+# Backtick-quoted repo-relative paths: `docs/foo.md`, `scripts/foo.sh`,
+# `packages/domain/src/layer/file.ts`, etc. Fenced code blocks are skipped.
+looks_like_repo_path() {
+  local ref=$1
+  [[ "$ref" == */* ]] || return 1
+  case "$ref" in
+    /*|./*|../*|~/*|http://*|https://*|mailto:*|*://*) return 1 ;;
+    *[\"\':,\;\(\)\{\}\[\]\<\>\|]*|*\**|*\?*) return 1 ;;
+  esac
+  case "$ref" in
+    docs/*|packages/*|apps/*|scripts/*|tools/*|demo/*|.github/*|.symphony/*) ;;
+    *) return 1 ;;
+  esac
+  case "$ref" in
+    *.md|*.txt|*.png|*.yml|*.yaml|*.json|*.jsonl|*.sh|*.py|*.ts|*.tsx|*.js|*.mjs|*.ex|*.exs|*.toml|*.tape|*.cmd|*.ps1|*.html|*.css) return 0 ;;
+    scripts/*|.github/*|demo/*) return 0 ;;
+    packages/*|apps/*)
+      [[ "$ref" != */*/* ]] && return 0
+      ;;
+    .symphony/issues/*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+while IFS=$'\t' read -r file line target; do
+  [[ -z "$target" ]] && continue
+  if ! looks_like_repo_path "$target"; then
+    continue
+  fi
+  target_path=${target%%#*}
+  [[ -z "$target_path" ]] && continue
+  if [[ ! -e "$target_path" ]]; then
+    findings=$((findings + 1))
+    printf '[warn] broken-code-path: %s:%s -> %s\n' "$file" "$line" "$target"
+  fi
+done < <(
+  find AGENTS.md ARCHITECTURE.md WORKFLOW.md README.md docs packages apps \
+    \( -path '*/node_modules/*' -o -path '*/.git/*' -o -path '*/.claude/*' -o -path '*/dist/*' -o -path '*/build/*' -o -path '*/__pycache__/*' -o -path '*/.venv/*' -o -path '*/.symphony/*' -o -path 'docs/references/openai_*.txt' -o -path 'docs/references/*.png' -o -path 'docs/exec-plans/completed/*' -o -path 'docs/references/doc-gardener.md' \) -prune \
+    -o -type f \( -name '*.md' -o -name '*.txt' \) -print 2>/dev/null \
+    | sort \
+    | while IFS= read -r file; do
+        awk -v file="$file" '
+          BEGIN { in_fence = 0 }
+          /^```/ { in_fence = !in_fence; next }
+          in_fence { next }
+          {
+            text = $0
+            while (match(text, /`[A-Za-z0-9_./-]+`/)) {
+              span = substr(text, RSTART + 1, RLENGTH - 2)
+              printf "%s\t%d\t%s\n", file, FNR, span
+              text = substr(text, RSTART + RLENGTH)
+            }
+          }
+        ' "$file"
+      done
+)
+
 if (( findings > 0 )); then
   emit_event warn gardener.findings failure "count=$findings"
   printf '\n%s staleness finding(s); a gardener agent should open a fix-up PR\n' "$findings"

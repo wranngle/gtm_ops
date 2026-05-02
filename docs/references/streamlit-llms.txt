@@ -1,0 +1,184 @@
+# Streamlit LLM Reference Snapshot
+
+Snapshot date: 2026-05-02
+Dependency in this repo: `apps/ops-console/pyproject.toml` declares `streamlit>=1.40,<2.0`.
+Purpose: compact, repo-local context for agents editing `apps/ops-console`.
+Approximate size: 7.5 KB, roughly 1.5K tokens.
+
+Sources:
+- https://docs.streamlit.io/
+- https://docs.streamlit.io/develop/api-reference
+- https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config
+- https://docs.streamlit.io/develop/api-reference/layout/st.columns
+- https://docs.streamlit.io/develop/api-reference/data/st.metric
+- https://docs.streamlit.io/develop/api-reference/data/st.table
+- https://docs.streamlit.io/develop/api-reference/layout/st.expander
+
+Refresh instructions:
+1. Open the official Streamlit URLs above.
+2. Check whether signatures or behavior changed for APIs used by `apps/ops-console/main.py`.
+3. Update this snapshot by summarizing behavior in original words. Keep direct quotes short.
+4. Keep the file concise enough for an agent to load into context; sub-500 KB is the repo policy.
+5. Update the snapshot date and rough size/token estimate.
+
+Storage/licensing note:
+This file stores a small public documentation summary with short attributed snippets and repo-specific interpretation. It intentionally does not mirror full Streamlit documentation pages.
+
+## Repo Usage
+
+The ops console is a thin Streamlit app. It imports `streamlit as st`, sets page configuration, displays summary metrics, renders a small table of failing rules, and uses expanders for per-conversation details.
+
+Relevant current code path:
+- `apps/ops-console/main.py`
+
+## App Execution Model
+
+Streamlit scripts are written top-to-bottom. User interactions generally rerun the script, so keep parsing and rendering idempotent. Do not put irreversible side effects in the render path unless guarded by explicit user actions.
+
+For this repo:
+- Parse JSON fixtures or result files before rendering.
+- Keep business logic in `domain.py`; keep Streamlit calls in `main.py`.
+- Treat `main.py` as the runtime/UI boundary.
+
+## Page Configuration
+
+Use `st.set_page_config(...)` to configure browser title, favicon, layout, sidebar state, and menu items.
+
+Important rule from the official docs: `st.set_page_config` must be the first Streamlit command on a page and should be called once for that page.
+
+Common arguments:
+- `page_title`: browser tab title.
+- `page_icon`: favicon-like icon.
+- `layout`: `"centered"` or `"wide"`. `"wide"` uses the full screen width and is appropriate for dashboard-style operator views.
+- `initial_sidebar_state`: `"auto"`, `"expanded"`, or `"collapsed"`.
+- `menu_items`: optional mapping for Streamlit's top-right app menu.
+
+Repo pattern:
+
+```python
+st.set_page_config(page_title="Wranngle Ops Console", layout="wide")
+```
+
+## Text Elements
+
+Use text elements for app structure:
+- `st.title(...)`: page-level title.
+- `st.caption(...)`: small supporting metadata such as source paths or timestamps.
+- `st.subheader(...)`: section headings inside the page.
+- `st.write(...)`: flexible rendering for Markdown-like text, objects, and simple values.
+
+For operator UIs, keep labels direct and data-dense. Avoid long explanatory text in the app unless it is actionable.
+
+## Columns
+
+Use `st.columns(spec, *, gap="small", vertical_alignment="top", border=False)` to create side-by-side containers.
+
+`spec` can be:
+- an integer for equal-width columns, such as `st.columns(4)`;
+- an iterable of numbers for relative widths, such as `[2, 1]`.
+
+The function returns a list of container objects. You can call Streamlit methods on those containers:
+
+```python
+cols = st.columns(4)
+cols[0].metric("Total", summary.total)
+cols[1].metric("Passed", summary.passed)
+```
+
+Guidance:
+- Use columns for compact summary rows and dashboard metrics.
+- Avoid deeply nested column layouts; keep mobile behavior predictable.
+- Column borders are available in newer Streamlit releases, but this repo currently keeps the ops console plain.
+
+## Metrics
+
+Use `st.metric(...)` for a prominent single value, optionally with a delta and small chart.
+
+Common arguments:
+- `label`: metric name.
+- `value`: metric value; strings and numbers are both common.
+- `delta`: optional change indicator.
+- `delta_color`: default semantics can be inverted or disabled when lower is better or when direction is not meaningful.
+
+Official examples show `st.metric` paired with `st.columns` for dashboard rows. That matches this repo's summary counters.
+
+Repo pattern:
+
+```python
+cols = st.columns(4)
+cols[0].metric("Total", summary.total)
+cols[1].metric("Passed", summary.passed)
+cols[2].metric("Failed", summary.failed)
+cols[3].metric("Pass rate", f"{summary.pass_rate * 100:.1f}%")
+```
+
+## Tables
+
+Use `st.table(data=None, *, border=True, width="stretch", height="content", hide_index=None, hide_header=None)` for small static tables.
+
+The official docs distinguish `st.table` from `st.dataframe`: `st.table` is best for small, styled, non-interactive tables without sorting or scrolling.
+
+Repo fit:
+- Failing-rule summaries are small and static, so `st.table` is appropriate.
+- If result sets become large or operators need sorting/filtering, consider `st.dataframe` instead.
+
+Repo pattern:
+
+```python
+st.table(
+    [
+        {"rule": rule, "failures": count}
+        for rule, count in sorted(summary.failing_rules.items(), key=lambda kv: -kv[1])
+    ]
+)
+```
+
+## Expanders
+
+Use `st.expander(label, ...)` for collapsible detail sections. The preferred pattern is `with` notation:
+
+```python
+with st.expander(f"{result.conversation_id} - {verdict}"):
+    st.caption(f"Evaluated: {result.evaluated_at}")
+    st.write("detail")
+```
+
+Important behavior:
+- By default, content inside an expander is still computed and sent to the frontend even when collapsed.
+- Newer Streamlit versions can track expander state with `on_change="rerun"` or a callback.
+- When state tracking is enabled and a `key` is set, the expanded state can be accessed via `st.session_state[key]`.
+
+Repo guidance:
+- Current per-conversation details are cheap to compute, so default expander behavior is acceptable.
+- If future details require expensive loading, use expander state tracking before doing the expensive work.
+- Do not nest expanders; official docs advise against it for appearance across screen sizes.
+
+## Error Handling
+
+Use `st.error(...)` for user-visible failures in app rendering, such as a missing result file or invalid JSON.
+
+Repo pattern:
+
+```python
+if not results_path.exists():
+    st.error(f"results file not found: {results_path}")
+    return
+```
+
+Keep parsing errors specific and boundary-oriented. The domain layer should raise a clear `ValueError`; the Streamlit layer should display it and stop rendering the dependent UI.
+
+## Testing Notes
+
+The official API reference includes `st.testing.v1.AppTest`, which simulates a running Streamlit app for tests. Use it if this repo adds UI-level Streamlit tests.
+
+For current repo shape:
+- Keep most tests in `apps/ops-console/tests/test_domain.py`.
+- Add Streamlit `AppTest` only when the render behavior itself becomes important.
+
+## Upgrade Checklist
+
+When changing the Streamlit version range:
+- Re-check `st.set_page_config` first-command behavior.
+- Re-check signatures for `st.columns`, `st.metric`, `st.table`, and `st.expander`.
+- Verify whether any new defaults affect wide layout, table dimensions, or expander state.
+- Run the ops-console tests and, if practical, start the app with `streamlit run apps/ops-console/main.py`.

@@ -31,7 +31,8 @@ Last reviewed: 2026-05-01
 | `tools/edge-mcp/windows/setup-elevated.sh` | one-time UAC-elevated setup: writes the v4tov6 portproxy + firewall allow rule by triggering `Start-Process -Verb RunAs` against the staged `.cmd` files |
 | `tools/edge-mcp/windows/edge-mcp-portproxy.cmd` | netsh: deletes any existing v4tov4 rule, adds v4tov6 from `0.0.0.0:9222` → `[::1]:9222` |
 | `tools/edge-mcp/windows/edge-mcp-firewall.cmd` | netsh advfirewall: adds inbound TCP 9222 allow rule named `edge-mcp-9222` |
-| `tools/edge-mcp/launch-mcp.sh` | resolves the working CDP endpoint at MCP start (host IP / 127.0.0.1 / `[::1]` fallbacks), then `exec npx -y @playwright/mcp@latest --browser msedge --cdp-endpoint $resolved`. Honors `EDGE_MCP_CONSOLE_LEVEL`, `EDGE_MCP_EXTRA_ARGS`, and the marker-only `EDGE_MCP_NO_UNSAFE_TOOLS=1` |
+| `tools/edge-mcp/launch-mcp.sh` | resolves the working CDP endpoint at MCP start (host IP / 127.0.0.1 / `[::1]` fallbacks), then runs `@playwright/mcp@latest --browser msedge --cdp-endpoint $resolved`. By default it enables `EDGE_MCP_NO_UNSAFE_TOOLS=1` and runs through `filter-unsafe-tools.mjs`; set `EDGE_MCP_NO_UNSAFE_TOOLS=0` only for deliberate local investigation. Honors `EDGE_MCP_CONSOLE_LEVEL` and `EDGE_MCP_EXTRA_ARGS` |
+| `tools/edge-mcp/filter-unsafe-tools.mjs` | JSON-RPC stdio mediator that hides `browser_run_code_unsafe` from `tools/list` and rejects `tools/call` for that tool before the request reaches upstream `@playwright/mcp` |
 | `tools/edge-mcp/mcp.json` | Claude Code MCP server registration template — uses `launch-mcp.sh` as the command so endpoint resolution happens fresh each session |
 | `tools/edge-mcp/install-mcp.sh` | idempotent merger that writes the `edge-devtools` entry into `~/.claude/settings.json` (or project-local with `--scope project`) |
 | `tools/edge-mcp/smoke/smoke.mjs` | end-to-end attach loop: initialize → tools/list → navigate → console_messages → screenshot → snapshot. Fails LOUDLY on tool-list shrink/expansion or security-gated-tool drift |
@@ -61,11 +62,11 @@ tools/edge-mcp/edge-debug-launch.sh
 # expected stdout: http://172.31.240.1:9222/json/version  (or similar)
 
 # Then drive Edge through Claude Code's `edge-devtools` MCP server.
-# The MCP exposes (via @playwright/mcp) 23 browser_* tools — see
+# The MCP exposes a safe filtered browser_* tool set by default — see
 # "Tools advertised" below for the full list. Common ones:
 # browser_navigate, browser_snapshot (accessibility tree),
 # browser_take_screenshot, browser_click, browser_fill_form,
-# browser_evaluate.
+# browser_evaluate. browser_run_code_unsafe is hidden and denied.
 ```
 
 ## Image #3 → tool/script coverage matrix
@@ -172,10 +173,10 @@ Notes on the loop:
 
 ## Tools advertised
 
-Verified against `@playwright/mcp@0.0.73` (npm `@latest`) on 2026-05-01
-via `tools/edge-mcp/smoke/smoke.mjs`. Note: `serverInfo.version` reports
-`1.60.0-alpha-...` because it surfaces the bundled `playwright-core`
-version, not the MCP wrapper version.
+Default safe inventory verified against `@playwright/mcp@0.0.73` (npm
+`@latest`) on 2026-05-01 via `tools/edge-mcp/smoke/smoke.mjs`. Note:
+`serverInfo.version` reports `1.60.0-alpha-...` because it surfaces the
+bundled `playwright-core` version, not the MCP wrapper version.
 
 ```
 browser_click            browser_close              browser_console_messages
@@ -183,19 +184,27 @@ browser_drag             browser_drop               browser_evaluate
 browser_file_upload      browser_fill_form          browser_handle_dialog
 browser_hover            browser_navigate           browser_navigate_back
 browser_network_request  browser_network_requests   browser_press_key
-browser_resize           browser_run_code_unsafe    browser_select_option
+browser_resize           browser_select_option
 browser_snapshot         browser_tabs               browser_take_screenshot
 browser_type             browser_wait_for
 ```
 
-The smoke test pins this exact set in `EXPECTED_BASE_TOOLS`. A live run
-fails LOUDLY if the upstream:
+Default advertised count is 22 because `launch-mcp.sh` enables
+`EDGE_MCP_NO_UNSAFE_TOOLS=1` unless explicitly set to `0`. The upstream
+unfiltered `@playwright/mcp` inventory still includes
+`browser_run_code_unsafe`; the mediator hides it from `tools/list` and
+rejects direct `tools/call` attempts.
+
+The smoke test pins the upstream set in `EXPECTED_BASE_TOOLS` and derives
+the default safe advertised set by filtering `SECURITY_GATED_TOOLS`. A
+live run fails LOUDLY if the upstream:
 
 - removes any tool from this list (regression),
 - adds a tool we haven't acknowledged (new tool — update both the
   constant and this list to depend on it intentionally),
-- changes the presence of `browser_run_code_unsafe` (security-gated tool
-  drift — update `SECURITY_GATED_TOOLS` and the Security section).
+- changes the presence or denial behavior of `browser_run_code_unsafe`
+  (security-gated tool drift — update `SECURITY_GATED_TOOLS`, the
+  mediator, and the Security section).
 
 To regenerate the inventory snapshot before changing the pin:
 
@@ -225,21 +234,26 @@ exercised by `tools/edge-mcp/smoke/smoke.mjs`, which spawns
 
 1. `initialize` returns a `2024-11-05` protocol envelope with a `tools`
    capability and `serverInfo.name == "Playwright"`.
-2. `tools/list` advertises exactly the 23 `browser_*` tools listed in
-   `EXPECTED_BASE_TOOLS` (no shrink, no unacknowledged expansion).
-3. `tools/call browser_navigate {url:"https://example.com"}` succeeds and
+2. `tools/list` advertises exactly the expected safe tool list: the
+   upstream inventory in `EXPECTED_BASE_TOOLS` minus `SECURITY_GATED_TOOLS`
+   when `EDGE_MCP_NO_UNSAFE_TOOLS` is enabled (no shrink, no
+   unacknowledged expansion).
+3. With `EDGE_MCP_NO_UNSAFE_TOOLS` enabled, `tools/call
+   browser_run_code_unsafe` returns a JSON-RPC denial from the mediator
+   before reaching upstream.
+4. `tools/call browser_navigate {url:"https://example.com"}` succeeds and
    returns Page URL `https://example.com/` and Page Title `Example Domain`.
-4. `tools/call browser_console_messages {all:true}` returns without
+5. `tools/call browser_console_messages {all:true}` returns without
    `isError` (proves console-event wiring even when the page emits no
    logs).
-5. `tools/call browser_take_screenshot {}` returns either an `image`
+6. `tools/call browser_take_screenshot {}` returns either an `image`
    content part or a saved-file reference under `.playwright-mcp/`.
-6. `tools/call browser_snapshot` returns an accessibility tree containing
+7. `tools/call browser_snapshot` returns an accessibility tree containing
    the `heading "Example Domain"` node.
 
 ```bash
 $ node tools/edge-mcp/smoke/smoke.mjs
-{ "pass": true, "failures": [], "toolCount": 23, "expectedToolCount": 23, ... }
+{ "pass": true, "failures": [], "toolCount": 22, "expectedToolCount": 22, "noUnsafeTools": true, ... }
 ```
 
 This is sufficient evidence the full chain (Edge bind → portproxy
@@ -268,7 +282,7 @@ across Edge updates.
 | Edge already running with the owner's main profile (different `--user-data-dir`) | Owner clicked the regular Edge icon before launching debug Edge | The launcher's `Stop-Process -Force msedge` kills *all* msedge.exe, including the owner's main session. Save your work first; this is by owner directive ("Force-kill / restart Edge whenever needed"). Once killed, `edge-debug-launch.sh` relaunches only the Debug profile. The owner's tabs reload from their normal session restore on next manual launch. |
 | Smoke reports `tools/list: SHRUNK` after `npm` cache update | Upstream `@playwright/mcp@latest` dropped a tool we relied on | (a) downgrade by pinning a known-good version inside `launch-mcp.sh`, or (b) accept the change: remove the tool from `EXPECTED_BASE_TOOLS` in `smoke.mjs` and from the inventory tables in this doc + `tools/edge-mcp/README.md` |
 | Smoke reports `tools/list: EXPANDED — new tools advertised that we don't track` | Upstream added a useful new tool | Decide whether the loop benefits from it. If yes, append the name to `EXPECTED_BASE_TOOLS` and to the inventory tables. If no, the smoke will keep failing until acknowledged — that's intentional, treat it as a documentation drift signal |
-| Smoke reports `security-gated tool drift` for `browser_run_code_unsafe` | Upstream renamed/removed the unsafe tool | Update `SECURITY_GATED_TOOLS` in `smoke.mjs` and the Security section here. If renamed, also update the Claude Code permission denylist |
+| Smoke reports `security-gated tool drift` for `browser_run_code_unsafe` | Upstream renamed/removed the unsafe tool or the mediator stopped filtering it | Update `SECURITY_GATED_TOOLS` in `smoke.mjs`, `filter-unsafe-tools.mjs`, and the Security section here |
 | `setup-elevated.sh` declined or partially applied | UAC prompt dismissed mid-flow | Re-run `setup-elevated.sh`. The script is idempotent: each `.cmd` deletes any existing rule before adding the new one, so re-running cannot stack duplicate rules. Verify with `netsh interface portproxy show all` and `netsh advfirewall firewall show rule name=edge-mcp-9222` |
 | `cmd.exe` reports `wslpath: Result not representable` | Repo is mounted at a UNC path the launcher can't translate | Move the repo under a normal `/mnt/c/` path, or set `EDGE_EXE_PATH` and `EDGE_DEBUG_PROFILE` to absolute Windows paths |
 
@@ -300,22 +314,22 @@ the `core` capability includes the unsafe tool and there is no way to
 opt out of `core`. Verified empirically with `--config` overrides on
 2026-05-01.
 
-Therefore the gating mechanism for this repo is:
+Therefore the gating mechanism for this repo is
+`EDGE_MCP_NO_UNSAFE_TOOLS=1`, enabled by default in `launch-mcp.sh` and
+in `tools/edge-mcp/mcp.json`. That mode runs `@playwright/mcp` through
+`tools/edge-mcp/filter-unsafe-tools.mjs`, which enforces two behaviors:
 
-1. **Claude Code permission denylist** (preferred, no code change): in the
-   project or user `~/.claude/settings.json`, add
-   `edge-devtools:browser_run_code_unsafe` to the deny rules so a tool
-   call is rejected before it reaches the MCP server. This is enforced
-   at the agent harness layer.
-2. **Wrapper-side tool filter** (heavier, requires code): wrap
-   `launch-mcp.sh` with a JSON-RPC mediator that intercepts `tools/list`
-   responses and `tools/call` requests for the unsafe tool. This is
-   tracked by `STACK-020` because it requires a real implementation,
-   not just docs.
-3. **Marker-only env var**: `EDGE_MCP_NO_UNSAFE_TOOLS=1` causes
-   `launch-mcp.sh` to emit a stderr warning naming the gating
-   mechanisms above. It does NOT actually disable the tool — that's why
-   it's documented as marker-only.
+1. `tools/list` responses omit `browser_run_code_unsafe`, so agents do
+   not discover or plan against the unsafe tool.
+2. Any `tools/call` request with `name: "browser_run_code_unsafe"` is
+   rejected with JSON-RPC error code `-32001` before it reaches upstream.
+
+Set `EDGE_MCP_NO_UNSAFE_TOOLS=0` only for deliberate local investigation
+of upstream MCP behavior. That mode exposes `browser_run_code_unsafe`.
+
+Claude Code permission deny rules can still provide an additional
+client-layer defense, but the repo-local load-bearing gate is the
+JSON-RPC mediator because it can be verified from this repository.
 
 The `--blocked-origins` and `--allowed-origins` flags exist but are
 network-layer controls, not tool-layer. They do not protect against

@@ -34,6 +34,7 @@ required_files=(
   "docs/exec-plans/completed/2026-04-30-harness-hydration.md"
   "docs/exec-plans/completed/2026-04-30-symphony-hydration.md"
   "docs/generated/README.md"
+  "docs/generated/layer-inventory.md"
   "docs/product-specs/index.md"
   "docs/product-specs/flagship-gtm-engine.md"
   "docs/references/dotfiles-hydration.md"
@@ -43,6 +44,8 @@ required_files=(
   "docs/references/doc-gardener.md"
   "docs/references/symphony-github-issues-adapter.md"
   "docs/references/local-observability.md"
+  "docs/references/README.md"
+  "docs/references/streamlit-llms.txt"
   "docs/references/openai_harness_engineering_original_spec.txt"
   "docs/references/openai_symphony_original_spec.txt"
   "docs/references/openai_symphony_github.txt"
@@ -87,6 +90,7 @@ required_files=(
   "tools/edge-mcp/edge-debug-launch.sh"
   "tools/edge-mcp/install-edge-shortcut.ps1"
   "tools/edge-mcp/install-mcp.sh"
+  "tools/edge-mcp/filter-unsafe-tools.mjs"
   "tools/edge-mcp/launch-mcp.sh"
   "tools/edge-mcp/mcp.json"
   "tools/edge-mcp/README.md"
@@ -99,6 +103,7 @@ required_files=(
   "tools/observability/docker-compose.yml"
   "tools/observability/vector.yaml"
   "tools/observability/README.md"
+  "tools/observability/test-namespace-isolation.sh"
   "scripts/lint-layered-architecture.sh"
   "scripts/lint-structured-logging.sh"
   "scripts/lint-naming-conventions.sh"
@@ -107,6 +112,7 @@ required_files=(
   "scripts/lint-json-parse-boundary.sh"
   "scripts/generate-quality-score-history.sh"
   "docs/generated/quality-score-history.md"
+  "scripts/generate-layer-inventory.sh"
   "scripts/gardener.sh"
   ".github/workflows/gardener.yml"
   "packages/agent-evals/README.md"
@@ -219,6 +225,12 @@ if ! grep -Eq '^tracker:[[:space:]]*$' WORKFLOW.md; then
   exit 1
 fi
 
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  tools/observability/test-namespace-isolation.sh
+else
+  printf 'skip: docker compose is not available; observability namespace isolation test not run\n' >&2
+fi
+
 if ! grep -Fq '.symphony/workspaces/*' .gitignore || ! grep -Fq '.symphony/logs/*.jsonl' .gitignore; then
   printf '.gitignore must keep Symphony workspaces and logs out of git\n' >&2
   exit 1
@@ -251,6 +263,11 @@ fi
 
 if ! scripts/lint-json-parse-boundary.sh; then
   printf 'json-parse-boundary lint failed; keep JSON.parse() in repo/, config/, or providers/ only\n' >&2
+  exit 1
+fi
+
+if ! scripts/generate-layer-inventory.sh --check; then
+  printf 'layer-inventory generated artifact is stale; run scripts/generate-layer-inventory.sh\n' >&2
   exit 1
 fi
 

@@ -26,6 +26,14 @@ The bash adapter, the Elixir daemon, and the agent-evals package all emit the ri
 - Unit tests for `ObservabilityClient` use the in-memory `unittest.mock` to verify URL construction; no live HTTP calls.
 - The page degrades gracefully when the stack is down: each panel shows "stack offline (start `tools/observability/docker compose up -d`)" instead of crashing.
 
+## Progress
+
+- 2026-05-02: Non-blocked ops-console slice landed in
+  `apps/ops-console/observability_client.py` and
+  `apps/ops-console/pages/02_Observability.py`. Unit tests cover URL
+  construction and offline behavior without live HTTP calls. The issue
+  remains in todo because real slow-span data is still blocked by STACK-070.
+
 ## Out of scope
 
 - A "Grafana-style" full panel/dashboard library; this is a single page with three panels.

@@ -2,7 +2,7 @@
 
 Internal operator UI for the Wranngle GTM engine. Built in Streamlit per `ARCHITECTURE.md`'s "prefer Streamlit unless FastAPI+Jinja2 is clearly more appropriate" rule.
 
-This is the first runnable surface inside the harness. It reads evaluation results produced by `packages/agent-evals` and presents them to a human operator.
+This is the first runnable surface inside the harness. It reads evaluation results produced by `packages/agent-evals` and presents them to a human operator. It also includes a compact observability page for the local VictoriaLogs, VictoriaMetrics, and VictoriaTraces stack.
 
 ## Run
 
@@ -15,6 +15,8 @@ streamlit run main.py -- fixtures/evaluation-results.json
 
 The path argument after `--` is the JSON file containing an `EvaluationResult[]` (the same shape produced by `packages/agent-evals` runtime). A synthetic fixture is checked in at `fixtures/evaluation-results.json` so the page renders with no upstream wiring.
 
+The `Observability` page queries localhost endpoints documented in `../../docs/references/local-observability.md`. If the stack is down, the page renders offline notices instead of crashing.
+
 ## Test
 
 ```bash
@@ -22,15 +24,18 @@ pip install -e ".[dev]"
 pytest
 ```
 
-Tests run against the pure parsing/aggregation in `domain.py` and require no Streamlit runtime.
+Tests run against pure parsing/aggregation and observability-client code and require no Streamlit runtime or live HTTP services.
 
 ## Shape
 
 ```
 main.py          Streamlit entry point. Imports streamlit at module load.
 domain.py        Pure parsing/aggregation. No streamlit import; testable headlessly.
+observability_client.py
+                 Pure stdlib HTTP client for LogsQL, PromQL, and Jaeger-style trace queries.
+pages/           Streamlit pages, including compact observability panels.
 fixtures/        Synthetic JSON results so the page works offline.
-tests/           pytest tests for domain.py.
+tests/           pytest tests for pure app logic.
 ```
 
 ## Why this is a stub
