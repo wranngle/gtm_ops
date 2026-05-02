@@ -122,8 +122,9 @@ if [[ "${DOGFOOD_DRY_RUN:-0}" == "1" ]]; then
   exit 0
 fi
 
-llm_chain=${DOGFOOD_LLM_CHAIN:-claude:claude-haiku-4-5,claude:claude-sonnet-4-6}
-llm_timeout=${DOGFOOD_LLM_TIMEOUT:-180}
+llm_chain=${DOGFOOD_LLM_CHAIN:-claude:claude-sonnet-4-6,claude:claude-opus-4-7,claude:claude-haiku-4-5}
+llm_timeout=${DOGFOOD_LLM_TIMEOUT:-300}
+min_diff_lines=${DOGFOOD_MIN_DIFF_LINES:-5}
 
 emit_event info dogfood.dispatch_start success "chain=${llm_chain} timeout=${llm_timeout}" "$selected_id"
 
@@ -141,6 +142,67 @@ if ! SYMPHONY_ALLOW_AGENT_RUN=1 \
     >> "$failure_dir/$(basename "$selected_ref")"
   exit 2
 fi
+
+# ============== Step 3.5: meaningful-diff guard ==============
+#
+# Tick 1 of the previous run closed STACK-010 with a 26-line "implementation
+# plan" agent-output and zero source changes. Validators passed against an
+# unchanged tree, the runner pushed an empty rename, and the issue was
+# marked done without the actual JSON-RPC adapter being built.
+#
+# Two complementary guards now:
+#   (a) Sentinel-phrase scan over the agent-output. If the response reads
+#       like a planning document instead of executed work, route to
+#       human_review/ regardless of what the validators say.
+#   (b) Real-diff insertions+deletions threshold against HEAD. Excludes
+#       .symphony/ noise (the issue rename, workspace artifacts, log files)
+#       so it measures actual source/doc changes.
+
+workspace_key=$(printf '%s' "$selected_id" | sed -E 's/[^A-Za-z0-9._-]+/_/g; s/^_+//; s/_+$//')
+latest_output=$(ls -1t ".symphony/workspaces/$workspace_key/agent-output-"*.md 2>/dev/null | head -n 1)
+
+planning_sentinels=(
+  'I.?ve completed the planning phase'
+  'Implementation Plan Summary'
+  'What needs to be built'
+  'I would implement'
+  'Here.?s the implementation plan'
+  'I would create'
+  '^# Implementation Plan'
+  '^## Plan$'
+)
+
+if [[ -n "$latest_output" && -f "$latest_output" ]]; then
+  for sentinel in "${planning_sentinels[@]}"; do
+    if grep -qiE "$sentinel" "$latest_output" 2>/dev/null; then
+      emit_event warn dogfood.planning_doc_rejected failure "matched=${sentinel}" "$selected_id"
+      mkdir -p .symphony/issues/human_review
+      mv "$selected_ref" .symphony/issues/human_review/
+      printf '\n## Dogfood failure (%s)\n\nAgent produced a planning document instead of executing the work (sentinel matched: `%s`). See: %s\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sentinel" "$latest_output" \
+        >> ".symphony/issues/human_review/$(basename "$selected_ref")"
+      exit 2
+    fi
+  done
+fi
+
+# Excludes .symphony/ — that's the issue rename + workspace artifacts the
+# runner itself produces, not work the agent did.
+diff_lines=$(git diff HEAD --numstat -- . ':(exclude).symphony/**' 2>/dev/null \
+  | awk '{ adds += $1; dels += $2 } END { print (adds + 0) + (dels + 0) }')
+
+if (( diff_lines < min_diff_lines )); then
+  emit_event warn dogfood.empty_diff failure "diff_lines=${diff_lines} threshold=${min_diff_lines}" "$selected_id"
+  mkdir -p .symphony/issues/human_review
+  mv "$selected_ref" .symphony/issues/human_review/
+  printf '\n## Dogfood failure (%s)\n\nAgent ran but produced only %s lines of meaningful diff outside `.symphony/` (threshold: %s). The agent likely returned a text response without using its file-edit tools. See: %s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$diff_lines" "$min_diff_lines" \
+    "${latest_output:-no-agent-output-found}" \
+    >> ".symphony/issues/human_review/$(basename "$selected_ref")"
+  exit 2
+fi
+
+emit_event info dogfood.diff_check_ok success "diff_lines=${diff_lines}" "$selected_id"
 
 # ============== Step 4: run validators ==============
 

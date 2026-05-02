@@ -68,6 +68,7 @@ Read these files before proposing or changing behavior:
 
 ## Operating Rules
 
+- **Use your file-edit tools.** You are running inside Claude Code CLI with full Read/Edit/Write/Bash access (`--dangerously-skip-permissions` is set by the local-shell `agent.command`). Edit the actual files in this repo. **Do NOT respond with a planning document or "implementation plan summary"** — that response is detected as a planning-doc and the issue gets routed to `human_review/`. The dogfood runner requires ≥5 lines of meaningful diff outside `.symphony/` before counting an issue closed.
 - Preserve the primitive dotfiles layer and the Harness Engineering layer.
 - Keep public data synthetic and clean-room.
 - Do not copy private operational repo history into this repo.

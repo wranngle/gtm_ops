@@ -43,7 +43,9 @@ DOGFOOD_LLM_CHAIN=claude:claude-sonnet-4-6 DOGFOOD_LLM_TIMEOUT=300 \
 
 | Var | Default | Purpose |
 |---|---|---|
-| `DOGFOOD_LLM_CHAIN` | `claude:claude-haiku-4-5,claude:claude-sonnet-4-6` | passes through to `scripts/bin/llm.sh` `LLM_CHAIN` |
+| `DOGFOOD_LLM_CHAIN` | `claude:claude-sonnet-4-6,claude:claude-opus-4-7,claude:claude-haiku-4-5` | passes through to `scripts/bin/llm.sh` `LLM_CHAIN` — Sonnet first because Haiku produced planning docs instead of edits |
+| `DOGFOOD_LLM_TIMEOUT` | `300` | per-call timeout (seconds) — bumped from 180 because Sonnet on substantive code work routinely needs >2 minutes |
+| `DOGFOOD_MIN_DIFF_LINES` | `5` | minimum insertions+deletions outside `.symphony/` before counting an issue closed |
 | `DOGFOOD_LLM_TIMEOUT` | `180` | per-call timeout (seconds) for the chain |
 | `DOGFOOD_MIN_AGE_SECONDS` | `300` | minimum mtime age (seconds) before an issue is eligible — race guard against parallel auditors filing fresh STACK-NNN files |
 | `DOGFOOD_DRY_RUN` | `0` | if `1`, picks an issue and runs the dry-run path; never invokes the real LLM, never commits |
