@@ -19,6 +19,7 @@ Run the checks for the surfaces this PR touches; tick what passes locally.
 
 - [ ] `bash -n scripts/*.sh scripts/bin/*.sh`
 - [ ] `scripts/validate-knowledge-base.sh`
+- [ ] `tests/symphony-completion-helpers.sh` (if Symphony completion helpers/workflow changed)
 - [ ] `scripts/lint-layered-architecture.sh`
 - [ ] `scripts/symphony.sh validate && scripts/symphony.sh once --dry-run --limit 1`
 - [ ] `scripts/gardener.sh` reviewed (informational)
@@ -40,3 +41,9 @@ Run the checks for the surfaces this PR touches; tick what passes locally.
 Link the active exec plan and/or Symphony issue (`.symphony/issues/...` or `#NNN`) this PR resolves:
 
 -
+
+## Handoff
+
+- Review packet path:
+- Follow-up tasks filed:
+- PR shepherding notes (reviewers, failed checks, reruns, merge policy):

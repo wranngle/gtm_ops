@@ -31,6 +31,7 @@ logs/*.jsonl
 
 # Claude Code agent worktrees (transient, not for git)
 .claude/worktrees/
+.claude/*.lock
 
 # Bun
 .bun/

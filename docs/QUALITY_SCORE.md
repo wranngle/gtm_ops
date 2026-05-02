@@ -14,13 +14,13 @@ but thin), D (planned/stub only), F (broken or absent where required).
 | --- | --- | --- | --- |
 | Repo knowledge base | B | AGENTS.md table-of-contents (≤120 lines), structured `docs/`, validator with required-files + AGENTS.md link presence checks, gardener + CI cron | Add link-resolution + index-coverage + design-doc-metadata checks to the validator. |
 | Dotfiles integration | B | Baseline files preserved, PR/security/contributing cleaned up, validator checks required files | Add renderable demo artifact once runnable surfaces exist. |
-| Symphony orchestration (bash one-shot) | B | `WORKFLOW.md` nested-YAML schema, local Markdown tracker, Bash runner, dry-run mode, validation hooks | Drive sustained use; defer daemon mode to the Elixir track. |
+| Symphony orchestration (bash one-shot) | B | `WORKFLOW.md` nested-YAML schema, local Markdown tracker, Bash runner, dry-run mode, follow-up/review-packet/PR helper contracts, validation hooks | Drive sustained use; defer daemon mode to the Elixir track. |
 | Symphony orchestration (Elixir daemon) | C | 51 ExUnit tests passing, supervision tree boots, retry queue + reconcile + snapshot land; **no Task-supervised worker spawn yet, no Codex JSON-RPC adapter** | Land Task-supervised worker spawn, then JSON-RPC adapter (TD-007 follow-on). |
 | Public safety | B | Synthetic-data policy, never-public source repos, pre-publish rg sweep documented | Install and run `gitleaks` + `trufflehog` locally and in CI. |
 | Agent evals (showcase) | B | Layered architecture, 15+ tests passing, CLI runnable with synthetic fixtures, metrics + logging providers | Add webhook contract tests for the showcase domain endpoints. |
 | Data reconciliation (showcase) | D | Planned only; package directory not yet created | Land Python CLI, SQL models, fixtures (see plan 001). |
 | Ops console (showcase) | C | Streamlit stub + pure-Python `domain.py` + pytest; reads agent-evals JSON | Add screenshot-loop validation once Edge MCP is paired with a per-worktree boot. |
-| Observability (local stack) | C | Vector + VictoriaLogs/Metrics/Traces compose, agent-evals OTLP emitter, query cookbook | Wire ops-console to PromQL; emit Symphony spans once JSON-RPC lands. |
+| Observability (local stack) | C | Vector + VictoriaLogs/Metrics/Traces compose, agent-evals metrics emitter, Symphony OTLP trace emitter + trace smoke, query cookbook | Fix Vector trace forwarding or run Symphony with the direct VictoriaTraces endpoint; wire ops-console slow-span panel to live data. |
 | Edge DevTools MCP | B | Smoke test passes end-to-end (WSL → Edge → CDP → MCP → DOM), all owner directives applied | Wire into a per-worktree app boot once one exists. |
 
 ## By architectural layer (showcase: `packages/agent-evals`)
@@ -48,7 +48,7 @@ graded so future garbage-collection passes can prioritize.
 | Generated artifacts pipeline | D | `docs/generated/` exists but has no actual generated files | Create one generator (e.g., layered-domain inventory) so the pattern is real. See STACK-003. |
 | Reference `*-llms.txt` corpora | D | Spec example calls out `design-system-reference-llms.txt`, `nixpacks-llms.txt`, `uv-llms.txt`. None present | Curate one, even minimally, to prove the pattern. See STACK-004. |
 | Quality-grade history | C | Generator script exists (`scripts/generate-quality-score-history.sh`); `docs/generated/quality-score-history.md` is committed and tracks all grade changes from git history. Not yet wired to pre-commit. | Wire the generator as a pre-commit hook so it runs automatically on every grade change. See STACK-001. |
-| Agent-to-agent review loop | D | Tracked as TD-008; deferred indefinitely | Re-evaluate when PR throughput justifies it. |
+| PR shepherding and review loop | C | STACK-076 added `gh` wrappers for PR open/update, review reads, failed-log capture, rebase, documented reruns, readiness comments, and opt-in merge. True agent-to-agent review remains TD-008. | Configure a real secondary agent reviewer once PR throughput justifies it. |
 | Per-worktree app boot | D | No app is bootable per worktree yet | Land once ops-console grows past stub. |
 
 ## Grade history

@@ -2,7 +2,7 @@
 
 Status: Active
 Owner: wranngle
-Last reviewed: 2026-04-30
+Last reviewed: 2026-05-02
 
 ## Design Decision
 
@@ -27,9 +27,8 @@ The repo needs to demonstrate agentic operating-system judgment without requirin
 
 - No daemon mode yet.
 - No true concurrent worker pool yet.
-- No tracker writes yet.
-- No PR creation yet.
+- No orchestrator-owned tracker writes yet. Agent-invoked follow-up helpers can write local Markdown tasks.
+- No automatic PR shepherd daemon yet. Agent-invoked `gh` wrappers handle PR creation, review triage, CI evidence, and opt-in merge.
 - No Codex App Server protocol yet.
 
 These are deliberate. The first milestone is a safe local orchestration scaffold that composes with the existing Harness framework.
-

@@ -23,6 +23,10 @@ required_files=(
   "scripts/hero.sh"
   "scripts/bin/llm.sh"
   "scripts/symphony.sh"
+  "scripts/symphony-follow-up.sh"
+  "scripts/symphony-review-packet.sh"
+  "scripts/symphony-pr-shepherd.sh"
+  "tests/symphony-completion-helpers.sh"
   "docs/index.md"
   "docs/ORCHESTRATION.md"
   "docs/design-docs/index.md"
@@ -98,12 +102,19 @@ required_files=(
   "tools/edge-mcp/windows/edge-mcp-portproxy.cmd"
   "tools/edge-mcp/windows/setup-elevated.sh"
   "tools/edge-mcp/smoke/smoke.mjs"
+  "tools/edge-mcp/smoke/LAST_RUN.md"
+  "tools/edge-mcp/smoke/validate-last-run.mjs"
   "tools/symphony-elixir/scripts/boot_with_file_sink.exs"
   "docs/references/edge-devtools-mcp.md"
   "tools/observability/docker-compose.yml"
   "tools/observability/vector.yaml"
   "tools/observability/README.md"
   "tools/observability/test-namespace-isolation.sh"
+  "tools/ops-console/ops-console.sh"
+  "tools/ops-console/smoke.sh"
+  "tools/symphony-elixir/lib/mix/tasks/trace_smoke.ex"
+  "tools/symphony-elixir/lib/symphony/tracing.ex"
+  "tools/symphony-elixir/test/symphony/tracing_test.exs"
   "scripts/lint-layered-architecture.sh"
   "scripts/lint-structured-logging.sh"
   "scripts/lint-naming-conventions.sh"
@@ -237,6 +248,10 @@ stack_neutral_scan_targets=(
   "scripts/hero.sh"
   "scripts/bin/llm.sh"
   "scripts/symphony.sh"
+  "scripts/symphony-follow-up.sh"
+  "scripts/symphony-review-packet.sh"
+  "scripts/symphony-pr-shepherd.sh"
+  "tests/symphony-completion-helpers.sh"
   "scripts/lint-layered-architecture.sh"
   "scripts/gardener.sh"
   "scripts/validate-knowledge-base.sh"
@@ -348,6 +363,11 @@ fi
 
 if ! scripts/generate-layer-inventory.sh --check; then
   printf 'layer-inventory generated artifact is stale; run scripts/generate-layer-inventory.sh\n' >&2
+  exit 1
+fi
+
+if ! tests/symphony-completion-helpers.sh; then
+  printf 'symphony completion helper smoke failed; fix follow-up/review-packet/pr-shepherd helper behavior\n' >&2
   exit 1
 fi
 
