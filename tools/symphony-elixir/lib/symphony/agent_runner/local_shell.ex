@@ -104,7 +104,7 @@ defmodule Symphony.AgentRunner.LocalShell do
   end
 
   defp pipe_through_agent(config, workspace, _rendered) do
-    command = Config.agent_command(config)
+    command = Config.agent_command(config) |> resolve_command_first_token(config)
     output_path = Path.join(workspace.path, "agent-output-#{utc_stamp()}.md")
     prompt_path = Path.join(workspace.path, "rendered-prompt.md")
     timeout_ms = pipe_timeout_ms(config)
@@ -133,6 +133,51 @@ defmodule Symphony.AgentRunner.LocalShell do
 
   defp shell_quote(value) do
     "'" <> String.replace(value, "'", ~S('\'')) <> "'"
+  end
+
+  # Spec § 9.5 invariant 1 pins the worker's cwd to the per-issue
+  # workspace dir. That breaks bare relative `agent.command` values
+  # like `scripts/bin/llm.sh` (PATH lookup fails because the shell
+  # doesn't see the repo's scripts/ subtree from the workspace cwd).
+  # Resolve the first whitespace-delimited token of the command line
+  # against the workflow file's directory so the operator can keep
+  # writing repo-relative paths in WORKFLOW.md.
+  defp resolve_command_first_token(command, config) do
+    workflow_dir =
+      case Map.get(config, :source_path) do
+        path when is_binary(path) -> Path.dirname(path)
+        _ -> nil
+      end
+
+    if is_nil(workflow_dir) do
+      command
+    else
+      case String.split(command, " ", parts: 2) do
+        [first | rest] ->
+          resolved_first = resolve_one_token(first, workflow_dir)
+          Enum.join([resolved_first | rest], " ")
+
+        _ ->
+          command
+      end
+    end
+  end
+
+  defp resolve_one_token(token, workflow_dir) do
+    cond do
+      # Absolute or shell-substitution-bearing tokens: leave alone.
+      String.starts_with?(token, "/") or String.contains?(token, "$") ->
+        token
+
+      # Bare command (no slash): rely on PATH lookup; don't mangle.
+      not String.contains?(token, "/") ->
+        token
+
+      # Relative path with at least one slash: resolve against
+      # workflow_dir.
+      true ->
+        Path.expand(token, workflow_dir)
+    end
   end
 
   defp pipe_timeout_ms(config) do

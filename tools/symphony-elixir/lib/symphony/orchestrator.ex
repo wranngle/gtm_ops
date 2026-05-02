@@ -994,7 +994,27 @@ defmodule Symphony.Orchestrator do
         )
 
       case result do
+        {:ok, %{exit_code: 0} = _result} ->
+          send_phase(parent, issue_id, :finishing, %{workspace_path: ws.path})
+          send_phase(parent, issue_id, :succeeded, %{workspace_path: ws.path})
+          :ok
+
+        {:ok, %{exit_code: code} = _result} when is_integer(code) and code != 0 ->
+          # Worker process completed without raising but exited non-zero.
+          # Per spec § 8.4 this is a failure (continuation retry is for
+          # exit_code == 0 only — "the agent finished its turn cleanly,
+          # check whether more work is needed"). Surface it through the
+          # abnormal-exit retry path so backoff applies.
+          send_phase(parent, issue_id, :failed, %{
+            workspace_path: ws.path,
+            error: "nonzero exit: #{code}"
+          })
+
+          exit({:agent_failed, {:nonzero_exit, code}})
+
         {:ok, _result} ->
+          # Older runners that don't yet propagate exit_code: keep the
+          # legacy clean-exit path so we don't regress.
           send_phase(parent, issue_id, :finishing, %{workspace_path: ws.path})
           send_phase(parent, issue_id, :succeeded, %{workspace_path: ws.path})
           :ok
