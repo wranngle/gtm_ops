@@ -6,6 +6,23 @@ This is the first runnable surface inside the harness. It reads evaluation resul
 
 ## Run
 
+For agent-driven worktree validation, use the repo-local boot helper from the
+repository root:
+
+```bash
+tools/ops-console/ops-console.sh start
+tools/ops-console/ops-console.sh status
+tools/ops-console/ops-console.sh url
+tools/ops-console/ops-console.sh stop
+```
+
+It allocates a port from `OPS_CONSOLE_PORT_RANGE` (default `8501-8599`),
+writes `.symphony/runtime/ops-console.json`, and records the log path for
+cleanup and troubleshooting. Set `OPS_CONSOLE_PYTHON` to a venv interpreter
+when Streamlit is not installed in system Python.
+
+Manual Streamlit launch still works:
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -22,9 +39,12 @@ The `Observability` page queries localhost endpoints documented in `../../docs/r
 ```bash
 pip install -e ".[dev]"
 pytest
+tools/ops-console/smoke.sh
 ```
 
 Tests run against pure parsing/aggregation and observability-client code and require no Streamlit runtime or live HTTP services.
+The smoke starts two temporary Streamlit instances in parallel and requires the
+Streamlit dependency to be installed locally.
 
 ## Shape
 

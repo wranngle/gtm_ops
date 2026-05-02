@@ -16,6 +16,10 @@ The Harness Engineering post (Lopopolo, 2026) describes a recurring "doc-gardeni
   - **Staleness markers** in prose: `TODO`, `TKTK`, `FIXME`, `XXX`, `placeholder`, `coming soon`, `TBD`.
   - **Broken intra-repo doc links**: any `](path/to/file.md)` whose target does not exist.
   - **Broken inline code paths**: any backtick-quoted repo-relative path-like span, such as `docs/foo.md` or `scripts/foo.sh`, whose target does not exist.
+  - **Edge MCP live-smoke ratchet drift**: delegates to
+    `tools/edge-mcp/smoke/validate-last-run.mjs` and reports
+    `edge-mcp-last-run` when `tools/edge-mcp/smoke/LAST_RUN.md` is stale,
+    malformed, failed, or not recorded against an ancestor of `HEAD`.
 - Excludes from the marker scan:
   - `docs/exec-plans/active/` and `docs/exec-plans/completed/` — plans
     legitimately discuss markers and use words like "TODO" / "TBD" in scope

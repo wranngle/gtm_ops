@@ -7,11 +7,14 @@ Chrome DevTools MCP" loop.
 
 ## Components
 
-- `edge-debug-launch.sh` — WSL-side launcher. Force-kills any prior msedge,
-  launches a fresh instance with `--remote-debugging-port=9222` and a
-  dedicated `EdgeDebugProfile` so the owner's main session is untouched.
-  Positions the window offscreen so it does not steal focus. Probes both
-  127.0.0.1 (mirrored networking) and the Windows host IP (NAT networking).
+- `edge-debug-launch.sh` — WSL-side launcher. Allocates or reuses a
+  per-worktree port from `EDGE_DEBUG_PORT_RANGE` (default `9222-9322`),
+  launches Edge with a per-worktree `EdgeDebugProfile-<key>` user-data-dir,
+  and writes `.symphony/runtime/edge-port` plus
+  `.symphony/runtime/edge-debug.json`. It stops only the Edge processes using
+  this worktree's debug profile by default. Positions the window offscreen so
+  it does not steal focus. Probes both 127.0.0.1 (mirrored networking) and the
+  Windows host IP (NAT networking).
 - `install-edge-shortcut.ps1` — drops `Edge (Debug).lnk` into the user's
   Start Menu so a single click auto-launches Edge with the right flags.
   Run from PowerShell on Windows (or from WSL via `powershell.exe -File`).
@@ -34,7 +37,14 @@ Chrome DevTools MCP" loop.
   appears/disappears relative to `EDGE_MCP_NO_UNSAFE_TOOLS`. Run with
   `node tools/edge-mcp/smoke/smoke.mjs`. No npm deps. Use
   `--tool-snapshot` to dump the live tool list as JSON when intentionally
-  re-pinning the inventory.
+  re-pinning the inventory. Use `--record-last-run` after a live pass to
+  update `smoke/LAST_RUN.md`.
+- `smoke/LAST_RUN.md` — checked-in live-smoke ratchet. Records the latest
+  local live run's commit SHA, UTC timestamp, pass/fail status, tool count,
+  and unsafe-tool denial proof.
+- `smoke/validate-last-run.mjs` — non-live validator for `LAST_RUN.md`.
+  CI and the doc gardener use it to fail or warn when the live proof is
+  stale, malformed, or recorded against a non-ancestor commit.
 - `install-mcp.sh` — idempotent merger: writes the `edge-devtools` MCP
   server entry into `~/.claude/settings.json` (or project-local
   `.claude/settings.json` with `--scope project`), preserving any other
@@ -57,25 +67,46 @@ coordinates.
 From WSL (this repo root):
 
 ```bash
-# 1. Install the Start Menu shortcut (Edge will use the Debug profile).
+# 1. Apply Windows portproxy/firewall for the debug range (UAC prompt).
+tools/edge-mcp/windows/setup-elevated.sh --port-range 9222-9322
+
+# 2. Install the Start Menu shortcut (optional; launcher is preferred for
+# per-worktree profile/port selection).
 powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w tools/edge-mcp/install-edge-shortcut.ps1)"
 
-# 2. Install or merge the MCP server entry into Claude Code settings.
+# 3. Install or merge the MCP server entry into Claude Code settings.
 tools/edge-mcp/install-mcp.sh                  # user-level (~/.claude/settings.json)
 # or:
 tools/edge-mcp/install-mcp.sh --scope project  # project-local
 
-# 3. Restart Claude Code so it picks up the new MCP server.
-# 4. Run /mcp inside Claude Code to confirm 'edge-devtools' is registered.
+# 4. Restart Claude Code so it picks up the new MCP server.
+# 5. Run /mcp inside Claude Code to confirm 'edge-devtools' is registered.
 ```
 
 ## Per-session use
 
 ```bash
-tools/edge-mcp/edge-debug-launch.sh   # kills any prior msedge, launches debug
-curl -s http://172.31.240.1:9222/json/version | jq    # NAT-mode probe
-# (or 127.0.0.1:9222 with mirrored networking)
+tools/ops-console/ops-console.sh start    # start this worktree's Streamlit UI
+tools/edge-mcp/edge-debug-launch.sh       # start this worktree's debug Edge
+jq . .symphony/runtime/edge-debug.json
+tools/ops-console/ops-console.sh url      # navigate Edge to this URL via MCP
 ```
+
+## Live smoke ratchet
+
+The browser smoke is local-only because stock GitHub runners cannot drive this
+Windows Edge + WSL portproxy topology. After any real live pass, update the
+ratchet:
+
+```bash
+node tools/edge-mcp/smoke/smoke.mjs --record-last-run
+node tools/edge-mcp/smoke/validate-last-run.mjs
+```
+
+`validate-last-run.mjs` is safe for CI because it only reads
+`smoke/LAST_RUN.md` and Git metadata. The default policy requires a passing
+record no more than 30 days behind `HEAD`; stale records make CI fail and make
+`scripts/gardener.sh` emit an `edge-mcp-last-run` warning.
 
 ## WSL2 networking — prerequisite
 
@@ -100,40 +131,43 @@ wsl --shutdown
 # next time you open WSL, 127.0.0.1 mirrors Windows-localhost
 ```
 
-After this, the launcher reaches Edge via `127.0.0.1:9222`. Set
+After this, the launcher reaches Edge via `127.0.0.1:<selected-port>`. Set
 `EDGE_DEBUG_USE_LOCALHOST=1` if you want to force the localhost probe.
 
 ### Fix B — Windows portproxy (no WSL restart, requires admin once)
 
-From elevated PowerShell on Windows:
+From WSL, run the range-aware elevated setup:
 
-```powershell
-netsh interface portproxy add v4tov4 `
-  listenport=9222 listenaddress=0.0.0.0 `
-  connectport=9222 connectaddress=127.0.0.1
+```bash
+tools/edge-mcp/windows/setup-elevated.sh --port-range 9222-9322
 ```
 
 The launcher will then reach Edge via the WSL host-IP route.
-Verify with `netsh interface portproxy show all`. Remove with
-`netsh interface portproxy delete v4tov4 listenport=9222 listenaddress=0.0.0.0`.
+Verify with `netsh interface portproxy show all`. The default proxy mode is
+`v4tov6` because recent Edge builds often bind CDP on `[::1]`. Set
+`EDGE_MCP_PORTPROXY_MODE=v4tov4 EDGE_MCP_PORTPROXY_CONNECT_ADDRESS=127.0.0.1`
+only when a local Windows check confirms Edge is binding IPv4 loopback.
 
 ## Owner directives applied
 
 - Edge (not Chrome). Path: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
-- Force-kill / restart Edge whenever needed.
+- Worktree-scoped Edge restart by default; set `EDGE_DEBUG_KILL_SCOPE=all`
+  only for deliberate manual cleanup.
 - Open outside the active window (positioned at 30000,30000 offscreen).
 - A single click on the Start Menu shortcut auto-launches with debug flags.
-- Separate `EdgeDebugProfile` user-data-dir so the owner's main browser
-  session stays untouched.
+- Separate per-worktree `EdgeDebugProfile-<key>` user-data-dir so the owner's
+  main browser session and parallel agent sessions stay isolated.
 
 ## Safety
 
 - Edge debug port binds to localhost only (Chromium-enforced).
 - `EDGE_DEBUG_FRESH_PROFILE=1` wipes the dedicated profile before each launch
   for a known-clean session.
-- The launcher never touches the owner's main Edge profile or its cookies.
-- Fix B's portproxy exposes 9222 to the local network. Acceptable for a
-  workstation behind a firewall; remove the rule if the box is shared.
+- The launcher never touches the owner's main Edge profile or its cookies in
+  the default `EDGE_DEBUG_KILL_SCOPE=profile` mode.
+- Fix B's portproxy exposes the selected debug range to the local network.
+  Acceptable for a workstation behind a firewall; remove the rule if the box
+  is shared.
 
 ## Tools advertised
 
@@ -167,7 +201,12 @@ Notes:
 - E-3 (Start Menu shortcut) ✓
 - E-4 (live smoke test) ✓ — `tools/edge-mcp/smoke/smoke.mjs` drives the full
   initialize → tools/list → navigate → console_messages → screenshot →
-  snapshot loop end-to-end and fails loudly on tool-inventory drift.
+  snapshot loop end-to-end, fails loudly on tool-inventory drift, and records
+  the latest live proof in `tools/edge-mcp/smoke/LAST_RUN.md`.
+- Per-worktree Edge/app boot ✓ — Edge runtime files live under
+  `.symphony/runtime/edge-*`; Streamlit app runtime files live under
+  `.symphony/runtime/ops-console*`. `tools/ops-console/smoke.sh` verifies two
+  parallel app instances without a Windows GUI.
 
 For the full image-#3 loop coverage matrix (which tool implements which
 step of the OpenAI "Codex drives the app with Chrome DevTools MCP"

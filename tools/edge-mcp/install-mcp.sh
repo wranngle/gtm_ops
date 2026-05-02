@@ -72,6 +72,6 @@ mv "$tmp" "$target"
 
 printf 'wrote edge-devtools MCP server registration to %s\n' "$target"
 printf 'next steps:\n'
-printf '  1. tools/edge-mcp/edge-debug-launch.sh   # start Edge with port 9222\n'
+printf '  1. tools/edge-mcp/edge-debug-launch.sh   # start this worktree Edge debug instance\n'
 printf '  2. restart Claude Code so it picks up the new MCP server\n'
 printf '  3. verify with /mcp inside Claude Code\n'

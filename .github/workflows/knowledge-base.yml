@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Bash syntax check on shell entrypoints
         run: bash -n scripts/*.sh scripts/bin/*.sh
       - name: Validate repository knowledge base
@@ -22,6 +24,10 @@ jobs:
         run: scripts/symphony.sh validate
       - name: Render Symphony dry run
         run: scripts/symphony.sh once --dry-run --limit 1
+      - name: Edge MCP non-live safety checks
+        run: |
+          node tools/edge-mcp/filter-unsafe-tools.mjs --self-test
+          node tools/edge-mcp/smoke/validate-last-run.mjs --max-age-days 30
       - name: Run doc gardener (non-blocking)
         run: scripts/gardener.sh || true
 
