@@ -33,7 +33,15 @@ if [[ -z "${LINEAR_API_KEY:-}" ]]; then
 fi
 
 DRY_RUN=0
-[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1
+CLEAN_DUPES=0
+case "${1:-}" in
+  --dry-run) DRY_RUN=1 ;;
+  --clean-dupes)
+    # Delete all but the lowest-WRA-numbered issue per STACK-NNN.
+    # Useful when an earlier mirror run created duplicates due to a bug.
+    CLEAN_DUPES=1
+    ;;
+esac
 
 readonly TEAM_ID="708a094d-8a79-4f59-b19c-bc54f12d44fa"
 readonly STATE_TODO="5aa782d7-2b10-4e62-863c-eb63e0be4eff"
@@ -51,7 +59,7 @@ linear() {
 fetch_existing() {
   local payload
   payload=$(jq -nc --arg team "$TEAM_ID" '{
-    query: "query($team:ID!) { team(id:$team) { issues(filter:{title:{startsWith:\"STACK-\"}}, first:100) { nodes { id identifier title state { id name } } } } }",
+    query: "query($team:String!) { team(id:$team) { issues(filter:{title:{startsWith:\"STACK-\"}}, first:100) { nodes { id identifier title state { id name } } } } }",
     variables: { team: $team }
   }')
   # `// empty` so jq emits zero output (instead of erroring) when the team
@@ -60,14 +68,72 @@ fetch_existing() {
 }
 
 # Build a "STACK-NNN" -> {linear_id, state_id} index from the fetch.
-declare -A existing_id existing_state
+# When duplicates exist, we keep the LOWEST-WRA-numbered one (earliest)
+# as the canonical row and queue the rest for cleanup.
+declare -A existing_id existing_state existing_ident
+declare -a dupes_to_archive=()
+
+# Augment the fetch query for ident sorting.
+fetch_existing_with_ident() {
+  local payload
+  payload=$(jq -nc --arg team "$TEAM_ID" '{
+    query: "query($team:String!) { team(id:$team) { issues(filter:{title:{startsWith:\"STACK-\"}}, first:250) { nodes { id identifier title state { id name } } } } }",
+    variables: { team: $team }
+  }')
+  linear "$payload" | jq -c '.data.team.issues.nodes // [] | .[] | {id, identifier, title, state_id: .state.id}'
+}
+
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   stack_id=$(echo "$line" | jq -r '.title' | grep -oE 'STACK-[0-9]+' | head -n1)
   [[ -z "$stack_id" ]] && continue
-  existing_id["$stack_id"]=$(echo "$line" | jq -r '.id')
-  existing_state["$stack_id"]=$(echo "$line" | jq -r '.state_id')
-done < <(fetch_existing)
+  this_id=$(echo "$line" | jq -r '.id')
+  this_ident=$(echo "$line" | jq -r '.identifier')
+  this_state=$(echo "$line" | jq -r '.state_id')
+
+  if [[ -z "${existing_id[$stack_id]:-}" ]]; then
+    existing_id["$stack_id"]="$this_id"
+    existing_state["$stack_id"]="$this_state"
+    existing_ident["$stack_id"]="$this_ident"
+    continue
+  fi
+
+  # Compare WRA numbers; keep the lower one.
+  cur_num=$(printf '%s' "${existing_ident[$stack_id]}" | grep -oE '[0-9]+$')
+  this_num=$(printf '%s' "$this_ident" | grep -oE '[0-9]+$')
+  if (( this_num < cur_num )); then
+    # The new row is older — archive the previously-kept duplicate.
+    dupes_to_archive+=("${existing_id[$stack_id]}")
+    existing_id["$stack_id"]="$this_id"
+    existing_state["$stack_id"]="$this_state"
+    existing_ident["$stack_id"]="$this_ident"
+  else
+    # Existing row is older — archive this one.
+    dupes_to_archive+=("$this_id")
+  fi
+done < <(fetch_existing_with_ident)
+
+if (( CLEAN_DUPES )); then
+  if (( ${#dupes_to_archive[@]} == 0 )); then
+    printf 'no duplicates found; nothing to clean\n'
+    exit 0
+  fi
+  printf 'archiving %d duplicate Linear issue(s)\n' "${#dupes_to_archive[@]}"
+  for dup_id in "${dupes_to_archive[@]}"; do
+    payload=$(jq -nc --arg id "$dup_id" '{
+      query: "mutation($id:String!){issueArchive(id:$id){success}}",
+      variables: { id: $id }
+    }')
+    result=$(linear "$payload")
+    if echo "$result" | jq -e '.data.issueArchive.success' >/dev/null; then
+      printf 'ARCHIVED %s\n' "$dup_id"
+    else
+      printf 'ARCHIVE FAILED %s: %s\n' "$dup_id" "$result" >&2
+    fi
+  done
+  printf '\ncleanup complete; re-run without --clean-dupes to refresh state\n'
+  exit 0
+fi
 
 created=0
 updated=0
