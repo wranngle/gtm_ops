@@ -1,0 +1,41 @@
+Symphony Elixir orchestrator (port)
+===================================
+
+This subtree (`tools/symphony-elixir/`) is a derivative work of the
+Symphony Elixir orchestrator originally published by OpenAI:
+
+    https://github.com/openai/symphony
+
+  Copyright 2025 OpenAI
+
+The original work is licensed under the Apache License, Version 2.0.
+A copy of that license is included alongside this NOTICE as
+`LICENSE-APACHE-2.0`. You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Modifications
+-------------
+
+This port has been modified from the upstream source. Material
+deviations and ours-only additions are catalogued in:
+
+    docs/references/symphony-upstream-drift.md (repo root)
+
+Common categories of modification include: a `LocalShell` agent runner
+adapter (codex-independent), additional tracker adapters
+(`local_markdown`, `github_issues`, `noop`), an Anthropic LLM provider,
+ECS-jsonl logging via `Symphony.Logging`, OTLP tracing, a startup
+orphan-process reaper, and a dotted-key configuration shape for
+fields not yet on the upstream typed schema.
+
+The wider `wranngle-gtm-engine` repository is licensed under MIT (see
+the repo-root `LICENSE` file). The MIT license at the repo root applies
+to the rest of the repository; the Apache-2.0 terms above govern only
+this `tools/symphony-elixir/` subtree.

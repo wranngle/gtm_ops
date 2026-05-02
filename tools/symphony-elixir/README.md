@@ -6,6 +6,13 @@ workspace, reconciles every tick, and exposes a snapshot interface.
 
 Reference spec: <https://github.com/openai/symphony/blob/main/SPEC.md>.
 
+## License
+
+This subtree is a derivative work of OpenAI's Symphony Elixir orchestrator
+and is governed by the Apache License, Version 2.0. See `LICENSE-APACHE-2.0`
+and `NOTICE` in this directory. The repo-root MIT license does not extend
+to this subtree.
+
 ## Status
 
 This is the active rewrite of the Bash one-shot adapter at `scripts/symphony.sh`.
