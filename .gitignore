@@ -54,6 +54,8 @@ pip-wheel-metadata/
 tools/symphony-elixir/_build/
 tools/symphony-elixir/deps/
 tools/symphony-elixir/.elixir_ls/
+tools/symphony-elixir/bin/
+tools/symphony-elixir/.symphony/
 erl_crash.dump
 **/erl_crash.dump
 

@@ -56,8 +56,20 @@ defmodule Symphony.CLI do
         :ok
 
       Keyword.has_key?(top_opts, :workflow) ->
-        :ok = override_workflow_path(top_opts[:workflow])
-        dispatch(rest, deps)
+        # Erlang's `:application.start/1` reloads the `.app` file's env
+        # on first start — which clobbers any `put_env` we did before
+        # the app booted. So we ensure_started FIRST, THEN override.
+        # `persistent: true` belt-and-suspenders against later reloads,
+        # and a direct `WorkflowStore.set_path/1` call refreshes the
+        # already-cached path inside the running store.
+        case deps.ensure_started.() do
+          :ok ->
+            :ok = override_workflow_path(top_opts[:workflow])
+            dispatch(rest, deps)
+
+          {:error, reason} ->
+            {:error, "init failed: #{inspect(reason)}"}
+        end
 
       true ->
         dispatch(rest, deps)
@@ -190,7 +202,18 @@ defmodule Symphony.CLI do
   end
 
   defp override_workflow_path(path) when is_binary(path) do
-    Application.put_env(:symphony, :workflow_path, Path.expand(path))
+    expanded = Path.expand(path)
+    Application.put_env(:symphony, :workflow_path, expanded, persistent: true)
+
+    # If the WorkflowStore was already started (it normally is, since the
+    # app booted in `run/2` before override), update its cached path so
+    # background polling reflects the new file. Tolerate the not-running
+    # case (e.g. test envs that disable the store).
+    case Process.whereis(Symphony.WorkflowStore) do
+      nil -> :ok
+      _pid -> Symphony.WorkflowStore.set_path(expanded)
+    end
+
     :ok
   end
 

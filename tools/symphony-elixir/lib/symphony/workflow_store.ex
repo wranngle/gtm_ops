@@ -86,6 +86,26 @@ defmodule Symphony.WorkflowStore do
     end
   end
 
+  @doc """
+  Update the watched workflow path and immediately reload from the new
+  location. Used by the CLI when `--workflow PATH` overrides the
+  compile-time default after the store has already booted with the old
+  path cached in its state.
+
+  Returns `:ok` if the new path loads cleanly, `{:error, reason}` if the
+  store updates its path but the new file fails to load (in which case
+  the store keeps polling the new path and will pick it up if/when the
+  file becomes readable). Returns `{:error, :not_started}` if the store
+  process isn't running (test envs that disable the orchestrator).
+  """
+  @spec set_path(binary()) :: :ok | {:error, term()}
+  def set_path(path) when is_binary(path) do
+    case GenServer.whereis(__MODULE__) do
+      nil -> {:error, :not_started}
+      _pid -> GenServer.call(__MODULE__, {:set_path, path})
+    end
+  end
+
   # ============== Callbacks ==============
 
   @impl true
@@ -149,6 +169,22 @@ defmodule Symphony.WorkflowStore do
 
       {:error, reason, new_state} ->
         {:reply, {:error, reason}, new_state}
+    end
+  end
+
+  def handle_call({:set_path, path}, _from, %State{} = state) do
+    # Reset the stamp so reload_state treats the new path as guaranteed
+    # changed — otherwise a coincidentally-matching mtime/size/hash
+    # tuple would be a false negative and the cached workflow from the
+    # OLD path would persist.
+    new_state = %{state | path: path, stamp: nil}
+
+    case reload_state(new_state) do
+      {:ok, loaded} ->
+        {:reply, :ok, loaded}
+
+      {:error, reason, partial} ->
+        {:reply, {:error, reason}, partial}
     end
   end
 

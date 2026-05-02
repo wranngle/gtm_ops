@@ -186,4 +186,78 @@ defmodule Symphony.CLITest do
       assert msg =~ "unknown subcommand"
     end
   end
+
+  describe "--workflow PATH (STACK-073)" do
+    # Regression: the flag was silently ignored because the escript boots
+    # the OTP app before CLI.main runs, and `:application.start/1` reloads
+    # the .app's compile-time env on first start — which clobbered the
+    # `Application.put_env` call that override_workflow_path made *before*
+    # ensure_started. The fix reorders ensure_started to run before
+    # override AND adds `WorkflowStore.set_path/1` so the running store's
+    # cached path also updates.
+
+    test "puts the user-supplied path into Application env (overriding default)" do
+      saved = Application.get_env(:symphony, :workflow_path)
+
+      on_exit(fn ->
+        if is_nil(saved) do
+          Application.delete_env(:symphony, :workflow_path)
+        else
+          Application.put_env(:symphony, :workflow_path, saved)
+        end
+      end)
+
+      tmp_dir =
+        Path.join(System.tmp_dir!(), "cli-flag-#{System.unique_integer([:positive])}")
+
+      File.mkdir_p!(tmp_dir)
+      File.mkdir_p!(Path.join(tmp_dir, "issues"))
+      workflow_file = Path.join(tmp_dir, "WORKFLOW.md")
+      File.write!(workflow_file, "---\ntracker:\n  kind: local_markdown\n---\n")
+
+      workflow = %{
+        config: %{
+          "tracker" => %{"kind" => "local_markdown", "issues_root" => Path.join(tmp_dir, "issues")},
+          "agent" => %{"command" => "scripts/bin/llm.sh"},
+          "codex" => %{"command" => "codex app-server"},
+          "workspace" => %{"root" => tmp_dir}
+        },
+        prompt_template: "{{ issue.title }}",
+        source_path: workflow_file
+      }
+
+      result = CLI.run(["--workflow", workflow_file, "validate"], deps_with_capture({:ok, workflow}))
+
+      assert result == :ok
+      assert Application.get_env(:symphony, :workflow_path) == Path.expand(workflow_file)
+    end
+
+    test "error path on a bogus --workflow value matches the user-supplied path, not the default" do
+      saved = Application.get_env(:symphony, :workflow_path)
+
+      on_exit(fn ->
+        if is_nil(saved) do
+          Application.delete_env(:symphony, :workflow_path)
+        else
+          Application.put_env(:symphony, :workflow_path, saved)
+        end
+      end)
+
+      bogus = Path.join(System.tmp_dir!(), "cli-flag-bogus-#{System.unique_integer([:positive])}.md")
+      refute File.exists?(bogus)
+
+      deps = %{
+        ensure_started: fn -> :ok end,
+        load_workflow: &Symphony.WorkflowLoader.load/1,
+        io_puts: fn _ -> :ok end,
+        io_err: fn _ -> :ok end,
+        halt: fn _ -> :ok end,
+        wait_forever: fn -> :ok end
+      }
+
+      assert {:error, msg} = CLI.run(["--workflow", bogus, "validate"], deps)
+      assert msg =~ bogus
+      refute msg =~ "tools/symphony-elixir/WORKFLOW.md"
+    end
+  end
 end
