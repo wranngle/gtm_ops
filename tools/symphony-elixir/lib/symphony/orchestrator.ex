@@ -71,29 +71,54 @@ defmodule Symphony.Orchestrator do
     seconds_running: 0
   }
 
-  @initial_state %{
-    config: nil,
-    adapter: nil,
-    running: %{},
-    claimed: MapSet.new(),
-    retry_attempts: %{},
-    codex_totals: @initial_codex_totals,
-    rate_limits: nil,
-    last_tick_at: nil,
-    startup_cleanup_done?: false,
-    poll_interval_override_ms: nil,
-    # Spec § 7.4 / § 8.1: tick coalescing. `tick_timer_ref` is the
-    # `Process.send_after/3` reference for the next pending tick;
-    # `tick_token` is a `make_ref()` matched in `handle_info({:tick,
-    # token})` so stale timers (from cancelled schedules or an
-    # interleaved manual `tick_now`) are dropped instead of running.
-    # `next_poll_due_at_ms` is the monotonic-clock target for the next
-    # tick, surfaced through the snapshot per spec § 13.5.
-    tick_timer_ref: nil,
-    tick_token: nil,
-    next_poll_due_at_ms: nil,
-    poll_check_in_progress: false
-  }
+  defmodule State do
+    @moduledoc """
+    Runtime state for the Symphony orchestrator polling loop.
+
+    Mirrors the upstream `SymphonyElixir.Orchestrator.State` struct shape so
+    upstream tests that pattern-match on `%Orchestrator.State{}` work without
+    modification, while retaining our extra runtime fields (`config`,
+    `adapter`, `last_tick_at`, `startup_cleanup_done?`,
+    `poll_interval_override_ms`).
+
+    The `codex_rate_limits` field is the Symphony-internal name for what the
+    snapshot output map exposes externally as `rate_limits` (matching upstream
+    naming). See `snapshot_payload/1`.
+    """
+
+    defstruct [
+      # ---- upstream fields ----
+      :poll_interval_ms,
+      :max_concurrent_agents,
+      :next_poll_due_at_ms,
+      :tick_timer_ref,
+      :tick_token,
+      poll_check_in_progress: false,
+      running: %{},
+      completed: MapSet.new(),
+      claimed: MapSet.new(),
+      retry_attempts: %{},
+      codex_totals: nil,
+      codex_rate_limits: nil,
+      # ---- Symphony-only fields ----
+      config: nil,
+      adapter: nil,
+      last_tick_at: nil,
+      startup_cleanup_done?: false,
+      poll_interval_override_ms: nil
+    ]
+  end
+
+  # Spec § 7.4 / § 8.1 tick coalescing notes:
+  #   `tick_timer_ref` is the `Process.send_after/3` reference for the next
+  #   pending tick; `tick_token` is a `make_ref()` matched in
+  #   `handle_info({:tick, token})` so stale timers (from cancelled schedules
+  #   or an interleaved manual `tick_now`) are dropped instead of running.
+  #   `next_poll_due_at_ms` is the monotonic-clock target for the next tick,
+  #   surfaced through the snapshot per spec § 13.5.
+  defp initial_state do
+    %State{codex_totals: @initial_codex_totals}
+  end
 
   @poll_check_key {__MODULE__, :poll_check_in_progress}
   @snapshot_cache_key {__MODULE__, :snapshot_cache}
@@ -419,7 +444,7 @@ defmodule Symphony.Orchestrator do
     case WorkflowLoader.load() do
       {:ok, workflow} ->
         Logger.info("symphony.workflow_loaded path=#{workflow.source_path}")
-        {state, _} = apply_workflow_to_state(@initial_state, workflow)
+        {state, _} = apply_workflow_to_state(initial_state(), workflow)
 
         case startup_preflight(state) do
           :ok -> {:ok, state}
@@ -428,7 +453,7 @@ defmodule Symphony.Orchestrator do
 
       {:error, reason} ->
         Logger.warning("symphony.workflow_load_failed reason=#{inspect(reason)}")
-        {:ok, @initial_state}
+        {:ok, initial_state()}
     end
   end
 
@@ -1257,7 +1282,7 @@ defmodule Symphony.Orchestrator do
   end
 
   defp maybe_put_rate_limits(state, nil), do: state
-  defp maybe_put_rate_limits(state, rate_limits), do: %{state | rate_limits: rate_limits}
+  defp maybe_put_rate_limits(state, rate_limits), do: %{state | codex_rate_limits: rate_limits}
 
   defp extract_absolute_token_totals(update) when is_map(update) do
     payload = update_payload(update)
@@ -1626,7 +1651,7 @@ defmodule Symphony.Orchestrator do
       running: running_rows,
       retrying: retrying_rows,
       codex_totals: codex_totals,
-      rate_limits: state.rate_limits,
+      rate_limits: state.codex_rate_limits,
       workflow_loaded: not is_nil(state.config),
       tracker_kind:
         case state.config do
