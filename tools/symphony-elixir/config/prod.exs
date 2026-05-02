@@ -11,9 +11,18 @@ config :logger, level: :info
 # `Symphony.Application.default_sink/0`) or by overriding
 # `config :symphony, :logging_sink, ...` in a release config.
 config :symphony,
+  dashboard_enabled?: true,
   logging_sink:
     {:multi,
      [
        :stderr,
        {:file, ".symphony/logs/symphony-elixir.jsonl"}
      ]}
+
+# Production endpoint. The `Symphony.HttpServer` boots `Symphony.Web.Endpoint`
+# with a freshly-generated secret_key_base if the application config doesn't
+# supply one (escript / single-binary deploys), so we stay deploy-friendly.
+config :symphony, Symphony.Web.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4040],
+  server: true,
+  check_origin: false

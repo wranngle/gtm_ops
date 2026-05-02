@@ -17,10 +17,17 @@ defmodule Symphony.Application do
   #   2. Symphony.WorkerSupervisor       — Task.Supervisor for run-attempt workers
   #   3. Symphony.WorkflowStore          — file watcher + cached workflow
   #   4. Symphony.Orchestrator           — scheduling brain
+  #   5. Phoenix.PubSub (Symphony.PubSub) — observability fan-out (gated)
+  #   6. Symphony.HttpServer             — Phoenix LiveView dashboard endpoint (gated)
   #
   # `auto_start_orchestrator?` = false (test env) skips both the
   # WorkflowStore and the Orchestrator so test helpers can boot
   # them on demand with synthetic fixtures.
+  #
+  # `dashboard_enabled?` (default true in :dev/:prod, false in :test) gates
+  # the optional spec § 13.3 / § 13.6 surface — Phoenix.PubSub +
+  # Symphony.HttpServer + Symphony.Web.Endpoint. When off, the dashboard
+  # never opens a port and the pubsub broadcaster no-ops gracefully.
   defp build_children do
     # The WorkerSupervisor (a `Task.Supervisor`) is always started, even
     # in test mode where the orchestrator is started on demand. Spawning
@@ -32,10 +39,16 @@ defmodule Symphony.Application do
       {Task.Supervisor, name: Symphony.WorkerSupervisor}
     ]
 
+    base
+    |> Kernel.++(orchestrator_children())
+    |> Kernel.++(dashboard_children())
+  end
+
+  defp orchestrator_children do
     if Application.get_env(:symphony, :auto_start_orchestrator?, true) do
-      base ++ workflow_store_children() ++ [{Symphony.Orchestrator, []}]
+      workflow_store_children() ++ [{Symphony.Orchestrator, []}]
     else
-      base
+      []
     end
   end
 
@@ -45,6 +58,24 @@ defmodule Symphony.Application do
     else
       []
     end
+  end
+
+  # Spec § 13.3 / § 13.6 dashboard supervision children. The PubSub server
+  # is registered under the well-known name `Symphony.PubSub` so the
+  # presenter and the LiveView can subscribe without hardcoding pid lookup.
+  defp dashboard_children do
+    if dashboard_enabled?() do
+      [
+        {Phoenix.PubSub, name: Symphony.PubSub},
+        {Symphony.HttpServer, []}
+      ]
+    else
+      []
+    end
+  end
+
+  defp dashboard_enabled? do
+    Application.get_env(:symphony, :dashboard_enabled?, false)
   end
 
   # The default sink is configurable per environment so callers don't have
