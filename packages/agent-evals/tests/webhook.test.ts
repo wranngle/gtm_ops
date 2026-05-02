@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   WebhookPayloadSchema,
   WebhookEventTypeSchema,
+  AnalysisDataSchema,
   type WebhookPayload,
 } from "../src/types";
 
@@ -159,5 +160,36 @@ describe("webhook contracts", () => {
       const result = WebhookEventTypeSchema.safeParse(type);
       expect(result.success).toBe(true);
     }
+  });
+
+  test("analysis.complete events include analysis data with synthetic IDs", () => {
+    const fixturePath = join(fixturesDir, "webhook-events.json");
+    const raw = readFileSync(fixturePath, "utf-8");
+    const events = JSON.parse(raw) as WebhookPayload[];
+
+    const analysisEvents = events.filter((e) => e.type === "analysis.complete");
+    expect(analysisEvents.length).toBeGreaterThan(0);
+
+    for (const event of analysisEvents) {
+      expect(event.analysisData).toBeDefined();
+      const result = AnalysisDataSchema.safeParse(event.analysisData);
+      expect(result.success).toBe(true, `AnalysisData validation failed: ${result.error?.message}`);
+      expect(event.analysisData?.conversationId.startsWith("synth-")).toBe(true);
+      expect(["positive", "neutral", "negative"]).toContain(event.analysisData?.sentiment);
+      expect(typeof event.analysisData?.resolved).toBe("boolean");
+      expect((event.analysisData?.summaryText.length ?? 0)).toBeGreaterThan(0);
+    }
+  });
+
+  test("all four webhook event types appear in fixtures", () => {
+    const fixturePath = join(fixturesDir, "webhook-events.json");
+    const raw = readFileSync(fixturePath, "utf-8");
+    const events = JSON.parse(raw) as WebhookPayload[];
+
+    const types = new Set(events.map((e) => e.type));
+    expect(types.has("conversation.started")).toBe(true);
+    expect(types.has("conversation.ended")).toBe(true);
+    expect(types.has("transcript.ready")).toBe(true);
+    expect(types.has("analysis.complete")).toBe(true);
   });
 });

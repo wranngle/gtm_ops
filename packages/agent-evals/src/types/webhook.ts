@@ -30,11 +30,20 @@ export const TranscriptDataSchema = z.object({
 });
 export type TranscriptData = z.infer<typeof TranscriptDataSchema>;
 
+export const AnalysisDataSchema = z.object({
+  conversationId: z.string().min(1),
+  sentiment: z.enum(["positive", "neutral", "negative"]),
+  resolved: z.boolean(),
+  summaryText: z.string().min(1),
+});
+export type AnalysisData = z.infer<typeof AnalysisDataSchema>;
+
 export const WebhookPayloadSchema = z.object({
   type: WebhookEventTypeSchema,
   timestamp: z.string().datetime(),
   conversationMetadata: ConversationMetadataSchema.optional(),
   transcriptData: TranscriptDataSchema.optional(),
+  analysisData: AnalysisDataSchema.optional(),
 });
 export type WebhookPayload = z.infer<typeof WebhookPayloadSchema>;
 
