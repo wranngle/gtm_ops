@@ -280,7 +280,7 @@ defmodule Symphony.AgentRunner.LocalShell do
     # Reuse codex.turn_timeout_ms for the local-shell timeout — the
     # surrounding LLM chain enforces its own per-call timeout, so this
     # outer cap is mostly a safety net.
-    Map.get(config.resolved, "codex.turn_timeout_ms", 3_600_000)
+    Config.codex_turn_timeout_ms(config)
   end
 
   defp utc_stamp do

@@ -409,7 +409,7 @@ defmodule Symphony.Tracker.Linear.Client do
   end
 
   defp require_project_slug(config) do
-    case Map.get(config.resolved, "tracker.project_slug") do
+    case Config.tracker_project_slug(config) do
       slug when is_binary(slug) and slug != "" -> {:ok, slug}
       _ -> {:error, :missing_tracker_project_slug}
     end

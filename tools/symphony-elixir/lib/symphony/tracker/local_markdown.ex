@@ -74,7 +74,7 @@ defmodule Symphony.Tracker.LocalMarkdown do
   # ============== Helpers ==============
 
   defp issues_root(config) do
-    case Map.get(config.resolved, "tracker.issues_root") do
+    case Config.tracker_issues_root(config) do
       nil -> ".symphony/issues"
       "" -> ".symphony/issues"
       value -> value

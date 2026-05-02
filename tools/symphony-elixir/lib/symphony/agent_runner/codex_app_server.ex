@@ -320,8 +320,9 @@ defmodule Symphony.AgentRunner.CodexAppServer do
         v
 
       _ ->
-        case Map.get(config.resolved, "agent.max_turns") do
-          v when is_integer(v) and v > 0 -> v
+        try do
+          Config.agent_max_turns(config)
+        rescue
           _ -> @default_max_turns
         end
     end

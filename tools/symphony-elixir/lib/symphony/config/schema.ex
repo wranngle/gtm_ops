@@ -153,6 +153,10 @@ defmodule Symphony.Config.Schema do
       # runner) shells out to this command instead of `codex.command`.
       # Upstream has only the Codex runner so it doesn't separate them.
       field(:command, :string, default: "codex app-server")
+      # Ours-only. Selects between AgentRunner adapter implementations
+      # (e.g. `:local_shell` vs `:codex_app_server`). Default `nil` lets
+      # `AgentRunner.adapter_for/1` fall back to its own resolver.
+      field(:runner_kind, :string)
     end
 
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -165,7 +169,8 @@ defmodule Symphony.Config.Schema do
           :max_turns,
           :max_retry_backoff_ms,
           :max_concurrent_agents_by_state,
-          :command
+          :command,
+          :runner_kind
         ],
         empty_values: []
       )

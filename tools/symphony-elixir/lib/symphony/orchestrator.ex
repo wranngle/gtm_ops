@@ -1293,8 +1293,11 @@ defmodule Symphony.Orchestrator do
 
   # Spec § 5.3.5 / § 8.3 per-state concurrency cap.
   defp filter_per_state_caps(eligible, state) do
-    raw = Map.get(state.config.raw, "agent", %{})
-    by_state_raw = Map.get(raw, "max_concurrent_agents_by_state", %{}) || %{}
+    by_state_raw =
+      case state.config do
+        %Symphony.Config.Settings{schema: schema} -> schema.agent.max_concurrent_agents_by_state
+        _ -> %{}
+      end || %{}
 
     by_state =
       by_state_raw
@@ -1354,13 +1357,7 @@ defmodule Symphony.Orchestrator do
   defp normalize_state(_), do: ""
 
   defp stall_timeout_ms(nil), do: 0
-
-  defp stall_timeout_ms(config) do
-    case Map.get(config.resolved, "codex.stall_timeout_ms", 300_000) do
-      n when is_integer(n) -> n
-      _ -> 0
-    end
-  end
+  defp stall_timeout_ms(config), do: Config.codex_stall_timeout_ms(config)
 
   defp entry_identifier(%{identifier: id}) when is_binary(id), do: id
   defp entry_identifier(_), do: ""

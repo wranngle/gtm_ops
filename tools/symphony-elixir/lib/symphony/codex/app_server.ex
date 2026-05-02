@@ -1304,17 +1304,22 @@ defmodule Symphony.Codex.AppServer do
   # by setting `codex.approval_policy` in WORKFLOW.md. Auto-approval
   # kicks in when the resolved policy is `"never"` (i.e., never ask).
   defp session_policies(config, workspace, opts) do
+    codex = codex_settings(config)
+
     approval_policy =
       Keyword.get(opts, :approval_policy) ||
-        get_resolved(config, "codex.approval_policy", "never")
+        non_empty(codex.approval_policy) ||
+        "never"
 
     thread_sandbox =
       Keyword.get(opts, :thread_sandbox) ||
-        get_resolved(config, "codex.thread_sandbox", "workspace-write")
+        non_empty(codex.thread_sandbox) ||
+        "workspace-write"
 
     turn_sandbox_policy =
       Keyword.get(opts, :turn_sandbox_policy) ||
-        get_resolved(config, "codex.turn_sandbox_policy", default_turn_sandbox_policy(workspace))
+        non_empty(codex.turn_sandbox_policy) ||
+        default_turn_sandbox_policy(workspace)
 
     %{
       approval_policy: approval_policy,
@@ -1322,6 +1327,14 @@ defmodule Symphony.Codex.AppServer do
       turn_sandbox_policy: turn_sandbox_policy
     }
   end
+
+  defp codex_settings(%Symphony.Config.Settings{schema: schema}), do: schema.codex
+  defp codex_settings(%Symphony.Config.Schema{} = schema), do: schema.codex
+  defp codex_settings(_), do: %{}
+
+  defp non_empty(nil), do: nil
+  defp non_empty(""), do: nil
+  defp non_empty(v), do: v
 
   defp default_turn_sandbox_policy(workspace) do
     %{
@@ -1362,27 +1375,9 @@ defmodule Symphony.Codex.AppServer do
     _ -> nil
   end
 
-  defp read_timeout_ms(config) do
-    case Map.get(config.resolved, "codex.read_timeout_ms") do
-      v when is_integer(v) and v > 0 -> v
-      _ -> 5_000
-    end
-  end
+  defp read_timeout_ms(config), do: Config.codex_read_timeout_ms(config)
 
-  defp turn_timeout_ms(config) do
-    case Map.get(config.resolved, "codex.turn_timeout_ms") do
-      v when is_integer(v) and v > 0 -> v
-      _ -> 3_600_000
-    end
-  end
-
-  defp get_resolved(config, key, default) do
-    case Map.get(config.resolved, key) do
-      nil -> default
-      "" -> default
-      v -> v
-    end
-  end
+  defp turn_timeout_ms(config), do: Config.codex_turn_timeout_ms(config)
 
   # Workspace assertion is exposed for the runner adapter — it lets the
   # adapter sanity-check workspaces before opening a port (mirrors §

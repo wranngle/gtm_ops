@@ -269,15 +269,11 @@ This document is the truth-finding pass. The natural follow-ups,
 in priority order:
 
 1. ~~Pick the dual-config-API drift apart in `config.ex`~~ — **done
-   2026-05-02**, see `symphony-config-dual-track-audit.md`. Verdict:
-   dotted-key track is needed today, blocked on 4 concrete Schema
-   gaps. Three dead-code accessors deleted. **PR (a) of the
-   migration plan landed same day** — `Schema.Tracker.{repo,
-   issues_root}`, `Schema.Agent.command`, `Schema.parse/2` with
-   workflow-dir anchoring, `$VAR` resolution for the new fields.
-   All four Schema gaps closed. Next move: PR (b) — migrate ~15 lib
-   files away from `config.resolved`/dotted getters to typed-struct
-   access.
+   2026-05-02**, see `symphony-config-dual-track-audit.md`. PRs (a)
+   and (b) both landed: typed `%Settings{schema, source_path}`
+   struct backs `Config.t()`; dotted-key data shape removed; 14 lib
+   files migrated to typed getters; 337 tests green. The
+   dual-track collapse is complete.
 2. ~~Port the missing observability API endpoints~~ — **done
    2026-05-02**. Initial drift map was wrong about scope: `/api/v1/state`,
    `/api/v1/:issue_identifier`, and most 405 catches were already
@@ -290,15 +286,37 @@ in priority order:
    `/`, and `/api/v1/MT-1` (matching upstream `extensions_test.exs`).
    `extensions_test.exs.todo_needs_linear_adapter_graphql_facade`
    itself remains parked on item #3 (Linear adapter shape).
-3. Decide on the Linear adapter shape: rewrite ours so the
-   `Client.graphql/2` test seam works (matches upstream), or document
-   the deviation and rewrite the parked test.
-4. Audit the `orchestrator.ex` function-name divergence systematically.
-   ~80 upstream functions, ~80 ours; map every pair and flag any
-   missing behaviours.
-5. Decide on the `specs_check.ex` rewrite — keep our runtime checker
-   and re-port upstream's static-spec linter as a sibling task, or
-   collapse to one of the two.
-6. Compliance: add `LICENSE` and `NOTICE` files for the Apache-2.0
-   inheritance from upstream code we ported wholesale.
-7. Toolchain: decide whether otp-27 vs otp-28 is intentional.
+3. ~~Decide on the Linear adapter shape~~ — **done 2026-05-02**.
+   Three `.todo_*` parked test files renamed to `.parked_*` with
+   reason suffixes; `test/symphony/PARKED_TESTS.md` manifest
+   documents which surfaces are covered by our existing tests and
+   why each parked file stays parked (intentional adapter-shape
+   divergence per spec § 11.1, plus dependencies on upstream-only
+   SSH-fanout / `Workspace.create_for_issue` helpers).
+4. ~~Audit the `orchestrator.ex` function-name divergence~~ —
+   **done 2026-05-02**, see
+   `symphony-orchestrator-function-audit.md`. 80 upstream-only and
+   79 ours-only function names classified into "missing
+   behaviour" (mostly the SSH-fanout family — multi-week port if
+   we want it), "same purpose, different decomposition"
+   (cosmetic, skip), and "documented design deviations" (test
+   seams, snapshot caching, tick coalescing, orphan reaper,
+   workflow hot-reload, refresh request).
+5. ~~Decide on `specs_check.ex` rewrite~~ — **done 2026-05-02**.
+   Renamed our runtime conformance checker to
+   `Symphony.SpecCompliance` (`mix symphony.spec_compliance`);
+   ported upstream's static `@spec` linter verbatim into
+   `Symphony.SpecsCheck` (`mix specs.check`). Both coexist as
+   siblings; 11 tests across the two modules green.
+6. ~~Compliance: add `LICENSE` and `NOTICE`~~ — **done 2026-05-02**.
+   `tools/symphony-elixir/LICENSE-APACHE-2.0` carries the upstream
+   Apache 2.0 text verbatim; `tools/symphony-elixir/NOTICE`
+   attributes OpenAI as the upstream author and points at the
+   drift map for material modifications. Repo-root `LICENSE` (MIT)
+   does not extend to this subtree (documented in the README).
+7. ~~Toolchain: decide whether otp-27 vs otp-28 is intentional~~ —
+   **investigated 2026-05-02**, see
+   `symphony-otp-version-pin.md`. Pin is stale (set in initial
+   `e4f073c` mise commit, not load-bearing). No OTP-28
+   incompatibilities found in deps. Recommendation: bump in a
+   deliberate separate PR; pin stays at OTP-27 until then.

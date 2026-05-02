@@ -240,15 +240,15 @@ defmodule Symphony.OrchestratorTest do
   end
 
   test "respects bounded concurrency: only takes (max - running) candidates" do
-    config = %{
-      raw: %{},
-      resolved: %{
-        "tracker.kind" => "noop",
-        "agent.max_concurrent_agents" => 2,
-        "polling.interval_ms" => 60000
-      },
-      source_path: "n/a"
-    }
+    {:ok, config} =
+      Config.from_workflow(%{
+        config: %{
+          "tracker" => %{"kind" => "noop"},
+          "agent" => %{"max_concurrent_agents" => 2},
+          "polling" => %{"interval_ms" => 60_000}
+        },
+        source_path: "n/a"
+      })
 
     state = %{
       config: config,

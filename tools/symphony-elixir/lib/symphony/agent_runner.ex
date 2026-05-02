@@ -72,25 +72,16 @@ defmodule Symphony.AgentRunner do
     end
   end
 
-  # `agent.runner_kind` is not in `Config.@defaults` so it doesn't
-  # appear in `config.resolved`. Read from `config.raw` as a fallback.
   defp read_runner_kind(config) do
-    candidate =
-      case config.raw do
-        %{"agent" => %{"runner_kind" => v}} when is_binary(v) -> v
-        _ -> Map.get(config.resolved, "agent.runner_kind")
-      end
-
-    case candidate do
-      v when is_binary(v) -> String.trim(v)
+    case Config.agent_runner_kind(config) do
+      kind when is_atom(kind) and not is_nil(kind) -> Atom.to_string(kind) |> String.trim()
       _ -> ""
     end
   end
 
   defp read_codex_command(config) do
-    case Map.get(config.resolved, "codex.command") do
-      v when is_binary(v) -> v
-      _ -> ""
-    end
+    Config.codex_command(config)
+  rescue
+    _ -> ""
   end
 end

@@ -41,6 +41,9 @@ defmodule Symphony.Codex.AppServerTest do
       command: #{codex_command}
       read_timeout_ms: 5000
       turn_timeout_ms: 5000
+      # Explicit "never": upstream Schema's default is the reject map,
+      # but our auto-approval tests exercise the high-trust path.
+      approval_policy: never
     ---
     Prompt for {{ issue.identifier }}.
     """)

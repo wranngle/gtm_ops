@@ -2,11 +2,14 @@ defmodule Symphony.Config do
   @moduledoc """
   Typed view of the workflow configuration, per Symphony spec section 5.3 + 6.
 
-  Responsibilities:
-    1. Apply built-in defaults to every field declared in the spec.
-    2. Resolve `$VAR_NAME` indirection in selected string fields against the
-       process environment.
-    3. Provide typed getters so callers do not pattern-match raw maps.
+  Single-source-of-truth representation: every consumer reads via the
+  typed `Symphony.Config.Schema.t()` struct, accessed either through
+  `Config.settings!()` (the upstream-shaped zero-arg accessor) or
+  through the per-config getters below. The latter take a
+  `Symphony.Config.Settings.t()` value built by `from_workflow/1`,
+  which carries the parsed `Schema.t()` plus the workflow file's
+  `source_path` (needed by callers that re-load `WORKFLOW.md` from
+  inside an agent runner).
 
   Construction:
 
@@ -15,12 +18,24 @@ defmodule Symphony.Config do
       iex> Symphony.Config.tracker_kind(config)
       :local_markdown
 
-  Validation errors are returned as `{:error, {:invalid, field, reason}}`
-  rather than raised, so the orchestrator can decide whether to fail
-  startup or skip a tick.
+  Validation errors are returned as
+  `{:error, {:invalid_workflow_config, message}}` rather than raised,
+  so the orchestrator can decide whether to fail startup or skip a
+  tick.
+
+  ## Migration history
+
+  Until 2026-05-02 this module exposed a parallel "dotted-key" data
+  shape (`%{raw, resolved, source_path}`) alongside the typed
+  `Schema`. PR (b) of the dual-track collapse (see
+  `docs/references/symphony-config-dual-track-audit.md`) replaced the
+  dotted shape with `Settings.t()` so there is now exactly one
+  representation. The getter functions kept their names and arities
+  so call sites did not need changing.
   """
 
   alias Symphony.Config.Schema
+  alias Symphony.Config.Settings
   alias Symphony.Workflow
   alias Symphony.WorkflowLoader
 
@@ -62,6 +77,8 @@ defmodule Symphony.Config do
     project_slug: nil,
     kind: "local_markdown"
   }
+
+  @type t :: Settings.t()
 
   @doc """
   Upstream-compatible accessor for `Symphony.StatusDashboard` and other
@@ -140,20 +157,6 @@ defmodule Symphony.Config do
   (`Schema.parse/1`) with cross-field rules that the typed schema cannot
   express on its own (e.g. `tracker.kind == "linear"` requires an API
   key + project slug).
-
-  Returns `:ok` when the workflow is dispatch-ready, or `{:error,
-  reason}` where `reason` is one of:
-
-    * `{:invalid_workflow_config, message}` — schema parse failure or
-      missing-required-field rejection from the changeset pipeline.
-    * `{:unsupported_tracker_kind, kind}` — `tracker.kind` is set but
-      not in the supported set.
-    * `:missing_tracker_kind` — `tracker.kind` resolved to `nil`.
-    * `:missing_linear_api_token` — `tracker.kind == "linear"` but the
-      api key is unset.
-    * `:missing_linear_project_slug` — `tracker.kind == "linear"` but
-      the project slug is unset.
-    * passthroughs from `Workflow.current/0` failure modes.
   """
   @spec validate!() :: :ok | {:error, term()}
   def validate! do
@@ -242,154 +245,195 @@ defmodule Symphony.Config do
     _ -> :default
   end
 
-  @env_resolvable [
-    "tracker.endpoint",
-    "tracker.api_key",
-    "tracker.project_slug",
-    "tracker.repo",
-    "workspace.root",
-    "agent.command",
-    "codex.command"
-  ]
-
-  # Spec § 6.1 / § 9.1: filesystem path values may be expressed as
-  # repo-relative strings inside WORKFLOW.md. Resolve them against the
-  # directory containing the workflow file so the daemon doesn't depend
-  # on whatever cwd `mix run` happened to inherit (the previous behavior
-  # silently broke `tracker.issues_root: .symphony/issues` when started
-  # from `tools/symphony-elixir/`).
-  @path_resolvable [
-    "tracker.issues_root",
-    "workspace.root"
-  ]
-
-  @defaults %{
-    "tracker.kind" => "local_markdown",
-    "tracker.endpoint" => "https://api.linear.app/graphql",
-    "tracker.api_key" => nil,
-    "tracker.project_slug" => nil,
-    "tracker.repo" => nil,
-    "tracker.issues_root" => ".symphony/issues",
-    "tracker.active_states" => "todo,in_progress",
-    "tracker.terminal_states" => "done,cancelled,duplicate",
-    "polling.interval_ms" => 30_000,
-    "workspace.root" => System.tmp_dir!() <> "/symphony_workspaces",
-    "hooks.timeout_ms" => 60_000,
-    "agent.command" => "codex app-server",
-    "agent.max_concurrent_agents" => 10,
-    "agent.max_retry_backoff_ms" => 300_000,
-    "codex.command" => "codex app-server",
-    "codex.read_timeout_ms" => 5_000,
-    "codex.turn_timeout_ms" => 3_600_000,
-    "codex.stall_timeout_ms" => 300_000
-  }
-
-  @type t :: %{
-          required(:raw) => map(),
-          required(:resolved) => map(),
-          required(:source_path) => binary()
-        }
-
+  @doc """
+  Build a `Settings.t()` from a loaded workflow. Returns `{:ok,
+  settings}` or `{:error, reason}` from `Schema.parse/2`. The resulting
+  struct carries the parsed `Schema.t()` plus the workflow's
+  `source_path` for callers that need to re-read `WORKFLOW.md` from
+  inside an agent runner (see `Symphony.AgentRunner.LocalShell` and
+  `Symphony.AgentRunner.CodexAppServer`).
+  """
   @spec from_workflow(WorkflowLoader.workflow()) :: {:ok, t()} | {:error, term()}
-  def from_workflow(%{config: raw, source_path: path}) do
+  def from_workflow(%{config: raw, source_path: path}) when is_map(raw) do
     workflow_dir = path && Path.dirname(path)
 
-    resolved =
-      Enum.reduce(@defaults, %{}, fn {dotted, default}, acc ->
-        value =
-          case fetch_raw(raw, dotted) do
-            :missing -> default
-            {:ok, v} -> v
-          end
+    case raw |> normalize_csv_arrays() |> Schema.parse(workflow_dir) do
+      {:ok, schema} -> {:ok, %Settings{schema: schema, source_path: path}}
+      {:error, _} = err -> err
+    end
+  end
 
-        value
-        |> maybe_resolve_env(dotted)
-        |> maybe_resolve_path(dotted, workflow_dir)
-        |> then(&Map.put(acc, dotted, &1))
-      end)
+  # Backwards-compat with the old dotted-key parser: callers occasionally
+  # write `tracker.active_states: "todo,in_progress"` as a CSV string
+  # rather than the YAML list `[todo, in_progress]`. Schema strictly
+  # types these as `{:array, :string}`, so we coerce CSV strings to
+  # lists before handing the raw map to `Schema.parse/2`.
+  defp normalize_csv_arrays(raw) when is_map(raw) do
+    Map.update(raw, "tracker", %{}, fn tracker when is_map(tracker) ->
+      tracker
+      |> coerce_csv("active_states")
+      |> coerce_csv("terminal_states")
+    end)
+  end
 
-    {:ok, %{raw: raw, resolved: resolved, source_path: path}}
+  defp coerce_csv(map, key) do
+    case Map.get(map, key) do
+      bin when is_binary(bin) ->
+        Map.put(
+          map,
+          key,
+          bin
+          |> String.split(",")
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+        )
+
+      _ ->
+        map
+    end
+  end
+
+  @doc """
+  Empty `Settings.t()` for callers that need a non-nil placeholder
+  (e.g. test fakes, the Linear tracker's zero-arg facade fallback).
+  Backed by `Schema.parse/1` of an empty map so every nested embed is
+  populated with its declared defaults instead of being `nil`.
+  """
+  @spec empty() :: t()
+  def empty do
+    {:ok, schema} = Schema.parse(%{})
+    %Settings{schema: schema, source_path: nil}
   end
 
   # ============== Typed getters ==============
+  #
+  # These wrap `settings.schema.<field>` access so call sites read like
+  # `Config.tracker_kind(config)` rather than
+  # `config.schema.tracker.kind |> String.to_atom()`. Single source of
+  # truth: every getter projects from the typed schema.
 
   @spec tracker_kind(t()) :: :local_markdown | :github_issues | :linear | atom()
   def tracker_kind(config) do
-    config.resolved
-    |> Map.fetch!("tracker.kind")
-    |> to_string()
-    |> String.to_atom()
+    case schema(config).tracker.kind do
+      nil -> :local_markdown
+      kind -> kind |> to_string() |> String.to_atom()
+    end
   end
 
   @spec tracker_repo(t()) :: binary() | nil
-  def tracker_repo(config), do: get_string(config, "tracker.repo")
+  def tracker_repo(config), do: schema(config).tracker.repo
 
   @spec tracker_endpoint(t()) :: binary()
-  def tracker_endpoint(config), do: get_string!(config, "tracker.endpoint")
+  def tracker_endpoint(config) do
+    case schema(config).tracker.endpoint do
+      v when is_binary(v) and v != "" -> v
+      _ -> raise ArgumentError, "config: tracker.endpoint must be a non-empty string"
+    end
+  end
 
   @spec tracker_api_key(t()) :: binary() | nil
   def tracker_api_key(config) do
-    case get_string(config, "tracker.api_key") do
+    case schema(config).tracker.api_key do
       "" -> nil
       v -> v
     end
   end
 
+  @spec tracker_project_slug(t()) :: binary() | nil
+  def tracker_project_slug(config), do: schema(config).tracker.project_slug
+
+  @spec tracker_issues_root(t()) :: binary() | nil
+  def tracker_issues_root(config), do: schema(config).tracker.issues_root
+
   @spec tracker_active_states(t()) :: [binary()]
-  def tracker_active_states(config), do: csv(config, "tracker.active_states")
+  def tracker_active_states(config), do: states_list(schema(config).tracker.active_states)
 
   @spec tracker_terminal_states(t()) :: [binary()]
-  def tracker_terminal_states(config), do: csv(config, "tracker.terminal_states")
+  def tracker_terminal_states(config), do: states_list(schema(config).tracker.terminal_states)
 
   @spec polling_interval_ms(t()) :: pos_integer()
-  def polling_interval_ms(config), do: pos_int!(config, "polling.interval_ms")
+  def polling_interval_ms(config) do
+    case schema(config).polling.interval_ms do
+      v when is_integer(v) and v > 0 -> v
+      v -> raise ArgumentError, "config: polling.interval_ms not a positive integer (#{inspect(v)})"
+    end
+  end
 
   @spec workspace_root(t()) :: binary()
-  def workspace_root(config), do: get_string!(config, "workspace.root")
+  def workspace_root(config) do
+    case schema(config).workspace.root do
+      v when is_binary(v) and v != "" -> v
+      _ -> raise ArgumentError, "config: workspace.root must be a non-empty string"
+    end
+  end
 
   @spec hooks_timeout_ms(t()) :: pos_integer()
-  def hooks_timeout_ms(config), do: pos_int_or_default(config, "hooks.timeout_ms", 60_000)
+  def hooks_timeout_ms(config) do
+    case schema(config).hooks.timeout_ms do
+      v when is_integer(v) and v > 0 -> v
+      _ -> 60_000
+    end
+  end
 
   @spec hook_script(t(), :after_create | :before_run | :after_run | :before_remove) ::
           binary() | nil
   def hook_script(config, name) do
-    case fetch_raw(config.raw, "hooks." <> Atom.to_string(name)) do
-      {:ok, v} when is_binary(v) and v != "" -> v
+    case Map.get(schema(config).hooks, name) do
+      v when is_binary(v) and v != "" -> v
       _ -> nil
     end
   end
 
   @spec agent_command(t()) :: binary()
-  def agent_command(config), do: get_string!(config, "agent.command")
+  def agent_command(config) do
+    case schema(config).agent.command do
+      v when is_binary(v) and v != "" -> v
+      _ -> raise ArgumentError, "config: agent.command must be a non-empty string"
+    end
+  end
 
   @spec agent_max_concurrent_agents(t()) :: pos_integer()
-  def agent_max_concurrent_agents(config),
-    do: pos_int!(config, "agent.max_concurrent_agents")
+  def agent_max_concurrent_agents(config), do: pos_int!(schema(config).agent.max_concurrent_agents, "agent.max_concurrent_agents")
 
   @spec agent_max_retry_backoff_ms(t()) :: pos_integer()
-  def agent_max_retry_backoff_ms(config),
-    do: pos_int!(config, "agent.max_retry_backoff_ms")
+  def agent_max_retry_backoff_ms(config), do: pos_int!(schema(config).agent.max_retry_backoff_ms, "agent.max_retry_backoff_ms")
+
+  @spec agent_max_turns(t()) :: pos_integer()
+  def agent_max_turns(config), do: pos_int!(schema(config).agent.max_turns, "agent.max_turns")
+
+  @spec agent_runner_kind(t()) :: atom() | nil
+  def agent_runner_kind(config) do
+    case schema(config).agent.runner_kind do
+      v when is_binary(v) and v != "" -> String.to_atom(v)
+      _ -> nil
+    end
+  end
 
   @spec codex_command(t()) :: binary()
-  def codex_command(config), do: get_string!(config, "codex.command")
+  def codex_command(config) do
+    case schema(config).codex.command do
+      v when is_binary(v) and v != "" -> v
+      _ -> raise ArgumentError, "config: codex.command must be a non-empty string"
+    end
+  end
+
+  @spec codex_read_timeout_ms(t()) :: pos_integer()
+  def codex_read_timeout_ms(config), do: pos_int_or_default(schema(config).codex.read_timeout_ms, 5_000)
+
+  @spec codex_turn_timeout_ms(t()) :: pos_integer()
+  def codex_turn_timeout_ms(config), do: pos_int_or_default(schema(config).codex.turn_timeout_ms, 3_600_000)
+
+  @spec codex_stall_timeout_ms(t()) :: non_neg_integer()
+  def codex_stall_timeout_ms(config) do
+    case schema(config).codex.stall_timeout_ms do
+      v when is_integer(v) and v >= 0 -> v
+      _ -> 300_000
+    end
+  end
 
   @doc """
   Spec § 6.3 dispatch preflight: validate the minimal config the
-  scheduler needs before launching work this tick. Returns `:ok` or
-  `{:error, {:dispatch_preflight, [reason, ...]}}` so the orchestrator
-  can skip dispatch (but keep reconciliation running) and emit an
-  operator-visible warning.
-
-  Checks performed:
-
-    * `tracker.kind` is present and supported (delegated to the tracker
-      adapter resolver elsewhere; this layer just rejects empty values).
-    * `tracker.api_key` is present after `$VAR` resolution when the
-      tracker requires it (`linear`, `github_issues`).
-    * `tracker.project_slug` is present when `tracker.kind == :linear`.
-    * `tracker.repo` is present when `tracker.kind == :github_issues`.
-    * `codex.command` is non-empty (or `agent.command` for kits that
-      stand in for codex).
+  scheduler needs before launching work this tick.
   """
   @spec validate_dispatch_preflight(t()) :: :ok | {:error, {:dispatch_preflight, [atom()]}}
   def validate_dispatch_preflight(config) do
@@ -401,13 +445,10 @@ defmodule Symphony.Config do
         :linear ->
           reasons
           |> add_if_missing(tracker_api_key(config), :missing_tracker_api_key)
-          |> add_if_missing(
-            get_string(config, "tracker.project_slug"),
-            :missing_tracker_project_slug
-          )
+          |> add_if_missing(tracker_project_slug(config), :missing_tracker_project_slug)
 
         :github_issues ->
-          add_if_missing(reasons, get_string(config, "tracker.repo"), :missing_tracker_repo)
+          add_if_missing(reasons, tracker_repo(config), :missing_tracker_repo)
 
         _ ->
           reasons
@@ -415,8 +456,8 @@ defmodule Symphony.Config do
 
     reasons =
       reasons
-      |> add_if_missing(safe_get_string(config, "codex.command"), :missing_codex_command)
-      |> add_if_missing(safe_get_string(config, "agent.command"), :missing_agent_command)
+      |> add_if_missing(safe_codex_command(config), :missing_codex_command)
+      |> add_if_missing(safe_agent_command(config), :missing_agent_command)
 
     case reasons do
       [] -> :ok
@@ -428,137 +469,55 @@ defmodule Symphony.Config do
   defp add_if_missing(reasons, "", atom), do: [atom | reasons]
   defp add_if_missing(reasons, _value, _atom), do: reasons
 
-  defp safe_get_string(config, dotted) do
-    get_string(config, dotted)
+  defp safe_codex_command(config) do
+    codex_command(config)
+  rescue
+    _ -> nil
+  end
+
+  defp safe_agent_command(config) do
+    agent_command(config)
   rescue
     _ -> nil
   end
 
   # ============== Helpers ==============
 
-  defp fetch_raw(map, dotted) do
-    case do_fetch(map, String.split(dotted, ".")) do
-      {:ok, v} -> {:ok, v}
-      :missing -> :missing
+  defp schema(%Settings{schema: schema}), do: schema
+  defp schema(%Schema{} = schema), do: schema
+
+  defp pos_int!(v, _label) when is_integer(v) and v > 0, do: v
+
+  defp pos_int!(v, label) when is_binary(v) do
+    case Integer.parse(v) do
+      {n, ""} when n > 0 -> n
+      _ -> raise ArgumentError, "config: #{label} not a positive integer (#{inspect(v)})"
     end
   end
 
-  defp do_fetch(value, []), do: {:ok, value}
+  defp pos_int!(v, label),
+    do: raise(ArgumentError, "config: #{label} not a positive integer (#{inspect(v)})")
 
-  defp do_fetch(map, [key | rest]) when is_map(map) do
-    case Map.fetch(map, key) do
-      {:ok, v} -> do_fetch(v, rest)
-      :error -> :missing
+  defp pos_int_or_default(v, _default) when is_integer(v) and v > 0, do: v
+
+  defp pos_int_or_default(v, default) when is_binary(v) do
+    case Integer.parse(v) do
+      {n, ""} when n > 0 -> n
+      _ -> default
     end
   end
 
-  defp do_fetch(_, _), do: :missing
+  defp pos_int_or_default(_, default), do: default
 
-  defp maybe_resolve_env(value, dotted) when is_binary(value) do
-    if dotted in @env_resolvable do
-      resolve_env(value)
-    else
-      value
-    end
+  defp states_list(list) when is_list(list), do: Enum.map(list, &to_string/1)
+
+  defp states_list(bin) when is_binary(bin) do
+    bin
+    |> String.split(",")
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
   end
 
-  defp maybe_resolve_env(value, _dotted), do: value
-
-  defp resolve_env("$" <> var_name) do
-    System.get_env(var_name) || ""
-  end
-
-  defp resolve_env(value), do: value
-
-  # Promote a relative filesystem path to absolute by resolving it against
-  # the directory of WORKFLOW.md. Absolute paths and non-binary values pass
-  # through unchanged. URLs and arbitrary command strings are not in
-  # `@path_resolvable` and are skipped.
-  defp maybe_resolve_path(value, dotted, workflow_dir)
-       when is_binary(value) and is_binary(workflow_dir) do
-    if dotted in @path_resolvable do
-      resolve_path(value, workflow_dir)
-    else
-      value
-    end
-  end
-
-  defp maybe_resolve_path(value, _dotted, _workflow_dir), do: value
-
-  defp resolve_path("", _workflow_dir), do: ""
-
-  defp resolve_path(<<"~", _::binary>> = path, _workflow_dir), do: Path.expand(path)
-
-  defp resolve_path(<<"$", _::binary>> = path, _workflow_dir),
-    do: path
-
-  defp resolve_path(path, workflow_dir) do
-    case Path.type(path) do
-      :absolute -> Path.expand(path)
-      _ -> Path.expand(path, workflow_dir)
-    end
-  end
-
-  defp get_string(config, dotted) do
-    case Map.fetch!(config.resolved, dotted) do
-      v when is_binary(v) -> v
-      nil -> nil
-      v -> to_string(v)
-    end
-  end
-
-  defp get_string!(config, dotted) do
-    case get_string(config, dotted) do
-      v when is_binary(v) and v != "" -> v
-      _ -> raise ArgumentError, "config: #{dotted} must be a non-empty string"
-    end
-  end
-
-  defp pos_int!(config, dotted) do
-    case Map.fetch!(config.resolved, dotted) do
-      v when is_integer(v) and v > 0 ->
-        v
-
-      v when is_binary(v) ->
-        case Integer.parse(v) do
-          {n, ""} when n > 0 -> n
-          _ -> raise ArgumentError, "config: #{dotted} not a positive integer (#{inspect(v)})"
-        end
-
-      v ->
-        raise ArgumentError, "config: #{dotted} not a positive integer (#{inspect(v)})"
-    end
-  end
-
-  defp pos_int_or_default(config, dotted, default) do
-    case Map.fetch!(config.resolved, dotted) do
-      v when is_integer(v) and v > 0 ->
-        v
-
-      v when is_binary(v) ->
-        case Integer.parse(v) do
-          {n, ""} when n > 0 -> n
-          _ -> default
-        end
-
-      _ ->
-        default
-    end
-  end
-
-  defp csv(config, dotted) do
-    case Map.fetch!(config.resolved, dotted) do
-      list when is_list(list) ->
-        Enum.map(list, &to_string/1)
-
-      bin when is_binary(bin) ->
-        bin
-        |> String.split(",")
-        |> Enum.map(&String.trim/1)
-        |> Enum.reject(&(&1 == ""))
-
-      other ->
-        raise ArgumentError, "config: #{dotted} not a CSV/list (#{inspect(other)})"
-    end
-  end
+  defp states_list(other),
+    do: raise(ArgumentError, "config: tracker states not a CSV/list (#{inspect(other)})")
 end

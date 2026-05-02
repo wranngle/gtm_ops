@@ -204,7 +204,30 @@ unblock the rest. Until then, both tracks remain.
     `@env_resolvable`. `Symphony.Config.settings/0` and
     `Symphony.Config.maybe_settings/0` now thread the workflow
     directory into `parse/2`. 7 new tests in `config_test.exs`
-    cover the additions. 321 tests + 3 doctests green. The four
-    "Schema lacks X" gaps in the section above are now closed; the
-    only remaining blocker for collapsing the dotted track is the
-    consumer migration (PRs b and c).
+    cover the additions.
+
+  - **2026-05-02 — PR (b) landed.** Dotted-key data shape
+    eliminated. `Config.from_workflow/1` now returns a typed
+    `%Symphony.Config.Settings{schema: Schema.t(), source_path:
+    binary | nil}` struct instead of `%{raw, resolved,
+    source_path}`. Every existing dotted-getter function
+    (`Config.tracker_kind/1`, `Config.workspace_root/1`,
+    `Config.agent_command/1`, etc.) was rewritten to project from
+    `settings.schema.<field>` so 44 lib call sites stayed unchanged.
+    Direct `config.resolved[...]` and `config.raw[...]` accesses (10
+    sites in `lib/symphony/orchestrator.ex`,
+    `agent_runner.ex`, `agent_runner/local_shell.ex`,
+    `agent_runner/codex_app_server.ex`, `codex/app_server.ex`,
+    `tracker/local_markdown.ex`, `tracker/linear/client.ex`,
+    `tracker/linear.ex`) migrated to new typed getters
+    (`Config.codex_turn_timeout_ms/1`, `Config.tracker_issues_root/1`,
+    `Config.tracker_project_slug/1`, `Config.agent_max_turns/1`,
+    `Config.agent_runner_kind/1`, `Config.codex_read_timeout_ms/1`,
+    `Config.codex_stall_timeout_ms/1`). `Schema.Agent` gained
+    `:runner_kind` to support the `agent_runner_kind/1` getter.
+    `Config.from_workflow/1` preserves backwards-compat with CSV
+    `tracker.active_states` / `tracker.terminal_states` strings via
+    a pre-parse coercion. Test stubs that built the old map shape
+    by hand were rewritten to use `Config.from_workflow/1`. 337
+    tests + 3 doctests green. **The dotted-key API is now fully
+    gone**; one source of truth.

@@ -29,7 +29,9 @@ defmodule Symphony.ConfigTest do
 
     assert Config.tracker_kind(config) == :local_markdown
     assert Config.polling_interval_ms(config) == 30_000
-    assert Config.tracker_active_states(config) == ["todo", "in_progress"]
+    # Schema defaults match upstream's Linear-style title case;
+    # callers that need lowercase pass an explicit list.
+    assert Config.tracker_active_states(config) == ["Todo", "In Progress"]
     assert Config.agent_command(config) == "codex app-server"
     assert Config.agent_max_concurrent_agents(config) == 10
   end
@@ -82,30 +84,35 @@ defmodule Symphony.ConfigTest do
     System.delete_env("SYMPHONY_TEST_TOKEN")
   end
 
-  test "rejects non-positive integer in pos_int! getters", %{tmp: tmp} do
-    config =
-      write_workflow(tmp, """
-      ---
-      polling:
-        interval_ms: 0
-      ---
-      """)
+  test "Schema rejects non-positive polling.interval_ms at parse time", %{tmp: tmp} do
+    path = Path.join(tmp, "WORKFLOW.md")
 
-    assert_raise ArgumentError, ~r/polling.interval_ms/, fn ->
-      Config.polling_interval_ms(config)
-    end
+    File.write!(path, """
+    ---
+    polling:
+      interval_ms: 0
+    ---
+    """)
+
+    {:ok, workflow} = WorkflowLoader.load(path)
+
+    assert {:error, {:invalid_workflow_config, message}} = Config.from_workflow(workflow)
+    assert message =~ "interval_ms"
   end
 
-  test "hooks_timeout_ms falls back to the default for non-positive values", %{tmp: tmp} do
-    config =
-      write_workflow(tmp, """
-      ---
-      hooks:
-        timeout_ms: 0
-      ---
-      """)
+  test "Schema rejects non-positive hooks.timeout_ms at parse time", %{tmp: tmp} do
+    path = Path.join(tmp, "WORKFLOW.md")
 
-    assert Config.hooks_timeout_ms(config) == 60_000
+    File.write!(path, """
+    ---
+    hooks:
+      timeout_ms: 0
+    ---
+    """)
+
+    {:ok, workflow} = WorkflowLoader.load(path)
+    assert {:error, {:invalid_workflow_config, message}} = Config.from_workflow(workflow)
+    assert message =~ "timeout_ms"
   end
 
   test "hook_script returns nil when absent and content when present", %{tmp: tmp} do
@@ -134,7 +141,7 @@ defmodule Symphony.ConfigTest do
       """)
 
     expected = Path.join(tmp, ".symphony/issues")
-    assert Map.fetch!(config.resolved, "tracker.issues_root") == expected
+    assert Config.tracker_issues_root(config) == expected
   end
 
   test "resolves relative workspace.root against the workflow file's directory", %{tmp: tmp} do

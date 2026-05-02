@@ -52,8 +52,8 @@ defmodule Symphony.Tracker.Linear do
 
   defp resolve_config do
     case Application.get_env(:symphony, :tracker_config_override) do
-      %{} = c -> c
-      _ -> %{resolved: %{}, raw: %{}, source_path: nil}
+      %Symphony.Config.Settings{} = c -> c
+      _ -> Symphony.Config.empty()
     end
   end
 
