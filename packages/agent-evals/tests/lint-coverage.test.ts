@@ -50,6 +50,9 @@ const lintScript = toPosixPath(join(repoRoot, "scripts", "lint-layered-architect
 const structuredLoggingScript = toPosixPath(
   join(repoRoot, "scripts", "lint-structured-logging.sh"),
 );
+const namingConventionsScript = toPosixPath(
+  join(repoRoot, "scripts", "lint-naming-conventions.sh"),
+);
 const repoRootPosix = toPosixPath(repoRoot);
 const scratchPkg = join(repoRoot, "packages", "_lint_test_scratch");
 const scratchSrc = join(scratchPkg, "src");
@@ -485,6 +488,171 @@ describe("structured-logging lint coverage (STACK-040)", () => {
     );
     const { stderr } = runStructuredLoggingLint();
     expect(stderr).toContain("providers/logger");
+    expect(stderr).toContain("docs/references/layered-domain-architecture.md");
+  });
+});
+
+// scripts/lint-naming-conventions.sh — STACK-041.
+//
+// Reuses the same scratch-package pattern but invokes the naming-conventions
+// lint, which scans packages/*/src/{types,config}/ for schema/type pair drift.
+const namingConventionsInvocations: Array<{ cmd: string; argv: string[] }> = [
+  { cmd: "bash", argv: ["-c", `cd "${repoRootPosix}" && "${namingConventionsScript}"`] },
+  {
+    cmd: "wsl.exe",
+    argv: ["bash", "-c", `cd "${repoRootPosix}" && "${namingConventionsScript}"`],
+  },
+];
+
+function runNamingConventionsLint(): {
+  exitCode: number;
+  stderr: string;
+  stdout: string;
+} {
+  for (const inv of namingConventionsInvocations) {
+    const result = spawnSync(inv.cmd, inv.argv, { encoding: "utf-8" });
+    if (
+      result.error &&
+      "code" in result.error &&
+      (result.error as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      continue;
+    }
+    return {
+      exitCode: result.status ?? -1,
+      stderr: result.stderr ?? "",
+      stdout: result.stdout ?? "",
+    };
+  }
+  throw new Error(
+    "could not invoke scripts/lint-naming-conventions.sh — neither bash nor wsl.exe is on PATH",
+  );
+}
+
+describe("naming-conventions lint coverage (STACK-041)", () => {
+  test("lint passes against the real codebase baseline", () => {
+    if (existsSync(scratchPkg)) {
+      rmSync(scratchPkg, { recursive: true, force: true });
+    }
+    const { exitCode } = runNamingConventionsLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("forbidden: schema constant with lowercase first letter", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "lower-schema.ts",
+      `import { z } from "zod";\nexport const fooSchema = z.object({});\n`,
+    );
+    const { exitCode, stderr } = runNamingConventionsLint();
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("fooSchema");
+    expect(stderr).toContain("FooSchema");
+  });
+
+  test("forbidden: schema constant missing the Schema suffix", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "no-suffix.ts",
+      `import { z } from "zod";\nexport const Bar = z.string();\n`,
+    );
+    const { exitCode, stderr } = runNamingConventionsLint();
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("BarSchema");
+  });
+
+  test("forbidden: inferred type with lowercase first letter", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "lower-type.ts",
+      `import { z } from "zod";\nexport const FooSchema = z.string();\nexport type foo = z.infer<typeof FooSchema>;\n`,
+    );
+    const { exitCode, stderr } = runNamingConventionsLint();
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain('inferred type "foo"');
+  });
+
+  test("forbidden: type name does not match schema name minus Schema suffix", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "mismatch.ts",
+      `import { z } from "zod";\nexport const FooSchema = z.string();\nexport type Bar = z.infer<typeof FooSchema>;\n`,
+    );
+    const { exitCode, stderr } = runNamingConventionsLint();
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain('"Bar"');
+    expect(stderr).toContain('"Foo"');
+  });
+
+  test("forbidden: Hungarian-prefix interface", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "hungarian.ts",
+      `export interface IUser { id: string; }\n`,
+    );
+    const { exitCode, stderr } = runNamingConventionsLint();
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("IUser");
+    expect(stderr).toContain("Hungarian");
+  });
+
+  test("allowed: canonical FooSchema + Foo pair", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "canonical.ts",
+      `import { z } from "zod";\nexport const ConversationSchema = z.object({});\nexport type Conversation = z.infer<typeof ConversationSchema>;\n`,
+    );
+    const { exitCode } = runNamingConventionsLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("allowed: forbidden patterns inside a line comment do not trigger", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "comment.ts",
+      `// export const fooSchema = z.string();\nexport const ok = 1;\n`,
+    );
+    const { exitCode } = runNamingConventionsLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("allowed: forbidden patterns inside a block comment do not trigger", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "block-comment.ts",
+      `/*\n  export const fooSchema = z.string();\n  export interface IUser {}\n*/\nexport const ok = 1;\n`,
+    );
+    const { exitCode } = runNamingConventionsLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("does not scan files outside types/ or config/", () => {
+    setupScratchPackage();
+    plantStatement(
+      "service",
+      "schemas.ts",
+      `import { z } from "zod";\nexport const fooSchema = z.string();\nexport interface IUser {}\n`,
+    );
+    const { exitCode } = runNamingConventionsLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("violation message references the docs anchor", () => {
+    setupScratchPackage();
+    plantStatement(
+      "types",
+      "bad.ts",
+      `import { z } from "zod";\nexport const fooSchema = z.string();\n`,
+    );
+    const { stderr } = runNamingConventionsLint();
     expect(stderr).toContain("docs/references/layered-domain-architecture.md");
   });
 });

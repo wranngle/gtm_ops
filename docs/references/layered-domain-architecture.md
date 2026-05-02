@@ -125,6 +125,32 @@ The lint strips `//` and `/* */` comments before pattern matching so commented-o
 
 When a violation fires, the message names the package's logger provider and points operators back to this section so the remediation is one search away from the agent's working context.
 
+## Naming conventions
+
+Companion lint: `scripts/lint-naming-conventions.sh` (STACK-041).
+
+Every Zod schema and the type it infers must follow the canonical pair:
+
+```ts
+export const ConversationSchema = z.object({ ... });
+export type Conversation = z.infer<typeof ConversationSchema>;
+```
+
+Why pin this in a lint instead of trusting reviewer eyes: once one file diverges (`conversationSchema`, `IConversation`, `ConversationDef`, `Conversation_t`), the next agent emits the broken pattern in the next file because the codebase is now self-inconsistent. The agent picks whichever style it sees most recently. The lint forecloses that drift at validate time so every schema/type stays grep-able with one PascalCase + Schema-suffix rule.
+
+Forbidden patterns (in `packages/*/src/types/` and `packages/*/src/config/`):
+
+- `export const X = z.<method>(...)` where `X` does not match `/^[A-Z][A-Za-z0-9]*Schema$/` — the schema constant must be PascalCase and end in `Schema`.
+- `export type X = z.infer<typeof YSchema>` where any of:
+  - `X` is not PascalCase, OR
+  - `Y` is not PascalCase + `Schema`-suffixed, OR
+  - `X` does not equal `Y` minus the `Schema` suffix.
+- `export interface IFoo { ... }` — Hungarian-prefixed interfaces are forbidden. Drop the leading `I`.
+
+The lint scans only `packages/*/src/types/` and `packages/*/src/config/` because those layers own the canonical type definitions; downstream layers consume the type by name without re-declaring it. Negative- and positive-case coverage lives in `packages/agent-evals/tests/lint-coverage.test.ts` under the "naming-conventions lint coverage" describe block.
+
+Each violation prints the renamed identifier the agent should use, so the remediation is one paste away from the agent's working context.
+
 ## When to break the rule
 
 Don't. If a layer needs something it can't reach, the right move is one of:

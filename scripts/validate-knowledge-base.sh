@@ -101,6 +101,7 @@ required_files=(
   "tools/observability/README.md"
   "scripts/lint-layered-architecture.sh"
   "scripts/lint-structured-logging.sh"
+  "scripts/lint-naming-conventions.sh"
   "scripts/gardener.sh"
   ".github/workflows/gardener.yml"
   "packages/agent-evals/README.md"
@@ -225,6 +226,11 @@ fi
 
 if ! scripts/lint-structured-logging.sh; then
   printf 'structured-logging lint failed; route log emission through the package logger provider\n' >&2
+  exit 1
+fi
+
+if ! scripts/lint-naming-conventions.sh; then
+  printf 'naming-conventions lint failed; align schema/type identifiers with the canonical pair\n' >&2
   exit 1
 fi
 
