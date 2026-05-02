@@ -79,7 +79,9 @@ followup_prefix=${DOGFOOD_FOLLOWUP_PREFIX:-STACK}
 
 # Candidate selection: the bash adapter sorts by priority asc; we additionally
 # require mtime older than the age guard so we don't pick up an issue another
-# auditor just filed.
+# auditor just filed. The `!/WGTE-/` filter excludes the showcase-project
+# tracker (WGTE-* are owner-blocked product tasks, not stack work — the loop
+# is for self-improving the canonical stack only).
 now_epoch=$(date +%s)
 selected_ref=""
 selected_priority=""
@@ -94,7 +96,7 @@ while IFS= read -r ref; do
   selected_ref="$ref"
   break
 done < <(scripts/symphony.sh list 2>/dev/null \
-  | awk -F'\t' '/state=todo/ && /blocked=no/ {print}' \
+  | awk -F'\t' '/state=todo/ && /blocked=no/ && !/WGTE-/ {print}' \
   | awk -F'\t' '{
       priority = "999";
       for (i = 1; i <= NF; i++) {

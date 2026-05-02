@@ -15,3 +15,7 @@ Acceptance criteria:
 - Tests can run locally without external services.
 - Knowledge-base docs are updated if new commands or package boundaries are introduced.
 
+
+## Dogfood failure (2026-05-02T02:22:54Z)
+
+Symphony dispatch exited non-zero. See workspace: .symphony/workspaces/WGTE-001/
