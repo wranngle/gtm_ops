@@ -680,7 +680,17 @@ defmodule Symphony.ExtensionsTest do
       |> Keyword.merge(overrides)
 
     Application.put_env(:symphony, Symphony.Web.Endpoint, endpoint_config)
-    start_supervised!({Symphony.Web.Endpoint, []})
+
+    # Our `test/test_helper.exs` pre-starts a single persistent
+    # `Symphony.Web.Endpoint` so every web-aware test reuses it for the
+    # duration of the run. If it is already up, just nudge the runtime
+    # config and continue. Otherwise start a fresh supervised instance
+    # scoped to this test (mirrors upstream's per-test lifecycle).
+    if Process.whereis(Symphony.Web.Endpoint) do
+      Symphony.Web.Endpoint.config_change(endpoint_config, [])
+    else
+      start_supervised!({Symphony.Web.Endpoint, []})
+    end
   end
 
   defp static_snapshot do
@@ -741,9 +751,20 @@ defmodule Symphony.ExtensionsTest do
     if Process.whereis(WorkflowStore) do
       :ok
     else
+      # In our test env Symphony.Application starts without WorkflowStore
+      # (config/test.exs sets `auto_start_orchestrator?: false`), so
+      # `Supervisor.restart_child/2` returns `:not_found`. Start it
+      # supervised inline instead — ExUnit will tear it down at test exit.
       case Supervisor.restart_child(Symphony.Supervisor, WorkflowStore) do
-        {:ok, _pid} -> :ok
-        {:error, {:already_started, _pid}} -> :ok
+        {:ok, _pid} ->
+          :ok
+
+        {:error, {:already_started, _pid}} ->
+          :ok
+
+        {:error, :not_found} ->
+          ExUnit.Callbacks.start_supervised!({WorkflowStore, []})
+          :ok
       end
     end
   end
