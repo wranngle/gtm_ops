@@ -53,6 +53,15 @@ const structuredLoggingScript = toPosixPath(
 const namingConventionsScript = toPosixPath(
   join(repoRoot, "scripts", "lint-naming-conventions.sh"),
 );
+const fileSizeScript = toPosixPath(
+  join(repoRoot, "scripts", "lint-file-size.sh"),
+);
+const timeInProvidersScript = toPosixPath(
+  join(repoRoot, "scripts", "lint-time-in-providers.sh"),
+);
+const jsonParseBoundaryScript = toPosixPath(
+  join(repoRoot, "scripts", "lint-json-parse-boundary.sh"),
+);
 const repoRootPosix = toPosixPath(repoRoot);
 const scratchPkg = join(repoRoot, "packages", "_lint_test_scratch");
 const scratchSrc = join(scratchPkg, "src");
@@ -653,6 +662,199 @@ describe("naming-conventions lint coverage (STACK-041)", () => {
       `import { z } from "zod";\nexport const fooSchema = z.string();\n`,
     );
     const { stderr } = runNamingConventionsLint();
+    expect(stderr).toContain("docs/references/layered-domain-architecture.md");
+  });
+});
+
+// Generic invocation helper for the remaining single-purpose lint scripts.
+function runScript(
+  scriptPath: string,
+): { exitCode: number; stderr: string; stdout: string } {
+  const invs = [
+    { cmd: "bash", argv: ["-c", `cd "${repoRootPosix}" && "${scriptPath}"`] },
+    {
+      cmd: "wsl.exe",
+      argv: ["bash", "-c", `cd "${repoRootPosix}" && "${scriptPath}"`],
+    },
+  ];
+  for (const inv of invs) {
+    const result = spawnSync(inv.cmd, inv.argv, { encoding: "utf-8" });
+    if (
+      result.error &&
+      "code" in result.error &&
+      (result.error as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      continue;
+    }
+    return {
+      exitCode: result.status ?? -1,
+      stderr: result.stderr ?? "",
+      stdout: result.stdout ?? "",
+    };
+  }
+  throw new Error(`could not invoke ${scriptPath} — neither bash nor wsl.exe is on PATH`);
+}
+
+// scripts/lint-file-size.sh — STACK-042.
+describe("file-size lint coverage (STACK-042)", () => {
+  test("lint passes against the real codebase baseline", () => {
+    if (existsSync(scratchPkg)) {
+      rmSync(scratchPkg, { recursive: true, force: true });
+    }
+    const { exitCode } = runScript(fileSizeScript);
+    expect(exitCode).toBe(0);
+  });
+
+  test("forbidden: file exceeds the 400-line hard cap", () => {
+    setupScratchPackage();
+    const huge = Array.from({ length: 410 }, (_, i) => `export const x${i} = ${i};`).join("\n");
+    plantStatement("service", "huge.ts", huge + "\n");
+    const { exitCode, stderr } = runScript(fileSizeScript);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("hard cap");
+    expect(stderr).toContain("410");
+  });
+
+  test("warning band fires between 250 and 400 without failing", () => {
+    setupScratchPackage();
+    const mid = Array.from({ length: 260 }, (_, i) => `export const x${i} = ${i};`).join("\n");
+    plantStatement("service", "mid.ts", mid + "\n");
+    const { exitCode, stderr } = runScript(fileSizeScript);
+    expect(exitCode).toBe(0);
+    expect(stderr).toContain("warn");
+    expect(stderr).toContain("260");
+  });
+
+  test("test files are exempt from the cap", () => {
+    setupScratchPackage();
+    // Plant a >400-line file under tests/ (sibling to src/) — should be skipped.
+    const testsDir = join(scratchPkg, "tests");
+    mkdirSync(testsDir, { recursive: true });
+    const huge = Array.from({ length: 600 }, (_, i) => `test("t${i}", () => {});`).join("\n");
+    writeFileSync(join(testsDir, "huge.test.ts"), huge + "\n");
+    const { exitCode } = runScript(fileSizeScript);
+    expect(exitCode).toBe(0);
+  });
+});
+
+// scripts/lint-time-in-providers.sh — STACK-043.
+describe("time-in-providers lint coverage (STACK-043)", () => {
+  test("lint passes against the real codebase baseline", () => {
+    if (existsSync(scratchPkg)) {
+      rmSync(scratchPkg, { recursive: true, force: true });
+    }
+    const { exitCode } = runScript(timeInProvidersScript);
+    expect(exitCode).toBe(0);
+  });
+
+  const forbiddenLayers: Layer[] = ["types", "config", "repo", "service", "runtime", "ui"];
+  const timePatterns: Array<[string, string]> = [
+    ["Date.now()", "Date.now()"],
+    ["new Date()", "new Date()"],
+    ["new Date(0)", "new Date(0)"],
+    ["performance.now()", "performance.now()"],
+    ["Math.random()", "Math.random()"],
+    ["crypto.randomUUID()", "crypto.randomUUID()"],
+  ];
+
+  for (const layer of forbiddenLayers) {
+    for (const [label, snippet] of timePatterns) {
+      test(`forbidden: ${label} in ${layer}/`, () => {
+        setupScratchPackage();
+        plantStatement(layer, `time.ts`, `export const t = ${snippet};\n`);
+        const { exitCode, stderr } = runScript(timeInProvidersScript);
+        expect(exitCode).not.toBe(0);
+        expect(stderr).toContain(layer);
+      });
+    }
+  }
+
+  test("allowed: time/random in providers/", () => {
+    setupScratchPackage();
+    plantStatement(
+      "providers",
+      "clock.ts",
+      `export const now = () => Date.now();\nexport const id = () => crypto.randomUUID();\n`,
+    );
+    const { exitCode } = runScript(timeInProvidersScript);
+    expect(exitCode).toBe(0);
+  });
+
+  test("allowed: pattern inside a comment does not trigger", () => {
+    setupScratchPackage();
+    plantStatement(
+      "service",
+      "comment.ts",
+      `// const t = Date.now();\nexport const ok = 1;\n`,
+    );
+    const { exitCode } = runScript(timeInProvidersScript);
+    expect(exitCode).toBe(0);
+  });
+
+  test("violation hint mentions the Clock provider", () => {
+    setupScratchPackage();
+    plantStatement("service", "wall.ts", `export const t = Date.now();\n`);
+    const { stderr } = runScript(timeInProvidersScript);
+    expect(stderr).toContain("Clock");
+    expect(stderr).toContain("docs/references/layered-domain-architecture.md");
+  });
+});
+
+// scripts/lint-json-parse-boundary.sh — STACK-044.
+describe("json-parse-boundary lint coverage (STACK-044)", () => {
+  test("lint passes against the real codebase baseline", () => {
+    if (existsSync(scratchPkg)) {
+      rmSync(scratchPkg, { recursive: true, force: true });
+    }
+    const { exitCode } = runScript(jsonParseBoundaryScript);
+    expect(exitCode).toBe(0);
+  });
+
+  const forbiddenLayers: Layer[] = ["types", "service", "runtime", "ui"];
+  for (const layer of forbiddenLayers) {
+    test(`forbidden: JSON.parse in ${layer}/`, () => {
+      setupScratchPackage();
+      plantStatement(
+        layer,
+        "parse.ts",
+        `export function go(raw: string) { return JSON.parse(raw); }\n`,
+      );
+      const { exitCode, stderr } = runScript(jsonParseBoundaryScript);
+      expect(exitCode).not.toBe(0);
+      expect(stderr).toContain(layer);
+    });
+  }
+
+  const allowedLayers: Layer[] = ["repo", "config", "providers"];
+  for (const layer of allowedLayers) {
+    test(`allowed: JSON.parse in ${layer}/`, () => {
+      setupScratchPackage();
+      plantStatement(
+        layer,
+        "parse.ts",
+        `export function go(raw: string) { return JSON.parse(raw); }\n`,
+      );
+      const { exitCode } = runScript(jsonParseBoundaryScript);
+      expect(exitCode).toBe(0);
+    });
+  }
+
+  test("allowed: JSON.parse inside a comment does not trigger", () => {
+    setupScratchPackage();
+    plantStatement(
+      "service",
+      "comment.ts",
+      `// const x = JSON.parse(raw);\nexport const ok = 1;\n`,
+    );
+    const { exitCode } = runScript(jsonParseBoundaryScript);
+    expect(exitCode).toBe(0);
+  });
+
+  test("violation hint mentions Zod schema parse + the docs anchor", () => {
+    setupScratchPackage();
+    plantStatement("service", "raw.ts", `export const x = JSON.parse("[]");\n`);
+    const { stderr } = runScript(jsonParseBoundaryScript);
+    expect(stderr).toContain("Zod");
     expect(stderr).toContain("docs/references/layered-domain-architecture.md");
   });
 });
