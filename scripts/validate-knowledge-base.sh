@@ -102,6 +102,9 @@ required_files=(
   "scripts/lint-layered-architecture.sh"
   "scripts/lint-structured-logging.sh"
   "scripts/lint-naming-conventions.sh"
+  "scripts/lint-file-size.sh"
+  "scripts/lint-time-in-providers.sh"
+  "scripts/lint-json-parse-boundary.sh"
   "scripts/gardener.sh"
   ".github/workflows/gardener.yml"
   "packages/agent-evals/README.md"
@@ -231,6 +234,21 @@ fi
 
 if ! scripts/lint-naming-conventions.sh; then
   printf 'naming-conventions lint failed; align schema/type identifiers with the canonical pair\n' >&2
+  exit 1
+fi
+
+if ! scripts/lint-file-size.sh; then
+  printf 'file-size lint failed; split files exceeding the hard cap\n' >&2
+  exit 1
+fi
+
+if ! scripts/lint-time-in-providers.sh; then
+  printf 'time-in-providers lint failed; route wall-clock + random sampling through providers/\n' >&2
+  exit 1
+fi
+
+if ! scripts/lint-json-parse-boundary.sh; then
+  printf 'json-parse-boundary lint failed; keep JSON.parse() in repo/, config/, or providers/ only\n' >&2
   exit 1
 fi
 
