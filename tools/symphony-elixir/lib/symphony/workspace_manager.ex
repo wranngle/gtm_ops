@@ -187,13 +187,13 @@ defmodule Symphony.WorkspaceManager do
     :ok
   end
 
+  def remove_issue_workspaces(_identifier, _worker_host), do: :ok
+
   defp settings_worker_ssh_hosts(%{worker: worker}) when is_map(worker) do
     Map.get(worker, :ssh_hosts) || []
   end
 
   defp settings_worker_ssh_hosts(_settings), do: []
-
-  def remove_issue_workspaces(_identifier, _worker_host), do: :ok
 
   defp do_remove_local_workspace(settings, identifier) do
     root = workspace_root_from_settings(settings)
