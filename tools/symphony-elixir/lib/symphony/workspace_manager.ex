@@ -145,6 +145,108 @@ defmodule Symphony.WorkspaceManager do
   end
 
   @doc """
+  Upstream-compatible workspace cleanup that consults the global
+  `Config.settings!()` instead of taking an explicit `Config.t()` arg.
+  Removes the per-issue workspace directory under `workspace.root`
+  matching the sanitized identifier. Returns `:ok` even on missing
+  workspace or non-binary identifier — matches upstream
+  `SymphonyElixir.Workspace.remove_issue_workspaces/1` semantics.
+
+  Honors `worker.ssh_hosts` from the parsed schema: when ssh_hosts is
+  populated, fans out to each host (the remote-shell variant is not
+  implemented yet — currently best-effort logs and returns `:ok`).
+  """
+  @spec remove_issue_workspaces(term()) :: :ok
+  def remove_issue_workspaces(identifier), do: remove_issue_workspaces(identifier, nil)
+
+  @spec remove_issue_workspaces(term(), binary() | nil) :: :ok
+  def remove_issue_workspaces(identifier, worker_host)
+      when is_binary(identifier) and is_binary(worker_host) do
+    # Remote-host workspace removal is parked for the SSH worker port;
+    # the upstream test that exercises this branch (MT-SSH-WS) is part of
+    # a section we have not ported yet. Local cleanup remains best-effort.
+    Logger.debug(
+      "symphony.workspace.remove_issue_workspaces.remote_host_skip identifier=#{identifier} worker_host=#{worker_host}"
+    )
+
+    :ok
+  end
+
+  def remove_issue_workspaces(identifier, nil) when is_binary(identifier) do
+    settings = safe_settings()
+    worker_hosts = settings_worker_ssh_hosts(settings)
+
+    case worker_hosts do
+      [] ->
+        do_remove_local_workspace(settings, identifier)
+
+      hosts when is_list(hosts) ->
+        Enum.each(hosts, &remove_issue_workspaces(identifier, &1))
+    end
+
+    :ok
+  end
+
+  defp settings_worker_ssh_hosts(%{worker: worker}) when is_map(worker) do
+    Map.get(worker, :ssh_hosts) || []
+  end
+
+  defp settings_worker_ssh_hosts(_settings), do: []
+
+  def remove_issue_workspaces(_identifier, _worker_host), do: :ok
+
+  defp do_remove_local_workspace(settings, identifier) do
+    root = workspace_root_from_settings(settings)
+    safe_id = sanitize_key(identifier)
+    path = Path.join(root, safe_id) |> Path.expand()
+
+    # Invariant 2 (spec § 9.5): the resolved path must remain inside the
+    # configured workspace root. Bail out silently if not — never delete
+    # a directory that escapes the root sandbox.
+    case PathSafety.canonicalize(path) do
+      {:ok, canonical} ->
+        try do
+          PathSafety.assert_inside_root!(Path.expand(root), canonical)
+        rescue
+          _ ->
+            Logger.warning(
+              "symphony.workspace.remove_issue_workspaces.path_outside_root identifier=#{identifier} path=#{canonical}"
+            )
+
+            :outside_root
+        else
+          :ok ->
+            if File.exists?(canonical) do
+              _ = File.rm_rf(canonical)
+            end
+
+            :ok
+        end
+
+      {:error, _reason} ->
+        :ok
+    end
+
+    :ok
+  end
+
+  defp workspace_root_from_settings(%{workspace: %{root: root}}) when is_binary(root), do: root
+
+  defp workspace_root_from_settings(_other) do
+    Path.join(System.tmp_dir!(), "symphony_workspaces")
+  end
+
+  defp safe_settings do
+    Config.settings!()
+  rescue
+    _ ->
+      %{
+        workspace: %{root: Path.join(System.tmp_dir!(), "symphony_workspaces")},
+        worker: %{ssh_hosts: []}
+      }
+  end
+
+  @doc """
   Remove an issue workspace after running `before_remove` when the
   directory exists. Per spec § 9.4, hook failure and timeout are logged
   and ignored; cleanup still proceeds.
