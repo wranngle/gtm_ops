@@ -33,3 +33,7 @@ Harness Engineering post calls out explicitly:
 Doing this well needs a small generator-on-commit pattern that the repo does
 not yet have anywhere else. Better to land the generator pattern (STACK-003)
 first and reuse it here.
+
+## Dogfood failure (2026-05-02T03:13:58Z)
+
+Agent ran but produced only 0 lines of meaningful diff outside `.symphony/` (threshold: 5). The agent likely returned a text response without using its file-edit tools. See: .symphony/workspaces/STACK-001/agent-output-20260502T030951Z.md

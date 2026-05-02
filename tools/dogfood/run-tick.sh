@@ -130,6 +130,14 @@ min_diff_lines=${DOGFOOD_MIN_DIFF_LINES:-5}
 
 emit_event info dogfood.dispatch_start success "chain=${llm_chain} timeout=${llm_timeout}" "$selected_id"
 
+# Snapshot HEAD before dispatch so the diff guard below can recognize the
+# agent committing during its own session (Claude Code in autonomous mode
+# routinely does this). Without the snapshot, post-agent `git diff HEAD`
+# returns empty even when 200+ lines just landed — STACK-001's tick 1 hit
+# this exact misroute despite producing the canonical fix in commit
+# f1cf059.
+pre_dispatch_sha=$(git rev-parse HEAD)
+
 if ! SYMPHONY_ALLOW_AGENT_RUN=1 \
      LLM_CHAIN="$llm_chain" \
      LLM_TIMEOUT="$llm_timeout" \
@@ -190,21 +198,33 @@ fi
 
 # Excludes .symphony/ — that's the issue rename + workspace artifacts the
 # runner itself produces, not work the agent did.
-diff_lines=$(git diff HEAD --numstat -- . ':(exclude).symphony/**' 2>/dev/null \
-  | awk '{ adds += $1; dels += $2 } END { print (adds + 0) + (dels + 0) }')
+#
+# If HEAD advanced during dispatch, the agent committed its own work
+# (Claude Code does this routinely). Compare pre→post SHAs in that case;
+# otherwise compare against working tree (HEAD).
+post_dispatch_sha=$(git rev-parse HEAD)
+agent_committed=0
+if [[ "$pre_dispatch_sha" != "$post_dispatch_sha" ]]; then
+  agent_committed=1
+  diff_lines=$(git diff "$pre_dispatch_sha" "$post_dispatch_sha" --numstat -- . ':(exclude).symphony/**' 2>/dev/null \
+    | awk '{ adds += $1; dels += $2 } END { print (adds + 0) + (dels + 0) }')
+else
+  diff_lines=$(git diff HEAD --numstat -- . ':(exclude).symphony/**' 2>/dev/null \
+    | awk '{ adds += $1; dels += $2 } END { print (adds + 0) + (dels + 0) }')
+fi
 
 if (( diff_lines < min_diff_lines )); then
-  emit_event warn dogfood.empty_diff failure "diff_lines=${diff_lines} threshold=${min_diff_lines}" "$selected_id"
+  emit_event warn dogfood.empty_diff failure "diff_lines=${diff_lines} threshold=${min_diff_lines} agent_committed=${agent_committed}" "$selected_id"
   mkdir -p .symphony/issues/human_review
   mv "$selected_ref" .symphony/issues/human_review/
-  printf '\n## Dogfood failure (%s)\n\nAgent ran but produced only %s lines of meaningful diff outside `.symphony/` (threshold: %s). The agent likely returned a text response without using its file-edit tools. See: %s\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$diff_lines" "$min_diff_lines" \
+  printf '\n## Dogfood failure (%s)\n\nAgent ran but produced only %s lines of meaningful diff outside `.symphony/` (threshold: %s, agent_committed=%s). The agent likely returned a text response without using its file-edit tools. See: %s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$diff_lines" "$min_diff_lines" "$agent_committed" \
     "${latest_output:-no-agent-output-found}" \
     >> ".symphony/issues/human_review/$(basename "$selected_ref")"
   exit 2
 fi
 
-emit_event info dogfood.diff_check_ok success "diff_lines=${diff_lines}" "$selected_id"
+emit_event info dogfood.diff_check_ok success "diff_lines=${diff_lines} agent_committed=${agent_committed}" "$selected_id"
 
 # ============== Step 4: run validators ==============
 
@@ -279,6 +299,9 @@ mv "$selected_ref" .symphony/issues/done/
 emit_event info dogfood.issue_done success "" "$selected_id"
 
 # Stage + commit. Include the moved issue file plus any work the agent landed.
+# When the agent already committed during dispatch (agent_committed=1), the
+# only thing left to stage here is the issue rename to done/, which we do
+# want to capture so the filesystem state matches the closure.
 git add -A
 commit_message="dogfood: ${selected_id} closed by agent
 
@@ -289,12 +312,21 @@ Auto-committed by tools/dogfood/run-tick.sh after validators passed.
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 if git diff --cached --quiet; then
-  emit_event warn dogfood.empty_commit failure "no changes after dispatch" "$selected_id"
+  if (( agent_committed )); then
+    sha=$(git log -1 --pretty=%H)
+    emit_event info dogfood.pushed success "sha=${sha:0:8} agent_committed=1 nothing_else_to_stage" "$selected_id"
+    if ! git push origin main 2>/dev/null; then
+      emit_event warn dogfood.push_failed failure "git push exited non-zero (agent commit only)" "$selected_id"
+      exit 2
+    fi
+  else
+    emit_event warn dogfood.empty_commit failure "no changes after dispatch" "$selected_id"
+  fi
 else
   if git commit -m "$commit_message" 2>/dev/null; then
     if git push origin main 2>/dev/null; then
       sha=$(git log -1 --pretty=%H)
-      emit_event info dogfood.pushed success "sha=${sha:0:8}" "$selected_id"
+      emit_event info dogfood.pushed success "sha=${sha:0:8} agent_committed=${agent_committed}" "$selected_id"
     else
       emit_event warn dogfood.push_failed failure "git push exited non-zero" "$selected_id"
       exit 2
