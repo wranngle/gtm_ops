@@ -235,6 +235,135 @@ defmodule Symphony.Orchestrator do
     end
   end
 
+  # ============== Test seams (upstream-compatible) ==============
+  # These public helpers expose private dispatch-eligibility logic so the
+  # core test suite can exercise the rules without spinning up the full
+  # GenServer + tracker stack. Mirrors upstream
+  # `SymphonyElixir.Orchestrator.should_dispatch_issue_for_test/2` and
+  # `sort_issues_for_dispatch_for_test/1` (orchestrator.ex lines 310-328).
+  # State construction in tests is intentionally minimal — only the fields
+  # named below need to be populated; absent fields default to empty maps
+  # / sets. Active/terminal state membership reads from
+  # `Config.settings!()` so tests do not need to seed `state.config`.
+
+  alias Symphony.Tracker.Issue
+
+  @doc false
+  @spec should_dispatch_issue_for_test(Issue.t(), term()) :: boolean()
+  def should_dispatch_issue_for_test(%Issue{} = issue, %State{} = state) do
+    test_should_dispatch_issue?(issue, state, test_active_state_set(), test_terminal_state_set())
+  end
+
+  def should_dispatch_issue_for_test(_issue, _state), do: false
+
+  @doc false
+  @spec sort_issues_for_dispatch_for_test([Issue.t()]) :: [Issue.t()]
+  def sort_issues_for_dispatch_for_test(issues) when is_list(issues) do
+    Enum.sort_by(issues, &dispatch_sort_key/1)
+  end
+
+  defp test_should_dispatch_issue?(
+         %Issue{} = issue,
+         %State{running: running, claimed: claimed} = state,
+         active_states,
+         terminal_states
+       ) do
+    test_candidate_issue?(issue, active_states, terminal_states) and
+      not test_todo_issue_blocked_by_non_terminal?(issue, terminal_states) and
+      not MapSet.member?(claimed || MapSet.new(), issue.id) and
+      not Map.has_key?(running || %{}, issue.id) and
+      test_available_slots(state) > 0
+  end
+
+  defp test_should_dispatch_issue?(_issue, _state, _active_states, _terminal_states), do: false
+
+  defp test_candidate_issue?(%Issue{} = issue, active_states, terminal_states) do
+    test_issue_routable_to_worker?(issue) and
+      test_active_issue_state?(issue.state, active_states) and
+      not test_terminal_issue_state?(issue.state, terminal_states)
+  end
+
+  defp test_issue_routable_to_worker?(%Issue{assigned_to_worker: assigned})
+       when is_boolean(assigned),
+       do: assigned
+
+  defp test_issue_routable_to_worker?(_issue), do: true
+
+  defp test_todo_issue_blocked_by_non_terminal?(
+         %Issue{state: state_name, blocked_by: blockers},
+         terminal_states
+       )
+       when is_binary(state_name) and is_list(blockers) do
+    normalize_state(state_name) == "todo" and
+      Enum.any?(blockers, fn
+        %{state: blocker_state} when is_binary(blocker_state) ->
+          not test_terminal_issue_state?(blocker_state, terminal_states)
+
+        _ ->
+          true
+      end)
+  end
+
+  defp test_todo_issue_blocked_by_non_terminal?(_issue, _terminal_states), do: false
+
+  defp test_terminal_issue_state?(state_name, terminal_states) when is_binary(state_name) do
+    MapSet.member?(terminal_states, normalize_state(state_name))
+  end
+
+  defp test_terminal_issue_state?(_state_name, _terminal_states), do: false
+
+  defp test_active_issue_state?(state_name, active_states) when is_binary(state_name) do
+    MapSet.member?(active_states, normalize_state(state_name))
+  end
+
+  defp test_active_issue_state?(_state_name, _active_states), do: false
+
+  defp test_active_state_set do
+    settings = safe_settings_for_test()
+    states = get_in(settings, [:tracker, :active_states]) || ["Todo", "In Progress"]
+
+    states
+    |> Enum.map(&normalize_state/1)
+    |> Enum.reject(&(&1 == ""))
+    |> MapSet.new()
+  end
+
+  defp test_terminal_state_set do
+    settings = safe_settings_for_test()
+
+    states =
+      get_in(settings, [:tracker, :terminal_states]) ||
+        ["Closed", "Cancelled", "Canceled", "Duplicate", "Done"]
+
+    states
+    |> Enum.map(&normalize_state/1)
+    |> Enum.reject(&(&1 == ""))
+    |> MapSet.new()
+  end
+
+  defp safe_settings_for_test do
+    Config.settings!()
+  rescue
+    _ ->
+      %{
+        tracker: %{
+          active_states: ["Todo", "In Progress"],
+          terminal_states: ["Closed", "Cancelled", "Canceled", "Duplicate", "Done"]
+        }
+      }
+  end
+
+  defp test_available_slots(%State{max_concurrent_agents: max, running: running})
+       when is_integer(max) and max > 0 do
+    max(max - map_size(running || %{}), 0)
+  end
+
+  defp test_available_slots(%State{running: running}) do
+    settings = safe_settings_for_test()
+    max = get_in(settings, [:agent, :max_concurrent_agents]) || 10
+    max(max - map_size(running || %{}), 0)
+  end
+
   # ============== Callbacks ==============
 
   @impl true
