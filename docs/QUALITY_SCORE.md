@@ -47,9 +47,21 @@ graded so future garbage-collection passes can prioritize.
 | --- | --- | --- | --- |
 | Generated artifacts pipeline | D | `docs/generated/` exists but has no actual generated files | Create one generator (e.g., layered-domain inventory) so the pattern is real. See STACK-003. |
 | Reference `*-llms.txt` corpora | D | Spec example calls out `design-system-reference-llms.txt`, `nixpacks-llms.txt`, `uv-llms.txt`. None present | Curate one, even minimally, to prove the pattern. See STACK-004. |
-| Quality-grade history | D | This file is a snapshot, not a trend; no per-grade timestamps | Add a tiny per-row history block or a generated changelog. See STACK-002. |
+| Quality-grade history | C | Generator script exists (`scripts/generate-quality-score-history.sh`); `docs/generated/quality-score-history.md` is committed and tracks all grade changes from git history. Not yet wired to pre-commit. | Wire the generator as a pre-commit hook so it runs automatically on every grade change. See STACK-001. |
 | Agent-to-agent review loop | D | Tracked as TD-008; deferred indefinitely | Re-evaluate when PR throughput justifies it. |
 | Per-worktree app boot | D | No app is bootable per worktree yet | Land once ops-console grows past stub. |
+
+## Grade history
+
+A machine-readable record of every grade change lives in
+[docs/generated/quality-score-history.md](generated/quality-score-history.md).
+It is produced by `scripts/generate-quality-score-history.sh`, which diffs
+successive `git log` versions of this file and emits one row per grade change.
+Re-run it whenever you update a grade:
+
+```bash
+scripts/generate-quality-score-history.sh
+```
 
 ## Update protocol
 

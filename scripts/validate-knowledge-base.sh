@@ -105,6 +105,8 @@ required_files=(
   "scripts/lint-file-size.sh"
   "scripts/lint-time-in-providers.sh"
   "scripts/lint-json-parse-boundary.sh"
+  "scripts/generate-quality-score-history.sh"
+  "docs/generated/quality-score-history.md"
   "scripts/gardener.sh"
   ".github/workflows/gardener.yml"
   "packages/agent-evals/README.md"
