@@ -268,10 +268,12 @@ Ours-only that we know about:
 This document is the truth-finding pass. The natural follow-ups,
 in priority order:
 
-1. Pick the dual-config-API drift apart in `config.ex` — establish whether
-   the `from_workflow → %{raw, resolved}` track is needed at all, or
-   whether everything that uses it could move to the typed-struct track.
-   Largest single source of orchestrator-side drift.
+1. ~~Pick the dual-config-API drift apart in `config.ex`~~ — **done
+   2026-05-02**, see `symphony-config-dual-track-audit.md`. Verdict:
+   dotted-key track is needed today, blocked on 4 concrete Schema
+   gaps. Three dead-code accessors deleted. Next move: PR (a) from
+   the audit's migration plan — add `Tracker.repo`,
+   `Tracker.issues_root`, `Agent.command` to `Schema`.
 2. Port the missing observability API endpoints (`refresh`, per-issue,
    405 catch-alls) so the upstream `extensions_test.exs` becomes
    un-parkable.

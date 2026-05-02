@@ -32,7 +32,6 @@ defmodule Symphony.ConfigTest do
     assert Config.tracker_active_states(config) == ["todo", "in_progress"]
     assert Config.agent_command(config) == "codex app-server"
     assert Config.agent_max_concurrent_agents(config) == 10
-    assert Config.agent_require_explicit_run?(config) == false
   end
 
   test "honors explicit values over defaults", %{tmp: tmp} do
@@ -49,7 +48,6 @@ defmodule Symphony.ConfigTest do
       agent:
         command: scripts/bin/llm.sh
         max_concurrent_agents: 1
-        require_explicit_run: true
       ---
       body
       """)
@@ -60,7 +58,6 @@ defmodule Symphony.ConfigTest do
     assert Config.polling_interval_ms(config) == 5_000
     assert Config.agent_command(config) == "scripts/bin/llm.sh"
     assert Config.agent_max_concurrent_agents(config) == 1
-    assert Config.agent_require_explicit_run?(config) == true
   end
 
   test "resolves $VAR env indirection in env-resolvable string fields", %{tmp: tmp} do

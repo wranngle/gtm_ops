@@ -246,8 +246,7 @@ defmodule Symphony.Config do
     "tracker.repo",
     "workspace.root",
     "agent.command",
-    "codex.command",
-    "log_path"
+    "codex.command"
   ]
 
   # Spec § 6.1 / § 9.1: filesystem path values may be expressed as
@@ -258,8 +257,7 @@ defmodule Symphony.Config do
   # from `tools/symphony-elixir/`).
   @path_resolvable [
     "tracker.issues_root",
-    "workspace.root",
-    "log_path"
+    "workspace.root"
   ]
 
   @defaults %{
@@ -271,19 +269,16 @@ defmodule Symphony.Config do
     "tracker.issues_root" => ".symphony/issues",
     "tracker.active_states" => "todo,in_progress",
     "tracker.terminal_states" => "done,cancelled,duplicate",
-    "tracker.handoff_state" => "human_review",
     "polling.interval_ms" => 30_000,
     "workspace.root" => System.tmp_dir!() <> "/symphony_workspaces",
     "hooks.timeout_ms" => 60_000,
     "agent.command" => "codex app-server",
     "agent.max_concurrent_agents" => 10,
     "agent.max_retry_backoff_ms" => 300_000,
-    "agent.require_explicit_run" => false,
     "codex.command" => "codex app-server",
     "codex.read_timeout_ms" => 5_000,
     "codex.turn_timeout_ms" => 3_600_000,
-    "codex.stall_timeout_ms" => 300_000,
-    "log_path" => ".symphony/logs/symphony.jsonl"
+    "codex.stall_timeout_ms" => 300_000
   }
 
   @type t :: %{
@@ -372,20 +367,8 @@ defmodule Symphony.Config do
   def agent_max_retry_backoff_ms(config),
     do: pos_int!(config, "agent.max_retry_backoff_ms")
 
-  @spec agent_require_explicit_run?(t()) :: boolean()
-  def agent_require_explicit_run?(config) do
-    case Map.fetch!(config.resolved, "agent.require_explicit_run") do
-      true -> true
-      "true" -> true
-      _ -> false
-    end
-  end
-
   @spec codex_command(t()) :: binary()
   def codex_command(config), do: get_string!(config, "codex.command")
-
-  @spec log_path(t()) :: binary()
-  def log_path(config), do: get_string!(config, "log_path")
 
   @doc """
   Spec § 6.3 dispatch preflight: validate the minimal config the
