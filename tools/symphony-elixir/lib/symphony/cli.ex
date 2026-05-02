@@ -67,12 +67,14 @@ defmodule Symphony.CLI do
         :ok
 
       Keyword.has_key?(top_opts, :workflow) ->
-        # Erlang's `:application.start/1` reloads the `.app` file's env
-        # on first start — which clobbers any `put_env` we did before
-        # the app booted. So we ensure_started FIRST, THEN override.
-        # `persistent: true` belt-and-suspenders against later reloads,
-        # and a direct `WorkflowStore.set_path/1` call refreshes the
-        # already-cached path inside the running store.
+        # Order: put_env BEFORE ensure_started so WorkflowStore picks
+        # up the right path at boot. `persistent: true` defeats the
+        # `.app` file's env reload (otherwise the boot reload would
+        # clobber the put_env). Then `set_path` is a belt-and-suspenders
+        # update for the running store's cached path.
+        expanded = Path.expand(top_opts[:workflow])
+        Application.put_env(:symphony, :workflow_path, expanded, persistent: true)
+
         case deps.ensure_started.() do
           :ok ->
             :ok = override_workflow_path(top_opts[:workflow])
@@ -233,17 +235,22 @@ defmodule Symphony.CLI do
     {opts, rest}
   end
 
-  # Subcommand-level `--workflow` handler. Mirrors the top-level path
-  # but only fires when the user passed `--workflow` AFTER the
-  # subcommand. Like the top-level handler, we must `ensure_started`
-  # before `put_env` so the OTP boot's `.app` env reload doesn't
-  # clobber the override.
+  # Subcommand-level `--workflow` handler. Order matters: put_env
+  # BEFORE ensure_started so WorkflowStore picks up the right path
+  # at boot. `persistent: true` defeats the `.app` env reload that
+  # would otherwise clobber a non-persistent put_env. After the app
+  # is up, `set_path` is a belt-and-suspenders backup that updates
+  # the running store's cached path (no-op when the env path was
+  # already honored at boot).
   defp apply_workflow_override(opts, deps) do
     case Keyword.get(opts, :workflow) do
       nil ->
         :ok
 
       path when is_binary(path) ->
+        expanded = Path.expand(path)
+        Application.put_env(:symphony, :workflow_path, expanded, persistent: true)
+
         case deps.ensure_started.() do
           :ok -> override_workflow_path(path)
           _ -> :ok
