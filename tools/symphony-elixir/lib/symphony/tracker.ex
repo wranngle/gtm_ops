@@ -78,4 +78,71 @@ defmodule Symphony.Tracker do
       kind -> {:error, {:unsupported_tracker, kind}}
     end
   end
+
+  # ============== Upstream-compatible zero/one-arg facade ==============
+  # Upstream `SymphonyElixir.Tracker` exposes 0- and 1-arg helpers that
+  # consult the global `Config.settings!()` to pick an adapter. Our
+  # spec § 11.1 contract threads `config` through every callback for
+  # explicit dependency. To keep upstream tests + helper scripts that
+  # call `Symphony.Tracker.fetch_candidate_issues()` working, the
+  # facade resolves the current adapter via `Config.settings!()` and
+  # delegates. Test overrides via `Application.put_env(:symphony,
+  # :tracker_adapter_override, Module)` short-circuit the resolution.
+
+  @spec adapter() :: module()
+  def adapter do
+    case Application.get_env(:symphony, :tracker_adapter_override) do
+      mod when is_atom(mod) and not is_nil(mod) ->
+        mod
+
+      _ ->
+        case settings_tracker_kind() do
+          "memory" -> Symphony.Tracker.Linear.Memory
+          "linear" -> Symphony.Tracker.Linear
+          "github_issues" -> Symphony.Tracker.GitHubIssues
+          "local_markdown" -> Symphony.Tracker.LocalMarkdown
+          "noop" -> Symphony.Tracker.Noop
+          _ -> Symphony.Tracker.Linear
+        end
+    end
+  end
+
+  @spec fetch_candidate_issues() :: {:ok, [term()]} | {:error, term()}
+  def fetch_candidate_issues, do: adapter().fetch_candidate_issues()
+
+  @spec fetch_issues_by_states([term()]) :: {:ok, [term()]} | {:error, term()}
+  def fetch_issues_by_states(states) when is_list(states),
+    do: adapter().fetch_issues_by_states(states)
+
+  @spec fetch_issue_states_by_ids([binary()]) :: {:ok, [term()]} | {:error, term()}
+  def fetch_issue_states_by_ids(issue_ids) when is_list(issue_ids),
+    do: adapter().fetch_issue_states_by_ids(issue_ids)
+
+  @spec create_comment(binary(), binary()) :: :ok | {:error, term()}
+  def create_comment(issue_id, body) when is_binary(issue_id) and is_binary(body) do
+    if function_exported?(adapter(), :create_comment, 2) do
+      adapter().create_comment(issue_id, body)
+    else
+      :ok
+    end
+  end
+
+  @spec update_issue_state(binary(), binary()) :: :ok | {:error, term()}
+  def update_issue_state(issue_id, state_name)
+      when is_binary(issue_id) and is_binary(state_name) do
+    if function_exported?(adapter(), :update_issue_state, 2) do
+      adapter().update_issue_state(issue_id, state_name)
+    else
+      :ok
+    end
+  end
+
+  defp settings_tracker_kind do
+    case Config.settings!() do
+      %{tracker: %{kind: kind}} when is_binary(kind) -> kind
+      _ -> "local_markdown"
+    end
+  rescue
+    _ -> "local_markdown"
+  end
 end
