@@ -50,6 +50,11 @@ defmodule Symphony.CLI do
   def run(argv, deps \\ runtime_deps()) do
     {top_opts, rest} = parse_top_level(argv)
 
+    # Gate the dashboard BEFORE the OTP app starts so non-serve subcommands
+    # don't bind port 4040 (STACK-074). `persistent: true` so the put_env
+    # survives `:application.start/1`'s env reload on first start.
+    configure_dashboard_autostart(rest)
+
     cond do
       Keyword.get(top_opts, :help, false) ->
         deps.io_puts.(usage())
@@ -74,6 +79,17 @@ defmodule Symphony.CLI do
       true ->
         dispatch(rest, deps)
     end
+  end
+
+  # Only `serve` needs the Phoenix endpoint. For every other subcommand
+  # (validate, list, once, --help) we explicitly disable dashboard auto-
+  # start so the app supervision tree skips Phoenix.PubSub + HttpServer
+  # entirely. Skipping unknown subcommands too — they error out before
+  # touching anything that needs the dashboard.
+  defp configure_dashboard_autostart(["serve" | _]), do: :ok
+  defp configure_dashboard_autostart(_) do
+    Application.put_env(:symphony, :dashboard_autostart?, false, persistent: true)
+    :ok
   end
 
   defp dispatch([], deps) do
@@ -172,9 +188,12 @@ defmodule Symphony.CLI do
     port = Keyword.get(opts, :port)
     host = Keyword.get(opts, :host)
 
-    if port, do: Application.put_env(:symphony, :dashboard_port, port)
-    if host, do: Application.put_env(:symphony, :dashboard_host, host)
-    Application.put_env(:symphony, :dashboard_enabled?, true)
+    # `persistent: true` so these survive `:application.start/1`'s env
+    # reload — same `.app` clobber bug we fix for --workflow PATH.
+    if port, do: Application.put_env(:symphony, :dashboard_port, port, persistent: true)
+    if host, do: Application.put_env(:symphony, :dashboard_host, host, persistent: true)
+    Application.put_env(:symphony, :dashboard_enabled?, true, persistent: true)
+    Application.put_env(:symphony, :dashboard_autostart?, true, persistent: true)
 
     case deps.ensure_started.() do
       :ok ->

@@ -187,6 +187,58 @@ defmodule Symphony.CLITest do
     end
   end
 
+  describe "dashboard autostart gating (STACK-074)" do
+    # Regression: every escript subcommand booted Phoenix on port 4040
+    # because the dashboard children were always in the supervision tree.
+    # The fix gates them on `:dashboard_autostart?`, which CLI.run sets to
+    # `false` BEFORE app start for non-serve subcommands so port 4040
+    # never gets bound. `serve` leaves the default in place so the
+    # dashboard still boots when the operator actually asks for it.
+
+    setup do
+      saved = Application.get_env(:symphony, :dashboard_autostart?)
+
+      on_exit(fn ->
+        if is_nil(saved) do
+          Application.delete_env(:symphony, :dashboard_autostart?)
+        else
+          Application.put_env(:symphony, :dashboard_autostart?, saved)
+        end
+      end)
+
+      Application.delete_env(:symphony, :dashboard_autostart?)
+      :ok
+    end
+
+    test "validate disables dashboard autostart" do
+      CLI.run(["validate"], deps_with_capture())
+      assert Application.get_env(:symphony, :dashboard_autostart?) == false
+    end
+
+    test "list disables dashboard autostart" do
+      CLI.run(["list"], deps_with_capture())
+      assert Application.get_env(:symphony, :dashboard_autostart?) == false
+    end
+
+    test "once disables dashboard autostart" do
+      CLI.run(["once", "--dry-run"], deps_with_capture())
+      assert Application.get_env(:symphony, :dashboard_autostart?) == false
+    end
+
+    test "serve preserves the default (does not force autostart off)" do
+      CLI.run(["serve", "--port", "0"], deps_with_capture())
+      # serve explicitly sets autostart? = true (so an operator who set
+      # dashboard_enabled? = false in config still gets the dashboard
+      # when they ask for it via `serve`).
+      assert Application.get_env(:symphony, :dashboard_autostart?) == true
+    end
+
+    test "no subcommand still disables (help fallback path doesn't need dashboard)" do
+      CLI.run([], deps_with_capture())
+      assert Application.get_env(:symphony, :dashboard_autostart?) == false
+    end
+  end
+
   describe "--workflow PATH (STACK-073)" do
     # Regression: the flag was silently ignored because the escript boots
     # the OTP app before CLI.main runs, and `:application.start/1` reloads

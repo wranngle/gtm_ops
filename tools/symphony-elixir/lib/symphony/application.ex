@@ -63,8 +63,14 @@ defmodule Symphony.Application do
   # Spec § 13.3 / § 13.6 dashboard supervision children. The PubSub server
   # is registered under the well-known name `Symphony.PubSub` so the
   # presenter and the LiveView can subscribe without hardcoding pid lookup.
+  #
+  # Gated on `:dashboard_autostart?` (NOT `:dashboard_enabled?`) so the CLI
+  # can disable per-subcommand boot without rewriting operator config —
+  # `bin/symphony validate|list|once` does not need port 4040 (STACK-074).
+  # `:dashboard_autostart?` defaults to `:dashboard_enabled?`, so operators
+  # who haven't read the new key still get the historical behavior.
   defp dashboard_children do
-    if dashboard_enabled?() do
+    if dashboard_autostart?() do
       [
         {Phoenix.PubSub, name: Symphony.PubSub},
         {Symphony.HttpServer, []}
@@ -72,6 +78,10 @@ defmodule Symphony.Application do
     else
       []
     end
+  end
+
+  defp dashboard_autostart? do
+    Application.get_env(:symphony, :dashboard_autostart?, dashboard_enabled?())
   end
 
   defp dashboard_enabled? do
