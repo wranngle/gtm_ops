@@ -57,6 +57,29 @@ defmodule Symphony.Providers.Anthropic do
           request_fun: (map(), list(), map() -> {:ok, map()} | {:error, term()})
         ]
 
+  # Normalized error categories returned by `messages/2`, modelled after the
+  # spec § 10.6 codex error vocabulary so the orchestrator can react to provider
+  # failures with the same grammar it uses for app-server failures.
+  #
+  #   * `{:rate_limited, retry_after_seconds | nil}` — HTTP 429. `retry_after`
+  #     comes from the `retry-after` response header (Anthropic populates it on
+  #     true rate limits) and is the integer second count, or nil when absent
+  #     or unparseable. This is what spec § 13.5 calls the "rate-limit payload".
+  #   * `{:invalid_request, status, body}` — any other 4xx (auth, schema, etc.).
+  #     Caller should NOT retry without changing the request.
+  #   * `{:server_error, status, body}` — any 5xx. Caller may retry with backoff.
+  #   * `{:transport, reason}` — connect/receive failure before any HTTP status.
+  #     Mirrors the codex `port_exit` family.
+  @type error ::
+          {:rate_limited, non_neg_integer() | nil}
+          | {:invalid_request, pos_integer(), term()}
+          | {:server_error, pos_integer(), term()}
+          | {:transport, term()}
+          | :missing_anthropic_api_key
+          | {:missing_required_option, atom()}
+          | {:anthropic_decode_failure, term()}
+          | {:anthropic_unexpected_body, term()}
+
   @doc """
   POST a `messages` request and return the parsed body on success.
 
@@ -93,16 +116,32 @@ defmodule Symphony.Providers.Anthropic do
         {:ok, %{status: 200, body: body}} ->
           decode_success(body)
 
-        {:ok, %{status: status, body: body}} ->
+        {:ok, %{status: 429, body: body} = resp} ->
+          retry_after = parse_retry_after(Map.get(resp, :headers, []))
+
           Logger.warning(
-            "symphony.providers.anthropic.api_status status=#{status} body=#{summarize(body)}"
+            "symphony.providers.anthropic.rate_limited retry_after=#{inspect(retry_after)} body=#{summarize(body)}"
           )
 
-          {:error, {:anthropic_api_status, status, body}}
+          {:error, {:rate_limited, retry_after}}
+
+        {:ok, %{status: status, body: body}} when status >= 400 and status < 500 ->
+          Logger.warning(
+            "symphony.providers.anthropic.invalid_request status=#{status} body=#{summarize(body)}"
+          )
+
+          {:error, {:invalid_request, status, body}}
+
+        {:ok, %{status: status, body: body}} when status >= 500 ->
+          Logger.warning(
+            "symphony.providers.anthropic.server_error status=#{status} body=#{summarize(body)}"
+          )
+
+          {:error, {:server_error, status, body}}
 
         {:error, reason} ->
-          Logger.warning("symphony.providers.anthropic.api_request reason=#{inspect(reason)}")
-          {:error, {:anthropic_api_request, reason}}
+          Logger.warning("symphony.providers.anthropic.transport reason=#{inspect(reason)}")
+          {:error, {:transport, reason}}
       end
     end
   end
@@ -176,12 +215,55 @@ defmodule Symphony.Providers.Anthropic do
   end
 
   defp default_request(payload, headers, %{endpoint: endpoint, timeout_ms: timeout}) do
-    Req.post(endpoint,
-      headers: headers,
-      json: payload,
-      connect_options: [timeout: timeout],
-      receive_timeout: timeout
-    )
+    case Req.post(endpoint,
+           headers: headers,
+           json: payload,
+           connect_options: [timeout: timeout],
+           receive_timeout: timeout
+         ) do
+      {:ok, %Req.Response{status: status, body: body, headers: resp_headers}} ->
+        # Normalize to a plain map so the test seam (`request_fun`) and the
+        # production path share an identical response shape — and so callers
+        # can pattern-match on `:headers` without depending on Req structs.
+        # The `retry-after` header on 429 lives here.
+        {:ok, %{status: status, body: body, headers: resp_headers}}
+
+      {:error, _} = err ->
+        err
+    end
+  end
+
+  # Anthropic returns `retry-after` in seconds (per RFC 7231) on 429. Header
+  # casing is non-deterministic across HTTP clients, so we lookup case-
+  # insensitively. Returns the integer second count or nil when missing /
+  # malformed — orchestrator code should treat nil as "back off with default
+  # exponential schedule" rather than fail.
+  defp parse_retry_after(headers) when is_list(headers) do
+    headers
+    |> Enum.find(fn
+      {k, _v} when is_binary(k) -> String.downcase(k) == "retry-after"
+      _ -> false
+    end)
+    |> case do
+      {_k, [v | _]} when is_binary(v) -> parse_retry_after_value(v)
+      {_k, v} when is_binary(v) -> parse_retry_after_value(v)
+      _ -> nil
+    end
+  end
+
+  defp parse_retry_after(headers) when is_map(headers) do
+    headers
+    |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+    |> parse_retry_after()
+  end
+
+  defp parse_retry_after(_), do: nil
+
+  defp parse_retry_after_value(value) do
+    case Integer.parse(String.trim(value)) do
+      {seconds, ""} when seconds >= 0 -> seconds
+      _ -> nil
+    end
   end
 
   defp decode_success(body) when is_map(body) do

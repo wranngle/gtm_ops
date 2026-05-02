@@ -192,12 +192,17 @@ defmodule Symphony.Providers.AnthropicTest do
                )
     end
 
-    test "surfaces non-200 responses as {:anthropic_api_status, status, body}" do
+    test "maps HTTP 429 to {:rate_limited, retry_after_seconds} from header" do
       stub = fn _, _, _ ->
-        {:ok, %{status: 429, body: %{"type" => "error", "error" => %{"type" => "rate_limit_error"}}}}
+        {:ok,
+         %{
+           status: 429,
+           body: %{"type" => "error", "error" => %{"type" => "rate_limit_error"}},
+           headers: [{"retry-after", "30"}, {"x-request-id", "req_42"}]
+         }}
       end
 
-      assert {:error, {:anthropic_api_status, 429, _body}} =
+      assert {:error, {:rate_limited, 30}} =
                Anthropic.messages(
                  [%{role: "user", content: "hi"}],
                  model: "claude-haiku-4-5",
@@ -206,10 +211,82 @@ defmodule Symphony.Providers.AnthropicTest do
                )
     end
 
-    test "surfaces transport errors as {:anthropic_api_request, reason}" do
+    test "rate_limited retry_after is nil when header missing or unparseable" do
+      stub_missing = fn _, _, _ ->
+        {:ok, %{status: 429, body: %{}, headers: [{"x-request-id", "req"}]}}
+      end
+
+      assert {:error, {:rate_limited, nil}} =
+               Anthropic.messages(
+                 [%{role: "user", content: "hi"}],
+                 model: "claude-haiku-4-5",
+                 api_key: "test-key",
+                 request_fun: stub_missing
+               )
+
+      stub_garbage = fn _, _, _ ->
+        {:ok, %{status: 429, body: %{}, headers: [{"Retry-After", "soon"}]}}
+      end
+
+      assert {:error, {:rate_limited, nil}} =
+               Anthropic.messages(
+                 [%{role: "user", content: "hi"}],
+                 model: "claude-haiku-4-5",
+                 api_key: "test-key",
+                 request_fun: stub_garbage
+               )
+    end
+
+    test "rate_limited retry_after handles list-of-strings header value (Req shape)" do
+      stub = fn _, _, _ ->
+        {:ok, %{status: 429, body: %{}, headers: [{"retry-after", ["12"]}]}}
+      end
+
+      assert {:error, {:rate_limited, 12}} =
+               Anthropic.messages(
+                 [%{role: "user", content: "hi"}],
+                 model: "claude-haiku-4-5",
+                 api_key: "test-key",
+                 request_fun: stub
+               )
+    end
+
+    test "maps other 4xx to {:invalid_request, status, body}" do
+      stub = fn _, _, _ ->
+        {:ok,
+         %{
+           status: 400,
+           body: %{"type" => "error", "error" => %{"type" => "invalid_request_error"}}
+         }}
+      end
+
+      assert {:error, {:invalid_request, 400, %{"type" => "error"} = body}} =
+               Anthropic.messages(
+                 [%{role: "user", content: "hi"}],
+                 model: "claude-haiku-4-5",
+                 api_key: "test-key",
+                 request_fun: stub
+               )
+
+      assert get_in(body, ["error", "type"]) == "invalid_request_error"
+    end
+
+    test "maps 5xx to {:server_error, status, body}" do
+      stub = fn _, _, _ -> {:ok, %{status: 503, body: %{"type" => "overloaded_error"}}} end
+
+      assert {:error, {:server_error, 503, %{"type" => "overloaded_error"}}} =
+               Anthropic.messages(
+                 [%{role: "user", content: "hi"}],
+                 model: "claude-haiku-4-5",
+                 api_key: "test-key",
+                 request_fun: stub
+               )
+    end
+
+    test "surfaces transport errors as {:transport, reason}" do
       stub = fn _, _, _ -> {:error, :timeout} end
 
-      assert {:error, {:anthropic_api_request, :timeout}} =
+      assert {:error, {:transport, :timeout}} =
                Anthropic.messages(
                  [%{role: "user", content: "hi"}],
                  model: "claude-haiku-4-5",
