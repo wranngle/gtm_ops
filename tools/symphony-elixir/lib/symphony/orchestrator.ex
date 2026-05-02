@@ -391,6 +391,13 @@ defmodule Symphony.Orchestrator do
         # Spec § 8.6 startup terminal workspace cleanup. Best-effort: a fetch
         # failure is logged and ignored so the daemon still boots.
         state = run_terminal_workspace_cleanup(state)
+
+        # Reap subprocesses leaked by a prior BEAM that was SIGKILL'd
+        # (LocalShell's setsid -w + group-kill cleanup only fires on
+        # graceful shutdown; ungraceful BEAM termination leaves bash +
+        # llm.sh trees alive). Scans /proc for processes whose cwd is
+        # under our `workspace.root` and SIGKILLs their session group.
+        state = reap_orphan_workspace_processes(state)
         # Spec § 8.1: "schedules an immediate tick, and then repeats every
         # `polling.interval_ms`." The first tick is delay=0 so the daemon
         # does not idle for a full poll interval before fetching candidates.
@@ -1654,6 +1661,109 @@ defmodule Symphony.Orchestrator do
         )
 
         %{state | startup_cleanup_done?: true}
+    end
+  end
+
+  # ============== Startup orphan-process reaping ==============
+
+  defp reap_orphan_workspace_processes(%{config: nil} = state), do: state
+
+  defp reap_orphan_workspace_processes(state) do
+    workspace_root =
+      case Config.workspace_root(state.config) do
+        path when is_binary(path) and path != "" -> Path.expand(path)
+        _ -> nil
+      end
+
+    if is_nil(workspace_root) do
+      state
+    else
+      reaped = scan_and_kill_orphans_under(workspace_root)
+
+      if reaped > 0 do
+        Logger.warning(
+          "symphony.startup.orphan_reap reaped=#{reaped} workspace_root=#{workspace_root}"
+        )
+
+        Logging.emit(:warning, "symphony.startup.orphan_reap", :success,
+          message: "reaped subprocesses left over from a prior BEAM",
+          fields: %{reaped: reaped, workspace_root: workspace_root}
+        )
+      end
+
+      state
+    end
+  rescue
+    e ->
+      Logger.debug(
+        "symphony.startup.orphan_reap_failed reason=#{Exception.message(e)} (continuing)"
+      )
+
+      state
+  end
+
+  defp scan_and_kill_orphans_under(workspace_root) do
+    # /proc/<pid>/cwd is a symlink to the process's current working
+    # directory. We list our own pid's siblings and check whether any
+    # symlink resolves to a path inside workspace_root. For each match,
+    # we read /proc/<pid>/stat to find its session id (sid, the 6th
+    # field) and SIGKILL the entire session via `kill -- -<sid>`.
+    own_pid = :os.getpid() |> List.to_string()
+    pids = list_pids() -- [own_pid]
+    sids_to_kill = MapSet.new()
+
+    sids =
+      Enum.reduce(pids, sids_to_kill, fn pid, acc ->
+        case File.read_link("/proc/#{pid}/cwd") do
+          {:ok, cwd} ->
+            cwd_abs = Path.expand(cwd)
+
+            if String.starts_with?(cwd_abs, workspace_root <> "/") or cwd_abs == workspace_root do
+              case read_session_id(pid) do
+                {:ok, sid} -> MapSet.put(acc, sid)
+                _ -> acc
+              end
+            else
+              acc
+            end
+
+          _ ->
+            acc
+        end
+      end)
+
+    Enum.each(sids, fn sid ->
+      _ = System.cmd("kill", ["-KILL", "--", "-#{sid}"], stderr_to_stdout: true)
+    end)
+
+    MapSet.size(sids)
+  end
+
+  defp list_pids do
+    case File.ls("/proc") do
+      {:ok, entries} ->
+        entries
+        |> Enum.filter(fn e -> match?({_, ""}, Integer.parse(e)) end)
+
+      _ ->
+        []
+    end
+  end
+
+  defp read_session_id(pid) do
+    with {:ok, stat} <- File.read("/proc/#{pid}/stat"),
+         # `man 5 proc`: stat fields are space-separated; field 6 is sid.
+         # The 2nd field (comm) can contain spaces wrapped in parens, so
+         # split after the trailing `)` to be safe.
+         [_pid_part, rest] <- String.split(stat, ")", parts: 2),
+         fields <- String.split(rest, " ", trim: true),
+         # rest starts with " <state> <ppid> <pgrp> <sid> ...", so sid is
+         # field index 3 (0-based) within the post-`)` portion.
+         sid_str when is_binary(sid_str) <- Enum.at(fields, 3),
+         {sid, ""} <- Integer.parse(sid_str) do
+      {:ok, sid}
+    else
+      _ -> :error
     end
   end
 
