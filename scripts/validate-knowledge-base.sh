@@ -351,29 +351,64 @@ if ! scripts/generate-layer-inventory.sh --check; then
   exit 1
 fi
 
-# AGENTS.md link resolution: every Markdown link of the form ](path) where
-# path does not look like a URL must resolve to an existing file or directory.
-agents_link_failed=0
-while IFS= read -r line; do
-  [[ -z "$line" ]] && continue
-  target="$line"
+# Markdown link resolution: owned Markdown links of the form ](path) must
+# resolve to a file/directory or an allowed external URL. Generated artifacts,
+# upstream source snapshots, and image references are intentionally excluded.
+markdown_link_failed=0
+while IFS=$'\t' read -r doc target; do
+  [[ -z "$target" ]] && continue
   case "$target" in
     http://*|https://*|mailto:*|''|'#'*) continue ;;
   esac
-  # Strip optional anchor (e.g. file.md#section).
+  case "$target" in
+    *' '*)
+      printf '%s links to %s; local Markdown links must not contain raw spaces\n' "$doc" "$target" >&2
+      markdown_link_failed=1
+      continue
+      ;;
+  esac
+
   target_path="${target%%#*}"
   [[ -z "$target_path" ]] && continue
-  if [[ ! -e "$target_path" ]]; then
-    printf 'AGENTS.md links to %s but it does not exist on disk\n' "$target" >&2
-    agents_link_failed=1
+  base_dir="$(dirname "$doc")"
+  if [[ "$target_path" == /* ]]; then
+    resolved_path="$repo_root${target_path}"
+  else
+    resolved_path="$base_dir/$target_path"
   fi
-done < <(grep -oE '\]\([^)]+\)' AGENTS.md | sed -E 's/\]\(([^)]+)\)/\1/')
-if (( agents_link_failed )); then
+  resolved_path="$(realpath -m "$resolved_path")"
+  case "$resolved_path" in
+    "$repo_root"/*|"$repo_root") ;;
+    *)
+      printf '%s links outside the repository: %s\n' "$doc" "$target" >&2
+      markdown_link_failed=1
+      continue
+      ;;
+  esac
+  if [[ ! -e "$resolved_path" ]]; then
+    printf '%s links to %s but it does not exist on disk\n' "$doc" "$target" >&2
+    markdown_link_failed=1
+  fi
+done < <(
+  find AGENTS.md .agents/AGENTS.md README.md ARCHITECTURE.md WORKFLOW.md SECURITY.md CONTRIBUTING.md docs \
+    \( -path 'docs/generated/*' -o -path 'docs/references/openai_*.txt' -o -path 'docs/references/*.png' \) -prune \
+    -o -type f -name '*.md' -print 2>/dev/null \
+    | sort \
+    | while IFS= read -r doc; do
+        grep -oE '\]\([^)]+\)' "$doc" \
+          | sed -E 's/\]\(([^)]+)\)/\1/' \
+          | while IFS= read -r target; do
+              printf '%s\t%s\n' "$doc" "$target"
+            done
+      done
+)
+if (( markdown_link_failed )); then
   exit 1
 fi
 
 # docs/index.md coverage: every top-level docs/*.md (excluding index itself)
-# must be mentioned by filename in docs/index.md so nothing goes orphaned.
+# and every key docs subdirectory named by AGENTS.md must be mentioned in
+# docs/index.md so nothing goes orphaned.
 index_missing=0
 while IFS= read -r doc; do
   base="$(basename "$doc")"
@@ -383,6 +418,24 @@ while IFS= read -r doc; do
     index_missing=1
   fi
 done < <(find docs -maxdepth 1 -type f -name '*.md')
+if (( index_missing )); then
+  exit 1
+fi
+
+required_index_entries=(
+  "design-docs"
+  "exec-plans"
+  "generated"
+  "product-specs"
+  "references"
+)
+
+for entry in "${required_index_entries[@]}"; do
+  if ! grep -Fq "$entry" docs/index.md; then
+    printf 'docs/index.md does not mention docs/%s; add an index entry or remove the directory\n' "$entry" >&2
+    index_missing=1
+  fi
+done
 if (( index_missing )); then
   exit 1
 fi
