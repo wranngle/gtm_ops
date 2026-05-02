@@ -320,7 +320,7 @@ defmodule Symphony.Orchestrator do
 
   defp test_active_state_set do
     settings = safe_settings_for_test()
-    states = get_in(settings, [:tracker, :active_states]) || ["Todo", "In Progress"]
+    states = settings_tracker_field(settings, :active_states) || ["Todo", "In Progress"]
 
     states
     |> Enum.map(&normalize_state/1)
@@ -332,7 +332,7 @@ defmodule Symphony.Orchestrator do
     settings = safe_settings_for_test()
 
     states =
-      get_in(settings, [:tracker, :terminal_states]) ||
+      settings_tracker_field(settings, :terminal_states) ||
         ["Closed", "Cancelled", "Canceled", "Duplicate", "Done"]
 
     states
@@ -340,6 +340,22 @@ defmodule Symphony.Orchestrator do
     |> Enum.reject(&(&1 == ""))
     |> MapSet.new()
   end
+
+  # The parsed Schema is an Ecto struct (no Access behaviour), but the
+  # default-fallback path returns a plain map. Read via struct field
+  # accessors when the input is the schema; fall back to map lookup
+  # otherwise so both shapes work.
+  defp settings_tracker_field(%{tracker: tracker}, field) when is_map(tracker) do
+    Map.get(tracker, field)
+  end
+
+  defp settings_tracker_field(_settings, _field), do: nil
+
+  defp settings_agent_max_concurrent(%{agent: agent}) when is_map(agent) do
+    Map.get(agent, :max_concurrent_agents)
+  end
+
+  defp settings_agent_max_concurrent(_settings), do: nil
 
   defp safe_settings_for_test do
     Config.settings!()
@@ -360,7 +376,7 @@ defmodule Symphony.Orchestrator do
 
   defp test_available_slots(%State{running: running}) do
     settings = safe_settings_for_test()
-    max = get_in(settings, [:agent, :max_concurrent_agents]) || 10
+    max = settings_agent_max_concurrent(settings) || 10
     max(max - map_size(running || %{}), 0)
   end
 

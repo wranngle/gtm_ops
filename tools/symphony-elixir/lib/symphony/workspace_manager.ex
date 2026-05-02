@@ -174,7 +174,7 @@ defmodule Symphony.WorkspaceManager do
 
   def remove_issue_workspaces(identifier, nil) when is_binary(identifier) do
     settings = safe_settings()
-    worker_hosts = get_in(settings, [:worker, :ssh_hosts]) || []
+    worker_hosts = settings_worker_ssh_hosts(settings)
 
     case worker_hosts do
       [] ->
@@ -186,6 +186,12 @@ defmodule Symphony.WorkspaceManager do
 
     :ok
   end
+
+  defp settings_worker_ssh_hosts(%{worker: worker}) when is_map(worker) do
+    Map.get(worker, :ssh_hosts) || []
+  end
+
+  defp settings_worker_ssh_hosts(_settings), do: []
 
   def remove_issue_workspaces(_identifier, _worker_host), do: :ok
 
