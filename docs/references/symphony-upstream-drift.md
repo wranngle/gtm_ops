@@ -271,9 +271,13 @@ in priority order:
 1. ~~Pick the dual-config-API drift apart in `config.ex`~~ — **done
    2026-05-02**, see `symphony-config-dual-track-audit.md`. Verdict:
    dotted-key track is needed today, blocked on 4 concrete Schema
-   gaps. Three dead-code accessors deleted. Next move: PR (a) from
-   the audit's migration plan — add `Tracker.repo`,
-   `Tracker.issues_root`, `Agent.command` to `Schema`.
+   gaps. Three dead-code accessors deleted. **PR (a) of the
+   migration plan landed same day** — `Schema.Tracker.{repo,
+   issues_root}`, `Schema.Agent.command`, `Schema.parse/2` with
+   workflow-dir anchoring, `$VAR` resolution for the new fields.
+   All four Schema gaps closed. Next move: PR (b) — migrate ~15 lib
+   files away from `config.resolved`/dotted getters to typed-struct
+   access.
 2. Port the missing observability API endpoints (`refresh`, per-issue,
    405 catch-alls) so the upstream `extensions_test.exs` becomes
    un-parkable.

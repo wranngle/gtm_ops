@@ -52,6 +52,13 @@ defmodule Symphony.Config.Schema do
       field(:assignee, :string)
       field(:active_states, {:array, :string}, default: ["Todo", "In Progress"])
       field(:terminal_states, {:array, :string}, default: ["Closed", "Cancelled", "Canceled", "Duplicate", "Done"])
+      # Ours-only fields. `repo` is the `owner/repo` slug used by the
+      # `:github_issues` tracker. `issues_root` is the on-disk path read
+      # by the `:local_markdown` tracker (resolved against the workflow
+      # file's directory by `parse/2` per spec § 6.1 / § 9.1). Neither
+      # is in upstream because upstream only ships `:linear` / `:memory`.
+      field(:repo, :string)
+      field(:issues_root, :string, default: ".symphony/issues")
     end
 
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -59,7 +66,17 @@ defmodule Symphony.Config.Schema do
       schema
       |> cast(
         attrs,
-        [:kind, :endpoint, :api_key, :project_slug, :assignee, :active_states, :terminal_states],
+        [
+          :kind,
+          :endpoint,
+          :api_key,
+          :project_slug,
+          :assignee,
+          :active_states,
+          :terminal_states,
+          :repo,
+          :issues_root
+        ],
         empty_values: []
       )
     end
@@ -132,6 +149,10 @@ defmodule Symphony.Config.Schema do
       field(:max_turns, :integer, default: 20)
       field(:max_retry_backoff_ms, :integer, default: 300_000)
       field(:max_concurrent_agents_by_state, :map, default: %{})
+      # Ours-only field. The `LocalShell` adapter (codex-independent
+      # runner) shells out to this command instead of `codex.command`.
+      # Upstream has only the Codex runner so it doesn't separate them.
+      field(:command, :string, default: "codex app-server")
     end
 
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -139,7 +160,13 @@ defmodule Symphony.Config.Schema do
       schema
       |> cast(
         attrs,
-        [:max_concurrent_agents, :max_turns, :max_retry_backoff_ms, :max_concurrent_agents_by_state],
+        [
+          :max_concurrent_agents,
+          :max_turns,
+          :max_retry_backoff_ms,
+          :max_concurrent_agents_by_state,
+          :command
+        ],
         empty_values: []
       )
       |> validate_number(:max_concurrent_agents, greater_than: 0)
@@ -274,7 +301,16 @@ defmodule Symphony.Config.Schema do
   end
 
   @spec parse(map()) :: {:ok, %__MODULE__{}} | {:error, {:invalid_workflow_config, String.t()}}
-  def parse(config) when is_map(config) do
+  def parse(config), do: parse(config, nil)
+
+  # Spec § 6.1 / § 9.1: relative filesystem paths in `WORKFLOW.md` are
+  # anchored to the workflow file's directory, not the daemon's CWD.
+  # `workflow_dir` is `nil` when the workflow is built in-memory (e.g.
+  # `StatusDashboardSnapshotTest`), in which case we leave relative
+  # paths unchanged.
+  @spec parse(map(), Path.t() | nil) ::
+          {:ok, %__MODULE__{}} | {:error, {:invalid_workflow_config, String.t()}}
+  def parse(config, workflow_dir) when is_map(config) do
     config
     |> normalize_keys()
     |> drop_nil_values()
@@ -282,7 +318,7 @@ defmodule Symphony.Config.Schema do
     |> apply_action(:validate)
     |> case do
       {:ok, settings} ->
-        {:ok, finalize_settings(settings)}
+        {:ok, finalize_settings(settings, workflow_dir)}
 
       {:error, changeset} ->
         {:error, {:invalid_workflow_config, format_errors(changeset)}}
@@ -365,26 +401,72 @@ defmodule Symphony.Config.Schema do
     |> cast_embed(:server, with: &Server.changeset/2)
   end
 
-  defp finalize_settings(settings) do
+  defp finalize_settings(settings, workflow_dir) do
     tracker = %{
       settings.tracker
       | api_key: resolve_secret_setting(settings.tracker.api_key, System.get_env("LINEAR_API_KEY")),
-        assignee: resolve_secret_setting(settings.tracker.assignee, System.get_env("LINEAR_ASSIGNEE"))
+        assignee: resolve_secret_setting(settings.tracker.assignee, System.get_env("LINEAR_ASSIGNEE")),
+        repo: resolve_env_string(settings.tracker.repo),
+        issues_root: anchor_relative_path(settings.tracker.issues_root, workflow_dir)
     }
 
     workspace = %{
       settings.workspace
-      | root: resolve_path_value(settings.workspace.root, Path.join(System.tmp_dir!(), "symphony_workspaces"))
+      | root:
+          settings.workspace.root
+          |> resolve_path_value(Path.join(System.tmp_dir!(), "symphony_workspaces"))
+          |> anchor_relative_path(workflow_dir)
+    }
+
+    agent = %{
+      settings.agent
+      | command: resolve_env_string(settings.agent.command)
     }
 
     codex = %{
       settings.codex
-      | approval_policy: normalize_keys(settings.codex.approval_policy),
+      | command: resolve_env_string(settings.codex.command),
+        approval_policy: normalize_keys(settings.codex.approval_policy),
         turn_sandbox_policy: normalize_optional_map(settings.codex.turn_sandbox_policy)
     }
 
-    %{settings | tracker: tracker, workspace: workspace, codex: codex}
+    %{settings | tracker: tracker, workspace: workspace, agent: agent, codex: codex}
   end
+
+  # Resolve `$VAR_NAME` indirection in plain string fields (no fallback).
+  # Mirrors the dotted-key track's `resolve_env/1` for `tracker.endpoint`,
+  # `tracker.repo`, `agent.command`, `codex.command`. Returns `""` when
+  # the env var is unset, matching the dotted track's behaviour so
+  # downstream `validate_dispatch_preflight` failures stay identical.
+  defp resolve_env_string(nil), do: nil
+
+  defp resolve_env_string(value) when is_binary(value) do
+    case env_reference_name(value) do
+      {:ok, env_name} -> System.get_env(env_name) || ""
+      :error -> value
+    end
+  end
+
+  # Spec § 6.1 / § 9.1 anchoring. Absolute paths, `~`-paths, `$VAR`
+  # tokens, and `nil`/empty values pass through unchanged.
+  defp anchor_relative_path(nil, _workflow_dir), do: nil
+  defp anchor_relative_path("", _workflow_dir), do: ""
+  defp anchor_relative_path(path, nil) when is_binary(path), do: path
+
+  defp anchor_relative_path(<<"~", _::binary>> = path, _workflow_dir),
+    do: Path.expand(path)
+
+  defp anchor_relative_path(<<"$", _::binary>> = path, _workflow_dir), do: path
+
+  defp anchor_relative_path(path, workflow_dir)
+       when is_binary(path) and is_binary(workflow_dir) do
+    case Path.type(path) do
+      :absolute -> Path.expand(path)
+      _ -> Path.expand(path, workflow_dir)
+    end
+  end
+
+  defp anchor_relative_path(value, _workflow_dir), do: value
 
   defp normalize_keys(value) when is_map(value) do
     Enum.reduce(value, %{}, fn {key, raw_value}, normalized ->

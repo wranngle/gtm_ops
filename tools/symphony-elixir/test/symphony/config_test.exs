@@ -234,4 +234,125 @@ defmodule Symphony.ConfigTest do
     {:ok, list_config} = Config.from_workflow(workflow)
     assert Config.tracker_active_states(list_config) == ["a", "b"]
   end
+
+  describe "typed-track Schema (PR (a) of dual-track migration)" do
+    test "Schema parses ours-only tracker.repo and tracker.issues_root", %{tmp: tmp} do
+      path = Path.join(tmp, "WORKFLOW.md")
+
+      File.write!(path, """
+      ---
+      tracker:
+        kind: github_issues
+        repo: owner/repo
+        issues_root: .symphony/issues
+      ---
+      """)
+
+      {:ok, workflow} = WorkflowLoader.load(path)
+      {:ok, settings} = Symphony.Config.Schema.parse(workflow.config, Path.dirname(path))
+
+      assert settings.tracker.repo == "owner/repo"
+      assert settings.tracker.issues_root == Path.join(tmp, ".symphony/issues")
+    end
+
+    test "Schema parses ours-only agent.command", %{tmp: tmp} do
+      path = Path.join(tmp, "WORKFLOW.md")
+
+      File.write!(path, """
+      ---
+      agent:
+        command: scripts/bin/llm.sh
+      ---
+      """)
+
+      {:ok, workflow} = WorkflowLoader.load(path)
+      {:ok, settings} = Symphony.Config.Schema.parse(workflow.config, Path.dirname(path))
+
+      assert settings.agent.command == "scripts/bin/llm.sh"
+    end
+
+    test "agent.command defaults to codex app-server when unset", %{tmp: tmp} do
+      path = Path.join(tmp, "WORKFLOW.md")
+      File.write!(path, "---\n---\n")
+
+      {:ok, workflow} = WorkflowLoader.load(path)
+      {:ok, settings} = Symphony.Config.Schema.parse(workflow.config, Path.dirname(path))
+
+      assert settings.agent.command == "codex app-server"
+    end
+
+    test "Schema anchors relative workspace.root to the workflow file's directory",
+         %{tmp: tmp} do
+      path = Path.join(tmp, "WORKFLOW.md")
+
+      File.write!(path, """
+      ---
+      workspace:
+        root: .symphony/workspaces
+      ---
+      """)
+
+      {:ok, workflow} = WorkflowLoader.load(path)
+      {:ok, settings} = Symphony.Config.Schema.parse(workflow.config, Path.dirname(path))
+
+      assert settings.workspace.root == Path.join(tmp, ".symphony/workspaces")
+    end
+
+    test "Schema leaves absolute workspace.root unchanged", %{tmp: tmp} do
+      path = Path.join(tmp, "WORKFLOW.md")
+      abs = Path.join(tmp, "abs-ws")
+
+      File.write!(path, """
+      ---
+      workspace:
+        root: #{abs}
+      ---
+      """)
+
+      {:ok, workflow} = WorkflowLoader.load(path)
+      {:ok, settings} = Symphony.Config.Schema.parse(workflow.config, Path.dirname(path))
+
+      assert settings.workspace.root == abs
+    end
+
+    test "Schema resolves $VAR in agent.command and tracker.repo", %{tmp: tmp} do
+      System.put_env("SYMPHONY_TEST_CMD", "/usr/local/bin/llm")
+      System.put_env("SYMPHONY_TEST_REPO", "ourorg/ourrepo")
+
+      path = Path.join(tmp, "WORKFLOW.md")
+
+      File.write!(path, """
+      ---
+      agent:
+        command: $SYMPHONY_TEST_CMD
+      tracker:
+        kind: github_issues
+        repo: $SYMPHONY_TEST_REPO
+      ---
+      """)
+
+      {:ok, workflow} = WorkflowLoader.load(path)
+      {:ok, settings} = Symphony.Config.Schema.parse(workflow.config, Path.dirname(path))
+
+      assert settings.agent.command == "/usr/local/bin/llm"
+      assert settings.tracker.repo == "ourorg/ourrepo"
+    after
+      System.delete_env("SYMPHONY_TEST_CMD")
+      System.delete_env("SYMPHONY_TEST_REPO")
+    end
+
+    test "parse/1 with no anchor leaves relative paths unchanged" do
+      raw = %{
+        "tracker" => %{"kind" => "local_markdown", "issues_root" => ".symphony/issues"},
+        "workspace" => %{"root" => ".symphony/workspaces"}
+      }
+
+      {:ok, settings} = Symphony.Config.Schema.parse(raw)
+
+      assert settings.tracker.issues_root == ".symphony/issues"
+      # workspace.root has its own default-fallback path; relative paths
+      # without an anchor stay relative.
+      assert settings.workspace.root == ".symphony/workspaces"
+    end
+  end
 end

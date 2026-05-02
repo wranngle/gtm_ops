@@ -192,9 +192,19 @@ Proceed with the migration as a multi-PR sequence in the order
 above. The Schema additions (PR a) are independently useful and
 unblock the rest. Until then, both tracks remain.
 
-The smallest follow-up that delivers operational value: PR (a)
-alone, which eliminates "Schema doesn't know about it" as a reason
-for `tracker_repo`, `tracker_issues_root`, and `agent_command` to
-live in the dotted track. Even without migrating any consumers,
-this would let new code reach for `settings!().tracker.repo`
-naturally, slowing dotted-track growth.
+## Status updates
+
+  - **2026-05-02 — PR (a) landed.** `Schema.Tracker` gained `:repo`
+    and `:issues_root`; `Schema.Agent` gained `:command`; `Schema`
+    gained a 2-arity `parse/2` overload that anchors relative
+    `workspace.root` and `tracker.issues_root` against
+    `Path.dirname(workflow.source_path)` per spec § 6.1 / § 9.1;
+    `Schema` gained `$VAR` resolution for `tracker.repo`,
+    `agent.command`, `codex.command` mirroring the dotted track's
+    `@env_resolvable`. `Symphony.Config.settings/0` and
+    `Symphony.Config.maybe_settings/0` now thread the workflow
+    directory into `parse/2`. 7 new tests in `config_test.exs`
+    cover the additions. 321 tests + 3 doctests green. The four
+    "Schema lacks X" gaps in the section above are now closed; the
+    only remaining blocker for collapsing the dotted track is the
+    consumer migration (PRs b and c).

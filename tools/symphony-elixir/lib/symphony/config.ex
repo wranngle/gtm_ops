@@ -104,8 +104,8 @@ defmodule Symphony.Config do
   @spec settings() :: {:ok, Schema.t()} | {:error, term()}
   def settings do
     case Workflow.current() do
-      {:ok, %{config: config}} when is_map(config) ->
-        Schema.parse(config)
+      {:ok, %{config: config} = workflow} when is_map(config) ->
+        Schema.parse(config, workflow_dir(workflow))
 
       {:ok, _other} ->
         {:error, :workflow_front_matter_not_a_map}
@@ -114,6 +114,9 @@ defmodule Symphony.Config do
         {:error, reason}
     end
   end
+
+  defp workflow_dir(%{source_path: path}) when is_binary(path), do: Path.dirname(path)
+  defp workflow_dir(_), do: nil
 
   @doc """
   Upstream-compatible workflow-prompt accessor. Returns the prompt body
@@ -214,8 +217,8 @@ defmodule Symphony.Config do
   defp maybe_settings do
     if function_exported?(Workflow, :current, 0) do
       case Workflow.current() do
-        {:ok, %{config: config}} when is_map(config) ->
-          case Schema.parse(config) do
+        {:ok, %{config: config} = workflow} when is_map(config) ->
+          case Schema.parse(config, workflow_dir(workflow)) do
             {:ok, parsed} -> {:ok, parsed}
             {:error, _reason} = err -> err
           end
