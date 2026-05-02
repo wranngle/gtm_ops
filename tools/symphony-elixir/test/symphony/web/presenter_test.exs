@@ -144,4 +144,32 @@ defmodule Symphony.Web.PresenterTest do
     assert payload.status == "running"
     assert payload.running.session_id == "s"
   end
+
+  describe "refresh_payload/1" do
+    test "wraps a successful Orchestrator.request_refresh with operations + requested_at" do
+      stub = fn -> {:ok, %{queued: true, coalesced: false}} end
+      assert {:ok, payload} = Presenter.refresh_payload(stub)
+      assert payload.queued == true
+      assert payload.coalesced == false
+      assert payload.operations == ["poll", "reconcile"]
+      assert is_binary(payload.requested_at)
+      # ISO-8601 second-truncated; ends with Z.
+      assert String.ends_with?(payload.requested_at, "Z")
+    end
+
+    test "preserves coalesced=true when the orchestrator coalesces an in-flight refresh" do
+      stub = fn -> {:ok, %{queued: true, coalesced: true}} end
+      assert {:ok, %{coalesced: true, queued: true}} = Presenter.refresh_payload(stub)
+    end
+
+    test "passes through :unavailable" do
+      stub = fn -> {:error, :unavailable} end
+      assert {:error, :unavailable} = Presenter.refresh_payload(stub)
+    end
+
+    test "passes through :timeout" do
+      stub = fn -> {:error, :timeout} end
+      assert {:error, :timeout} = Presenter.refresh_payload(stub)
+    end
+  end
 end

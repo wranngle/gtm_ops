@@ -135,5 +135,109 @@ defmodule Symphony.Web.ObservabilityApiControllerTest do
       body = Jason.decode!(conn.resp_body)
       assert body["error"]["code"] == "method_not_allowed"
     end
+
+    test "POST /api/v1/state rejects with 405 (matches upstream extensions_test)" do
+      conn = build_conn(:post, "/api/v1/state")
+      conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
+
+      assert conn.status == 405
+      assert Jason.decode!(conn.resp_body) ==
+               %{"error" => %{"code" => "method_not_allowed", "message" => "Method not allowed"}}
+    end
+
+    test "GET /api/v1/refresh rejects with 405 (refresh is POST-only)" do
+      conn = build_conn(:get, "/api/v1/refresh")
+      conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
+
+      assert conn.status == 405
+      assert Jason.decode!(conn.resp_body)["error"]["code"] == "method_not_allowed"
+    end
+
+    test "POST / (root) rejects with 405 — LiveView dashboard handles GET only" do
+      conn = build_conn(:post, "/")
+      conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
+
+      assert conn.status == 405
+      assert Jason.decode!(conn.resp_body)["error"]["code"] == "method_not_allowed"
+    end
+
+    test "POST /api/v1/MT-1 (per-issue path with non-GET) rejects with 405" do
+      conn = build_conn(:post, "/api/v1/MT-1")
+      conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
+
+      assert conn.status == 405
+      assert Jason.decode!(conn.resp_body)["error"]["code"] == "method_not_allowed"
+    end
+  end
+
+  describe "GET /api/v1/:issue_identifier" do
+    test "returns 200 + per-issue payload when the issue is running" do
+      now = DateTime.utc_now()
+
+      Symphony.WebCase.start_stub_snapshot!(%{
+        running: [
+          %{
+            issue_id: "id-1",
+            identifier: "WGTE-007",
+            state: "in_progress",
+            phase: :running,
+            status: :running,
+            session_id: "sess",
+            last_codex_event: :session_started,
+            last_codex_timestamp: now,
+            last_codex_message: nil,
+            codex_input_tokens: 0,
+            codex_output_tokens: 0,
+            codex_total_tokens: 0,
+            turn_count: 1,
+            started_at: now
+          }
+        ],
+        retrying: [],
+        codex_totals: %{input_tokens: 0, output_tokens: 0, total_tokens: 0, seconds_running: 0},
+        rate_limits: nil,
+        workflow_loaded: true,
+        tracker_kind: :local_markdown,
+        last_tick_at: nil
+      })
+
+      conn = build_conn(:get, "/api/v1/WGTE-007")
+      conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
+
+      assert conn.status == 200
+      body = Jason.decode!(conn.resp_body)
+      assert body["identifier"] == "WGTE-007"
+      assert body["status"] == "running"
+    end
+
+    test "returns 404 + issue_not_found when the issue is not in the snapshot" do
+      Symphony.WebCase.start_stub_snapshot!(%{
+        running: [],
+        retrying: [],
+        codex_totals: %{input_tokens: 0, output_tokens: 0, total_tokens: 0, seconds_running: 0},
+        rate_limits: nil,
+        workflow_loaded: true,
+        tracker_kind: :local_markdown,
+        last_tick_at: nil
+      })
+
+      conn = build_conn(:get, "/api/v1/MT-MISSING")
+      conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
+
+      assert conn.status == 404
+      assert Jason.decode!(conn.resp_body) ==
+               %{"error" => %{"code" => "issue_not_found", "message" => "Issue not found"}}
+    end
+  end
+
+  describe "POST /api/v1/refresh" do
+    test "returns 503 + orchestrator_unavailable when orchestrator isn't running" do
+      conn = build_conn(:post, "/api/v1/refresh")
+      conn = Symphony.Web.Endpoint.call(conn, Symphony.Web.Endpoint.init([]))
+
+      assert conn.status == 503
+      body = Jason.decode!(conn.resp_body)
+      assert body["error"]["code"] == "orchestrator_unavailable"
+    end
   end
 end

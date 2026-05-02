@@ -60,6 +60,43 @@ defmodule Symphony.Web.Presenter do
     end
   end
 
+  @doc """
+  Build the refresh-request payload for `POST /api/v1/refresh`. Calls
+  `Symphony.Orchestrator.request_refresh/0` and shapes the response into
+  the upstream-compatible body (`queued`, `coalesced`, `operations`,
+  `requested_at`). The 4th `refresh_fun` arg lets tests inject a stub
+  without booting the orchestrator.
+
+  Mirrors upstream `SymphonyElixirWeb.Presenter.refresh_payload/1` but
+  takes a 0-arity function instead of an orchestrator name (matches our
+  `state_payload/issue_payload` injection seam).
+  """
+  @type refresh_fun :: (-> {:ok, map()} | {:error, :unavailable | :timeout})
+
+  @spec refresh_payload(refresh_fun() | nil) ::
+          {:ok, map()} | {:error, :unavailable | :timeout}
+  def refresh_payload(refresh_fun \\ nil) do
+    refresh_fun = refresh_fun || (&Symphony.Orchestrator.request_refresh/0)
+    requested_at = DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+
+    case refresh_fun.() do
+      {:ok, %{queued: queued, coalesced: coalesced}} ->
+        {:ok,
+         %{
+           queued: queued,
+           coalesced: coalesced,
+           operations: ["poll", "reconcile"],
+           requested_at: requested_at
+         }}
+
+      {:error, reason} when reason in [:unavailable, :timeout] ->
+        {:error, reason}
+
+      _ ->
+        {:error, :unavailable}
+    end
+  end
+
   @doc "Issue-specific projection (drill-down). Returns `{:ok, map} | {:error, :issue_not_found}`."
   @spec issue_payload(String.t(), snapshot_fun() | nil) ::
           {:ok, map()} | {:error, :issue_not_found | :unavailable}

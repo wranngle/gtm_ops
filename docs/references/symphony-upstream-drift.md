@@ -278,9 +278,18 @@ in priority order:
    All four Schema gaps closed. Next move: PR (b) — migrate ~15 lib
    files away from `config.resolved`/dotted getters to typed-struct
    access.
-2. Port the missing observability API endpoints (`refresh`, per-issue,
-   405 catch-alls) so the upstream `extensions_test.exs` becomes
-   un-parkable.
+2. ~~Port the missing observability API endpoints~~ — **done
+   2026-05-02**. Initial drift map was wrong about scope: `/api/v1/state`,
+   `/api/v1/:issue_identifier`, and most 405 catches were already
+   present. What was actually missing: `POST /api/v1/refresh` (action +
+   route + 405 catch), `Presenter.refresh_payload/0` wrapping
+   `Orchestrator.request_refresh/0`, and a `match :*` for `/` so
+   `POST /` returns 405 JSON instead of Phoenix's default 404. All
+   landed; 5 new controller tests + 4 new presenter tests cover the
+   refresh shape, 405 catches for `/api/v1/state`, `/api/v1/refresh`,
+   `/`, and `/api/v1/MT-1` (matching upstream `extensions_test.exs`).
+   `extensions_test.exs.todo_needs_linear_adapter_graphql_facade`
+   itself remains parked on item #3 (Linear adapter shape).
 3. Decide on the Linear adapter shape: rewrite ours so the
    `Client.graphql/2` test seam works (matches upstream), or document
    the deviation and rewrite the parked test.

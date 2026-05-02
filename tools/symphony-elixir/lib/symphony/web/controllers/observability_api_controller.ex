@@ -42,6 +42,22 @@ defmodule Symphony.Web.ObservabilityApiController do
     end
   end
 
+  @spec refresh(Conn.t(), map()) :: Conn.t()
+  def refresh(conn, _params) do
+    case Presenter.refresh_payload() do
+      {:ok, payload} ->
+        conn
+        |> put_status(202)
+        |> json(payload)
+
+      {:error, :unavailable} ->
+        error_response(conn, 503, "orchestrator_unavailable", "Orchestrator is unavailable")
+
+      {:error, :timeout} ->
+        error_response(conn, 504, "timeout", "Refresh request timed out")
+    end
+  end
+
   @spec method_not_allowed(Conn.t(), map()) :: Conn.t()
   def method_not_allowed(conn, _params) do
     error_response(conn, 405, "method_not_allowed", "Method not allowed")
