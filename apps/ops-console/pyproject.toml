@@ -7,6 +7,9 @@ dependencies = [
     "streamlit>=1.40,<2.0",
 ]
 
+[tool.setuptools]
+py-modules = ["domain", "main", "observability_client"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",

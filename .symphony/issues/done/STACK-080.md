@@ -38,3 +38,9 @@ This is a validator/documentation gap only. It should not change app behavior.
 - `docs/QUALITY_SCORE.md` row "Repo knowledge base".
 - `docs/references/doc-gardener.md`.
 
+## Completion note
+
+`scripts/validate-knowledge-base.sh` now resolves local Markdown links across
+owned docs, validates top-level docs/index coverage, checks key docs
+subdirectory coverage, and keeps design-doc status plus last-reviewed metadata
+mandatory. The generated/reference exclusions remain explicit.
