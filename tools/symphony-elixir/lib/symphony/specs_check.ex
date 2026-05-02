@@ -118,7 +118,18 @@ defmodule Symphony.SpecsCheck do
 
   defp consume_form({:@, _, _}, state, _module_name, _file, _exemptions), do: state
 
+  # Bodyless `def name(arg \\ default)` headers (used to declare a
+  # default-arg shape before the bodied clauses) are still public
+  # function declarations — treat them the same as bodied defs.
+  defp consume_form({:def, meta, [head_ast]}, state, module_name, file, exemptions) do
+    consume_def(head_ast, meta, state, module_name, file, exemptions)
+  end
+
   defp consume_form({:def, meta, [head_ast, _]} = _form, state, module_name, file, exemptions) do
+    consume_def(head_ast, meta, state, module_name, file, exemptions)
+  end
+
+  defp consume_def(head_ast, meta, state, module_name, file, exemptions) do
     {name, arity} = def_head_to_identifier(head_ast)
 
     id = {name, arity}

@@ -31,8 +31,14 @@ defmodule Symphony.CLI do
   @top_switches [workflow: :string, help: :boolean]
   @top_aliases [h: :help]
 
-  @serve_switches [port: :integer, host: :string]
-  @once_switches [dry_run: :boolean, limit: :integer]
+  # `--workflow` is also accepted on every subcommand line so users can
+  # write either `symphony --workflow X validate` or `symphony validate
+  # --workflow X`. Each subcommand strips and applies the override
+  # before its own parse.
+  @serve_switches [port: :integer, host: :string, workflow: :string]
+  @once_switches [dry_run: :boolean, limit: :integer, workflow: :string]
+  @validate_switches [workflow: :string]
+  @list_switches [workflow: :string]
 
   @spec main([String.t()]) :: no_return() | :ok
   def main(argv) do
@@ -106,7 +112,8 @@ defmodule Symphony.CLI do
   end
 
   defp dispatch(["validate" | rest], deps) do
-    {_opts, _, _} = OptionParser.parse(rest, strict: [])
+    {opts, _, _} = OptionParser.parse(rest, strict: @validate_switches)
+    apply_workflow_override(opts, deps)
 
     case ensure_workflow_and_started(deps) do
       {:ok, workflow} ->
@@ -128,7 +135,8 @@ defmodule Symphony.CLI do
   end
 
   defp dispatch(["list" | rest], deps) do
-    {_opts, _, _} = OptionParser.parse(rest, strict: [])
+    {opts, _, _} = OptionParser.parse(rest, strict: @list_switches)
+    apply_workflow_override(opts, deps)
 
     with {:ok, workflow} <- ensure_workflow_and_started(deps),
          {:ok, config} <- Config.from_workflow(workflow),
@@ -148,6 +156,7 @@ defmodule Symphony.CLI do
 
   defp dispatch(["once" | rest], deps) do
     {opts, _, _} = OptionParser.parse(rest, strict: @once_switches)
+    apply_workflow_override(opts, deps)
     dry_run? = Keyword.get(opts, :dry_run, false)
     limit = Keyword.get(opts, :limit, 1)
 
@@ -186,6 +195,7 @@ defmodule Symphony.CLI do
 
   defp dispatch(["serve" | rest], deps) do
     {opts, _, _} = OptionParser.parse(rest, strict: @serve_switches)
+    apply_workflow_override(opts, deps)
     port = Keyword.get(opts, :port)
     host = Keyword.get(opts, :host)
 
@@ -221,6 +231,24 @@ defmodule Symphony.CLI do
       OptionParser.parse_head(argv, strict: @top_switches, aliases: @top_aliases)
 
     {opts, rest}
+  end
+
+  # Subcommand-level `--workflow` handler. Mirrors the top-level path
+  # but only fires when the user passed `--workflow` AFTER the
+  # subcommand. Like the top-level handler, we must `ensure_started`
+  # before `put_env` so the OTP boot's `.app` env reload doesn't
+  # clobber the override.
+  defp apply_workflow_override(opts, deps) do
+    case Keyword.get(opts, :workflow) do
+      nil ->
+        :ok
+
+      path when is_binary(path) ->
+        case deps.ensure_started.() do
+          :ok -> override_workflow_path(path)
+          _ -> :ok
+        end
+    end
   end
 
   defp override_workflow_path(path) when is_binary(path) do

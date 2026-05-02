@@ -1383,6 +1383,7 @@ defmodule Symphony.Codex.AppServer do
   # adapter sanity-check workspaces before opening a port (mirrors §
   # 9.5).
   @doc false
+  @spec assert_inside_workspace_root!(Config.t(), Path.t()) :: :ok
   def assert_inside_workspace_root!(config, workspace) do
     WorkspaceManager.assert_inside_root!(Config.workspace_root(config), workspace)
   end

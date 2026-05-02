@@ -19,6 +19,7 @@ defmodule Symphony.Logging.Sink do
 
   # ============== Public API ==============
 
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, Keyword.get(opts, :sink, :stderr), name: __MODULE__)
   end

@@ -139,6 +139,7 @@ defmodule Symphony.Tracker.GitHubIssues do
   end
 
   @doc false
+  @spec from_gh_payload(map()) :: Issue.t()
   def from_gh_payload(payload) do
     number = to_string(payload["number"])
     label_names = get_label_names(payload["labels"])
@@ -195,6 +196,7 @@ defmodule Symphony.Tracker.GitHubIssues do
   end
 
   @doc false
+  @spec parse_blocked_by_body(binary() | nil) :: [%{id: nil, identifier: binary(), state: nil}]
   def parse_blocked_by_body(nil), do: []
 
   def parse_blocked_by_body(body) do
