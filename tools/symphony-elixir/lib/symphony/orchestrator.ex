@@ -1,45 +1,74 @@
 defmodule Symphony.Orchestrator do
   @moduledoc """
-  GenServer that owns the Symphony orchestrator state, per spec section 7.
+  Symphony orchestrator GenServer.
 
-  Lifecycle:
+  Owns the scheduling state for the entire daemon: the running map, the
+  per-issue claim set, the retry queue, codex token totals, and the live
+  rate-limit payload. Other components (workflow store, status surface)
+  push and pull through this server's API; workers communicate exclusively
+  by message.
 
-    1. Init loads `WORKFLOW.md` via `WorkflowLoader` and builds a typed
-       `Symphony.Config` view.
-    2. A poll timer fires every `polling.interval_ms` (typed config getter).
-    3. Each tick:
-       a. Reconcile running runs (no-op while running map is always empty).
-       b. Validate config preflight; on failure, skip dispatch this tick.
-       c. Fetch candidate issues from the configured tracker adapter.
-       d. Sort by `(priority asc, created_at asc, identifier asc)`.
-       e. Dispatch up to `agent.max_concurrent_agents - running_count` issues.
-          (T-4: log-only — no real subprocess spawn yet.)
+  Tick lifecycle (spec § 8.1):
 
-  T-4 scope:
-    * Wire Config into the GenServer state.
-    * Resolve a tracker adapter via `Symphony.Tracker.adapter_for/1`.
-    * Run the tick sequence with bounded concurrency, log-only dispatch.
-    * Track `running` and `claimed` maps so future slices can plug real
-      runners in without restructuring state.
+    1. Reconcile running issues
+       - Stall detection (spec § 8.5 part A): kill workers whose
+         `last_codex_timestamp` (or `started_at`) is older than
+         `codex.stall_timeout_ms`. Schedules a failure-driven retry.
+       - Tracker state refresh (spec § 8.5 part B): for each running
+         issue, fetch its current tracker state. Terminate workers whose
+         issue moved to terminal (workspace cleanup) or non-active
+         (no cleanup); refresh the snapshot otherwise.
+    2. Validate dispatch preflight (spec § 6.3 / § 8.1).
+    3. Fetch candidate issues and sort (spec § 8.2).
+    4. Dispatch up to `max_concurrent_agents - running_count`, respecting
+       per-state caps (spec § 8.3).
 
-  Real subprocess dispatch lands in T-6. Real tracker adapters land in T-7.
+  Worker spawn (STACK-011):
+
+    Each dispatched issue becomes a `Task` under `Symphony.WorkerSupervisor`.
+    The worker walks the spec § 7.2 phases (PreparingWorkspace ->
+    BuildingPrompt -> LaunchingAgentProcess -> InitializingSession ->
+    StreamingTurn -> Finishing -> Succeeded/Failed). Phase transitions
+    and live-session updates flow back as `{:worker_phase, ...}` and
+    `{:codex_worker_update, ...}` messages.
+
+  Retry / backoff (spec § 8.4):
+
+    * Clean worker exit -> `:continuation` retry at +1000ms.
+    * Abnormal exit / stall -> `:failure` retry with exponential backoff
+      delegated to `Symphony.RetryQueue.next_attempt/3`.
+
+  Snapshot (spec § 13.3, § 13.5):
+
+    Returns `{:ok, %{running: [...], retrying: [...], codex_totals: ...,
+    rate_limits: ..., last_tick_at: ..., tracker_kind: ...}}`. The
+    `seconds_running` aggregate is composed of cumulative completed-session
+    time plus active-session elapsed time computed at snapshot time.
   """
 
   use GenServer
   require Logger
 
-  alias Symphony.{Config, Logging, RetryQueue, Tracker, WorkflowLoader}
+  alias Symphony.{
+    AgentRunner,
+    Config,
+    LiveSession,
+    Logging,
+    RetryQueue,
+    RunAttempt,
+    Tracker,
+    WorkflowLoader,
+    WorkspaceManager
+  }
 
-  @type state :: %{
-          required(:config) => Config.t() | nil,
-          required(:adapter) => module() | nil,
-          required(:running) => map(),
-          required(:claimed) => MapSet.t(),
-          required(:retry_attempts) => map(),
-          required(:codex_totals) => map(),
-          required(:rate_limits) => map() | nil,
-          required(:last_tick_at) => DateTime.t() | nil
-        }
+  @worker_supervisor Symphony.WorkerSupervisor
+
+  @initial_codex_totals %{
+    input_tokens: 0,
+    output_tokens: 0,
+    total_tokens: 0,
+    seconds_running: 0
+  }
 
   @initial_state %{
     config: nil,
@@ -47,14 +76,11 @@ defmodule Symphony.Orchestrator do
     running: %{},
     claimed: MapSet.new(),
     retry_attempts: %{},
-    codex_totals: %{
-      input_tokens: 0,
-      output_tokens: 0,
-      total_tokens: 0,
-      seconds_running: 0
-    },
+    codex_totals: @initial_codex_totals,
     rate_limits: nil,
-    last_tick_at: nil
+    last_tick_at: nil,
+    startup_cleanup_done?: false,
+    poll_interval_override_ms: nil
   }
 
   # ============== Public API ==============
@@ -63,9 +89,6 @@ defmodule Symphony.Orchestrator do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  # Spec § 13.3 recommends returning either `:timeout` or `:unavailable`
-  # for snapshot error modes so monitoring callers can distinguish "the
-  # daemon isn't running" from "the daemon is busy".
   @spec snapshot() :: {:ok, map()} | {:error, :unavailable | :timeout}
   def snapshot do
     case GenServer.whereis(__MODULE__) do
@@ -74,7 +97,7 @@ defmodule Symphony.Orchestrator do
 
       pid ->
         try do
-          GenServer.call(pid, :snapshot, 5_000)
+          GenServer.call(pid, :snapshot, 10_000)
         catch
           :exit, {:timeout, _} -> {:error, :timeout}
           :exit, {:noproc, _} -> {:error, :unavailable}
@@ -86,7 +109,7 @@ defmodule Symphony.Orchestrator do
   def apply_workflow(workflow) do
     case GenServer.whereis(__MODULE__) do
       nil -> {:error, :unavailable}
-      pid -> GenServer.call(pid, {:apply_workflow, workflow}, 5_000)
+      pid -> GenServer.call(pid, {:apply_workflow, workflow}, 10_000)
     end
   end
 
@@ -95,7 +118,31 @@ defmodule Symphony.Orchestrator do
   def tick_now do
     case GenServer.whereis(__MODULE__) do
       nil -> {:error, :unavailable}
-      pid -> GenServer.call(pid, :tick_now, 10_000)
+      pid -> GenServer.call(pid, :tick_now, 30_000)
+    end
+  end
+
+  @doc """
+  Test seam: replace the running map with a synthetic entry. Used by
+  unit tests that need to exercise stall detection or reconciliation
+  without spawning a real worker.
+  """
+  @spec inject_running(binary(), map()) :: :ok | {:error, :unavailable}
+  def inject_running(issue_id, entry) when is_binary(issue_id) and is_map(entry) do
+    case GenServer.whereis(__MODULE__) do
+      nil -> {:error, :unavailable}
+      pid -> GenServer.call(pid, {:inject_running, issue_id, entry}, 5_000)
+    end
+  end
+
+  @doc """
+  Test seam: swap the tracker adapter to a test-only module.
+  """
+  @spec set_adapter(module()) :: :ok | {:error, :unavailable}
+  def set_adapter(module) when is_atom(module) do
+    case GenServer.whereis(__MODULE__) do
+      nil -> {:error, :unavailable}
+      pid -> GenServer.call(pid, {:set_adapter, module}, 5_000)
     end
   end
 
@@ -104,6 +151,10 @@ defmodule Symphony.Orchestrator do
   @impl true
   def init(_opts) do
     state = build_initial_state()
+
+    # Spec § 8.6 startup terminal workspace cleanup. Best-effort: a fetch
+    # failure is logged and ignored so the daemon still boots.
+    state = run_terminal_workspace_cleanup(state)
     schedule_tick(poll_interval(state))
     {:ok, state}
   end
@@ -122,11 +173,117 @@ defmodule Symphony.Orchestrator do
     {:reply, :ok, run_tick(state)}
   end
 
+  def handle_call({:inject_running, issue_id, entry}, _from, state) do
+    new_state = %{
+      state
+      | running: Map.put(state.running, issue_id, entry),
+        claimed: MapSet.put(state.claimed, issue_id)
+    }
+
+    {:reply, :ok, new_state}
+  end
+
+  def handle_call({:set_adapter, module}, _from, state) do
+    {:reply, :ok, %{state | adapter: module}}
+  end
+
   @impl true
   def handle_info(:tick, state) do
     new_state = run_tick(state)
     schedule_tick(poll_interval(new_state))
     {:noreply, new_state}
+  end
+
+  # ---- Worker lifecycle messages ----
+
+  def handle_info({:worker_phase, issue_id, phase, payload}, state)
+      when is_binary(issue_id) and is_atom(phase) and is_map(payload) do
+    case Map.get(state.running, issue_id) do
+      nil ->
+        {:noreply, state}
+
+      entry ->
+        %RunAttempt{} = attempt = entry.attempt || %RunAttempt{}
+
+        new_attempt = %RunAttempt{
+          attempt
+          | phase: phase,
+            status: phase_status(phase),
+            error: payload[:error] || attempt.error,
+            workspace_path: payload[:workspace_path] || attempt.workspace_path
+        }
+
+        new_running = Map.put(state.running, issue_id, %{entry | attempt: new_attempt})
+        {:noreply, %{state | running: new_running}}
+    end
+  end
+
+  def handle_info({:codex_worker_update, issue_id, %{event: _, timestamp: _} = update}, state)
+      when is_binary(issue_id) do
+    case Map.get(state.running, issue_id) do
+      nil ->
+        {:noreply, state}
+
+      entry ->
+        new_session = integrate_codex_update(entry.session, update)
+        new_running = Map.put(state.running, issue_id, %{entry | session: new_session})
+        {:noreply, %{state | running: new_running}}
+    end
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
+    case find_issue_id_for_ref(state.running, ref) do
+      nil ->
+        {:noreply, state}
+
+      issue_id ->
+        {entry, state_after_pop} = pop_running_entry(state, issue_id)
+        state_after_pop = record_session_completion_totals(state_after_pop, entry)
+
+        new_state =
+          case reason do
+            :normal ->
+              # Spec § 7.1: clean worker exit -> 1s continuation retry so
+              # the orchestrator can re-check whether the issue still
+              # needs another worker session.
+              Logger.info(
+                "symphony.worker.exit outcome=normal issue_id=#{issue_id} identifier=#{entry_identifier(entry)}"
+              )
+
+              state_after_pop
+              |> complete_issue(issue_id)
+              |> schedule_issue_retry(issue_id, entry, :continuation, nil)
+
+            other ->
+              Logger.warning(
+                "symphony.worker.exit outcome=abnormal issue_id=#{issue_id} identifier=#{entry_identifier(entry)} reason=#{inspect(other)}"
+              )
+
+              schedule_issue_retry(state_after_pop, issue_id, entry, :failure,
+                "agent exited: #{inspect(other)}"
+              )
+          end
+
+        {:noreply, new_state}
+    end
+  end
+
+  def handle_info({:retry_due, issue_id, retry_token}, state) do
+    case Map.get(state.retry_attempts, issue_id) do
+      %{retry_token: ^retry_token} = retry_entry ->
+        # Re-fetch the issue and re-dispatch if still candidate-eligible.
+        new_state = handle_retry_due(state, issue_id, retry_entry)
+        {:noreply, new_state}
+
+      _ ->
+        # Stale timer (token mismatch or already cleared); ignore.
+        {:noreply, state}
+    end
+  end
+
+  def handle_info(msg, state) do
+    Logger.debug("symphony.orchestrator.ignored_message #{inspect(msg)}")
+    {:noreply, state}
   end
 
   # ============== State construction ==============
@@ -165,14 +322,13 @@ defmodule Symphony.Orchestrator do
   defp run_tick(state) do
     state
     |> reconcile_running()
-    |> redeem_retries()
     |> dispatch_with_preflight()
     |> Map.put(:last_tick_at, DateTime.utc_now())
   end
 
-  # Spec § 6.3 / § 8.1: per-tick dispatch preflight validation. On
-  # failure, skip dispatch but keep reconciliation active and emit an
-  # operator-visible warning.
+  # Spec § 6.3 / § 8.1: per-tick dispatch preflight. On failure, skip
+  # dispatch but keep reconciliation active and emit an operator-visible
+  # warning.
   defp dispatch_with_preflight(state) do
     case Config.validate_dispatch_preflight(state.config) do
       :ok ->
@@ -192,76 +348,136 @@ defmodule Symphony.Orchestrator do
     end
   end
 
+  # Spec § 8.5: stall detection + tracker state refresh.
   defp reconcile_running(state) do
-    # Spec section 8.5 part B: tracker state refresh for running issues.
-    # The current state map has no real workers yet (dispatch is log-only
-    # until the orchestrator wires Task supervision in a follow-up slice),
-    # so the refresh path is a stub that exercises the tracker call to
-    # verify the adapter is healthy.
-    case state.adapter do
-      nil ->
+    state
+    |> reconcile_stalled_running_issues()
+    |> reconcile_tracker_states()
+  end
+
+  # Spec § 8.5 part A: stall detection. Kill any worker whose elapsed
+  # time since `last_codex_timestamp` (or `started_at`) exceeds
+  # `codex.stall_timeout_ms`; queue a failure retry.
+  defp reconcile_stalled_running_issues(%{config: config} = state) do
+    timeout_ms = stall_timeout_ms(config)
+
+    cond do
+      timeout_ms <= 0 -> state
+      map_size(state.running) == 0 -> state
+      true -> do_reconcile_stalls(state, timeout_ms)
+    end
+  end
+
+  defp do_reconcile_stalls(state, timeout_ms) do
+    now = DateTime.utc_now()
+
+    Enum.reduce(state.running, state, fn {issue_id, entry}, acc ->
+      elapsed_ms = stall_elapsed_ms(entry, now)
+
+      if is_integer(elapsed_ms) and elapsed_ms > timeout_ms do
+        Logging.emit(:warning, "symphony.reconcile.stall", :failure,
+          issue: entry_identifier(entry),
+          fields: %{issue_id: issue_id, elapsed_ms: elapsed_ms, timeout_ms: timeout_ms}
+        )
+
+        Logger.warning(
+          "symphony.reconcile.stall issue_id=#{issue_id} identifier=#{entry_identifier(entry)} elapsed_ms=#{elapsed_ms} timeout_ms=#{timeout_ms}"
+        )
+
+        acc
+        |> terminate_worker_for(issue_id, false)
+        |> schedule_issue_retry(
+          issue_id,
+          entry,
+          :failure,
+          "stalled for #{elapsed_ms}ms without codex activity"
+        )
+      else
+        acc
+      end
+    end)
+  end
+
+  defp stall_elapsed_ms(%{session: %LiveSession{last_codex_timestamp: %DateTime{} = ts}}, now) do
+    max(0, DateTime.diff(now, ts, :millisecond))
+  end
+
+  defp stall_elapsed_ms(%{started_at: %DateTime{} = ts}, now) do
+    max(0, DateTime.diff(now, ts, :millisecond))
+  end
+
+  defp stall_elapsed_ms(_entry, _now), do: nil
+
+  # Spec § 8.5 part B: tracker state refresh. Terminate workers when
+  # their issue goes terminal (with workspace cleanup) or non-active
+  # (no cleanup); refresh the snapshot otherwise.
+  defp reconcile_tracker_states(%{adapter: nil} = state), do: state
+  defp reconcile_tracker_states(%{running: running} = state) when map_size(running) == 0, do: state
+
+  defp reconcile_tracker_states(%{adapter: adapter, config: config} = state) do
+    ids = Map.keys(state.running)
+
+    case adapter.fetch_issue_states_by_ids(config, ids) do
+      {:ok, states} when is_map(states) ->
+        terminal = MapSet.new(Enum.map(Config.tracker_terminal_states(config), &normalize_state/1))
+        active = MapSet.new(Enum.map(Config.tracker_active_states(config), &normalize_state/1))
+        apply_tracker_state_refresh(state, states, terminal, active)
+
+      {:error, reason} ->
+        Logging.emit(:warning, "symphony.reconcile.refresh_failed", :failure,
+          message: "tracker state refresh failed; keeping workers running",
+          fields: %{reason: inspect(reason)}
+        )
+
         state
+    end
+  end
 
-      adapter ->
-        if map_size(state.running) == 0 do
-          state
-        else
-          ids = Map.keys(state.running)
+  defp apply_tracker_state_refresh(state, states, terminal, active) do
+    Enum.reduce(states, state, fn {issue_id, raw_state}, acc ->
+      norm = normalize_state(raw_state)
 
-          case adapter.fetch_issue_states_by_ids(state.config, ids) do
-            {:ok, states} ->
-              Logging.emit(:debug, "symphony.reconcile.refreshed", :success,
-                fields: %{
-                  refreshed_count: map_size(states),
-                  running_count: map_size(state.running)
-                }
-              )
+      cond do
+        MapSet.member?(terminal, norm) ->
+          Logger.info(
+            "symphony.reconcile.terminal issue_id=#{issue_id} state=#{raw_state}; stopping worker and cleaning workspace"
+          )
 
-              state
+          terminate_worker_for(acc, issue_id, true)
 
-            {:error, reason} ->
-              Logging.emit(:warning, "symphony.reconcile.failed", :failure,
-                message: "tracker state refresh failed",
-                fields: %{reason: inspect(reason)}
-              )
+        MapSet.member?(active, norm) ->
+          # Active state — refresh in-memory snapshot.
+          case Map.get(acc.running, issue_id) do
+            nil ->
+              acc
 
-              state
+            entry ->
+              %RunAttempt{} = attempt = entry.attempt || %RunAttempt{}
+              attempt = %RunAttempt{attempt | issue_id: issue_id}
+              %{acc | running: Map.put(acc.running, issue_id, %{entry | attempt: attempt})}
           end
-        end
-    end
+
+        true ->
+          Logger.info(
+            "symphony.reconcile.non_active issue_id=#{issue_id} state=#{raw_state}; stopping worker"
+          )
+
+          terminate_worker_for(acc, issue_id, false)
+      end
+    end)
   end
 
-  defp redeem_retries(state) do
-    now_ms = System.monotonic_time(:millisecond)
-    due = RetryQueue.due(state.retry_attempts, now_ms)
-
-    if due == [] do
-      state
-    else
-      Logging.emit(:debug, "symphony.retry.redeem", :success,
-        fields: %{redeem_count: length(due)}
-      )
-
-      retries_after =
-        Enum.reduce(due, state.retry_attempts, fn entry, acc ->
-          Map.delete(acc, entry.issue_id)
-        end)
-
-      claimed_after =
-        Enum.reduce(due, state.claimed, fn entry, acc ->
-          MapSet.delete(acc, entry.issue_id)
-        end)
-
-      %{state | retry_attempts: retries_after, claimed: claimed_after}
-    end
-  end
+  # ============== Dispatch ==============
 
   defp dispatch_eligible(state) do
     config = state.config
     available = available_slots(state)
 
     if available <= 0 do
-      Logger.debug("symphony.dispatch.skipped reason=no_slots running=#{map_size(state.running)}")
+      Logger.debug(
+        "symphony.dispatch.skipped reason=no_slots running=#{map_size(state.running)}"
+      )
+
       state
     else
       case state.adapter.fetch_candidate_issues(config) do
@@ -269,7 +485,7 @@ defmodule Symphony.Orchestrator do
           eligible =
             candidates
             |> Enum.reject(&already_claimed?(state, &1))
-            |> Enum.reject(&blocked_todo?/1)
+            |> Enum.reject(&blocked_todo?(&1))
             |> Enum.sort_by(&dispatch_sort_key/1)
             |> filter_per_state_caps(state)
             |> Enum.take(available)
@@ -286,11 +502,7 @@ defmodule Symphony.Orchestrator do
             "symphony.dispatch ready=#{length(eligible)} candidates=#{length(candidates)} available=#{available}"
           )
 
-          # Real worker spawn lands in a follow-up slice. Each eligible
-          # issue is logged so operators can confirm dispatch decisions.
-          Enum.each(eligible, &log_dispatch(&1, state))
-
-          state
+          Enum.reduce(eligible, state, fn issue, acc -> dispatch_issue(acc, issue, nil) end)
 
         {:error, reason} ->
           Logging.emit(:warning, "symphony.candidate_fetch_failed", :failure,
@@ -303,16 +515,355 @@ defmodule Symphony.Orchestrator do
     end
   end
 
-  defp available_slots(state) do
-    max = Config.agent_max_concurrent_agents(state.config)
-    max - map_size(state.running)
+  defp dispatch_issue(state, %Tracker.Issue{} = issue, attempt) do
+    parent = self()
+    config = state.config
+
+    case Task.Supervisor.start_child(@worker_supervisor, fn ->
+           run_worker(parent, config, issue, attempt)
+         end) do
+      {:ok, pid} ->
+        ref = Process.monitor(pid)
+
+        attempt_struct = %RunAttempt{
+          issue_id: issue.id,
+          issue_identifier: issue.identifier,
+          attempt: attempt,
+          phase: :preparing_workspace,
+          status: :unknown,
+          started_at: DateTime.utc_now()
+        }
+
+        entry = %{
+          pid: pid,
+          ref: ref,
+          identifier: issue.identifier,
+          issue: issue,
+          attempt: attempt_struct,
+          session: %LiveSession{},
+          started_at: DateTime.utc_now(),
+          retry_attempt: attempt
+        }
+
+        Logging.emit(:info, "symphony.dispatch.spawn", :success,
+          issue: issue.identifier,
+          fields: %{id: issue.id, attempt: attempt || 0, pid: inspect(pid)}
+        )
+
+        Logger.info(
+          "symphony.dispatch.spawn issue_id=#{issue.id} identifier=#{issue.identifier} pid=#{inspect(pid)} attempt=#{inspect(attempt)}"
+        )
+
+        %{
+          state
+          | running: Map.put(state.running, issue.id, entry),
+            claimed: MapSet.put(state.claimed, issue.id),
+            retry_attempts: Map.delete(state.retry_attempts, issue.id)
+        }
+
+      {:error, reason} ->
+        Logging.emit(:error, "symphony.dispatch.spawn_failed", :failure,
+          issue: issue.identifier,
+          fields: %{id: issue.id, reason: inspect(reason)}
+        )
+
+        Logger.error(
+          "symphony.dispatch.spawn_failed issue_id=#{issue.id} identifier=#{issue.identifier} reason=#{inspect(reason)}"
+        )
+
+        synthetic_entry = %{
+          identifier: issue.identifier,
+          retry_attempt: attempt,
+          session: %LiveSession{}
+        }
+
+        schedule_issue_retry(
+          state,
+          issue.id,
+          synthetic_entry,
+          :failure,
+          "failed to spawn worker: #{inspect(reason)}"
+        )
+    end
   end
 
-  # Spec § 8.2 blocker rule: when an issue is in the `todo` state, do
-  # not dispatch if any blocker is non-terminal. Lowercased states.
-  defp blocked_todo?(%Tracker.Issue{state: state, blocked_by: blockers}) do
+  # ============== Worker body (runs in the spawned Task) ==============
+
+  defp run_worker(parent, config, %Tracker.Issue{} = issue, _attempt) do
+    issue_id = issue.id
+    send_phase(parent, issue_id, :preparing_workspace, %{})
+
+    with {:ok, ws} <- WorkspaceManager.ensure_exists(config, issue.identifier),
+         _ <- send_phase(parent, issue_id, :building_prompt, %{workspace_path: ws.path}) do
+      send_phase(parent, issue_id, :launching_agent_process, %{workspace_path: ws.path})
+
+      session_started_at = DateTime.utc_now()
+
+      send(parent, {
+        :codex_worker_update,
+        issue_id,
+        %{
+          event: :session_started,
+          timestamp: session_started_at,
+          payload: %{}
+        }
+      })
+
+      send_phase(parent, issue_id, :initializing_session, %{workspace_path: ws.path})
+      send_phase(parent, issue_id, :streaming_turn, %{workspace_path: ws.path})
+
+      runner_module = resolve_agent_runner(config)
+
+      result =
+        try do
+          runner_module.run(config, issue, ws, [])
+        rescue
+          e ->
+            Logger.error(
+              "symphony.worker.runner_raise issue_id=#{issue_id} error=#{Exception.message(e)}"
+            )
+
+            {:error, {:runner_raise, Exception.message(e)}}
+        end
+
+      case result do
+        {:ok, _result} ->
+          send_phase(parent, issue_id, :finishing, %{workspace_path: ws.path})
+          send_phase(parent, issue_id, :succeeded, %{workspace_path: ws.path})
+          :ok
+
+        {:error, reason} ->
+          send_phase(parent, issue_id, :failed, %{
+            workspace_path: ws.path,
+            error: inspect(reason)
+          })
+
+          # Translate the error into an exit so the parent's :DOWN
+          # handler picks the failure-driven retry path.
+          exit({:agent_failed, reason})
+      end
+    else
+      {:error, reason} ->
+        send_phase(parent, issue_id, :failed, %{error: inspect(reason)})
+        exit({:workspace_failed, reason})
+    end
+  end
+
+  defp send_phase(parent, issue_id, phase, payload) do
+    send(parent, {:worker_phase, issue_id, phase, payload})
+    :ok
+  end
+
+  defp resolve_agent_runner(config) do
+    case AgentRunner.adapter_for(config) do
+      {:ok, mod} -> mod
+      _ -> Symphony.AgentRunner.LocalShell
+    end
+  end
+
+  # ============== Worker termination ==============
+
+  defp terminate_worker_for(state, issue_id, cleanup_workspace?) do
+    case Map.get(state.running, issue_id) do
+      nil ->
+        # Just release the claim.
+        %{state | claimed: MapSet.delete(state.claimed, issue_id)}
+
+      entry ->
+        if is_pid(entry.pid) and Process.alive?(entry.pid) do
+          _ = Task.Supervisor.terminate_child(@worker_supervisor, entry.pid)
+        end
+
+        if is_reference(entry.ref) do
+          Process.demonitor(entry.ref, [:flush])
+        end
+
+        if cleanup_workspace? do
+          cleanup_issue_workspace(state.config, entry)
+        end
+
+        state = record_session_completion_totals(state, entry)
+
+        %{
+          state
+          | running: Map.delete(state.running, issue_id),
+            claimed: MapSet.delete(state.claimed, issue_id),
+            retry_attempts: Map.delete(state.retry_attempts, issue_id)
+        }
+    end
+  end
+
+  defp cleanup_issue_workspace(config, %{identifier: identifier}) when is_binary(identifier) do
+    workspace_path = WorkspaceManager.workspace_path(config, identifier)
+
+    if File.exists?(workspace_path) do
+      File.rm_rf(workspace_path)
+    end
+  rescue
+    e ->
+      Logger.warning("symphony.workspace.cleanup_failed identifier=#{identifier} reason=#{inspect(e)}")
+  end
+
+  defp cleanup_issue_workspace(_config, _entry), do: :ok
+
+  # ============== Retry handling ==============
+
+  defp complete_issue(state, issue_id) do
+    %{state | retry_attempts: Map.delete(state.retry_attempts, issue_id)}
+  end
+
+  defp schedule_issue_retry(state, issue_id, entry, reason, error)
+       when reason in [:continuation, :failure] do
+    prior =
+      case Map.get(state.retry_attempts, issue_id) do
+        nil -> %{attempt: max(0, retry_attempt_from_entry(entry))}
+        existing -> existing
+      end
+
+    max_backoff =
+      case state.config do
+        nil -> 300_000
+        c -> Config.agent_max_retry_backoff_ms(c)
+      end
+
+    identifier = entry_identifier(entry)
+
+    next =
+      RetryQueue.next_attempt(prior, reason,
+        issue_id: issue_id,
+        identifier: identifier,
+        error: error,
+        max_backoff_ms: max_backoff
+      )
+
+    # Cancel any existing timer.
+    case Map.get(state.retry_attempts, issue_id) do
+      %{timer_handle: ref} when is_reference(ref) ->
+        Process.cancel_timer(ref)
+
+      _ ->
+        :ok
+    end
+
+    retry_token = make_ref()
+    delay_ms = max(0, next.due_at_ms - System.monotonic_time(:millisecond))
+    timer_ref = Process.send_after(self(), {:retry_due, issue_id, retry_token}, delay_ms)
+
+    Logging.emit(:info, "symphony.retry.scheduled", :success,
+      issue: identifier,
+      fields: %{
+        issue_id: issue_id,
+        attempt: next.attempt,
+        delay_ms: delay_ms,
+        reason: Atom.to_string(reason)
+      }
+    )
+
+    Logger.warning(
+      "symphony.retry.scheduled issue_id=#{issue_id} identifier=#{identifier} attempt=#{next.attempt} delay_ms=#{delay_ms} reason=#{reason}"
+    )
+
+    retry_entry =
+      next
+      |> Map.put(:timer_handle, timer_ref)
+      |> Map.put(:retry_token, retry_token)
+      |> Map.put(:identifier, identifier)
+      |> Map.put(:error, error)
+      |> Map.put(:reason, reason)
+      |> Map.put(:due_at_ms, next.due_at_ms)
+
+    %{state | retry_attempts: Map.put(state.retry_attempts, issue_id, retry_entry)}
+  end
+
+  defp retry_attempt_from_entry(%{retry_attempt: n}) when is_integer(n) and n > 0, do: n
+  defp retry_attempt_from_entry(_), do: 0
+
+  defp handle_retry_due(state, issue_id, retry_entry) do
+    state = %{state | retry_attempts: Map.delete(state.retry_attempts, issue_id)}
+
+    case state.adapter.fetch_candidate_issues(state.config) do
+      {:ok, issues} ->
+        case Enum.find(issues, fn %Tracker.Issue{id: id} -> id == issue_id end) do
+          nil ->
+            Logger.debug("symphony.retry.released issue_id=#{issue_id}; no longer a candidate")
+            release_claim(state, issue_id)
+
+          %Tracker.Issue{} = issue ->
+            cond do
+              blocked_todo?(issue) ->
+                requeue_retry(state, issue_id, retry_entry, "blocked")
+
+              available_slots(state) > 0 ->
+                dispatch_issue(state, issue, retry_entry.attempt)
+
+              true ->
+                requeue_retry(state, issue_id, retry_entry, "no available orchestrator slots")
+            end
+        end
+
+      {:error, reason} ->
+        # Per spec § 8.4: requeue with the original retry kind.
+        requeue_retry(state, issue_id, retry_entry, "retry poll failed: #{inspect(reason)}")
+    end
+  end
+
+  defp requeue_retry(state, issue_id, retry_entry, error) do
+    synthetic_entry = %{
+      identifier: retry_entry.identifier,
+      retry_attempt: retry_entry.attempt,
+      session: %LiveSession{}
+    }
+
+    schedule_issue_retry(state, issue_id, synthetic_entry, retry_entry.reason, error)
+  end
+
+  defp release_claim(state, issue_id) do
+    %{
+      state
+      | claimed: MapSet.delete(state.claimed, issue_id),
+        retry_attempts: Map.delete(state.retry_attempts, issue_id)
+    }
+  end
+
+  # ============== Helpers ==============
+
+  defp pop_running_entry(state, issue_id) do
+    {Map.get(state.running, issue_id), %{state | running: Map.delete(state.running, issue_id)}}
+  end
+
+  defp record_session_completion_totals(state, %{started_at: %DateTime{} = started_at} = _entry) do
+    runtime = max(0, DateTime.diff(DateTime.utc_now(), started_at, :second))
+
+    totals = %{
+      input_tokens: state.codex_totals.input_tokens,
+      output_tokens: state.codex_totals.output_tokens,
+      total_tokens: state.codex_totals.total_tokens,
+      seconds_running: state.codex_totals.seconds_running + runtime
+    }
+
+    %{state | codex_totals: totals}
+  end
+
+  defp record_session_completion_totals(state, _entry), do: state
+
+  defp find_issue_id_for_ref(running, ref) do
+    Enum.find_value(running, fn {issue_id, %{ref: r}} ->
+      if r == ref, do: issue_id
+    end)
+  end
+
+  defp available_slots(state) do
+    max(Config.agent_max_concurrent_agents(state.config) - map_size(state.running), 0)
+  end
+
+  defp already_claimed?(state, %Tracker.Issue{id: id, identifier: ident}) do
+    MapSet.member?(state.claimed, id) or MapSet.member?(state.claimed, ident)
+  end
+
+  # Spec § 8.2 blocker rule.
+  defp blocked_todo?(%Tracker.Issue{state: state_name, blocked_by: blockers}) do
     cond do
-      String.downcase(state || "") != "todo" -> false
+      String.downcase(state_name || "") != "todo" -> false
       blockers == nil or blockers == [] -> false
       true -> Enum.any?(blockers, &blocker_active?/1)
     end
@@ -326,10 +877,15 @@ defmodule Symphony.Orchestrator do
 
   defp blocker_active?(_), do: true
 
-  # Spec § 5.3.5 / § 8.3 per-state concurrency: cap dispatch per
-  # tracker state via `agent.max_concurrent_agents_by_state`. State keys
-  # are normalized lowercase. Missing entries fall back to the global
-  # cap, which is already enforced by `Enum.take(available)`.
+  defp dispatch_sort_key(%Tracker.Issue{} = issue) do
+    {
+      issue.priority || 999_999,
+      issue.created_at || ~U[9999-12-31 23:59:59Z],
+      issue.identifier
+    }
+  end
+
+  # Spec § 5.3.5 / § 8.3 per-state concurrency cap.
   defp filter_per_state_caps(eligible, state) do
     raw = Map.get(state.config.raw, "agent", %{})
     by_state_raw = Map.get(raw, "max_concurrent_agents_by_state", %{}) || %{}
@@ -345,7 +901,12 @@ defmodule Symphony.Orchestrator do
     else
       running_by_state =
         Enum.reduce(state.running, %{}, fn {_id, entry}, acc ->
-          s = String.downcase(to_string(Map.get(entry, :state) || ""))
+          s =
+            case entry do
+              %{issue: %Tracker.Issue{state: s}} when is_binary(s) -> String.downcase(s)
+              _ -> ""
+            end
+
           Map.update(acc, s, 1, &(&1 + 1))
         end)
 
@@ -381,38 +942,151 @@ defmodule Symphony.Orchestrator do
   end
   defp normalize_pos_int(_), do: nil
 
-  defp already_claimed?(state, %Tracker.Issue{id: id, identifier: ident}) do
-    MapSet.member?(state.claimed, id) or MapSet.member?(state.claimed, ident)
+  defp normalize_state(s) when is_binary(s), do: s |> String.downcase() |> String.trim()
+  defp normalize_state(_), do: ""
+
+  defp stall_timeout_ms(nil), do: 0
+  defp stall_timeout_ms(config) do
+    case Map.get(config.resolved, "codex.stall_timeout_ms", 300_000) do
+      n when is_integer(n) -> n
+      _ -> 0
+    end
   end
 
-  defp dispatch_sort_key(%Tracker.Issue{} = issue) do
-    {
-      issue.priority || 999_999,
-      issue.created_at || ~U[9999-12-31 23:59:59Z],
-      issue.identifier
+  defp entry_identifier(%{identifier: id}) when is_binary(id), do: id
+  defp entry_identifier(_), do: ""
+
+  # ---- Codex update integration ----
+
+  defp integrate_codex_update(%LiveSession{} = session, update) do
+    timestamp = update[:timestamp]
+    event = update[:event]
+    session_id = session_id_for_update(session.session_id, update)
+    pid = pid_for_update(session.codex_app_server_pid, update)
+    usage = update[:usage] || update[:payload][:usage] || %{}
+
+    {input_d, output_d, total_d, in_rep, out_rep, total_rep} =
+      compute_token_deltas(session, usage)
+
+    turn_count = turn_count_for_update(session.turn_count, session.session_id, update)
+
+    %LiveSession{
+      session
+      | session_id: session_id,
+        codex_app_server_pid: pid,
+        last_codex_event: to_string(event),
+        last_codex_timestamp: timestamp,
+        last_codex_message: update[:payload] || update[:raw],
+        codex_input_tokens: session.codex_input_tokens + input_d,
+        codex_output_tokens: session.codex_output_tokens + output_d,
+        codex_total_tokens: session.codex_total_tokens + total_d,
+        last_reported_input_tokens: max(session.last_reported_input_tokens, in_rep),
+        last_reported_output_tokens: max(session.last_reported_output_tokens, out_rep),
+        last_reported_total_tokens: max(session.last_reported_total_tokens, total_rep),
+        turn_count: turn_count
     }
   end
 
-  defp log_dispatch(issue, _state) do
-    Logging.emit(:info, "symphony.dispatch.log_only", :success,
-      issue: issue.identifier,
-      fields: %{
-        id: issue.id,
-        state: issue.state,
-        priority: issue.priority
-      }
-    )
+  defp session_id_for_update(_existing, %{session_id: s}) when is_binary(s), do: s
+  defp session_id_for_update(existing, _update), do: existing
 
-    Logger.info(
-      "symphony.dispatch.log_only id=#{issue.id} identifier=#{issue.identifier} state=#{issue.state} priority=#{issue.priority}"
-    )
+  defp pid_for_update(_existing, %{codex_app_server_pid: p}) when is_binary(p), do: p
+  defp pid_for_update(existing, _update), do: existing
+
+  defp turn_count_for_update(existing_count, existing_session_id, %{
+         event: :session_started,
+         session_id: session_id
+       })
+       when is_integer(existing_count) and is_binary(session_id) do
+    if session_id == existing_session_id, do: existing_count, else: existing_count + 1
   end
 
-  # ============== Helpers ==============
+  defp turn_count_for_update(existing_count, _existing_session_id, _update)
+       when is_integer(existing_count),
+       do: existing_count
+
+  defp turn_count_for_update(_existing_count, _existing_session_id, _update), do: 0
+
+  defp compute_token_deltas(session, usage) when is_map(usage) do
+    next_in = pos_int(usage[:input_tokens] || usage["input_tokens"])
+    next_out = pos_int(usage[:output_tokens] || usage["output_tokens"])
+    next_total = pos_int(usage[:total_tokens] || usage["total_tokens"])
+
+    in_d = max(0, next_in - session.last_reported_input_tokens)
+    out_d = max(0, next_out - session.last_reported_output_tokens)
+    total_d = max(0, next_total - session.last_reported_total_tokens)
+
+    {in_d, out_d, total_d, next_in, next_out, next_total}
+  end
+
+  defp pos_int(n) when is_integer(n) and n >= 0, do: n
+  defp pos_int(_), do: 0
+
+  defp phase_status(:succeeded), do: :ok
+  defp phase_status(:failed), do: :error
+  defp phase_status(:timed_out), do: :error
+  defp phase_status(:stalled), do: :error
+  defp phase_status(:canceled_by_reconciliation), do: :error
+  defp phase_status(_), do: :unknown
+
+  # ============== Startup terminal cleanup (spec § 8.6) ==============
+
+  defp run_terminal_workspace_cleanup(%{config: nil} = state), do: state
+  defp run_terminal_workspace_cleanup(%{adapter: nil} = state), do: state
+
+  defp run_terminal_workspace_cleanup(state) do
+    config = state.config
+    terminal_states = Config.tracker_terminal_states(config)
+
+    case state.adapter.fetch_issues_by_states(config, terminal_states) do
+      {:ok, issues} ->
+        cleaned =
+          Enum.reduce(issues, 0, fn
+            %Tracker.Issue{identifier: identifier}, acc when is_binary(identifier) ->
+              path = WorkspaceManager.workspace_path(config, identifier)
+
+              if File.exists?(path) do
+                _ = File.rm_rf(path)
+                acc + 1
+              else
+                acc
+              end
+
+            _, acc ->
+              acc
+          end)
+
+        Logging.emit(:info, "symphony.startup.terminal_cleanup", :success,
+          fields: %{terminal_count: length(issues), cleaned: cleaned}
+        )
+
+        Logger.info(
+          "symphony.startup.terminal_cleanup terminal_count=#{length(issues)} cleaned=#{cleaned}"
+        )
+
+        %{state | startup_cleanup_done?: true}
+
+      {:error, reason} ->
+        Logging.emit(:warning, "symphony.startup.terminal_cleanup", :failure,
+          message: "could not fetch terminal issues; continuing startup",
+          fields: %{reason: inspect(reason)}
+        )
+
+        Logger.warning(
+          "symphony.startup.terminal_cleanup outcome=failure reason=#{inspect(reason)}; continuing startup"
+        )
+
+        %{state | startup_cleanup_done?: true}
+    end
+  end
+
+  # ============== Tick scheduling ==============
 
   defp schedule_tick(interval_ms) when is_integer(interval_ms) and interval_ms > 0 do
     Process.send_after(self(), :tick, interval_ms)
   end
+
+  defp poll_interval(%{poll_interval_override_ms: ms}) when is_integer(ms) and ms > 0, do: ms
 
   defp poll_interval(%{config: nil}) do
     Application.get_env(:symphony, :poll_interval_ms, 30_000)
@@ -424,19 +1098,73 @@ defmodule Symphony.Orchestrator do
     _ -> 30_000
   end
 
+  # ============== Snapshot ==============
+
   defp snapshot_payload(state) do
+    now = DateTime.utc_now()
+    now_ms = System.monotonic_time(:millisecond)
+
+    running_rows =
+      Enum.map(state.running, fn {issue_id, entry} ->
+        session = entry.session || %LiveSession{}
+        attempt = entry.attempt || %RunAttempt{}
+
+        %{
+          issue_id: issue_id,
+          identifier: entry.identifier,
+          state: tracked_state(entry),
+          phase: attempt.phase,
+          status: attempt.status,
+          workspace_path: attempt.workspace_path,
+          session_id: session.session_id,
+          thread_id: session.thread_id,
+          turn_id: session.turn_id,
+          codex_app_server_pid: session.codex_app_server_pid,
+          last_codex_event: session.last_codex_event,
+          last_codex_timestamp: session.last_codex_timestamp,
+          last_codex_message: session.last_codex_message,
+          codex_input_tokens: session.codex_input_tokens,
+          codex_output_tokens: session.codex_output_tokens,
+          codex_total_tokens: session.codex_total_tokens,
+          last_reported_input_tokens: session.last_reported_input_tokens,
+          last_reported_output_tokens: session.last_reported_output_tokens,
+          last_reported_total_tokens: session.last_reported_total_tokens,
+          turn_count: session.turn_count,
+          started_at: entry.started_at,
+          runtime_seconds: runtime_seconds(entry.started_at, now)
+        }
+      end)
+
+    retrying_rows =
+      Enum.map(state.retry_attempts, fn {issue_id, retry} ->
+        %{
+          issue_id: issue_id,
+          identifier: Map.get(retry, :identifier),
+          attempt: retry.attempt,
+          due_in_ms: max(0, retry.due_at_ms - now_ms),
+          reason: Map.get(retry, :reason),
+          error: Map.get(retry, :error)
+        }
+      end)
+
+    # Spec § 13.5: aggregate seconds_running = cumulative completed +
+    # active-session elapsed time at snapshot time.
+    active_seconds =
+      Enum.reduce(state.running, 0, fn {_id, entry}, acc ->
+        acc + runtime_seconds(entry.started_at, now)
+      end)
+
+    codex_totals =
+      Map.put(
+        state.codex_totals,
+        :seconds_running,
+        state.codex_totals.seconds_running + active_seconds
+      )
+
     %{
-      running:
-        for {id, entry} <- state.running do
-          entry
-          |> Map.put(:issue_id, id)
-          |> Map.put_new(:turn_count, 0)
-        end,
-      retrying:
-        for {id, entry} <- state.retry_attempts do
-          Map.put(entry, :issue_id, id)
-        end,
-      codex_totals: state.codex_totals,
+      running: running_rows,
+      retrying: retrying_rows,
+      codex_totals: codex_totals,
       rate_limits: state.rate_limits,
       workflow_loaded: not is_nil(state.config),
       tracker_kind:
@@ -447,4 +1175,13 @@ defmodule Symphony.Orchestrator do
       last_tick_at: state.last_tick_at
     }
   end
+
+  defp tracked_state(%{issue: %Tracker.Issue{state: s}}) when is_binary(s), do: s
+  defp tracked_state(_), do: nil
+
+  defp runtime_seconds(%DateTime{} = started_at, %DateTime{} = now) do
+    max(0, DateTime.diff(now, started_at, :second))
+  end
+
+  defp runtime_seconds(_started, _now), do: 0
 end

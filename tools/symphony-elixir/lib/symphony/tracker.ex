@@ -53,13 +53,23 @@ defmodule Symphony.Tracker do
   @callback fetch_issue_states_by_ids(Config.t(), [binary()]) ::
               {:ok, %{required(binary()) => binary()}} | {:error, term()}
 
-  @doc "Resolve the adapter module for a given config."
+  @doc """
+  Resolve the adapter module for a given config.
+
+  `:linear_memory` is a test-only variant of the Linear adapter (see
+  `Symphony.Tracker.Linear.Memory`) that lets the orchestrator + tracker
+  test suites exercise the behaviour contract without real Linear creds
+  or HTTP. Kept here rather than only registered in test config so the
+  unsupported-tracker error path stays tight to actually unknown kinds
+  (per spec section 11.4 `unsupported_tracker_kind`).
+  """
   @spec adapter_for(Config.t()) :: {:ok, module()} | {:error, term()}
   def adapter_for(config) do
     case Config.tracker_kind(config) do
       :local_markdown -> {:ok, Symphony.Tracker.LocalMarkdown}
       :github_issues -> {:ok, Symphony.Tracker.GitHubIssues}
       :linear -> {:ok, Symphony.Tracker.Linear}
+      :linear_memory -> {:ok, Symphony.Tracker.Linear.Memory}
       :noop -> {:ok, Symphony.Tracker.Noop}
       kind -> {:error, {:unsupported_tracker, kind}}
     end

@@ -22,7 +22,11 @@ defmodule Symphony.MixProject do
   defp deps do
     [
       {:yaml_elixir, "~> 2.11"},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      # Liquid-compatible template engine (Symphony spec § 12)
+      {:solid, "~> 1.2"},
+      # HTTP client for tracker adapters (Linear GraphQL, gh CLI fallback)
+      {:req, "~> 0.5"}
     ]
   end
 

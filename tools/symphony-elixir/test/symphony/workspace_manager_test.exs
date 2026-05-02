@@ -27,12 +27,14 @@ defmodule Symphony.WorkspaceManagerTest do
     config
   end
 
-  test "sanitize_key preserves allowed chars and replaces the rest" do
+  test "sanitize_key preserves allowed chars and replaces every other char 1:1 (spec § 9.5 invariant 3)" do
     assert WorkspaceManager.sanitize_key("WGTE-001") == "WGTE-001"
     assert WorkspaceManager.sanitize_key("ABC.123_x") == "ABC.123_x"
-    assert WorkspaceManager.sanitize_key("foo bar / baz!") == "foo_bar_baz"
-    assert WorkspaceManager.sanitize_key("/leading/slash") == "leading_slash"
-    assert WorkspaceManager.sanitize_key("multiple   spaces") == "multiple_spaces"
+    # Spec wording is "Replace all other characters with `_`" — strict
+    # 1:1 substitution (no run-collapse, no trim).
+    assert WorkspaceManager.sanitize_key("foo bar / baz!") == "foo_bar___baz_"
+    assert WorkspaceManager.sanitize_key("/leading/slash") == "_leading_slash"
+    assert WorkspaceManager.sanitize_key("multiple   spaces") == "multiple___spaces"
   end
 
   test "workspace_path joins sanitized key under workspace.root", %{tmp: tmp} do
@@ -111,11 +113,11 @@ defmodule Symphony.WorkspaceManagerTest do
   end
 
   test "ensure_exists rejects identifier whose sanitized path escapes root", %{tmp: tmp} do
-    # Sanitization collapses "/" to "_", so a "../escape" identifier becomes
-    # "_._escape" — still inside root. The escape invariant primarily defends
-    # against operator misconfiguration of workspace.root, not against
-    # adversarial identifiers (already sanitized). We exercise the operator
-    # case here.
+    # Sanitization replaces "/" with "_" 1:1, so a "../escape" identifier
+    # becomes ".._escape" — still inside root. The escape invariant
+    # primarily defends against operator misconfiguration of
+    # workspace.root, not against adversarial identifiers (already
+    # sanitized). We exercise the operator case here.
     config = config_with_root(tmp, Path.join(tmp, "ws"))
     assert {:ok, ws} = WorkspaceManager.ensure_exists(config, "../escape")
     assert String.starts_with?(ws.path, Path.expand(Path.join(tmp, "ws")))

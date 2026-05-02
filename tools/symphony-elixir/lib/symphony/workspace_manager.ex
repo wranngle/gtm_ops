@@ -13,7 +13,12 @@ defmodule Symphony.WorkspaceManager do
     2. The workspace path must stay inside `workspace.root` after
        absolute-path normalization. Enforced by `assert_inside_root!/2`.
     3. The workspace key is sanitized: only `[A-Za-z0-9._-]` is allowed;
-       all other characters collapse to `_`.
+       all other characters are replaced 1:1 with `_` (no run-collapse,
+       no trim — matches the literal spec wording from section 9.5).
+
+  All three invariants are delegated to `Symphony.PathSafety` so the
+  workspace manager and any future code paths share a single
+  implementation.
 
   Hooks (section 9.4):
 
@@ -23,9 +28,12 @@ defmodule Symphony.WorkspaceManager do
     * `before_remove` — failure logged but ignored
 
   All hook executions respect `hooks.timeout_ms` from the typed config.
+  Hook execution uses `Task.async/yield` with a precise millisecond
+  timeout and `Task.shutdown(:brutal_kill)` on overrun, matching upstream
+  Symphony behaviour.
   """
 
-  alias Symphony.Config
+  alias Symphony.{Config, PathSafety}
 
   require Logger
 
@@ -38,17 +46,11 @@ defmodule Symphony.WorkspaceManager do
   # ============== Public API ==============
 
   @doc """
-  Sanitize an issue identifier into a workspace key.
-
-  Replaces any character outside `[A-Za-z0-9._-]` with `_`, collapses
-  consecutive underscores, and trims leading/trailing underscores.
+  Sanitize an issue identifier into a workspace key — delegated to
+  `Symphony.PathSafety.sanitize_key/1`.
   """
-  @spec sanitize_key(binary()) :: binary()
-  def sanitize_key(identifier) when is_binary(identifier) do
-    identifier
-    |> String.replace(~r/[^A-Za-z0-9._-]+/, "_")
-    |> String.trim("_")
-  end
+  @spec sanitize_key(binary() | nil) :: binary()
+  def sanitize_key(identifier), do: PathSafety.sanitize_key(identifier)
 
   @doc """
   Compute the absolute workspace path for a given issue identifier.
@@ -66,6 +68,10 @@ defmodule Symphony.WorkspaceManager do
   Ensure the per-issue workspace directory exists. Returns the workspace
   struct including `created_now` so callers can decide whether to fire
   the `after_create` hook.
+
+  `created_now=true` only when this call is responsible for the directory
+  appearing on disk; reused workspaces report `false`. Mirrors upstream
+  Symphony semantics so hook ordering across attempts stays predictable.
 
   Enforces invariant 2 — the resolved path must be inside the workspace
   root.
@@ -90,43 +96,36 @@ defmodule Symphony.WorkspaceManager do
 
   @doc """
   Assert that the agent is about to run with `cwd === workspace_path`.
-  Raises `RuntimeError` on mismatch — section 9.5 invariant 1.
+  Delegated to `Symphony.PathSafety.assert_safe_cwd!/2` — section 9.5
+  invariant 1.
   """
   @spec assert_safe_cwd!(workspace(), binary()) :: :ok
-  def assert_safe_cwd!(%{path: ws_path}, cwd) do
-    if absolute(ws_path) == absolute(cwd) do
-      :ok
-    else
-      raise "symphony.workspace.invariant_violation cwd=#{cwd} workspace=#{ws_path}"
-    end
-  end
+  def assert_safe_cwd!(%{path: _} = ws, cwd), do: PathSafety.assert_safe_cwd!(ws, cwd)
 
   @doc """
   Assert that `path` is inside `root` after absolute-path normalization.
-  Raises `RuntimeError` on escape — section 9.5 invariant 2.
+  Delegated to `Symphony.PathSafety.assert_inside_root!/2` — section 9.5
+  invariant 2.
   """
   @spec assert_inside_root!(binary(), binary()) :: :ok
-  def assert_inside_root!(root, path) do
-    abs_root = absolute(root)
-    abs_path = absolute(path)
-
-    cond do
-      abs_path == abs_root ->
-        :ok
-
-      String.starts_with?(abs_path, abs_root <> "/") ->
-        :ok
-
-      true ->
-        raise "symphony.workspace.escape root=#{abs_root} path=#{abs_path}"
-    end
-  end
+  def assert_inside_root!(root, path), do: PathSafety.assert_inside_root!(root, path)
 
   @doc """
   Run a workspace hook by name. Returns `:ok` on success or `{:error,
   reason}`. The caller decides whether the failure is fatal — per spec:
   `after_create` and `before_run` are fatal; `after_run` and
   `before_remove` are logged-and-ignored.
+
+  Hook execution sequence:
+
+    1. Resolve the script via `Config.hook_script/2`. A nil script
+       short-circuits with `:ok`.
+    2. Spawn `bash -lc <script>` (or `sh -lc` if bash is unavailable)
+       with the workspace path as `cwd`. Capture stderr together with
+       stdout for log truncation.
+    3. Yield up to `hooks.timeout_ms` milliseconds. On overrun, brutal
+       kill the task and return `{:error, :hook_timeout}` so the caller
+       can classify it as fatal or logged-only per § 9.4.
   """
   @spec run_hook(Config.t(), workspace(), :after_create | :before_run | :after_run | :before_remove) ::
           :ok | {:error, term()}
@@ -144,6 +143,8 @@ defmodule Symphony.WorkspaceManager do
   # ============== Helpers ==============
 
   defp run_script(script, cwd, timeout_ms, name) do
+    Logger.info("symphony.hook.#{name} outcome=start cwd=#{cwd} timeout_ms=#{timeout_ms}")
+
     task =
       Task.async(fn ->
         try do
@@ -165,8 +166,9 @@ defmodule Symphony.WorkspaceManager do
         :ok
 
       {:ok, {status, output}} when is_integer(status) ->
+        truncated = truncate_output(output)
         Logger.warning("symphony.hook.#{name} outcome=failure exit=#{status} cwd=#{cwd}")
-        Logger.debug("symphony.hook.#{name}.output #{output}")
+        Logger.debug("symphony.hook.#{name}.output #{truncated}")
         {:error, {:hook_nonzero_exit, status}}
 
       {:ok, {:exception, msg}} ->
@@ -180,6 +182,18 @@ defmodule Symphony.WorkspaceManager do
       other ->
         Logger.warning("symphony.hook.#{name} outcome=unknown #{inspect(other)}")
         {:error, {:hook_unknown, other}}
+    end
+  end
+
+  # Cap hook output at 2 KiB before logging (matches upstream so noisy
+  # hooks like `npm install` cannot overwhelm the JSONL sink).
+  defp truncate_output(output, max_bytes \\ 2_048) do
+    binary = IO.iodata_to_binary(output)
+
+    if byte_size(binary) <= max_bytes do
+      binary
+    else
+      binary_part(binary, 0, max_bytes) <> "... (truncated)"
     end
   end
 

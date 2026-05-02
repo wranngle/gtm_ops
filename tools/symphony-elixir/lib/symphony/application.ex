@@ -5,18 +5,46 @@ defmodule Symphony.Application do
 
   @impl true
   def start(_type, _args) do
-    children =
-      [
-        {Symphony.Logging.Sink, [sink: default_sink()]}
-      ] ++
-        if Application.get_env(:symphony, :auto_start_orchestrator?, true) do
-          [{Symphony.Orchestrator, []}]
-        else
-          []
-        end
+    children = build_children()
 
     opts = [strategy: :one_for_one, name: Symphony.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Supervision tree (boot order matters; spec §§ 6.2, 7, 8 wiring):
+  #
+  #   1. Symphony.Logging.Sink           — log sink for ECS-jsonl events
+  #   2. Symphony.WorkerSupervisor       — Task.Supervisor for run-attempt workers
+  #   3. Symphony.WorkflowStore          — file watcher + cached workflow
+  #   4. Symphony.Orchestrator           — scheduling brain
+  #
+  # `auto_start_orchestrator?` = false (test env) skips both the
+  # WorkflowStore and the Orchestrator so test helpers can boot
+  # them on demand with synthetic fixtures.
+  defp build_children do
+    # The WorkerSupervisor (a `Task.Supervisor`) is always started, even
+    # in test mode where the orchestrator is started on demand. Spawning
+    # workers under a fixed-name supervisor decouples the orchestrator's
+    # lifecycle from the worker pool: the orchestrator can be restarted
+    # without orphaning live worker tasks.
+    base = [
+      {Symphony.Logging.Sink, [sink: default_sink()]},
+      {Task.Supervisor, name: Symphony.WorkerSupervisor}
+    ]
+
+    if Application.get_env(:symphony, :auto_start_orchestrator?, true) do
+      base ++ workflow_store_children() ++ [{Symphony.Orchestrator, []}]
+    else
+      base
+    end
+  end
+
+  defp workflow_store_children do
+    if Application.get_env(:symphony, :workflow_store_enabled?, true) do
+      [{Symphony.WorkflowStore, []}]
+    else
+      []
+    end
   end
 
   # The default sink is configurable per environment so callers don't have
