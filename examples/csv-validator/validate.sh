@@ -71,8 +71,30 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   rowsValidated=$((rowsValidated + 1))
 done < "$csvPath"
 
+queueRoot="${repoRoot}/examples/csv-validator/queue"
+issueFile="${queueRoot}/todo/${issueIdentifier}.md"
+
+# The orchestrator's local_markdown adapter is read-mostly; state
+# transitions are the worker's responsibility (see
+# docs/references/orchestrator-as-runtime.md). On success move the
+# issue to done/, on failure to human_review/ with the diagnostic
+# stderr stashed alongside.
 if (( rowsFailed > 0 )); then
   echo "validator.failure: $rowsFailed row(s) failed validation in $csvPath" >&2
+  if [[ -f "$issueFile" ]]; then
+    mkdir -p "${queueRoot}/human_review"
+    mv "$issueFile" "${queueRoot}/human_review/${issueIdentifier}.md"
+    {
+      echo "# Validator failure for ${issueIdentifier}"
+      echo
+      echo "Failed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      echo
+      echo "## Reasons"
+      for reason in "${failureReasons[@]}"; do
+        echo "- $reason"
+      done
+    } > "${queueRoot}/human_review/${issueIdentifier}.diagnostic.md"
+  fi
   for reason in "${failureReasons[@]}"; do
     echo "  - $reason" >&2
   done
@@ -80,4 +102,8 @@ if (( rowsFailed > 0 )); then
 fi
 
 echo "validator.success: $rowsValidated row(s) validated in $csvPath"
+if [[ -f "$issueFile" ]]; then
+  mkdir -p "${queueRoot}/done"
+  mv "$issueFile" "${queueRoot}/done/${issueIdentifier}.md"
+fi
 exit 0

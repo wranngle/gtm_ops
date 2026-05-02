@@ -19,12 +19,11 @@ workspace:
   root: workspaces
 
 agent:
-  # cwd at run time is the per-issue workspace (per spec § 9.5
-  # invariant 1), so we resolve back to the repo root via git to find
-  # the validator script. Operators running this workflow outside a
-  # git worktree should replace `$(git rev-parse --show-toplevel)`
-  # with an absolute path.
-  command: bash $(git rev-parse --show-toplevel)/examples/csv-validator/validate.sh {{issue.identifier}}
+  # cwd at run time is the per-issue workspace (`workspaces/<issue-id>/`,
+  # per spec § 9.5 invariant 1). The worker reads its own issue
+  # identifier from `$(basename "$PWD")`. We resolve back to the repo
+  # root via git so the validator script can be found.
+  command: bash $(git rev-parse --show-toplevel)/examples/csv-validator/validate.sh "$(basename "$PWD")"
   max_concurrent_agents: 2
   require_explicit_run: false
   # Force the LocalShell adapter; the default heuristic picks
