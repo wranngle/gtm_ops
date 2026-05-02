@@ -27,8 +27,10 @@ defmodule Symphony.Tracker do
             state: binary(),
             branch_name: binary() | nil,
             url: binary() | nil,
+            assignee_id: binary() | nil,
             labels: [binary()],
             blocked_by: [%{id: binary() | nil, identifier: binary() | nil, state: binary() | nil}],
+            assigned_to_worker: boolean(),
             created_at: DateTime.t() | nil,
             updated_at: DateTime.t() | nil
           }
@@ -41,8 +43,10 @@ defmodule Symphony.Tracker do
               state: "",
               branch_name: nil,
               url: nil,
+              assignee_id: nil,
               labels: [],
               blocked_by: [],
+              assigned_to_worker: true,
               created_at: nil,
               updated_at: nil
   end
