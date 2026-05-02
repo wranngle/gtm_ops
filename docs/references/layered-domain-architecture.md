@@ -151,6 +151,61 @@ The lint scans only `packages/*/src/types/` and `packages/*/src/config/` because
 
 Each violation prints the renamed identifier the agent should use, so the remediation is one paste away from the agent's working context.
 
+## File size
+
+Companion lint: `scripts/lint-file-size.sh` (STACK-042).
+
+Hard cap: **400 lines**. Warning band: **250 lines** (advisory; lint exits 0 but prints a notice to flag a file that is approaching the cap).
+
+Why a line cap is leverage for the agent: a file under the cap stays small enough that the agent can hold the whole module in working memory without summarizing. Once a file blows past the cap, the agent has to compress to reason about it — and compression drops invariants. The cap also discourages the "one-giant-service-file" anti-pattern that emerges naturally when the agent keeps tacking new functions onto the file it is already editing.
+
+Exempt (allowed to grow with table-driven cases or large fixtures):
+
+- `packages/<name>/tests/**`
+- `packages/<name>/fixtures/**`
+- `packages/<name>/src/**/fixtures/**`
+- Anything under `node_modules/`, `dist/`, or `.next/`
+
+When a file exceeds the cap, the remediation is always: extract the largest top-level construct (the longest exported function, class, or const block) into its own sibling module under the same layer. The lint message names the file and the line count so the agent can act on it without re-measuring.
+
+## Time and randomness in providers
+
+Companion lint: `scripts/lint-time-in-providers.sh` (STACK-043).
+
+The `providers/` layer is the **single explicit cross-cutting boundary** for runtime concerns. Wall-clock time and non-determinism enter the codebase exactly there — every other layer takes a provider abstraction (`Clock`, `RandomSource`, `IdSource`) and calls through it. That keeps service / repo / runtime / ui code deterministic and testable without monkey-patching globals.
+
+Forbidden outside `packages/*/src/providers/`:
+
+- `Date.now()`
+- `new Date(...)` (with or without arguments)
+- `performance.now()`
+- `Math.random()`
+- `crypto.randomUUID()`
+
+Working example: `packages/agent-evals/src/service/evaluator.ts` takes a `Clock` parameter and never samples `Date.now()` itself. Tests inject a `FixedClock` that returns a known timestamp, so evaluation outcomes are byte-for-byte reproducible.
+
+Inside `providers/` the calls are allowed — that IS the layer's job. `providers/clock.ts` wraps `Date.now()` behind `nowIso()` / `nowMillis()`. A future `providers/random.ts` would wrap `Math.random()` / `crypto.randomUUID()` behind a seedable interface.
+
+## Boundary parsing
+
+Companion lint: `scripts/lint-json-parse-boundary.sh` (STACK-044).
+
+Untyped data must be parsed at the layer that brought it in — `repo/` (filesystem / DB / disk), `config/` (env / settings), or `providers/` (external SDK responses). The rest of the codebase consumes typed values produced by Zod (or equivalent) so the agent cannot accidentally build on guessed shapes.
+
+Forbidden outside `packages/*/src/{repo,config,providers}/`:
+
+- `JSON.parse(...)`
+
+Working example: `packages/agent-evals/src/repo/conversation-repo.ts` does `JSON.parse(raw)` and immediately calls `ConversationFileSchema.parse(parsed)`, returning a typed `ConversationFile` to its callers. `service/` and `runtime/` then operate on the typed value without ever seeing the raw bytes.
+
+When a violation fires outside the allowed layers, the remediation is:
+
+1. Move the parse into the appropriate boundary layer (`repo/` for files, `config/` for env, `providers/` for SDK responses).
+2. Pair the `JSON.parse` with a Zod schema — `FooSchema.parse(JSON.parse(raw))` — so the function returns a typed value.
+3. Update the caller to consume the typed value instead of poking at `unknown`.
+
+The lint covers the layer restriction only; pairing-with-Zod is left to a follow-up because a robust check needs an AST.
+
 ## When to break the rule
 
 Don't. If a layer needs something it can't reach, the right move is one of:
