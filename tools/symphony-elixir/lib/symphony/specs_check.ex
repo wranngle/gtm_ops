@@ -1,269 +1,195 @@
 defmodule Symphony.SpecsCheck do
   @moduledoc """
-  Runtime spec-conformance checker.
+  Static `@spec` linter for the Symphony lib tree.
 
-  Walks the live module tree and asserts that the spec-mandated public
-  surfaces (the ones the OpenAI Symphony spec elevates to MUST) are
-  actually wired. Failures are returned as `{:error, [reason, ...]}` so
-  the mix-task wrapper can print them in operator-friendly form.
+  Walks every `.ex` file under the configured paths (default `lib/`)
+  and flags every public function (`def name(...)`) that does not have
+  an adjacent `@spec` declaration or `@impl` annotation. Ported
+  verbatim from upstream `SymphonyElixir.SpecsCheck`.
 
-  This is *not* the upstream `SpecsCheck` AST scanner that enforces
-  `@spec` on every public function — we adapted that module's role to
-  match what is most useful for our codebase: a behavioural assertion
-  that the spec sections we reference in modules are still live.
+  Distinct from `Symphony.SpecCompliance`, which is a runtime
+  behavioural-conformance check for spec-mandated public surfaces.
+  This module is purely lexical — it does not load or run any code.
 
-  Checks performed (each maps back to a section in
-  `docs/references/openai_symphony_original_spec.txt`):
+  Wired through `Mix.Tasks.Specs.Check`; invoke with:
 
-    * § 6.3 dispatch preflight — `Symphony.Config.validate_dispatch_preflight/1`
-      exists and returns `:ok` for a tracker-kind=local_markdown config.
-    * § 9.4/9.5 workspace + safety — `Symphony.WorkspaceManager`
-      delegates `sanitize_key/1`, `assert_inside_root!/2`,
-      `assert_safe_cwd!/2` to `Symphony.PathSafety`.
-    * § 10.7 agent runner — `Symphony.AgentRunner.adapter_for/1`
-      exists and returns `{:ok, _module}` for the default config.
-    * § 11.1 tracker adapter — `Symphony.Tracker.adapter_for/1`
-      exists and returns `{:ok, _module}` for every tracker kind the
-      spec lists (`:local_markdown`, `:github_issues`, `:linear`,
-      `:noop`).
-    * § 12 prompt rendering — `Symphony.PromptRenderer.render/1`
-      accepts a Liquid template and rejects unknown variables strictly.
+      mix specs.check
+      mix specs.check --paths lib --paths test
+      mix specs.check --exemptions-file specs_check_exemptions.txt
+
+  Exemption files are line-delimited `Module.function/arity`
+  identifiers with `#` comments.
   """
 
-  alias Symphony.{Config, PromptRenderer, Tracker}
+  @type finding :: %{
+          file: String.t(),
+          module: String.t(),
+          name: atom(),
+          arity: non_neg_integer(),
+          line: pos_integer()
+        }
 
-  @type check_id ::
-          :dispatch_preflight
-          | :path_safety_delegation
-          | :agent_runner_adapter
-          | :tracker_adapter_kinds
-          | :prompt_renderer_strict
+  @spec missing_public_specs([Path.t()], keyword()) :: [finding()]
+  def missing_public_specs(paths, opts \\ []) do
+    exemptions =
+      opts
+      |> Keyword.get(:exemptions, [])
+      |> MapSet.new()
 
-  @type failure :: {check_id(), term()}
+    paths
+    |> Enum.flat_map(&collect_elixir_files/1)
+    |> Enum.flat_map(&file_findings(&1, exemptions))
+    |> Enum.sort_by(&{&1.file, &1.line, &1.name, &1.arity})
+  end
 
-  @spec_path Application.compile_env(
-               :symphony,
-               :spec_path,
-               "docs/references/openai_symphony_original_spec.txt"
-             )
+  @spec finding_identifier(finding()) :: String.t()
+  def finding_identifier(%{module: module, name: name, arity: arity}) do
+    "#{module}.#{name}/#{arity}"
+  end
 
-  @doc """
-  Run every check. Returns `:ok` on full success; otherwise
-  `{:error, [{check_id, reason}, ...]}` listing the checks that failed.
+  defp collect_elixir_files(path) do
+    cond do
+      File.regular?(path) and String.ends_with?(path, ".ex") ->
+        [path]
 
-  Options:
-    * `:checks` — limit to a subset of `t:check_id/0`.
-    * `:spec_path` — override the path that holds the upstream spec.
-      Defaults to `docs/references/openai_symphony_original_spec.txt`
-      relative to the repo root (when running under mix from
-      `tools/symphony-elixir/` we walk up two levels first).
-  """
-  @spec run(keyword()) :: :ok | {:error, [failure()]}
-  def run(opts \\ []) do
-    ensure_modules_loaded()
-    requested = Keyword.get(opts, :checks, all_check_ids())
-    spec_path = resolve_spec_path(Keyword.get(opts, :spec_path))
+      File.dir?(path) ->
+        Path.wildcard(Path.join(path, "**/*.ex"))
 
-    failures =
-      requested
-      |> Enum.map(fn check -> {check, perform(check, spec_path)} end)
-      |> Enum.reject(fn {_id, result} -> result == :ok end)
-      |> Enum.map(fn {id, {:error, reason}} -> {id, reason} end)
-
-    case failures do
-      [] -> :ok
-      list -> {:error, list}
+      true ->
+        []
     end
   end
 
-  # `function_exported?/3` returns false until the BEAM has loaded the
-  # target module. Under `mix run`/tests the modules are usually already
-  # loaded, but `mix symphony.specs_check` invokes us before anything
-  # else has touched these modules. Force-load them so the conformance
-  # checks see the real exports.
-  defp ensure_modules_loaded do
-    Enum.each(
-      [
-        Symphony.Config,
-        Symphony.PathSafety,
-        Symphony.WorkspaceManager,
-        Symphony.AgentRunner,
-        Symphony.Tracker,
-        Symphony.PromptRenderer
-      ],
-      &Code.ensure_loaded/1
-    )
-  end
-
-  @doc "Identifiers for every spec check this module knows how to run."
-  @spec all_check_ids() :: [check_id()]
-  def all_check_ids do
-    [
-      :dispatch_preflight,
-      :path_safety_delegation,
-      :agent_runner_adapter,
-      :tracker_adapter_kinds,
-      :prompt_renderer_strict
-    ]
-  end
-
-  @doc """
-  Resolve where the spec file lives. Callers may explicitly override; the
-  default walks up from the symphony-elixir tool directory to the repo
-  root (`../../`) and then resolves the configured relative path.
-  """
-  @spec resolve_spec_path(binary() | nil) :: binary()
-  def resolve_spec_path(nil) do
-    case Path.type(@spec_path) do
-      :absolute ->
-        @spec_path
-
-      _ ->
-        # Walk up from `tools/symphony-elixir/` to the repo root so the
-        # mix task does not depend on whatever cwd `mix` inherited.
-        repo_root = Path.expand("../..", File.cwd!())
-        Path.join(repo_root, @spec_path)
-    end
-  end
-
-  def resolve_spec_path(path) when is_binary(path), do: path
-
-  # ============== Individual checks ==============
-
-  defp perform(:dispatch_preflight, _spec_path) do
-    if function_exported?(Config, :validate_dispatch_preflight, 1) do
-      with {:ok, config} <- minimal_config(),
-           :ok <- Config.validate_dispatch_preflight(config) do
-        :ok
-      else
-        {:error, {:dispatch_preflight, reasons}} ->
-          {:error, {:dispatch_preflight_returned, reasons}}
-
-        other ->
-          {:error, {:dispatch_preflight_unexpected, other}}
-      end
+  defp file_findings(file, exemptions) do
+    with {:ok, source} <- File.read(file),
+         {:ok, ast} <- Code.string_to_quoted(source, columns: true, file: file) do
+      ast
+      |> module_nodes()
+      |> Enum.flat_map(fn {module_name, body} ->
+        find_missing_specs(body, module_name, file, exemptions)
+      end)
     else
-      {:error, :missing_validate_dispatch_preflight}
+      {:error, {line, error, token}} ->
+        Mix.raise("Unable to parse #{file}:#{line} #{error} #{inspect(token)}")
+
+      {:error, reason} ->
+        Mix.raise("Unable to read #{file}: #{inspect(reason)}")
     end
   end
 
-  defp perform(:path_safety_delegation, _spec_path) do
-    expected = [
-      {Symphony.PathSafety, :sanitize_key, 1},
-      {Symphony.PathSafety, :assert_inside_root!, 2},
-      {Symphony.PathSafety, :assert_safe_cwd!, 2},
-      {Symphony.WorkspaceManager, :sanitize_key, 1},
-      {Symphony.WorkspaceManager, :assert_inside_root!, 2},
-      {Symphony.WorkspaceManager, :assert_safe_cwd!, 2}
-    ]
+  defp module_nodes(ast) do
+    {_ast, modules} =
+      Macro.prewalk(ast, [], fn
+        {:defmodule, _meta, [module_ast, [do: body]]} = node, acc ->
+          {node, [{Macro.to_string(module_ast), body} | acc]}
 
-    missing =
-      Enum.reject(expected, fn {mod, fun, arity} ->
-        function_exported?(mod, fun, arity)
+        node, acc ->
+          {node, acc}
       end)
 
-    case missing do
-      [] -> :ok
-      list -> {:error, {:missing_exports, list}}
-    end
+    Enum.reverse(modules)
   end
 
-  defp perform(:agent_runner_adapter, _spec_path) do
-    if function_exported?(Symphony.AgentRunner, :adapter_for, 1) do
-      with {:ok, config} <- minimal_config(),
-           {:ok, module} <- Symphony.AgentRunner.adapter_for(config),
-           true <- is_atom(module) do
-        :ok
-      else
-        false -> {:error, :agent_runner_adapter_returned_non_atom}
-        {:error, reason} -> {:error, {:agent_runner_adapter_failed, reason}}
-        other -> {:error, {:agent_runner_adapter_unexpected, other}}
-      end
+  defp find_missing_specs(body, module_name, file, exemptions) do
+    body
+    |> normalize_block()
+    |> Enum.reduce(initial_state(), fn form, state ->
+      consume_form(form, state, module_name, file, exemptions)
+    end)
+    |> Map.fetch!(:findings)
+  end
+
+  defp initial_state do
+    %{pending_specs: MapSet.new(), pending_impl: false, seen_defs: MapSet.new(), findings: []}
+  end
+
+  defp consume_form({:@, _, [{:spec, _, spec_nodes}]}, state, _module_name, _file, _exemptions) do
+    ids =
+      spec_nodes
+      |> Enum.flat_map(&extract_spec_identifiers/1)
+      |> MapSet.new()
+
+    %{state | pending_specs: MapSet.union(state.pending_specs, ids)}
+  end
+
+  defp consume_form({:@, _, [{:impl, _, _}]}, state, _module_name, _file, _exemptions) do
+    %{state | pending_impl: true}
+  end
+
+  defp consume_form({:@, _, _}, state, _module_name, _file, _exemptions), do: state
+
+  defp consume_form({:def, meta, [head_ast, _]} = _form, state, module_name, file, exemptions) do
+    {name, arity} = def_head_to_identifier(head_ast)
+
+    id = {name, arity}
+
+    if MapSet.member?(state.seen_defs, id) do
+      %{state | pending_specs: MapSet.new(), pending_impl: false}
     else
-      {:error, :missing_agent_runner_adapter_for}
-    end
-  end
-
-  defp perform(:tracker_adapter_kinds, _spec_path) do
-    if function_exported?(Tracker, :adapter_for, 1) do
-      kinds = [:local_markdown, :github_issues, :linear, :noop]
-
-      missing =
-        Enum.reduce(kinds, [], fn kind, acc ->
-          case fake_config_for_kind(kind) |> Tracker.adapter_for() do
-            {:ok, mod} when is_atom(mod) -> acc
-            {:error, reason} -> [{kind, reason} | acc]
-            other -> [{kind, {:unexpected, other}} | acc]
-          end
-        end)
-
-      case missing do
-        [] -> :ok
-        list -> {:error, {:tracker_kinds_failed, Enum.reverse(list)}}
-      end
-    else
-      {:error, :missing_tracker_adapter_for}
-    end
-  end
-
-  defp perform(:prompt_renderer_strict, _spec_path) do
-    if function_exported?(PromptRenderer, :render, 1) do
-      issue = %Tracker.Issue{
-        id: "abc",
-        identifier: "WGTE-001",
-        title: "Hello",
-        state: "todo",
-        labels: ["a"]
+      finding = %{
+        file: file,
+        module: module_name,
+        name: name,
+        arity: arity,
+        line: Keyword.get(meta, :line, 1)
       }
 
-      with {:ok, _rendered} <-
-             PromptRenderer.render(%{template: "{{ issue.title }}", issue: issue}),
-           {:error, {:template_render_error, _}} <-
-             PromptRenderer.render(%{template: "{{ issue.bogus }}", issue: issue}) do
-        :ok
+      next_state = %{
+        state
+        | pending_specs: MapSet.new(),
+          pending_impl: false,
+          seen_defs: MapSet.put(state.seen_defs, id)
+      }
+
+      if compliant?(finding, state, exemptions) do
+        next_state
       else
-        unexpected -> {:error, {:prompt_renderer_unexpected, unexpected}}
+        %{next_state | findings: [finding | next_state.findings]}
       end
-    else
-      {:error, :missing_prompt_renderer_render}
     end
   end
 
-  # ============== Helpers ==============
-
-  # Build a minimal in-memory config that satisfies dispatch preflight
-  # for the local-markdown tracker (the only kind that requires no API
-  # keys). Used by the conformance checks above so they do not depend on
-  # any on-disk WORKFLOW.md.
-  defp minimal_config do
-    workflow = %{
-      config: %{
-        "tracker" => %{
-          "kind" => "local_markdown",
-          "issues_root" => ".symphony/issues"
-        },
-        "agent" => %{"command" => "scripts/bin/llm.sh"},
-        "codex" => %{"command" => "codex app-server"},
-        "workspace" => %{"root" => System.tmp_dir!()}
-      },
-      source_path: nil
-    }
-
-    Config.from_workflow(workflow)
+  defp consume_form({:defp, _, _}, state, _module_name, _file, _exemptions) do
+    %{state | pending_specs: MapSet.new(), pending_impl: false}
   end
 
-  defp fake_config_for_kind(kind) do
-    %{
-      raw: %{},
-      resolved: %{
-        "tracker.kind" => Atom.to_string(kind),
-        "tracker.endpoint" => "https://example.test",
-        "tracker.api_key" => "stub",
-        "tracker.repo" => "owner/repo",
-        "tracker.project_slug" => "stub",
-        "tracker.issues_root" => ".symphony/issues"
-      },
-      source_path: nil
-    }
+  defp consume_form(_form, state, _module_name, _file, _exemptions) do
+    %{state | pending_specs: MapSet.new(), pending_impl: false}
   end
+
+  defp compliant?(finding, state, exemptions) do
+    id = {finding.name, finding.arity}
+
+    MapSet.member?(state.pending_specs, id) or
+      state.pending_impl or
+      MapSet.member?(exemptions, finding_identifier(finding))
+  end
+
+  defp normalize_block({:__block__, _, forms}), do: forms
+  defp normalize_block(form), do: [form]
+
+  defp extract_spec_identifiers({:"::", _, [head, _return_type]}) do
+    case spec_head_to_identifier(head) do
+      nil -> []
+      id -> [id]
+    end
+  end
+
+  defp extract_spec_identifiers({:when, _, [{:"::", _, [head, _return_type]} | _guards]}) do
+    case spec_head_to_identifier(head) do
+      nil -> []
+      id -> [id]
+    end
+  end
+
+  defp extract_spec_identifiers(_), do: []
+
+  defp spec_head_to_identifier({:when, _, [inner | _guards]}), do: spec_head_to_identifier(inner)
+  defp spec_head_to_identifier({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
+  defp spec_head_to_identifier({name, _, nil}) when is_atom(name), do: {name, 0}
+  defp spec_head_to_identifier(_), do: nil
+
+  defp def_head_to_identifier({:when, _, [head | _guards]}), do: def_head_to_identifier(head)
+  defp def_head_to_identifier({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
+  defp def_head_to_identifier({name, _, nil}) when is_atom(name), do: {name, 0}
 end
