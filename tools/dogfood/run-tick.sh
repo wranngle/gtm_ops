@@ -18,11 +18,12 @@
 #   7. Emits one ECS-jsonl event per tick on stderr (and to .symphony/logs/).
 #
 # Env knobs:
-#   DOGFOOD_LLM_CHAIN          default: claude:claude-haiku-4-5,claude:claude-sonnet-4-6
-#   DOGFOOD_LLM_TIMEOUT        default: 180
+#   DOGFOOD_LLM_CHAIN          default: claude + codex + gemini fallback chain
+#   DOGFOOD_LLM_TIMEOUT        default: 300
 #   DOGFOOD_MIN_AGE_SECONDS    default: 300 (5 min — race guard)
 #   DOGFOOD_DRY_RUN            if "1", do everything except real LLM dispatch
-#   DOGFOOD_FOLLOWUP_PREFIX    default: STACK
+#   DOGFOOD_ISSUE_PREFIX       default: STACK (limits autonomous pickup)
+#   DOGFOOD_FOLLOWUP_PREFIX    default: DOGFOOD_ISSUE_PREFIX
 #   SYMPHONY_WORKFLOW_FILE     defaults to repo's WORKFLOW.md
 #
 # Exit codes:
@@ -75,16 +76,16 @@ if [[ -f "$HOME/.agents/.env" ]]; then
 fi
 
 min_age_seconds=${DOGFOOD_MIN_AGE_SECONDS:-300}
-followup_prefix=${DOGFOOD_FOLLOWUP_PREFIX:-STACK}
+issue_prefix=${DOGFOOD_ISSUE_PREFIX:-STACK}
+followup_prefix=${DOGFOOD_FOLLOWUP_PREFIX:-$issue_prefix}
 
 # Candidate selection: the bash adapter sorts by priority asc; we additionally
 # require mtime older than the age guard so we don't pick up an issue another
-# auditor just filed. The `!/WGTE-/` filter excludes the showcase-project
-# tracker (WGTE-* are owner-blocked product tasks, not stack work — the loop
-# is for self-improving the canonical stack only).
+# auditor just filed. DOGFOOD_ISSUE_PREFIX is a positive allow-list, not a
+# negative skip-list, so project tasks such as WGTE-* cannot slip into the
+# stack self-improvement loop when new prefixes appear.
 now_epoch=$(date +%s)
 selected_ref=""
-selected_priority=""
 
 while IFS= read -r ref; do
   [[ -z "$ref" ]] && continue
@@ -96,7 +97,9 @@ while IFS= read -r ref; do
   selected_ref="$ref"
   break
 done < <(scripts/symphony.sh list 2>/dev/null \
-  | awk -F'\t' '/state=todo/ && /blocked=no/ && !/WGTE-/ {print}' \
+  | awk -F'\t' -v prefix="$issue_prefix" '
+    $2 == "state=todo" && $4 == "blocked=no" && (prefix == "" || index($1, prefix "-") == 1) {print}
+  ' \
   | awk -F'\t' '{
       priority = "999";
       for (i = 1; i <= NF; i++) {
@@ -108,7 +111,7 @@ done < <(scripts/symphony.sh list 2>/dev/null \
   | awk '{ printf ".symphony/issues/todo/%s.md\n", $2 }')
 
 if [[ -z "$selected_ref" ]]; then
-  emit_event info dogfood.no_eligible success "no unblocked issue past the ${min_age_seconds}s age guard"
+  emit_event info dogfood.no_eligible success "no unblocked ${issue_prefix:-any-prefix} issue past the ${min_age_seconds}s age guard"
   printf 'no eligible issue (backlog may be empty or all too fresh)\n'
   exit 3
 fi
@@ -124,7 +127,7 @@ if [[ "${DOGFOOD_DRY_RUN:-0}" == "1" ]]; then
   exit 0
 fi
 
-llm_chain=${DOGFOOD_LLM_CHAIN:-claude:claude-sonnet-4-6,claude:claude-opus-4-7,claude:claude-haiku-4-5}
+llm_chain=${DOGFOOD_LLM_CHAIN:-claude:claude-sonnet-4-6,codex:o3-mini,gemini:gemini-3-flash-preview,claude:claude-opus-4-7,claude:claude-haiku-4-5}
 llm_timeout=${DOGFOOD_LLM_TIMEOUT:-300}
 min_diff_lines=${DOGFOOD_MIN_DIFF_LINES:-5}
 

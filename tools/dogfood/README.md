@@ -5,8 +5,8 @@ The self-feeding stack-improvement loop. Each tick:
 1. Picks the next unblocked Symphony issue (highest priority, mtime past
    the race-guard window so parallel auditors can finish filing without
    getting stomped on).
-2. Dispatches it via `scripts/symphony.sh once --limit 1` with a tight
-   LLM chain (Claude Haiku 4.5 → Sonnet 4.6 by default).
+2. Dispatches it via `scripts/symphony.sh once --limit 1` with a
+   multi-provider LLM chain (Claude → Codex → Gemini → Claude by default).
 3. Runs every validator the harness owns — the bash syntax check,
    knowledge-base validator, layered-architecture lint, Symphony validate
    + dry-run, and the per-language test suites for whatever trees the
@@ -43,13 +43,13 @@ DOGFOOD_LLM_CHAIN=claude:claude-sonnet-4-6 DOGFOOD_LLM_TIMEOUT=300 \
 
 | Var | Default | Purpose |
 |---|---|---|
-| `DOGFOOD_LLM_CHAIN` | `claude:claude-sonnet-4-6,claude:claude-opus-4-7,claude:claude-haiku-4-5` | passes through to `scripts/bin/llm.sh` `LLM_CHAIN` — Sonnet first because Haiku produced planning docs instead of edits |
-| `DOGFOOD_LLM_TIMEOUT` | `300` | per-call timeout (seconds) — bumped from 180 because Sonnet on substantive code work routinely needs >2 minutes |
+| `DOGFOOD_LLM_CHAIN` | `claude:claude-sonnet-4-6,codex:o3-mini,gemini:gemini-3-flash-preview,claude:claude-opus-4-7,claude:claude-haiku-4-5` | passes through to `scripts/bin/llm.sh` `LLM_CHAIN`; starts with Sonnet, then crosses provider boundaries before spending deeper Claude budget |
+| `DOGFOOD_LLM_TIMEOUT` | `300` | per-call timeout (seconds) — substantive code work routinely needs >2 minutes |
 | `DOGFOOD_MIN_DIFF_LINES` | `5` | minimum insertions+deletions outside `.symphony/` before counting an issue closed |
-| `DOGFOOD_LLM_TIMEOUT` | `180` | per-call timeout (seconds) for the chain |
 | `DOGFOOD_MIN_AGE_SECONDS` | `300` | minimum mtime age (seconds) before an issue is eligible — race guard against parallel auditors filing fresh STACK-NNN files |
 | `DOGFOOD_DRY_RUN` | `0` | if `1`, picks an issue and runs the dry-run path; never invokes the real LLM, never commits |
-| `DOGFOOD_FOLLOWUP_PREFIX` | `STACK` | prefix used when filing follow-up issues |
+| `DOGFOOD_ISSUE_PREFIX` | `STACK` | positive allow-list for autonomous pickup; set to empty only when intentionally allowing any tracker prefix |
+| `DOGFOOD_FOLLOWUP_PREFIX` | `$DOGFOOD_ISSUE_PREFIX` | prefix used when filing follow-up issues |
 | `SYMPHONY_WORKFLOW_FILE` | repo `WORKFLOW.md` | passed through to `scripts/symphony.sh` |
 
 ## Exit codes
@@ -109,8 +109,7 @@ scheduling, use `/schedule` to register a cloud cron that runs
   that would discard owner work. Refuses to dispatch instead.
 - Never picks issues whose `blocked=yes`.
 - Never picks issues outside `.symphony/issues/todo/`.
-- Skip-list: `.symphony/issues/todo/WGTE-001.md` is the showcase project
-  task and is owner-blocked; the dogfood runner does not pick it
-  (filtered by `STACK-` prefix when sorting; if you want WGTE-001 to be
-  picked up, set `DOGFOOD_FOLLOWUP_PREFIX` to `""` and remove the
-  prefix-filter).
+- Positive prefix gate: only issue identifiers beginning with
+  `DOGFOOD_ISSUE_PREFIX-` are eligible by default. This keeps showcase
+  project tasks (`WGTE-*`) out of the canonical-stack self-improvement loop
+  even when they are unblocked and high priority.
