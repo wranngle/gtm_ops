@@ -111,10 +111,26 @@ ensure_label_id() {
   }')
   result=$(linear "$payload")
   id=$(echo "$result" | jq -r '.data.issueLabelCreate.issueLabel.id // empty')
+
+  # Most-common cause of empty id: label already exists. Look it up by
+  # exact name and add to cache so the next call is a hit.
   if [[ -z "$id" ]]; then
-    printf 'LABEL CREATE FAILED %s: %s\n' "$name" "$result" >&2
+    local lookup
+    lookup=$(jq -nc --arg team "$TEAM_ID" --arg name "$name" '{
+      query: "query($team:String!,$name:String!){team(id:$team){labels(filter:{name:{eq:$name}},first:1){nodes{id}}}}",
+      variables: {team: $team, name: $name}
+    }')
+    id=$(linear "$lookup" | jq -r '.data.team.labels.nodes[0].id // empty')
+    if [[ -n "$id" ]]; then
+      label_id_by_name["$name"]="$id"
+      printf 'RESOLVED-LABEL %s (%s, was-pre-existing)\n' "$name" "$id" >&2
+      printf '%s' "$id"
+      return 0
+    fi
+    printf 'LABEL RESOLVE FAILED %s: %s\n' "$name" "$result" >&2
     return 1
   fi
+
   label_id_by_name["$name"]="$id"
   printf 'CREATED-LABEL %s (%s)\n' "$name" "$id" >&2
   printf '%s' "$id"
@@ -183,6 +199,54 @@ prime_existing_cache() {
 prime_label_cache
 prime_existing_cache
 
+# ============== Pre-resolve all labels ==============
+#
+# Critical: build_label_ids_csv is called from inside command-substitution
+# `$(...)` blocks during mirror_file, which means it runs in a subshell.
+# Subshell additions to the global label_id_by_name array do NOT persist
+# back to the parent. So we walk every STACK file ONCE in the parent
+# shell first, collect the union of labels, and ensure each exists. After
+# this pass the cache is fully populated; per-issue lookups just read.
+
+pre_resolve_all_labels() {
+  declare -A seen_label
+  for f in .symphony/issues/todo/STACK-*.md .symphony/issues/done/STACK-*.md; do
+    [[ -f "$f" ]] || continue
+    local names
+    names=$(extract_labels "$f")
+    for name in $names; do
+      [[ -z "$name" ]] && continue
+      [[ -n "${seen_label[$name]:-}" ]] && continue
+      seen_label["$name"]=1
+      ensure_label_id "$name" >/dev/null || true
+    done
+  done
+}
+
+# extract_labels is defined later, so we forward-declare via re-source. Simpler
+# fix: define a minimal inline parser here that mirrors extract_labels' output.
+extract_labels_inline() {
+  local file=$1 raw
+  raw=$(awk '/^---/{n++;next} n==1 && /^labels:/{sub(/^labels:[[:space:]]*/, ""); print; exit}' "$file")
+  raw=$(printf '%s' "$raw" | tr ',' ' ' | tr -s ' \t')
+  printf '%s stack auto-mirror' "$raw"
+}
+
+# Replace the forward call with the inline version so we don't depend on
+# definition order.
+declare -A seen_label
+for f in .symphony/issues/todo/STACK-*.md .symphony/issues/done/STACK-*.md; do
+  [[ -f "$f" ]] || continue
+  names=$(extract_labels_inline "$f")
+  for name in $names; do
+    [[ -z "$name" ]] && continue
+    [[ -n "${seen_label[$name]:-}" ]] && continue
+    seen_label["$name"]=1
+    ensure_label_id "$name" >/dev/null 2>&1 || true
+  done
+done
+unset seen_label
+
 if (( CLEAN_DUPES )); then
   if (( ${#dupes_to_archive[@]} == 0 )); then
     printf 'no duplicates found; nothing to clean\n'
@@ -245,16 +309,41 @@ find_closing_commit_sha() {
 
 build_description() {
   local file=$1 desired_state=$2 stack_id=$3
-  local body sha link
+  local body sha link hash
   body=$(extract_full_body "$file")
   if [[ "$desired_state" == "done" ]]; then
     sha=$(find_closing_commit_sha "$stack_id")
     if [[ -n "$sha" ]]; then
-      link=$(printf '\n\n---\n_Closed in commit [%s](%s/commit/%s)_' "${sha:0:8}" "$GH_REPO_URL" "$sha")
+      link=$(printf '\n\n---\n_Closed in commit [%s](<%s/commit/%s>)_' "${sha:0:8}" "$GH_REPO_URL" "$sha")
       body="${body}${link}"
     fi
   fi
+  # Linear's markdown parser normalizes emphasis tokens (_x_ → *x*) on
+  # store, so byte-level desc comparison after a roundtrip always fails.
+  # Embed a stable source hash as plain text (no markdown chars) so the
+  # marker survives normalization, then compare hashes for idempotency.
+  hash=$(printf '%s' "$body" | sha256sum | cut -c1-16)
+  body+=$(printf '\n\nmirror-hash: %s' "$hash")
   printf '%s' "$body"
+}
+
+extract_mirror_hash() {
+  # Pull the embedded hash out of a stored Linear description for the
+  # idempotency comparison. Linear may have normalized markdown around it
+  # but the bare `mirror-hash: <hex>` line stays intact. awk over grep
+  # so a missing marker returns "" (empty) instead of exit 1, which would
+  # trip set -e in the calling block.
+  printf '%s' "$1" | awk '
+    BEGIN { last = "" }
+    /mirror-hash:/ {
+      if (match($0, /mirror-hash:[[:space:]]*[a-f0-9]+/)) {
+        m = substr($0, RSTART, RLENGTH)
+        sub(/^mirror-hash:[[:space:]]*/, "", m)
+        last = m
+      }
+    }
+    END { if (last != "") print last }
+  '
 }
 
 build_label_ids_csv() {
@@ -301,16 +390,21 @@ mirror_file() {
   body=$(build_description "$file" "$desired_state" "$stack_id")
 
   if [[ -n "${existing_id[$stack_id]:-}" ]]; then
-    # Drift detection: compare every tracked field. If all match, skip.
+    # Drift detection: compare every tracked field. Description comparison
+    # uses the embedded mirror-hash marker because Linear normalizes
+    # markdown on store (emphasis tokens, link autolinks).
     local cur_state="${existing_state[$stack_id]}"
     local cur_priority="${existing_priority[$stack_id]}"
     local cur_labels="${existing_labels[$stack_id]}"
-    local cur_desc="${existing_description[$stack_id]}"
+    local cur_desc_hash desired_desc_hash
+    cur_desc_hash=$(extract_mirror_hash "${existing_description[$stack_id]}")
+    desired_desc_hash=$(extract_mirror_hash "$body")
 
     if [[ "$cur_state" == "$desired_state_id" \
        && "$cur_priority" == "$desired_priority" \
        && "$cur_labels" == "$desired_label_ids" \
-       && "$cur_desc" == "$body" ]]; then
+       && -n "$cur_desc_hash" \
+       && "$cur_desc_hash" == "$desired_desc_hash" ]]; then
       skipped=$((skipped + 1))
       return 0
     fi
