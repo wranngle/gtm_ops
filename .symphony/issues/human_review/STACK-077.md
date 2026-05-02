@@ -41,3 +41,17 @@ proof-of-work loop.
 - `docs/references/openai_symphony_harness_engineering_stack_diagrams_explained.txt`
   lines 512-552.
 
+## Handoff notes
+
+Implemented on 2026-05-02 by Worker K:
+
+- Added `scripts/symphony-review-packet.sh` to create
+  `.symphony/workspaces/<issue>/review-packet/manifest.md`, command logs,
+  changed-file summaries, and optional UI artifacts.
+- UI packets require visual evidence through provided artifacts,
+  `SYMPHONY_BROWSER_CAPTURE_CMD`, or `--fixture-visual` for smoke tests.
+- Added workflow/docs instructions to link the packet path from the handoff note.
+- Review packet: `.symphony/workspaces/STACK-076/review-packet/manifest.md`.
+
+Remaining scope: live browser capture depends on the caller's configured browser
+target; Edge internals were intentionally not changed.

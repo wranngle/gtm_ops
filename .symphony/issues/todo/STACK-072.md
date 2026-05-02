@@ -33,6 +33,11 @@ The bash adapter, the Elixir daemon, and the agent-evals package all emit the ri
   `apps/ops-console/pages/02_Observability.py`. Unit tests cover URL
   construction and offline behavior without live HTTP calls. The issue
   remains in todo because real slow-span data is still blocked by STACK-070.
+- 2026-05-02: STACK-070 now emits real `symphony.trace_smoke` spans and
+  wraps Elixir worker turns as `symphony.turn`. The dashboard's slow-span
+  panel can be validated against real data once the daemon is run with
+  `OTLP_HTTP_ENDPOINT` pointed at VictoriaTraces' direct insert endpoint
+  or the Vector trace-forwarding caveat is resolved.
 
 ## Out of scope
 

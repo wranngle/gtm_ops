@@ -33,3 +33,26 @@ Either path satisfies the CI requirement. Path A is higher fidelity but requires
 - `docs/references/edge-devtools-mcp.md` ("CI integration" section)
 - `tools/edge-mcp/smoke/smoke.mjs`
 - `tools/edge-mcp/windows/setup-elevated.sh`
+
+## Progress
+
+- 2026-05-02: Chose the `STACK-009` local-only live-smoke policy for now.
+  `.github/workflows/knowledge-base.yml` now runs non-live Edge MCP checks:
+  `node tools/edge-mcp/filter-unsafe-tools.mjs --self-test` and
+  `node tools/edge-mcp/smoke/validate-last-run.mjs --max-age-days 30`.
+  This catches mediator regressions and stale live proof, but it does not
+  launch Edge or validate the Windows-side portproxy path.
+
+## Remaining external proof to close
+
+This issue stays open until one of these live-CI paths is actually available:
+
+- Path A: provision a self-hosted Windows runner labelled `self-hosted`,
+  `windows`, and `edge`; pre-run `tools/edge-mcp/windows/setup-elevated.sh`;
+  then add a workflow that runs
+  `node tools/edge-mcp/smoke/smoke.mjs --record-last-run` on changes under
+  `tools/edge-mcp/`.
+- Path B: explicitly approve a lower-fidelity Chromium adapter for
+  `ubuntu-latest`, document that it does not prove Windows Edge, WSL
+  portproxy, or firewall behavior, and keep the local Edge run as the canonical
+  pre-merge gate.

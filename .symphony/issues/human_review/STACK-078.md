@@ -40,3 +40,15 @@ either dropped or folded into the current task.
 - `docs/references/openai_symphony_harness_engineering_stack_diagrams_explained.txt`
   lines 522, 567, and 801.
 
+## Handoff notes
+
+Implemented on 2026-05-02 by Worker K:
+
+- Added `scripts/symphony-follow-up.sh create` for local Markdown-backed
+  follow-ups under `.symphony/issues/todo`.
+- The helper assigns the next `PREFIX-NNN` id, writes required front matter,
+  links the source task, and rejects unsafe evidence paths from generated,
+  build, dependency, runtime, private-looking, or out-of-repo locations.
+- Added fixture-backed coverage that proves `scripts/symphony.sh list` sees the
+  generated follow-up with the expected priority and blocked state.
+- Review packet: `.symphony/workspaces/STACK-076/review-packet/manifest.md`.

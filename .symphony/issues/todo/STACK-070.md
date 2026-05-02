@@ -25,6 +25,21 @@ The Symphony Elixir daemon is the natural producer for the first user journey: e
 - `docs/references/local-observability.md` TraceQL section is updated from "PLANNED" to "Live" with example queries that match the actual span attributes.
 - Backwards compatibility: if the OTLP endpoint is unreachable, the orchestrator must NOT crash. Tracing is best-effort, just like the existing `Symphony.Logging` sink.
 
+## Progress
+
+- 2026-05-02: Added `Symphony.Tracing` with a small OTLP/HTTP protobuf
+  exporter, `Symphony.Tracing.span/4`, and `mix symphony.trace_smoke`.
+  The Elixir worker now wraps agent turns in a best-effort
+  `symphony.turn` span, and `tools/observability/smoke.sh traces`
+  emits + queries a real `symphony.trace_smoke` span. Live smoke passes
+  against VictoriaTraces' direct OTLP insert endpoint.
+- Remaining caveat: Vector 0.55 accepts the OTLP trace request at
+  `:4318/v1/traces`, but its decoded trace event is not currently
+  forwarded to VictoriaTraces as a valid `resourceSpans` envelope.
+  Until that forwarding slice is fixed, set
+  `OTLP_HTTP_ENDPOINT=http://127.0.0.1:10428/insert/opentelemetry/v1/traces`
+  when you need `symphony.turn` spans to land locally.
+
 ## Out of scope
 
 - Tracing the bash one-shot adapter (`scripts/symphony.sh`); that is a separate effort and harder because there is no long-lived process to amortize the span-buffer flush against. File a follow-up if needed.

@@ -52,3 +52,13 @@ adapter (STACK-010) lands.
 
 Dependencies: STACK-010 (need the real Codex JSON-RPC stream to extract
 token events from).
+
+## Completion note
+
+Completed in `tools/symphony-elixir`: `LiveSession` carries Codex token and
+last-reported fields, Codex app-server stream messages are forwarded into the
+orchestrator, absolute token totals are delta-accounted into live sessions and
+aggregate `codex_totals`, unsupported generic `usage` payloads are ignored, and
+the latest rate-limit payload is surfaced in `Symphony.snapshot/0`. Regression
+coverage lives in `test/symphony/orchestrator_test.exs` and
+`test/symphony/codex/app_server_test.exs`.

@@ -23,8 +23,23 @@ Out of scope: changing the owner's main Edge profile behavior (still untouched),
 
 ## References
 
-- `docs/references/edge-devtools-mcp.md` ("Per-worktree app boot — gap" section)
+- `docs/references/edge-devtools-mcp.md` ("Per-worktree Edge/App Boot Contract" section)
 - `docs/references/openai_harness_engineering_original_spec.txt` line 46 ("we made the app bootable per git worktree")
 - `tools/edge-mcp/edge-debug-launch.sh` (current single-instance launcher)
 - `tools/edge-mcp/launch-mcp.sh` (current single-port endpoint resolution)
 - `tools/edge-mcp/windows/setup-elevated.sh` (current single-rule setup)
+
+## Implementation note
+
+Worker J added the per-worktree runtime contract:
+
+- `tools/edge-mcp/edge-debug-launch.sh` allocates or reuses a port from
+  `EDGE_DEBUG_PORT_RANGE` and writes `.symphony/runtime/edge-port` plus
+  `.symphony/runtime/edge-debug.json`.
+- Edge profile directories default to `EdgeDebugProfile-<worktree-key>`.
+- `tools/edge-mcp/launch-mcp.sh` reads the same runtime port/endpoint.
+- `tools/edge-mcp/windows/setup-elevated.sh --port-range <start>-<end>`
+  stages range-aware portproxy/firewall rules.
+
+Remaining acceptance item: run the dual-worktree live Edge smoke on Windows
+after applying the elevated range setup.

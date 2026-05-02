@@ -45,3 +45,15 @@ documented timeouts and failure semantics.
 
 Dependencies: STACK-011 (worker spawn must exist before `before_run` /
 `after_run` can be wired in).
+
+## Completion note
+
+Completed in `tools/symphony-elixir`: workspace hooks run with the issue
+workspace as cwd, `hooks.timeout_ms` falls back to the default for non-positive
+values, hook logs use `event.action=hook.<name>` and `event.outcome=...`, and
+`before_remove` is wired into `WorkspaceManager.remove/2` with logged-and-
+ignored failure semantics. `before_run` and `after_run` remain wired through
+the agent runners so attempt lifecycle hooks execute around each run.
+Regression coverage lives in `test/symphony/workspace_manager_test.exs`,
+`test/symphony/agent_runner/local_shell_test.exs`, and
+`test/symphony/agent_runner/codex_app_server_test.exs`.

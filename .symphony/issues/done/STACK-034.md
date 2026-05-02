@@ -43,3 +43,14 @@ must re-validate per tick.
 
 Dependencies: STACK-013 (dynamic reload provides the effective-config
 plumbing the tick preflight reuses).
+
+## Completion note
+
+Completed in `tools/symphony-elixir`: `Symphony.Config.validate_dispatch_preflight/1`
+validates tracker and command requirements, the CLI startup validation path
+uses it for operator-visible failures, and the orchestrator tick path re-runs
+preflight after reconciliation so dispatch is skipped while reconciliation and
+snapshot state remain alive. Invalid workflow reloads continue to keep the last
+known good workflow through `Symphony.WorkflowStore`. Regression coverage lives
+in `test/symphony/config_test.exs`, `test/symphony/orchestrator_test.exs`, and
+`test/symphony/workflow_store_test.exs`.
