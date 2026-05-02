@@ -114,7 +114,7 @@ docstring expansion inflate the number heavily.
 | `AGENTS.md` (in `elixir/`) | Upstream's per-directory agent guidance. We have an `AGENTS.md` at the repo root instead. |
 | `mise.toml` (in `elixir/`) | Upstream pins `erlang = "28"`, `elixir = "1.19.5-otp-28"`. We have `.mise.toml` at repo root pinning `erlang = "27"`, `elixir = "1.19.5-otp-27"`. **Drift in toolchain version** (otp-27 vs otp-28). |
 | `.gitignore` (in `elixir/`) | Upstream-specific ignores. We rely on the repo-root gitignore. |
-| `docs/logging.md`, `docs/token_accounting.md` | Upstream-internal docs. Worth porting / rewriting under our `docs/references/`. |
+| `docs/logging.md`, `docs/token_accounting.md` | **Ported 2026-05-02** verbatim into `tools/symphony-elixir/docs/` as part of the transfer-completeness audit. |
 
 ## API drift summary
 
@@ -153,9 +153,9 @@ function-name divergences from upstream).
 | `specs_check_test.exs` | `specs_check_test.exs` | **Tests different tool** (see `specs_check.ex` row above) |
 | `ssh_test.exs` | `ssh_test.exs` | Ported |
 | `status_dashboard_snapshot_test.exs` | `status_dashboard_snapshot_test.exs` | Ported, all 6 fixtures |
-| `workspace_and_config_test.exs` | parked `.todo_needs_create_for_issue_label_names_revalidate_codex_runtime` | **Parked**, blocked on `WorkspaceManager.create_for_issue` and 6+ other functions |
+| `workspace_and_config_test.exs` | `.parked_upstream_only_workspace_helpers` | **Parked permanently** (see `test/symphony/PARKED_TESTS.md`) |
 | `mix/tasks/pr_body_check_test.exs` | `mix/tasks/pr_body_check_test.exs` | Ported |
-| `mix/tasks/specs_check_task_test.exs` | (none) | **Missing.** We deleted upstream's task test. |
+| `mix/tasks/specs_check_task_test.exs` | `mix/tasks/specs_check_task_test.exs` | Ported 2026-05-02 (gap caught in transfer-completeness audit) |
 | `mix/tasks/workspace_before_remove_test.exs` | `mix/tasks/workspace_before_remove_test.exs` | Ported |
 | `support/snapshot_support.exs` | `support/snapshot_support.exs` | Ported |
 | `support/test_support.exs` | `support/test_support.exs` | Ported, alias-adapted |
@@ -188,8 +188,8 @@ ours-only modules.)
 
 ## Documentation upstream has that we don't
 
-- `elixir/docs/logging.md` — log-key contract reference.
-- `elixir/docs/token_accounting.md` — § 13.5 token-aggregation rules.
+- ~~`elixir/docs/logging.md`~~ — **ported** into `tools/symphony-elixir/docs/logging.md` (2026-05-02).
+- ~~`elixir/docs/token_accounting.md`~~ — **ported** into `tools/symphony-elixir/docs/token_accounting.md` (2026-05-02).
 - `elixir/AGENTS.md` — operator-facing agent guidance for the elixir subtree.
 
 ## Top-level repo (above `elixir/`)
