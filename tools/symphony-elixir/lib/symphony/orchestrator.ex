@@ -80,7 +80,17 @@ defmodule Symphony.Orchestrator do
     rate_limits: nil,
     last_tick_at: nil,
     startup_cleanup_done?: false,
-    poll_interval_override_ms: nil
+    poll_interval_override_ms: nil,
+    # Spec § 7.4 / § 8.1: tick coalescing. `tick_timer_ref` is the
+    # `Process.send_after/3` reference for the next pending tick;
+    # `tick_token` is a `make_ref()` matched in `handle_info({:tick,
+    # token})` so stale timers (from cancelled schedules or an
+    # interleaved manual `tick_now`) are dropped instead of running.
+    # `next_poll_due_at_ms` is the monotonic-clock target for the next
+    # tick, surfaced through the snapshot per spec § 13.5.
+    tick_timer_ref: nil,
+    tick_token: nil,
+    next_poll_due_at_ms: nil
   }
 
   # ============== Public API ==============
@@ -155,7 +165,10 @@ defmodule Symphony.Orchestrator do
     # Spec § 8.6 startup terminal workspace cleanup. Best-effort: a fetch
     # failure is logged and ignored so the daemon still boots.
     state = run_terminal_workspace_cleanup(state)
-    schedule_tick(poll_interval(state))
+    # Spec § 8.1: "schedules an immediate tick, and then repeats every
+    # `polling.interval_ms`." The first tick is delay=0 so the daemon
+    # does not idle for a full poll interval before fetching candidates.
+    state = schedule_tick(state, 0)
     {:ok, state}
   end
 
@@ -170,7 +183,14 @@ defmodule Symphony.Orchestrator do
   end
 
   def handle_call(:tick_now, _from, state) do
-    {:reply, :ok, run_tick(state)}
+    # Spec § 7.4 idempotency: a manual tick coalesces with the scheduled
+    # one. Cancel the pending timer (and invalidate its token) before
+    # running, then re-arm so the next tick is `interval_ms` from now
+    # rather than racing with a stale timer.
+    state = cancel_pending_tick(state)
+    new_state = run_tick(state)
+    new_state = schedule_tick(new_state, poll_interval(new_state))
+    {:reply, :ok, new_state}
   end
 
   def handle_call({:inject_running, issue_id, entry}, _from, state) do
@@ -188,9 +208,28 @@ defmodule Symphony.Orchestrator do
   end
 
   @impl true
-  def handle_info(:tick, state) do
+  # Spec § 7.4 idempotency: tick coalescing. The token in the message
+  # must match the orchestrator's current `tick_token`, otherwise the
+  # message came from a cancelled timer and is dropped. This prevents
+  # overlapping ticks when `tick_now`, an `apply_workflow` reload, or a
+  # rescheduled timer fires while a stale `:tick` message is still in
+  # the mailbox.
+  def handle_info({:tick, token}, %{tick_token: token} = state) when is_reference(token) do
+    state = %{state | tick_timer_ref: nil, tick_token: nil, next_poll_due_at_ms: nil}
     new_state = run_tick(state)
-    schedule_tick(poll_interval(new_state))
+    new_state = schedule_tick(new_state, poll_interval(new_state))
+    {:noreply, new_state}
+  end
+
+  def handle_info({:tick, _stale_token}, state), do: {:noreply, state}
+
+  # Backward-compat: untokenized `:tick` (used by tests that send the
+  # raw atom). Treated as a coalesced tick that always re-arms the
+  # next interval.
+  def handle_info(:tick, state) do
+    state = cancel_pending_tick(state)
+    new_state = run_tick(state)
+    new_state = schedule_tick(new_state, poll_interval(new_state))
     {:noreply, new_state}
   end
 
@@ -1082,9 +1121,29 @@ defmodule Symphony.Orchestrator do
 
   # ============== Tick scheduling ==============
 
-  defp schedule_tick(interval_ms) when is_integer(interval_ms) and interval_ms > 0 do
-    Process.send_after(self(), :tick, interval_ms)
+  # Spec § 7.4 / § 8.1: cancel any in-flight timer and arm a new one
+  # with a fresh token so the matching `handle_info({:tick, token})`
+  # is the only one that fires. `delay_ms` may be 0 for immediate ticks
+  # (used at startup and from `tick_now`).
+  defp schedule_tick(%{} = state, delay_ms) when is_integer(delay_ms) and delay_ms >= 0 do
+    state = cancel_pending_tick(state)
+    token = make_ref()
+    timer_ref = Process.send_after(self(), {:tick, token}, delay_ms)
+
+    %{
+      state
+      | tick_timer_ref: timer_ref,
+        tick_token: token,
+        next_poll_due_at_ms: System.monotonic_time(:millisecond) + delay_ms
+    }
   end
+
+  defp cancel_pending_tick(%{tick_timer_ref: ref} = state) when is_reference(ref) do
+    _ = Process.cancel_timer(ref)
+    %{state | tick_timer_ref: nil, tick_token: nil, next_poll_due_at_ms: nil}
+  end
+
+  defp cancel_pending_tick(state), do: state
 
   defp poll_interval(%{poll_interval_override_ms: ms}) when is_integer(ms) and ms > 0, do: ms
 
@@ -1161,6 +1220,13 @@ defmodule Symphony.Orchestrator do
         state.codex_totals.seconds_running + active_seconds
       )
 
+    # Spec § 13.5: surface poll-loop visibility (matches upstream
+    # `polling: %{checking?, next_poll_in_ms, poll_interval_ms}`).
+    polling_info = %{
+      poll_interval_ms: poll_interval(state),
+      next_poll_in_ms: next_poll_in_ms(state.next_poll_due_at_ms, now_ms)
+    }
+
     %{
       running: running_rows,
       retrying: retrying_rows,
@@ -1172,8 +1238,15 @@ defmodule Symphony.Orchestrator do
           nil -> nil
           c -> Config.tracker_kind(c)
         end,
-      last_tick_at: state.last_tick_at
+      last_tick_at: state.last_tick_at,
+      polling: polling_info
     }
+  end
+
+  defp next_poll_in_ms(nil, _now_ms), do: nil
+
+  defp next_poll_in_ms(due_at_ms, now_ms) when is_integer(due_at_ms) and is_integer(now_ms) do
+    max(0, due_at_ms - now_ms)
   end
 
   defp tracked_state(%{issue: %Tracker.Issue{state: s}}) when is_binary(s), do: s
