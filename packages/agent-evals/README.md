@@ -12,19 +12,22 @@ bun test
 bun run evaluate fixtures/conversations.json
 ```
 
+Tests include contract validation for ElevenLabs-style webhook events using synthetic fixtures (`fixtures/webhook-events.json`).
+
 ## Layout
 
 ```
 src/
   types/        Zod-parsed shapes and public contracts. Imports nothing.
+                Includes Conversation, Turn, EvaluationResult, and WebhookPayload types.
   config/       Env-driven runtime config. Imports types only.
   repo/         Fixture-backed conversation reader. Imports types, config.
-  providers/    Cross-cutting boundaries (clock, logger). Imports types only.
+  providers/    Cross-cutting boundaries (clock, logger, metrics). Imports types only.
   service/      Evaluation business rules. Imports types, repo, providers.
   runtime/      CLI entry point that wires the layers. Imports anything.
   ui/           Markdown renderer for evaluation results. Imports types, service.
-fixtures/       Synthetic conversation transcripts.
-tests/          Per-layer unit tests.
+fixtures/       Synthetic conversation transcripts and webhook events.
+tests/          Per-layer unit tests and webhook contract tests.
 ```
 
 ## Architecture Rule
