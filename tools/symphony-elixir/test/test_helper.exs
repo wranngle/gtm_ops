@@ -1,8 +1,10 @@
 ExUnit.start()
+Code.require_file("support/snapshot_support.exs", __DIR__)
+Code.require_file("support/test_support.exs", __DIR__)
 # Tests tagged `:integration` hit the live Linear workspace (or other
 # external services) and require credentials. Exclude by default;
 # opt in with `mix test --include integration`.
-ExUnit.configure(exclude: [:integration])
+ExUnit.configure(exclude: [:integration, :live_e2e])
 
 # The optional Phoenix LiveView dashboard (spec § 13.3, § 13.6) is
 # normally OFF in :test (see config/test.exs `dashboard_enabled?: false`).
