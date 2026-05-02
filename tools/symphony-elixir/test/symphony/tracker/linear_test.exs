@@ -103,6 +103,50 @@ defmodule Symphony.Tracker.LinearTest do
       config = linear_real_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
       assert {:ok, %{}} = LinearAdapter.fetch_issue_states_by_ids(config, [])
     end
+
+    test "post_comment/4 delegates to the client and validates inputs", %{tmp: tmp} do
+      config = linear_real_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
+      assert {:error, :linear_missing_issue_id} = LinearAdapter.post_comment(config, "", "hi")
+      assert {:error, :linear_empty_comment_body} = LinearAdapter.post_comment(config, "u-1", "")
+    end
+  end
+
+  # Live workspace test (spec section 11.5): exercises the real Linear
+  # `commentCreate` mutation against the WRA team using
+  # `LINEAR_API_KEY` from the environment. Tagged `:integration` so it
+  # does NOT run on every `mix test`; opt in with
+  # `mix test --include integration`.
+  #
+  # The issue ID is the live WRA-77 ("STACK-075: Orchestrator lacks
+  # request_refresh API ...") which is in a stable Todo state and is the
+  # canonical probe target for vector 2 LINEAR exploration. If the issue
+  # is ever deleted, this test will surface a GraphQL error and need
+  # the ID rotated.
+  describe "live workspace (tag :integration)" do
+    @tag :integration
+    test "post_comment/4 leaves an audit-trail comment on a real issue", %{tmp: tmp} do
+      api_key = System.get_env("LINEAR_API_KEY")
+
+      if api_key in [nil, ""] do
+        flunk(
+          "LINEAR_API_KEY env var not set; integration test cannot run. " <>
+            "source ~/.agents/.env first."
+        )
+      end
+
+      config = linear_real_config(tmp, api_key: api_key, project_slug: "wgte")
+      issue_id = "4c1b6e32-6dd2-4792-baef-48e8971fb4c2"
+
+      body =
+        "symphony.tracker.linear.live_test: post_comment/4 ok @ " <>
+          DateTime.to_iso8601(DateTime.utc_now())
+
+      assert {:ok, %{id: comment_id, url: comment_url}} =
+               LinearAdapter.post_comment(config, issue_id, body)
+
+      assert is_binary(comment_id) and byte_size(comment_id) > 0
+      assert is_binary(comment_url) and String.contains?(comment_url, "linear.app")
+    end
   end
 
   # ============== Fixtures ==============

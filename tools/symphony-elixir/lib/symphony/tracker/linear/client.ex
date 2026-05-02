@@ -91,6 +91,15 @@ defmodule Symphony.Tracker.Linear.Client do
   }
   """
 
+  @comment_create_mutation """
+  mutation SymphonyLinearCommentCreate($input: CommentCreateInput!) {
+    commentCreate(input: $input) {
+      success
+      comment { id url }
+    }
+  }
+  """
+
   # ============== Behaviour-facing entry points ==============
 
   @doc """
@@ -149,6 +158,67 @@ defmodule Symphony.Tracker.Linear.Client do
         with {:ok, _api_key} <- require_api_key(config),
              {:ok, issues} <- do_fetch_issues_by_ids(config, deduped, []) do
           {:ok, Map.new(issues, fn %Issue{id: id, state: state} -> {id, state} end)}
+        end
+    end
+  end
+
+  @doc """
+  Post a comment on a Linear issue via the `commentCreate` mutation.
+
+  `issue_id` is the Linear issue UUID (the `id` field, not the
+  `identifier` like `WRA-77`). `body` is plain text or Linear-flavored
+  markdown.
+
+  Options:
+    * `:do_not_subscribe` — when `true` (default), the agent posting the
+      comment is NOT auto-subscribed to the issue. Symphony agents are
+      headless and shouldn't accumulate subscriptions; an operator who
+      explicitly cares about the issue can subscribe themselves.
+    * `:request_fun` — same injection seam as `graphql/4` for tests.
+
+  Returns `{:ok, %{id: comment_id, url: comment_url}}` on success, or an
+  error tuple. `:linear_comment_create_failed` is surfaced when the
+  mutation returns `success: false` without GraphQL errors (defensive —
+  the live API populates `errors` in that case, but we don't want to
+  silently treat a `success: false` as a successful post).
+
+  Empty / blank `body` short-circuits to `{:error,
+  :linear_empty_comment_body}` so callers don't accidentally post empty
+  audit-trail comments when string interpolation produces nothing.
+  """
+  @spec post_comment(Config.t(), binary(), binary(), keyword()) ::
+          {:ok, %{id: binary(), url: binary() | nil}} | {:error, term()}
+  def post_comment(config, issue_id, body, opts \\ [])
+      when is_binary(issue_id) and is_binary(body) and is_list(opts) do
+    trimmed = String.trim(body)
+
+    cond do
+      issue_id == "" ->
+        {:error, :linear_missing_issue_id}
+
+      trimmed == "" ->
+        {:error, :linear_empty_comment_body}
+
+      true ->
+        with {:ok, _api_key} <- require_api_key(config) do
+          input =
+            %{
+              "issueId" => issue_id,
+              "body" => body,
+              "doNotSubscribeToIssue" => Keyword.get(opts, :do_not_subscribe, true)
+            }
+
+          variables = %{input: input}
+
+          graphql_opts =
+            opts
+            |> Keyword.take([:request_fun])
+            |> Keyword.put(:operation_name, "SymphonyLinearCommentCreate")
+
+          with {:ok, body_resp} <-
+                 graphql(config, @comment_create_mutation, variables, graphql_opts) do
+            decode_comment_create(body_resp)
+          end
         end
     end
   end
@@ -220,6 +290,11 @@ defmodule Symphony.Tracker.Linear.Client do
   @doc false
   @spec decode_response_for_test(map()) :: {:ok, [Issue.t()]} | {:error, term()}
   def decode_response_for_test(body), do: decode_issues_response(body)
+
+  @doc false
+  @spec decode_comment_create_for_test(map()) ::
+          {:ok, %{id: binary(), url: binary() | nil}} | {:error, term()}
+  def decode_comment_create_for_test(body), do: decode_comment_create(body)
 
   # ============== Pagination loop ==============
 
@@ -294,6 +369,28 @@ defmodule Symphony.Tracker.Linear.Client do
   end
 
   defp decode_issues_response(_), do: {:error, :linear_unknown_payload}
+
+  defp decode_comment_create(%{"errors" => errors}) when is_list(errors) and errors != [] do
+    {:error, {:linear_graphql_errors, errors}}
+  end
+
+  defp decode_comment_create(%{
+         "data" => %{
+           "commentCreate" => %{
+             "success" => true,
+             "comment" => %{"id" => id} = comment
+           }
+         }
+       })
+       when is_binary(id) and id != "" do
+    {:ok, %{id: id, url: Map.get(comment, "url")}}
+  end
+
+  defp decode_comment_create(%{"data" => %{"commentCreate" => %{"success" => false} = payload}}) do
+    {:error, {:linear_comment_create_failed, payload}}
+  end
+
+  defp decode_comment_create(_), do: {:error, :linear_unknown_payload}
 
   defp next_page_cursor(%{has_next_page: true, end_cursor: cursor})
        when is_binary(cursor) and byte_size(cursor) > 0,

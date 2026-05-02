@@ -271,6 +271,138 @@ defmodule Symphony.Tracker.Linear.ClientTest do
     end
   end
 
+  describe "post_comment/4" do
+    test "preflight: empty issue_id surfaces :linear_missing_issue_id", %{tmp: tmp} do
+      config = workflow_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
+      assert {:error, :linear_missing_issue_id} = Client.post_comment(config, "", "hi")
+    end
+
+    test "preflight: blank body surfaces :linear_empty_comment_body", %{tmp: tmp} do
+      config = workflow_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
+      assert {:error, :linear_empty_comment_body} = Client.post_comment(config, "uuid-1", "  \n  ")
+    end
+
+    test "preflight: missing api_key surfaces :missing_tracker_api_key", %{tmp: tmp} do
+      config = workflow_config(tmp, api_key: nil, project_slug: "wgte")
+      assert {:error, :missing_tracker_api_key} = Client.post_comment(config, "uuid-1", "hello")
+    end
+
+    test "successful mutation returns {:ok, %{id, url}} and uses commentCreate input", %{tmp: tmp} do
+      config = workflow_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
+
+      request_fun = fn payload, headers, _opts ->
+        send(self(), {:capture, payload, headers})
+
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "data" => %{
+               "commentCreate" => %{
+                 "success" => true,
+                 "comment" => %{
+                   "id" => "comment-uuid-1",
+                   "url" => "https://linear.app/example/issue/WGTE-1#comment-comment"
+                 }
+               }
+             }
+           }
+         }}
+      end
+
+      assert {:ok, %{id: "comment-uuid-1", url: url}} =
+               Client.post_comment(config, "issue-uuid-1", "dogfood-loop tick @ 2026-05-01",
+                 request_fun: request_fun
+               )
+
+      assert url =~ "comment-comment"
+
+      assert_received {:capture, payload, headers}
+      assert payload["operationName"] == "SymphonyLinearCommentCreate"
+      assert payload["query"] =~ "commentCreate"
+      assert payload["variables"][:input]["issueId"] == "issue-uuid-1"
+      assert payload["variables"][:input]["body"] == "dogfood-loop tick @ 2026-05-01"
+      assert payload["variables"][:input]["doNotSubscribeToIssue"] == true
+      assert {"Authorization", "lin_xxx"} in headers
+    end
+
+    test "do_not_subscribe: false flips the input flag", %{tmp: tmp} do
+      config = workflow_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
+
+      request_fun = fn payload, _headers, _opts ->
+        send(self(), {:capture, payload})
+
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "data" => %{
+               "commentCreate" => %{
+                 "success" => true,
+                 "comment" => %{"id" => "c-1", "url" => nil}
+               }
+             }
+           }
+         }}
+      end
+
+      assert {:ok, _} =
+               Client.post_comment(config, "issue-uuid-1", "x",
+                 request_fun: request_fun,
+                 do_not_subscribe: false
+               )
+
+      assert_received {:capture, payload}
+      assert payload["variables"][:input]["doNotSubscribeToIssue"] == false
+    end
+
+    test "GraphQL errors propagate as {:linear_graphql_errors, errors}", %{tmp: tmp} do
+      config = workflow_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
+      errors = [%{"message" => "Issue not found"}]
+
+      request_fun = fn _, _, _ ->
+        {:ok, %{status: 200, body: %{"errors" => errors}}}
+      end
+
+      assert {:error, {:linear_graphql_errors, ^errors}} =
+               Client.post_comment(config, "issue-uuid-1", "hi", request_fun: request_fun)
+    end
+
+    test "success: false without errors surfaces :linear_comment_create_failed", %{tmp: tmp} do
+      config = workflow_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
+
+      request_fun = fn _, _, _ ->
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "data" => %{
+               "commentCreate" => %{"success" => false, "comment" => nil}
+             }
+           }
+         }}
+      end
+
+      assert {:error, {:linear_comment_create_failed, _}} =
+               Client.post_comment(config, "issue-uuid-1", "hi", request_fun: request_fun)
+    end
+
+    test "decode_comment_create_for_test/1 covers happy + unknown payload" do
+      assert {:ok, %{id: "c-1", url: "https://example/c"}} =
+               Client.decode_comment_create_for_test(%{
+                 "data" => %{
+                   "commentCreate" => %{
+                     "success" => true,
+                     "comment" => %{"id" => "c-1", "url" => "https://example/c"}
+                   }
+                 }
+               })
+
+      assert {:error, :linear_unknown_payload} =
+               Client.decode_comment_create_for_test(%{"data" => %{}})
+    end
+  end
+
   describe "test seams" do
     test "next_page_cursor_for_test/1 covers all pagination branches" do
       assert :done = Client.next_page_cursor_for_test(%{has_next_page: false, end_cursor: nil})
