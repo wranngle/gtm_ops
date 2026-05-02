@@ -144,6 +144,11 @@ defmodule Symphony.OrchestratorTest do
     ---
     """)
 
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             not is_nil(snap.last_tick_at) and snap.polling.checking? == false
+           end)
+
     Orchestrator.set_adapter(Symphony.Test.BlockingTracker)
 
     assert {:ok, %{queued: true, coalesced: true}} = Orchestrator.request_refresh()
