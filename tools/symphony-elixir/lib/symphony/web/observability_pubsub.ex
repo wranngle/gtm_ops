@@ -25,10 +25,20 @@ defmodule Symphony.Web.ObservabilityPubSub do
   end
 
   @spec broadcast_update() :: :ok
-  def broadcast_update do
-    case Process.whereis(@pubsub) do
+  def broadcast_update, do: broadcast_update(@pubsub)
+
+  @spec broadcast_update(atom() | pid()) :: :ok
+  def broadcast_update(pubsub) when is_pid(pubsub) do
+    Phoenix.PubSub.broadcast(pubsub, @topic, @update_message)
+    :ok
+  rescue
+    _ -> :ok
+  end
+
+  def broadcast_update(pubsub_name) when is_atom(pubsub_name) do
+    case Process.whereis(pubsub_name) do
       pid when is_pid(pid) ->
-        Phoenix.PubSub.broadcast(@pubsub, @topic, @update_message)
+        Phoenix.PubSub.broadcast(pubsub_name, @topic, @update_message)
         :ok
 
       _ ->
