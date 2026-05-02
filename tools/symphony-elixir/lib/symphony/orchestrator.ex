@@ -57,6 +57,7 @@ defmodule Symphony.Orchestrator do
     RetryQueue,
     RunAttempt,
     Tracker,
+    Tracing,
     WorkflowLoader,
     WorkspaceManager
   }
@@ -104,8 +105,10 @@ defmodule Symphony.Orchestrator do
   end
 
   defp call_snapshot(pid) do
+    timeout_ms = Application.get_env(:symphony, :snapshot_timeout_ms, 10_000)
+
     try do
-      GenServer.call(pid, :snapshot, 10_000)
+      GenServer.call(pid, :snapshot, timeout_ms)
     catch
       :exit, {:timeout, _} -> {:error, :timeout}
       :exit, {:noproc, _} -> {:error, :unavailable}
@@ -195,21 +198,38 @@ defmodule Symphony.Orchestrator do
     end
   end
 
+  @doc """
+  Test seam: insert a retry entry directly so branch tests can drive
+  the § 8.4 retry handler without waiting for wall-clock backoff.
+  """
+  @spec inject_retry(binary(), map()) :: :ok | {:error, :unavailable}
+  def inject_retry(issue_id, retry_entry) when is_binary(issue_id) and is_map(retry_entry) do
+    case GenServer.whereis(__MODULE__) do
+      nil -> {:error, :unavailable}
+      pid -> GenServer.call(pid, {:inject_retry, issue_id, retry_entry}, 5_000)
+    end
+  end
+
   # ============== Callbacks ==============
 
   @impl true
   def init(_opts) do
-    state = build_initial_state()
-    clear_poll_check_cache()
+    case build_initial_state() do
+      {:ok, state} ->
+        clear_poll_check_cache()
 
-    # Spec § 8.6 startup terminal workspace cleanup. Best-effort: a fetch
-    # failure is logged and ignored so the daemon still boots.
-    state = run_terminal_workspace_cleanup(state)
-    # Spec § 8.1: "schedules an immediate tick, and then repeats every
-    # `polling.interval_ms`." The first tick is delay=0 so the daemon
-    # does not idle for a full poll interval before fetching candidates.
-    state = schedule_tick(state, 0)
-    {:ok, state}
+        # Spec § 8.6 startup terminal workspace cleanup. Best-effort: a fetch
+        # failure is logged and ignored so the daemon still boots.
+        state = run_terminal_workspace_cleanup(state)
+        # Spec § 8.1: "schedules an immediate tick, and then repeats every
+        # `polling.interval_ms`." The first tick is delay=0 so the daemon
+        # does not idle for a full poll interval before fetching candidates.
+        state = schedule_tick(state, 0)
+        {:ok, state}
+
+      {:error, reason} ->
+        {:stop, reason}
+    end
   end
 
   @impl true
@@ -250,6 +270,18 @@ defmodule Symphony.Orchestrator do
 
   def handle_call({:set_adapter, module}, _from, state) do
     {:reply, :ok, %{state | adapter: module}}
+  end
+
+  def handle_call({:inject_retry, issue_id, retry_entry}, _from, state) do
+    new_retry = Map.put(retry_entry, :issue_id, issue_id)
+
+    new_state = %{
+      state
+      | retry_attempts: Map.put(state.retry_attempts, issue_id, new_retry),
+        claimed: MapSet.put(state.claimed, issue_id)
+    }
+
+    {:reply, :ok, new_state}
   end
 
   @impl true
@@ -309,9 +341,16 @@ defmodule Symphony.Orchestrator do
         {:noreply, state}
 
       entry ->
-        new_session = integrate_codex_update(entry.session, update)
+        {new_session, token_delta, rate_limits} = integrate_codex_update(entry.session, update)
         new_running = Map.put(state.running, issue_id, %{entry | session: new_session})
-        {:noreply, %{state | running: new_running}}
+
+        new_state =
+          state
+          |> Map.put(:running, new_running)
+          |> apply_codex_token_delta(token_delta)
+          |> maybe_put_rate_limits(rate_limits)
+
+        {:noreply, new_state}
     end
   end
 
@@ -381,11 +420,33 @@ defmodule Symphony.Orchestrator do
       {:ok, workflow} ->
         Logger.info("symphony.workflow_loaded path=#{workflow.source_path}")
         {state, _} = apply_workflow_to_state(@initial_state, workflow)
-        state
+
+        case startup_preflight(state) do
+          :ok -> {:ok, state}
+          {:error, reason} -> {:error, reason}
+        end
 
       {:error, reason} ->
         Logger.warning("symphony.workflow_load_failed reason=#{inspect(reason)}")
-        @initial_state
+        {:ok, @initial_state}
+    end
+  end
+
+  defp startup_preflight(%{config: nil}), do: {:error, :startup_config_unavailable}
+
+  defp startup_preflight(%{config: config}) do
+    case Config.validate_dispatch_preflight(config) do
+      :ok ->
+        :ok
+
+      {:error, reason} = error ->
+        Logging.emit(:error, "symphony.startup.preflight_failed", :failure,
+          message: "startup aborted",
+          fields: %{reason: inspect(reason)}
+        )
+
+        Logger.error("symphony.startup.preflight_failed reason=#{inspect(reason)}")
+        error
     end
   end
 
@@ -708,7 +769,7 @@ defmodule Symphony.Orchestrator do
 
   # ============== Worker body (runs in the spawned Task) ==============
 
-  defp run_worker(parent, config, %Tracker.Issue{} = issue, _attempt) do
+  defp run_worker(parent, config, %Tracker.Issue{} = issue, attempt) do
     issue_id = issue.id
     send_phase(parent, issue_id, :preparing_workspace, %{})
 
@@ -733,17 +794,34 @@ defmodule Symphony.Orchestrator do
 
       runner_module = resolve_agent_runner(config)
 
-      result =
-        try do
-          runner_module.run(config, issue, ws, [])
-        rescue
-          e ->
-            Logger.error(
-              "symphony.worker.runner_raise issue_id=#{issue_id} error=#{Exception.message(e)}"
-            )
+      on_message = fn message ->
+        send(parent, {:codex_worker_update, issue_id, message})
+        :ok
+      end
 
-            {:error, {:runner_raise, Exception.message(e)}}
-        end
+      result =
+        Tracing.span(
+          "symphony.turn",
+          %{
+            "user.journey" => "agent-dispatch",
+            "issue.id" => issue.id,
+            "issue.identifier" => issue.identifier,
+            "symphony.runner" => inspect(runner_module),
+            "symphony.retry_attempt" => attempt || 0
+          },
+          fn ->
+            try do
+              runner_module.run(config, issue, ws, on_message: on_message)
+            rescue
+              e ->
+                Logger.error(
+                  "symphony.worker.runner_raise issue_id=#{issue_id} error=#{Exception.message(e)}"
+                )
+
+                {:error, {:runner_raise, Exception.message(e)}}
+            end
+          end
+        )
 
       case result do
         {:ok, _result} ->
@@ -813,11 +891,7 @@ defmodule Symphony.Orchestrator do
   end
 
   defp cleanup_issue_workspace(config, %{identifier: identifier}) when is_binary(identifier) do
-    workspace_path = WorkspaceManager.workspace_path(config, identifier)
-
-    if File.exists?(workspace_path) do
-      File.rm_rf(workspace_path)
-    end
+    :ok = WorkspaceManager.remove(config, identifier)
   rescue
     e ->
       Logger.warning(
@@ -911,6 +985,13 @@ defmodule Symphony.Orchestrator do
 
           %Tracker.Issue{} = issue ->
             cond do
+              not active_candidate?(state.config, issue) ->
+                Logger.debug(
+                  "symphony.retry.released issue_id=#{issue_id}; candidate no longer active"
+                )
+
+                release_claim(state, issue_id)
+
               blocked_todo?(issue) ->
                 requeue_retry(state, issue_id, retry_entry, "blocked")
 
@@ -997,6 +1078,13 @@ defmodule Symphony.Orchestrator do
   end
 
   defp blocker_active?(_), do: true
+
+  defp active_candidate?(config, %Tracker.Issue{state: state_name}) when is_binary(state_name) do
+    active = MapSet.new(Enum.map(Config.tracker_active_states(config), &normalize_state/1))
+    MapSet.member?(active, normalize_state(state_name))
+  end
+
+  defp active_candidate?(_config, _issue), do: false
 
   defp dispatch_sort_key(%Tracker.Issue{} = issue) do
     {
@@ -1087,27 +1175,32 @@ defmodule Symphony.Orchestrator do
     event = update[:event]
     session_id = session_id_for_update(session.session_id, update)
     pid = pid_for_update(session.codex_app_server_pid, update)
-    usage = update[:usage] || update[:payload][:usage] || %{}
+    usage = extract_absolute_token_totals(update)
+    rate_limits = extract_rate_limits(update)
 
     {input_d, output_d, total_d, in_rep, out_rep, total_rep} =
       compute_token_deltas(session, usage)
 
     turn_count = turn_count_for_update(session.turn_count, session.session_id, update)
 
-    %LiveSession{
-      session
-      | session_id: session_id,
-        codex_app_server_pid: pid,
-        last_codex_event: to_string(event),
-        last_codex_timestamp: timestamp,
-        last_codex_message: update[:payload] || update[:raw],
-        codex_input_tokens: session.codex_input_tokens + input_d,
-        codex_output_tokens: session.codex_output_tokens + output_d,
-        codex_total_tokens: session.codex_total_tokens + total_d,
-        last_reported_input_tokens: max(session.last_reported_input_tokens, in_rep),
-        last_reported_output_tokens: max(session.last_reported_output_tokens, out_rep),
-        last_reported_total_tokens: max(session.last_reported_total_tokens, total_rep),
-        turn_count: turn_count
+    {
+      %LiveSession{
+        session
+        | session_id: session_id,
+          codex_app_server_pid: pid,
+          last_codex_event: to_string(event),
+          last_codex_timestamp: timestamp,
+          last_codex_message: update[:payload] || update[:raw],
+          codex_input_tokens: session.codex_input_tokens + input_d,
+          codex_output_tokens: session.codex_output_tokens + output_d,
+          codex_total_tokens: session.codex_total_tokens + total_d,
+          last_reported_input_tokens: max(session.last_reported_input_tokens, in_rep),
+          last_reported_output_tokens: max(session.last_reported_output_tokens, out_rep),
+          last_reported_total_tokens: max(session.last_reported_total_tokens, total_rep),
+          turn_count: turn_count
+      },
+      %{input_tokens: input_d, output_tokens: output_d, total_tokens: total_d},
+      rate_limits
     }
   end
 
@@ -1132,9 +1225,9 @@ defmodule Symphony.Orchestrator do
   defp turn_count_for_update(_existing_count, _existing_session_id, _update), do: 0
 
   defp compute_token_deltas(session, usage) when is_map(usage) do
-    next_in = pos_int(usage[:input_tokens] || usage["input_tokens"])
-    next_out = pos_int(usage[:output_tokens] || usage["output_tokens"])
-    next_total = pos_int(usage[:total_tokens] || usage["total_tokens"])
+    next_in = pos_int(usage[:input_tokens])
+    next_out = pos_int(usage[:output_tokens])
+    next_total = pos_int(usage[:total_tokens])
 
     in_d = max(0, next_in - session.last_reported_input_tokens)
     out_d = max(0, next_out - session.last_reported_output_tokens)
@@ -1142,6 +1235,176 @@ defmodule Symphony.Orchestrator do
 
     {in_d, out_d, total_d, next_in, next_out, next_total}
   end
+
+  defp compute_token_deltas(session, _usage) do
+    {0, 0, 0, session.last_reported_input_tokens, session.last_reported_output_tokens,
+     session.last_reported_total_tokens}
+  end
+
+  defp apply_codex_token_delta(state, %{
+         input_tokens: in_d,
+         output_tokens: out_d,
+         total_tokens: total_d
+       }) do
+    totals = %{
+      input_tokens: state.codex_totals.input_tokens + in_d,
+      output_tokens: state.codex_totals.output_tokens + out_d,
+      total_tokens: state.codex_totals.total_tokens + total_d,
+      seconds_running: state.codex_totals.seconds_running
+    }
+
+    %{state | codex_totals: totals}
+  end
+
+  defp maybe_put_rate_limits(state, nil), do: state
+  defp maybe_put_rate_limits(state, rate_limits), do: %{state | rate_limits: rate_limits}
+
+  defp extract_absolute_token_totals(update) when is_map(update) do
+    payload = update_payload(update)
+    method = update_method(update, payload)
+
+    cond do
+      method == "thread/tokenUsage/updated" ->
+        extract_thread_token_usage(payload) || extract_thread_token_usage(update)
+
+      true ->
+        extract_total_token_usage(payload) || extract_total_token_usage(update)
+    end
+  end
+
+  defp extract_absolute_token_totals(_update), do: nil
+
+  defp extract_thread_token_usage(payload) when is_map(payload) do
+    [
+      map_path(payload, ["params", "totalTokenUsage"]),
+      map_path(payload, ["params", "total_token_usage"]),
+      map_path(payload, ["params", "usage"]),
+      map_get(payload, ["params"]),
+      map_get(payload, ["totalTokenUsage", "total_token_usage", "usage"])
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.find_value(nil, &usage_to_token_totals/1)
+  end
+
+  defp extract_thread_token_usage(_payload), do: nil
+
+  defp extract_total_token_usage(payload) when is_map(payload) do
+    [
+      map_path(payload, ["params", "totalTokenUsage"]),
+      map_path(payload, ["params", "total_token_usage"]),
+      map_get(payload, ["totalTokenUsage", "total_token_usage"])
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.find_value(nil, &usage_to_token_totals/1)
+  end
+
+  defp extract_total_token_usage(_payload), do: nil
+
+  defp usage_to_token_totals(usage) when is_map(usage) do
+    input = pick_token(usage, ["input_tokens", "inputTokens", "prompt_tokens", "promptTokens"])
+
+    output =
+      pick_token(usage, ["output_tokens", "outputTokens", "completion_tokens", "completionTokens"])
+
+    total = pick_token(usage, ["total_tokens", "totalTokens", "tokens"])
+
+    cond do
+      input == nil and output == nil and total == nil ->
+        nil
+
+      true ->
+        in_v = input || 0
+        out_v = output || 0
+        %{input_tokens: in_v, output_tokens: out_v, total_tokens: total || in_v + out_v}
+    end
+  end
+
+  defp usage_to_token_totals(_usage), do: nil
+
+  defp pick_token(map, keys) do
+    Enum.find_value(keys, nil, fn key ->
+      case map_get(map, [key]) do
+        v when is_integer(v) and v >= 0 ->
+          v
+
+        v when is_binary(v) ->
+          case Integer.parse(v) do
+            {n, ""} when n >= 0 -> n
+            _ -> nil
+          end
+
+        _ ->
+          nil
+      end
+    end)
+  end
+
+  defp extract_rate_limits(update) when is_map(update) do
+    payload = update_payload(update)
+    method = update_method(update, payload)
+
+    direct =
+      map_get(update, ["rateLimits", "rate_limits"]) ||
+        map_path(payload, ["params", "rateLimits"]) ||
+        map_path(payload, ["params", "rate_limits"]) ||
+        map_get(payload, ["rateLimits", "rate_limits"])
+
+    cond do
+      not is_nil(direct) ->
+        direct
+
+      method == "account/rateLimits/updated" ->
+        map_get(payload, ["params"]) || payload
+
+      method == "account/updated" ->
+        map_path(payload, ["params", "account", "rateLimits"]) ||
+          map_path(payload, ["params", "rateLimits"])
+
+      true ->
+        nil
+    end
+  end
+
+  defp extract_rate_limits(_update), do: nil
+
+  defp update_payload(update) when is_map(update) do
+    map_get(update, ["payload"]) || map_get(update, ["raw"]) || %{}
+  end
+
+  defp update_method(update, payload) do
+    map_get(update, ["method"]) || map_get(payload, ["method"])
+  end
+
+  defp map_path(map, path) when is_map(map) and is_list(path) do
+    Enum.reduce_while(path, map, fn key, acc ->
+      case map_get(acc, [key]) do
+        nil -> {:halt, nil}
+        value -> {:cont, value}
+      end
+    end)
+  end
+
+  defp map_path(_map, _path), do: nil
+
+  defp map_get(map, keys) when is_map(map) and is_list(keys) do
+    Enum.find_value(keys, nil, fn key ->
+      cond do
+        Map.has_key?(map, key) ->
+          Map.get(map, key)
+
+        is_binary(key) and Map.has_key?(map, String.to_atom(key)) ->
+          Map.get(map, String.to_atom(key))
+
+        is_atom(key) and Map.has_key?(map, Atom.to_string(key)) ->
+          Map.get(map, Atom.to_string(key))
+
+        true ->
+          nil
+      end
+    end)
+  end
+
+  defp map_get(_map, _keys), do: nil
 
   defp pos_int(n) when is_integer(n) and n >= 0, do: n
   defp pos_int(_), do: 0
@@ -1170,7 +1433,7 @@ defmodule Symphony.Orchestrator do
               path = WorkspaceManager.workspace_path(config, identifier)
 
               if File.exists?(path) do
-                _ = File.rm_rf(path)
+                _ = WorkspaceManager.remove(config, identifier)
                 acc + 1
               else
                 acc

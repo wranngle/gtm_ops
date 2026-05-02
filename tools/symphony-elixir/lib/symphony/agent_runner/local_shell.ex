@@ -31,7 +31,9 @@ defmodule Symphony.AgentRunner.LocalShell do
     template = Keyword.get(opts, :template, default_template(config))
     attempt = Keyword.get(opts, :attempt)
 
-    with :ok <- WorkspaceManager.assert_inside_root!(Config.workspace_root(config), workspace.path) |> ok_if_no_raise(),
+    with :ok <-
+           WorkspaceManager.assert_inside_root!(Config.workspace_root(config), workspace.path)
+           |> ok_if_no_raise(),
          :ok <- run_before_hooks(config, workspace),
          {:ok, rendered} <-
            PromptRenderer.render(%{template: template, issue: issue, attempt: attempt}),
@@ -81,9 +83,13 @@ defmodule Symphony.AgentRunner.LocalShell do
   defp run_before_hooks(config, workspace) do
     case workspace.created_now do
       true ->
-        with :ok <- WorkspaceManager.run_hook(config, workspace, :after_create),
-             :ok <- WorkspaceManager.run_hook(config, workspace, :before_run) do
-          :ok
+        case WorkspaceManager.run_hook(config, workspace, :after_create) do
+          :ok ->
+            WorkspaceManager.run_hook(config, workspace, :before_run)
+
+          {:error, _reason} = error ->
+            _ = WorkspaceManager.remove(config, workspace.workspace_key)
+            error
         end
 
       false ->
@@ -138,10 +144,10 @@ defmodule Symphony.AgentRunner.LocalShell do
 
   defp utc_stamp do
     {{y, m, d}, {hh, mm, ss}} = :calendar.universal_time()
+
     :io_lib.format("~4..0B~2..0B~2..0BT~2..0B~2..0B~2..0BZ", [y, m, d, hh, mm, ss])
     |> IO.iodata_to_binary()
   end
 
   defp ok_if_no_raise(:ok), do: :ok
 end
-

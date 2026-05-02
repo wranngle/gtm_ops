@@ -104,7 +104,8 @@ defmodule Symphony.Codex.AppServer do
       metadata = port_metadata(port)
       session_policies = session_policies(config, expanded_workspace, opts)
 
-      with {:ok, thread_id} <- do_start_session(port, expanded_workspace, session_policies, config) do
+      with {:ok, thread_id} <-
+             do_start_session(port, expanded_workspace, session_policies, config) do
         {:ok,
          %{
            port: port,
@@ -151,7 +152,16 @@ defmodule Symphony.Codex.AppServer do
         DynamicTool.execute(tool, arguments, dynamic_tool_opts(config))
       end)
 
-    case start_turn(port, thread_id, prompt, issue, workspace, approval_policy, turn_sandbox_policy, config) do
+    case start_turn(
+           port,
+           thread_id,
+           prompt,
+           issue,
+           workspace,
+           approval_policy,
+           turn_sandbox_policy,
+           config
+         ) do
       {:ok, turn_id} ->
         session_id = "#{thread_id}-#{turn_id}"
         Logger.info("Codex session started for #{issue_context(issue)} session_id=#{session_id}")
@@ -167,7 +177,14 @@ defmodule Symphony.Codex.AppServer do
           metadata
         )
 
-        case await_turn_completion(port, on_message, tool_executor, auto_approve_requests, config, prior_totals) do
+        case await_turn_completion(
+               port,
+               on_message,
+               tool_executor,
+               auto_approve_requests,
+               config,
+               prior_totals
+             ) do
           {:ok, {result, totals}} ->
             Logger.info(
               "Codex session completed for #{issue_context(issue)} session_id=#{session_id} " <>
@@ -227,7 +244,8 @@ defmodule Symphony.Codex.AppServer do
         {:ok, expanded_workspace}
 
       true ->
-        {:error, {:invalid_workspace_cwd, :outside_workspace_root, expanded_workspace, expanded_root}}
+        {:error,
+         {:invalid_workspace_cwd, :outside_workspace_root, expanded_workspace, expanded_root}}
     end
   end
 
@@ -300,7 +318,12 @@ defmodule Symphony.Codex.AppServer do
     end
   end
 
-  defp start_thread(port, workspace, %{approval_policy: approval_policy, thread_sandbox: thread_sandbox}, config) do
+  defp start_thread(
+         port,
+         workspace,
+         %{approval_policy: approval_policy, thread_sandbox: thread_sandbox},
+         config
+       ) do
     send_message(port, %{
       "method" => "thread/start",
       "id" => @thread_start_id,
@@ -324,7 +347,16 @@ defmodule Symphony.Codex.AppServer do
     end
   end
 
-  defp start_turn(port, thread_id, prompt, issue, workspace, approval_policy, turn_sandbox_policy, config) do
+  defp start_turn(
+         port,
+         thread_id,
+         prompt,
+         issue,
+         workspace,
+         approval_policy,
+         turn_sandbox_policy,
+         config
+       ) do
     send_message(port, %{
       "method" => "turn/start",
       "id" => @turn_start_id,
@@ -358,7 +390,14 @@ defmodule Symphony.Codex.AppServer do
 
   # ============== Streaming receive loop (§ 10.3) ==============
 
-  defp await_turn_completion(port, on_message, tool_executor, auto_approve_requests, config, totals) do
+  defp await_turn_completion(
+         port,
+         on_message,
+         tool_executor,
+         auto_approve_requests,
+         config,
+         totals
+       ) do
     receive_loop(
       port,
       on_message,
@@ -371,11 +410,30 @@ defmodule Symphony.Codex.AppServer do
     )
   end
 
-  defp receive_loop(port, on_message, timeout_ms, pending_line, tool_executor, auto_approve_requests, config, totals) do
+  defp receive_loop(
+         port,
+         on_message,
+         timeout_ms,
+         pending_line,
+         tool_executor,
+         auto_approve_requests,
+         config,
+         totals
+       ) do
     receive do
       {^port, {:data, {:eol, chunk}}} ->
         complete_line = pending_line <> to_string(chunk)
-        handle_incoming(port, on_message, complete_line, timeout_ms, tool_executor, auto_approve_requests, config, totals)
+
+        handle_incoming(
+          port,
+          on_message,
+          complete_line,
+          timeout_ms,
+          tool_executor,
+          auto_approve_requests,
+          config,
+          totals
+        )
 
       {^port, {:data, {:noeol, chunk}}} ->
         receive_loop(
@@ -397,7 +455,16 @@ defmodule Symphony.Codex.AppServer do
     end
   end
 
-  defp handle_incoming(port, on_message, data, timeout_ms, tool_executor, auto_approve_requests, config, totals) do
+  defp handle_incoming(
+         port,
+         on_message,
+         data,
+         timeout_ms,
+         tool_executor,
+         auto_approve_requests,
+         config,
+         totals
+       ) do
     payload_string = to_string(data)
 
     case Jason.decode(payload_string) do
@@ -453,7 +520,16 @@ defmodule Symphony.Codex.AppServer do
           metadata_from_message(port, payload)
         )
 
-        receive_loop(port, on_message, timeout_ms, "", tool_executor, auto_approve_requests, config, totals)
+        receive_loop(
+          port,
+          on_message,
+          timeout_ms,
+          "",
+          tool_executor,
+          auto_approve_requests,
+          config,
+          totals
+        )
 
       {:error, _reason} ->
         log_non_json_stream_line(payload_string, "turn stream")
@@ -467,7 +543,16 @@ defmodule Symphony.Codex.AppServer do
           )
         end
 
-        receive_loop(port, on_message, timeout_ms, "", tool_executor, auto_approve_requests, config, totals)
+        receive_loop(
+          port,
+          on_message,
+          timeout_ms,
+          "",
+          tool_executor,
+          auto_approve_requests,
+          config,
+          totals
+        )
     end
   end
 
@@ -515,7 +600,16 @@ defmodule Symphony.Codex.AppServer do
         {:error, {:turn_input_required, payload}}
 
       :approved ->
-        receive_loop(port, on_message, timeout_ms, "", tool_executor, auto_approve_requests, config, totals)
+        receive_loop(
+          port,
+          on_message,
+          timeout_ms,
+          "",
+          tool_executor,
+          auto_approve_requests,
+          config,
+          totals
+        )
 
       :approval_required ->
         emit_message(
@@ -546,7 +640,17 @@ defmodule Symphony.Codex.AppServer do
           )
 
           Logger.debug("Codex notification: #{inspect(method)}")
-          receive_loop(port, on_message, timeout_ms, "", tool_executor, auto_approve_requests, config, totals)
+
+          receive_loop(
+            port,
+            on_message,
+            timeout_ms,
+            "",
+            tool_executor,
+            auto_approve_requests,
+            config,
+            totals
+          )
         end
     end
   end
@@ -563,7 +667,16 @@ defmodule Symphony.Codex.AppServer do
          _tool_executor,
          auto_approve_requests
        ) do
-    approve_or_require(port, id, "acceptForSession", payload, payload_string, on_message, metadata, auto_approve_requests)
+    approve_or_require(
+      port,
+      id,
+      "acceptForSession",
+      payload,
+      payload_string,
+      on_message,
+      metadata,
+      auto_approve_requests
+    )
   end
 
   defp maybe_handle_approval_request(
@@ -608,7 +721,16 @@ defmodule Symphony.Codex.AppServer do
          _tool_executor,
          auto_approve_requests
        ) do
-    approve_or_require(port, id, "approved_for_session", payload, payload_string, on_message, metadata, auto_approve_requests)
+    approve_or_require(
+      port,
+      id,
+      "approved_for_session",
+      payload,
+      payload_string,
+      on_message,
+      metadata,
+      auto_approve_requests
+    )
   end
 
   defp maybe_handle_approval_request(
@@ -621,7 +743,16 @@ defmodule Symphony.Codex.AppServer do
          _tool_executor,
          auto_approve_requests
        ) do
-    approve_or_require(port, id, "approved_for_session", payload, payload_string, on_message, metadata, auto_approve_requests)
+    approve_or_require(
+      port,
+      id,
+      "approved_for_session",
+      payload,
+      payload_string,
+      on_message,
+      metadata,
+      auto_approve_requests
+    )
   end
 
   defp maybe_handle_approval_request(
@@ -634,7 +765,16 @@ defmodule Symphony.Codex.AppServer do
          _tool_executor,
          auto_approve_requests
        ) do
-    approve_or_require(port, id, "acceptForSession", payload, payload_string, on_message, metadata, auto_approve_requests)
+    approve_or_require(
+      port,
+      id,
+      "acceptForSession",
+      payload,
+      payload_string,
+      on_message,
+      metadata,
+      auto_approve_requests
+    )
   end
 
   defp maybe_handle_approval_request(
@@ -659,8 +799,17 @@ defmodule Symphony.Codex.AppServer do
     )
   end
 
-  defp maybe_handle_approval_request(_port, _method, _payload, _payload_string, _on_message, _metadata, _tool_executor, _auto_approve_requests),
-    do: :unhandled
+  defp maybe_handle_approval_request(
+         _port,
+         _method,
+         _payload,
+         _payload_string,
+         _on_message,
+         _metadata,
+         _tool_executor,
+         _auto_approve_requests
+       ),
+       do: :unhandled
 
   defp normalize_dynamic_tool_result(%{"success" => success} = result) when is_boolean(success) do
     output =
@@ -688,7 +837,9 @@ defmodule Symphony.Codex.AppServer do
     }
   end
 
-  defp dynamic_tool_output(%{"contentItems" => [%{"text" => text} | _]}) when is_binary(text), do: text
+  defp dynamic_tool_output(%{"contentItems" => [%{"text" => text} | _]}) when is_binary(text),
+    do: text
+
   defp dynamic_tool_output(result), do: Jason.encode!(result, pretty: true)
 
   defp dynamic_tool_content_items(output) when is_binary(output) do
@@ -708,8 +859,17 @@ defmodule Symphony.Codex.AppServer do
     :approved
   end
 
-  defp approve_or_require(_port, _id, _decision, _payload, _payload_string, _on_message, _metadata, false),
-    do: :approval_required
+  defp approve_or_require(
+         _port,
+         _id,
+         _decision,
+         _payload,
+         _payload_string,
+         _on_message,
+         _metadata,
+         false
+       ),
+       do: :approval_required
 
   defp maybe_auto_answer_tool_request_user_input(
          port,
@@ -735,7 +895,15 @@ defmodule Symphony.Codex.AppServer do
         :approved
 
       :error ->
-        reply_with_non_interactive_tool_input_answer(port, id, params, payload, payload_string, on_message, metadata)
+        reply_with_non_interactive_tool_input_answer(
+          port,
+          id,
+          params,
+          payload,
+          payload_string,
+          on_message,
+          metadata
+        )
     end
   end
 
@@ -749,10 +917,19 @@ defmodule Symphony.Codex.AppServer do
          metadata,
          false
        ) do
-    reply_with_non_interactive_tool_input_answer(port, id, params, payload, payload_string, on_message, metadata)
+    reply_with_non_interactive_tool_input_answer(
+      port,
+      id,
+      params,
+      payload,
+      payload_string,
+      on_message,
+      metadata
+    )
   end
 
-  defp tool_request_user_input_approval_answers(%{"questions" => questions}) when is_list(questions) do
+  defp tool_request_user_input_approval_answers(%{"questions" => questions})
+       when is_list(questions) do
     answers =
       Enum.reduce_while(questions, %{}, fn question, acc ->
         case tool_request_user_input_approval_answer(question) do
@@ -773,7 +950,15 @@ defmodule Symphony.Codex.AppServer do
 
   defp tool_request_user_input_approval_answers(_params), do: :error
 
-  defp reply_with_non_interactive_tool_input_answer(port, id, params, payload, payload_string, on_message, metadata) do
+  defp reply_with_non_interactive_tool_input_answer(
+         port,
+         id,
+         params,
+         payload,
+         payload_string,
+         on_message,
+         metadata
+       ) do
     case tool_request_user_input_unavailable_answers(params) do
       {:ok, answers} ->
         send_message(port, %{"id" => id, "result" => %{"answers" => answers}})
@@ -792,12 +977,14 @@ defmodule Symphony.Codex.AppServer do
     end
   end
 
-  defp tool_request_user_input_unavailable_answers(%{"questions" => questions}) when is_list(questions) do
+  defp tool_request_user_input_unavailable_answers(%{"questions" => questions})
+       when is_list(questions) do
     answers =
       Enum.reduce_while(questions, %{}, fn question, acc ->
         case tool_request_user_input_question_id(question) do
           {:ok, question_id} ->
-            {:cont, Map.put(acc, question_id, %{"answers" => [@non_interactive_tool_input_answer]})}
+            {:cont,
+             Map.put(acc, question_id, %{"answers" => [@non_interactive_tool_input_answer]})}
 
           :error ->
             {:halt, :error}
@@ -845,7 +1032,9 @@ defmodule Symphony.Codex.AppServer do
 
   defp approval_option_label?(label) when is_binary(label) do
     normalized_label = label |> String.trim() |> String.downcase()
-    String.starts_with?(normalized_label, "approve") or String.starts_with?(normalized_label, "allow")
+
+    String.starts_with?(normalized_label, "approve") or
+      String.starts_with?(normalized_label, "allow")
   end
 
   # ============== Sync request/response (§ 10.6) ==============
@@ -968,7 +1157,9 @@ defmodule Symphony.Codex.AppServer do
   defp pick_token(map, keys) do
     Enum.find_value(keys, nil, fn key ->
       case Map.get(map, key) do
-        v when is_integer(v) -> v
+        v when is_integer(v) ->
+          v
+
         v when is_binary(v) ->
           case Integer.parse(v) do
             {n, ""} -> n
@@ -1048,7 +1239,8 @@ defmodule Symphony.Codex.AppServer do
   defp default_on_message(_message), do: :ok
 
   defp tool_call_name(params) when is_map(params) do
-    case Map.get(params, "tool") || Map.get(params, :tool) || Map.get(params, "name") || Map.get(params, :name) do
+    case Map.get(params, "tool") || Map.get(params, :tool) || Map.get(params, "name") ||
+           Map.get(params, :name) do
       name when is_binary(name) ->
         case String.trim(name) do
           "" -> nil

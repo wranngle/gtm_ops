@@ -96,7 +96,9 @@ defmodule Symphony.Tracker.LinearTest do
 
     test "missing project_slug surfaces :missing_tracker_project_slug", %{tmp: tmp} do
       config = linear_real_config(tmp, api_key: "lin_xxx", project_slug: nil)
-      assert {:error, :missing_tracker_project_slug} = LinearAdapter.fetch_candidate_issues(config)
+
+      assert {:error, :missing_tracker_project_slug} =
+               LinearAdapter.fetch_candidate_issues(config)
     end
 
     test "fetch_issue_states_by_ids with empty list short-circuits", %{tmp: tmp} do

@@ -291,6 +291,69 @@ defmodule Symphony.OrchestratorTest do
     assert {:error, :unavailable} = Orchestrator.snapshot()
   end
 
+  test "snapshot returns :timeout without raising when the daemon is busy", %{tmp: tmp} do
+    previous = Application.get_env(:symphony, :snapshot_timeout_ms)
+    Application.put_env(:symphony, :snapshot_timeout_ms, 10)
+
+    on_exit(fn ->
+      case previous do
+        nil -> Application.delete_env(:symphony, :snapshot_timeout_ms)
+        value -> Application.put_env(:symphony, :snapshot_timeout_ms, value)
+      end
+    end)
+
+    boot_with_workflow(tmp, """
+    ---
+    tracker:
+      kind: noop
+    polling:
+      interval_ms: 60000
+    agent:
+      command: scripts/bin/llm.sh
+      max_concurrent_agents: 1
+    ---
+    """)
+
+    pid = Process.whereis(Orchestrator)
+    :ok = :sys.suspend(pid)
+
+    try do
+      assert {:error, :timeout} = Orchestrator.snapshot()
+    after
+      :sys.resume(pid)
+    end
+  end
+
+  test "startup preflight aborts when the configured workflow is invalid", %{tmp: tmp} do
+    previous = Application.get_env(:symphony, :workflow_path)
+    previous_trap = Process.flag(:trap_exit, true)
+    path = Path.join(tmp, "WORKFLOW.md")
+
+    File.write!(path, """
+    ---
+    tracker:
+      kind: linear
+    agent:
+      command: scripts/bin/llm.sh
+    ---
+    """)
+
+    Application.put_env(:symphony, :workflow_path, path)
+
+    on_exit(fn ->
+      Process.flag(:trap_exit, previous_trap)
+
+      case previous do
+        nil -> Application.delete_env(:symphony, :workflow_path)
+        value -> Application.put_env(:symphony, :workflow_path, value)
+      end
+    end)
+
+    assert {:error, {:dispatch_preflight, reasons}} = Orchestrator.start_link([])
+    assert :missing_tracker_api_key in reasons
+    assert :missing_tracker_project_slug in reasons
+  end
+
   # ============================================================
   # New tests (STACK-011 / STACK-013 / STACK-014 / STACK-016)
   # ============================================================
@@ -542,6 +605,115 @@ defmodule Symphony.OrchestratorTest do
     Process.exit(sleeper_pid, :kill)
   end
 
+  test "retry due releases the claim when the issue is no longer a candidate", %{tmp: tmp} do
+    {:ok, _stub} = Symphony.Test.StubTracker.start_link()
+    Symphony.Test.StubTracker.set_candidates([])
+
+    boot_with_workflow(tmp, retry_workflow(tmp, "/bin/true"))
+    Orchestrator.set_adapter(Symphony.Test.StubTracker)
+
+    token = inject_retry_due("issue-missing", "STUB-MISSING")
+    send(Process.whereis(Orchestrator), {:retry_due, "issue-missing", token})
+
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             snap.retrying == [] and snap.running == []
+           end)
+  end
+
+  test "retry due releases the claim when a candidate is no longer active", %{tmp: tmp} do
+    {:ok, _stub} = Symphony.Test.StubTracker.start_link()
+
+    Symphony.Test.StubTracker.set_candidates([
+      %Tracker.Issue{id: "issue-done", identifier: "STUB-DONE", state: "done"}
+    ])
+
+    boot_with_workflow(tmp, retry_workflow(tmp, "/bin/true"))
+    Orchestrator.set_adapter(Symphony.Test.StubTracker)
+
+    token = inject_retry_due("issue-done", "STUB-DONE")
+    send(Process.whereis(Orchestrator), {:retry_due, "issue-done", token})
+
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             snap.retrying == [] and snap.running == []
+           end)
+  end
+
+  test "retry due requeues when no orchestrator slots are available", %{tmp: tmp} do
+    {:ok, _stub} = Symphony.Test.StubTracker.start_link()
+
+    Symphony.Test.StubTracker.set_candidates([
+      %Tracker.Issue{id: "issue-wait", identifier: "STUB-WAIT", state: "in_progress"}
+    ])
+
+    boot_with_workflow(tmp, retry_workflow(tmp, "/bin/true", max_concurrent: 1))
+    Orchestrator.set_adapter(Symphony.Test.StubTracker)
+
+    :ok =
+      Orchestrator.inject_running("already-running", %{
+        pid: nil,
+        ref: nil,
+        identifier: "STUB-RUNNING",
+        issue: %Tracker.Issue{
+          id: "already-running",
+          identifier: "STUB-RUNNING",
+          state: "in_progress"
+        },
+        attempt: %RunAttempt{phase: :streaming_turn},
+        session: %LiveSession{},
+        started_at: DateTime.utc_now(),
+        retry_attempt: nil
+      })
+
+    token = inject_retry_due("issue-wait", "STUB-WAIT")
+    send(Process.whereis(Orchestrator), {:retry_due, "issue-wait", token})
+
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+
+             case snap.retrying do
+               [%{issue_id: "issue-wait", attempt: 2, error: "no available orchestrator slots"}] ->
+                 true
+
+               _ ->
+                 false
+             end
+           end)
+
+    # The original timer token is stale after requeue; replaying it is
+    # ignored instead of scheduling another retry attempt.
+    send(Process.whereis(Orchestrator), {:retry_due, "issue-wait", token})
+    Process.sleep(25)
+    {:ok, snap} = Orchestrator.snapshot()
+    assert [%{issue_id: "issue-wait", attempt: 2}] = snap.retrying
+  end
+
+  test "retry due clears the retry entry after successful redispatch", %{tmp: tmp} do
+    {:ok, _stub} = Symphony.Test.StubTracker.start_link()
+
+    issue = %Tracker.Issue{id: "issue-redo", identifier: "STUB-REDO", state: "in_progress"}
+    Symphony.Test.StubTracker.set_candidates([issue])
+
+    fake_agent = make_fake_agent(tmp, "agent-sleep.sh", "sleep 0.5")
+    boot_with_workflow(tmp, retry_workflow(tmp, fake_agent, max_concurrent: 1))
+    Orchestrator.set_adapter(Symphony.Test.StubTracker)
+
+    token = inject_retry_due("issue-redo", "STUB-REDO")
+    send(Process.whereis(Orchestrator), {:retry_due, "issue-redo", token})
+
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             Enum.any?(snap.running, &(&1.issue_id == "issue-redo")) and snap.retrying == []
+           end)
+
+    # Let the short fake worker exit before the test tempdir is removed.
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             Enum.any?(snap.retrying, &(&1.issue_id == "issue-redo"))
+           end)
+  end
+
   test "snapshot exposes full LiveSession field set including turn_count", %{tmp: tmp} do
     boot_with_workflow(tmp, """
     ---
@@ -610,6 +782,107 @@ defmodule Symphony.OrchestratorTest do
 
     # Spec § 13.5: aggregate seconds_running includes active sessions.
     assert snap.codex_totals.seconds_running >= 1
+  end
+
+  test "codex token updates accumulate absolute totals delta-aware and track rate limits", %{
+    tmp: tmp
+  } do
+    boot_with_workflow(tmp, """
+    ---
+    tracker:
+      kind: noop
+    polling:
+      interval_ms: 60000
+    agent:
+      command: scripts/bin/llm.sh
+      max_concurrent_agents: 1
+    codex:
+      stall_timeout_ms: 0
+    ---
+    """)
+
+    issue = %Tracker.Issue{
+      id: "issue-token",
+      identifier: "STUB-TOKEN",
+      state: "in_progress"
+    }
+
+    :ok =
+      Orchestrator.inject_running("issue-token", %{
+        pid: nil,
+        ref: nil,
+        identifier: "STUB-TOKEN",
+        issue: issue,
+        attempt: %RunAttempt{phase: :streaming_turn},
+        session: %LiveSession{},
+        started_at: DateTime.utc_now(),
+        retry_attempt: nil
+      })
+
+    pid = Process.whereis(Orchestrator)
+
+    token_payload = %{
+      "method" => "thread/tokenUsage/updated",
+      "params" => %{
+        "totalTokenUsage" => %{
+          "input_tokens" => 100,
+          "output_tokens" => 50,
+          "total_tokens" => 150
+        }
+      }
+    }
+
+    send(pid, {:codex_worker_update, "issue-token", update(:notification, token_payload)})
+    assert_token_totals("issue-token", 100, 50, 150)
+
+    # Replaying the same absolute totals must not double count.
+    send(pid, {:codex_worker_update, "issue-token", update(:notification, token_payload)})
+    assert_token_totals("issue-token", 100, 50, 150)
+
+    send(
+      pid,
+      {:codex_worker_update, "issue-token",
+       update(:notification, %{
+         "method" => "thread/tokenUsage/updated",
+         "params" => %{
+           "totalTokenUsage" => %{
+             "inputTokens" => "130",
+             "outputTokens" => "70",
+             "totalTokens" => "200"
+           }
+         }
+       })}
+    )
+
+    assert_token_totals("issue-token", 130, 70, 200)
+
+    # Unsupported generic `usage` maps are not treated as cumulative totals.
+    send(
+      pid,
+      {:codex_worker_update, "issue-token",
+       update(:notification, %{
+         "method" => "agent/last_token_usage",
+         "usage" => %{"input_tokens" => 999, "output_tokens" => 999, "total_tokens" => 1998}
+       })}
+    )
+
+    assert_token_totals("issue-token", 130, 70, 200)
+
+    rate_limits = [%{"name" => "primary", "remaining" => 42}]
+
+    send(
+      pid,
+      {:codex_worker_update, "issue-token",
+       update(:notification, %{
+         "method" => "account/rateLimits/updated",
+         "params" => %{"rateLimits" => rate_limits}
+       })}
+    )
+
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             snap.rate_limits == rate_limits
+           end)
   end
 
   test "startup terminal cleanup removes stale workspaces", %{tmp: tmp} do
@@ -698,6 +971,66 @@ defmodule Symphony.OrchestratorTest do
   end
 
   # --- helpers ---
+
+  defp update(event, payload) do
+    %{event: event, timestamp: DateTime.utc_now(), payload: payload}
+  end
+
+  defp retry_workflow(tmp, agent_command, opts \\ []) do
+    max_concurrent = Keyword.get(opts, :max_concurrent, 2)
+
+    """
+    ---
+    tracker:
+      kind: noop
+      active_states: todo,in_progress
+    workspace:
+      root: #{Path.join(tmp, "ws")}
+    polling:
+      interval_ms: 60000
+    agent:
+      command: #{agent_command}
+      max_concurrent_agents: #{max_concurrent}
+      max_retry_backoff_ms: 300000
+    codex:
+      stall_timeout_ms: 0
+      command: scripts/bin/llm.sh
+    ---
+    Echo template: {{ issue.identifier }}.
+    """
+  end
+
+  defp inject_retry_due(issue_id, identifier) do
+    token = make_ref()
+
+    :ok =
+      Orchestrator.inject_retry(issue_id, %{
+        identifier: identifier,
+        attempt: 1,
+        due_at_ms: 0,
+        reason: :failure,
+        error: "previous failure",
+        timer_handle: nil,
+        retry_token: token
+      })
+
+    token
+  end
+
+  defp assert_token_totals(issue_id, input, output, total) do
+    assert eventually(fn ->
+             {:ok, snap} = Orchestrator.snapshot()
+             row = Enum.find(snap.running, &(&1.issue_id == issue_id))
+
+             row &&
+               row.codex_input_tokens == input &&
+               row.codex_output_tokens == output &&
+               row.codex_total_tokens == total &&
+               snap.codex_totals.input_tokens == input &&
+               snap.codex_totals.output_tokens == output &&
+               snap.codex_totals.total_tokens == total
+           end)
+  end
 
   defp eventually(fun, attempts \\ 60) do
     Enum.reduce_while(1..attempts, false, fn _i, _ ->

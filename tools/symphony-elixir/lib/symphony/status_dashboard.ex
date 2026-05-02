@@ -74,7 +74,9 @@ defmodule Symphony.StatusDashboard do
   """
   @spec humanize_event(atom() | binary() | nil, term()) :: binary()
   def humanize_event(nil, message), do: humanize_codex_message(message)
-  def humanize_event(event, message), do: humanize_codex_message(%{event: event, message: message})
+
+  def humanize_event(event, message),
+    do: humanize_codex_message(%{event: event, message: message})
 
   @doc """
   Build a list of recent humanized events from a snapshot payload (the
@@ -264,13 +266,15 @@ defmodule Symphony.StatusDashboard do
   end
 
   defp humanize_codex_method("thread/started", payload) do
-    thread_id = map_path(payload, ["params", "thread", "id"]) || map_path(payload, [:params, :thread, :id])
+    thread_id =
+      map_path(payload, ["params", "thread", "id"]) || map_path(payload, [:params, :thread, :id])
 
     if is_binary(thread_id), do: "thread started (#{thread_id})", else: "thread started"
   end
 
   defp humanize_codex_method("turn/started", payload) do
-    turn_id = map_path(payload, ["params", "turn", "id"]) || map_path(payload, [:params, :turn, :id])
+    turn_id =
+      map_path(payload, ["params", "turn", "id"]) || map_path(payload, [:params, :turn, :id])
 
     if is_binary(turn_id), do: "turn started (#{turn_id})", else: "turn started"
   end
@@ -345,8 +349,11 @@ defmodule Symphony.StatusDashboard do
     end
   end
 
-  defp humanize_codex_method("item/started", payload), do: humanize_item_lifecycle("started", payload)
-  defp humanize_codex_method("item/completed", payload), do: humanize_item_lifecycle("completed", payload)
+  defp humanize_codex_method("item/started", payload),
+    do: humanize_item_lifecycle("started", payload)
+
+  defp humanize_codex_method("item/completed", payload),
+    do: humanize_item_lifecycle("completed", payload)
 
   defp humanize_codex_method("item/agentMessage/delta", payload),
     do: humanize_streaming_event("agent message streaming", payload)
@@ -532,12 +539,20 @@ defmodule Symphony.StatusDashboard do
   defp humanize_codex_wrapper_event("agent_reasoning_section_break", _payload),
     do: "reasoning section break"
 
-  defp humanize_codex_wrapper_event("agent_reasoning", payload), do: humanize_reasoning_update(payload)
+  defp humanize_codex_wrapper_event("agent_reasoning", payload),
+    do: humanize_reasoning_update(payload)
+
   defp humanize_codex_wrapper_event("turn_diff", _payload), do: "turn diff updated"
 
-  defp humanize_codex_wrapper_event("exec_command_begin", payload), do: humanize_exec_command_begin(payload)
-  defp humanize_codex_wrapper_event("exec_command_end", payload), do: humanize_exec_command_end(payload)
-  defp humanize_codex_wrapper_event("exec_command_output_delta", _payload), do: "command output streaming"
+  defp humanize_codex_wrapper_event("exec_command_begin", payload),
+    do: humanize_exec_command_begin(payload)
+
+  defp humanize_codex_wrapper_event("exec_command_end", payload),
+    do: humanize_exec_command_end(payload)
+
+  defp humanize_codex_wrapper_event("exec_command_output_delta", _payload),
+    do: "command output streaming"
+
   defp humanize_codex_wrapper_event("mcp_tool_call_begin", _payload), do: "mcp tool call started"
   defp humanize_codex_wrapper_event("mcp_tool_call_end", _payload), do: "mcp tool call completed"
 
@@ -577,7 +592,9 @@ defmodule Symphony.StatusDashboard do
         map_path(payload, ["params", "msg", "exitCode"]) ||
         map_path(payload, [:params, :msg, :exitCode])
 
-    if is_integer(exit_code), do: "command completed (exit #{exit_code})", else: "command completed"
+    if is_integer(exit_code),
+      do: "command completed (exit #{exit_code})",
+      else: "command completed"
   end
 
   # ============== Token / rate-limit / formatting helpers ==============
@@ -781,7 +798,9 @@ defmodule Symphony.StatusDashboard do
   defp fallback_command(command, _payload), do: command
 
   defp normalize_command(%{} = command) do
-    binary_command = map_value(command, ["parsedCmd", :parsedCmd, "command", :command, "cmd", :cmd])
+    binary_command =
+      map_value(command, ["parsedCmd", :parsedCmd, "command", :command, "cmd", :cmd])
+
     args = map_value(command, ["args", :args, "argv", :argv])
 
     if is_binary(binary_command) and is_list(args) do

@@ -196,6 +196,7 @@ defmodule Symphony.Tracker.GitHubIssues do
 
   @doc false
   def parse_blocked_by_body(nil), do: []
+
   def parse_blocked_by_body(body) do
     case Regex.run(~r/^[ \t]*blocked-by:[ \t]*([0-9# ,]+)\s*$/im, body) do
       [_, refs] ->
@@ -212,6 +213,7 @@ defmodule Symphony.Tracker.GitHubIssues do
   end
 
   defp parse_iso(nil), do: nil
+
   defp parse_iso(s) when is_binary(s) do
     case DateTime.from_iso8601(s) do
       {:ok, dt, _} -> dt

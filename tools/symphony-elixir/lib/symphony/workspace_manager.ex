@@ -127,7 +127,11 @@ defmodule Symphony.WorkspaceManager do
        kill the task and return `{:error, :hook_timeout}` so the caller
        can classify it as fatal or logged-only per § 9.4.
   """
-  @spec run_hook(Config.t(), workspace(), :after_create | :before_run | :after_run | :before_remove) ::
+  @spec run_hook(
+          Config.t(),
+          workspace(),
+          :after_create | :before_run | :after_run | :before_remove
+        ) ::
           :ok | {:error, term()}
   def run_hook(config, %{path: cwd}, name) do
     case Config.hook_script(config, name) do
@@ -140,21 +144,45 @@ defmodule Symphony.WorkspaceManager do
     end
   end
 
+  @doc """
+  Remove an issue workspace after running `before_remove` when the
+  directory exists. Per spec § 9.4, hook failure and timeout are logged
+  and ignored; cleanup still proceeds.
+  """
+  @spec remove(Config.t(), binary()) :: :ok | {:error, term()}
+  def remove(config, identifier) when is_binary(identifier) do
+    path = workspace_path(config, identifier)
+    root = absolute(Config.workspace_root(config))
+
+    with :ok <- assert_inside_root!(root, path) |> wrap_invariant() do
+      if File.exists?(path) do
+        workspace = %{path: path, workspace_key: sanitize_key(identifier), created_now: false}
+        _ = run_hook(config, workspace, :before_remove)
+
+        case File.rm_rf(path) do
+          {:ok, _files} -> :ok
+          {:error, reason, failed_path} -> {:error, {:remove_failed, failed_path, reason}}
+        end
+      else
+        :ok
+      end
+    end
+  end
+
   # ============== Helpers ==============
 
   defp run_script(script, cwd, timeout_ms, name) do
-    Logger.info("symphony.hook.#{name} outcome=start cwd=#{cwd} timeout_ms=#{timeout_ms}")
+    action = "hook.#{name}"
+
+    Logger.info("event.action=#{action} event.outcome=start cwd=#{cwd} timeout_ms=#{timeout_ms}")
 
     task =
       Task.async(fn ->
         try do
-          {output, status} =
-            System.cmd("bash", ["-lc", script],
-              cd: cwd,
-              stderr_to_stdout: true
-            )
-
-          {status, output}
+          case shell_command(script, cwd) do
+            {:ok, {output, status}} -> {status, output}
+            {:error, reason} -> {:exception, inspect(reason)}
+          end
         rescue
           e -> {:exception, Exception.message(e)}
         end
@@ -162,26 +190,42 @@ defmodule Symphony.WorkspaceManager do
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, {0, _output}} ->
-        Logger.info("symphony.hook.#{name} outcome=success cwd=#{cwd}")
+        Logger.info("event.action=#{action} event.outcome=success cwd=#{cwd}")
         :ok
 
       {:ok, {status, output}} when is_integer(status) ->
         truncated = truncate_output(output)
-        Logger.warning("symphony.hook.#{name} outcome=failure exit=#{status} cwd=#{cwd}")
-        Logger.debug("symphony.hook.#{name}.output #{truncated}")
+        Logger.warning("event.action=#{action} event.outcome=failure exit=#{status} cwd=#{cwd}")
+        Logger.debug("event.action=#{action}.output #{truncated}")
         {:error, {:hook_nonzero_exit, status}}
 
       {:ok, {:exception, msg}} ->
-        Logger.warning("symphony.hook.#{name} outcome=exception cwd=#{cwd} message=#{msg}")
+        Logger.warning("event.action=#{action} event.outcome=exception cwd=#{cwd} message=#{msg}")
         {:error, {:hook_exception, msg}}
 
       nil ->
-        Logger.warning("symphony.hook.#{name} outcome=timeout timeout_ms=#{timeout_ms} cwd=#{cwd}")
+        Logger.warning(
+          "event.action=#{action} event.outcome=timeout timeout_ms=#{timeout_ms} cwd=#{cwd}"
+        )
+
         {:error, :hook_timeout}
 
       other ->
-        Logger.warning("symphony.hook.#{name} outcome=unknown #{inspect(other)}")
+        Logger.warning("event.action=#{action} event.outcome=unknown #{inspect(other)}")
         {:error, {:hook_unknown, other}}
+    end
+  end
+
+  defp shell_command(script, cwd) do
+    cond do
+      bash = System.find_executable("bash") ->
+        {:ok, System.cmd(bash, ["-lc", script], cd: cwd, stderr_to_stdout: true)}
+
+      sh = System.find_executable("sh") ->
+        {:ok, System.cmd(sh, ["-c", script], cd: cwd, stderr_to_stdout: true)}
+
+      true ->
+        {:error, :no_local_shell}
     end
   end
 

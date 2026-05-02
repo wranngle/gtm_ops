@@ -99,6 +99,18 @@ defmodule Symphony.ConfigTest do
     end
   end
 
+  test "hooks_timeout_ms falls back to the default for non-positive values", %{tmp: tmp} do
+    config =
+      write_workflow(tmp, """
+      ---
+      hooks:
+        timeout_ms: 0
+      ---
+      """)
+
+    assert Config.hooks_timeout_ms(config) == 60_000
+  end
+
   test "hook_script returns nil when absent and content when present", %{tmp: tmp} do
     config =
       write_workflow(tmp, """
@@ -210,6 +222,7 @@ defmodule Symphony.ConfigTest do
     assert Config.tracker_active_states(csv_config) == ["a", "b", "c"]
 
     list_path = Path.join(tmp, "WORKFLOW.md")
+
     File.write!(list_path, """
     ---
     tracker:

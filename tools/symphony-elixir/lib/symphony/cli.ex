@@ -87,6 +87,7 @@ defmodule Symphony.CLI do
   # entirely. Skipping unknown subcommands too — they error out before
   # touching anything that needs the dashboard.
   defp configure_dashboard_autostart(["serve" | _]), do: :ok
+
   defp configure_dashboard_autostart(_) do
     Application.put_env(:symphony, :dashboard_autostart?, false, persistent: true)
     :ok
@@ -216,7 +217,9 @@ defmodule Symphony.CLI do
   # ============== Helpers ==============
 
   defp parse_top_level(argv) do
-    {opts, rest, _invalid} = OptionParser.parse_head(argv, strict: @top_switches, aliases: @top_aliases)
+    {opts, rest, _invalid} =
+      OptionParser.parse_head(argv, strict: @top_switches, aliases: @top_aliases)
+
     {opts, rest}
   end
 

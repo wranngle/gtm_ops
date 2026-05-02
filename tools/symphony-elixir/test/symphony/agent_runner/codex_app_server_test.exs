@@ -5,7 +5,9 @@ defmodule Symphony.AgentRunner.CodexAppServerTest do
   alias Symphony.{Config, Tracker, WorkflowLoader, WorkspaceManager}
 
   setup do
-    tmp = Path.join(System.tmp_dir!(), "symphony-codex-runner-#{System.unique_integer([:positive])}")
+    tmp =
+      Path.join(System.tmp_dir!(), "symphony-codex-runner-#{System.unique_integer([:positive])}")
+
     File.mkdir_p!(tmp)
     on_exit(fn -> File.rm_rf!(tmp) end)
     {:ok, tmp: tmp}
@@ -202,7 +204,8 @@ defmodule Symphony.AgentRunner.CodexAppServerTest do
   end
 
   test "honours explicit agent.runner_kind override", %{tmp: tmp} do
-    config = make_config(tmp, "/usr/local/bin/codex app-server", "agent:\n  runner_kind: local_shell")
+    config =
+      make_config(tmp, "/usr/local/bin/codex app-server", "agent:\n  runner_kind: local_shell")
 
     assert {:ok, Symphony.AgentRunner.LocalShell} =
              Symphony.AgentRunner.adapter_for(config)

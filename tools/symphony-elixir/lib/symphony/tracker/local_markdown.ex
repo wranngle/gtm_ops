@@ -47,7 +47,10 @@ defmodule Symphony.Tracker.LocalMarkdown do
     {:ok, issues}
   rescue
     e ->
-      Logger.warning("symphony.tracker.local_markdown.fetch_failed reason=#{Exception.message(e)}")
+      Logger.warning(
+        "symphony.tracker.local_markdown.fetch_failed reason=#{Exception.message(e)}"
+      )
+
       {:error, {:local_markdown_fetch, Exception.message(e)}}
   end
 
@@ -170,29 +173,35 @@ defmodule Symphony.Tracker.LocalMarkdown do
 
   defp parse_priority(nil), do: nil
   defp parse_priority(n) when is_integer(n), do: n
+
   defp parse_priority(s) when is_binary(s) do
     case Integer.parse(s) do
       {n, _} -> n
       :error -> nil
     end
   end
+
   defp parse_priority(_), do: nil
 
   defp parse_labels(nil), do: []
   defp parse_labels(list) when is_list(list), do: Enum.map(list, &to_string/1)
+
   defp parse_labels(s) when is_binary(s) do
     s
     |> String.split(",")
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
+
   defp parse_labels(_), do: []
 
   defp parse_blocked_by(nil), do: []
   defp parse_blocked_by(""), do: []
+
   defp parse_blocked_by(list) when is_list(list) do
     for v <- list, do: %{id: to_string(v), identifier: to_string(v), state: nil}
   end
+
   defp parse_blocked_by(s) when is_binary(s) do
     s
     |> String.split(",")
@@ -200,5 +209,6 @@ defmodule Symphony.Tracker.LocalMarkdown do
     |> Enum.reject(&(&1 == ""))
     |> Enum.map(fn id -> %{id: id, identifier: id, state: nil} end)
   end
+
   defp parse_blocked_by(_), do: []
 end

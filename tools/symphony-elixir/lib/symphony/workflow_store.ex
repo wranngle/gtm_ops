@@ -245,9 +245,7 @@ defmodule Symphony.WorkflowStore do
         if state.apply_on_change? do
           case maybe_apply_workflow(new_state.workflow) do
             :ok ->
-              Logging.emit(:info, "symphony.workflow.reload", :success,
-                fields: %{path: path}
-              )
+              Logging.emit(:info, "symphony.workflow.reload", :success, fields: %{path: path})
 
               Logger.info("symphony.workflow.reload path=#{path}")
               {:ok, new_state}

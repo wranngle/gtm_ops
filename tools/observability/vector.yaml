@@ -89,10 +89,10 @@ sinks:
       enabled: false
 
   victoriatraces_traces:
-    # VictoriaTraces speaks the OTLP HTTP traces protocol natively. Vector
-    # 0.55 doesn't ship a dedicated `victoria_traces` sink, but `http`
-    # forwarding the encoded OTLP bytes works as long as the OTLP source
-    # output is wired in. See:
+    # VictoriaTraces speaks the OTLP HTTP traces protocol natively. Vector's
+    # HTTP sink can encode OTLP/protobuf, but decoded trace re-encoding still
+    # needs a follow-up live fix before the 4318 hop is the smoke default.
+    # See:
     #   https://docs.victoriametrics.com/victoriatraces/data-ingestion/
     type: http
     inputs:
@@ -100,8 +100,6 @@ sinks:
     uri: http://victoriatraces:10428/insert/opentelemetry/v1/traces
     method: post
     encoding:
-      codec: json
-    framing:
-      method: newline_delimited
+      codec: otlp
     healthcheck:
       enabled: false

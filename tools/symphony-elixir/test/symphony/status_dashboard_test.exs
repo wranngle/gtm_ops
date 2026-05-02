@@ -144,7 +144,12 @@ defmodule Symphony.StatusDashboardTest do
     test "skips entries without a last_codex_event" do
       snapshot = %{
         running: [
-          %{identifier: "X", last_codex_event: nil, last_codex_message: nil, last_codex_timestamp: nil}
+          %{
+            identifier: "X",
+            last_codex_event: nil,
+            last_codex_message: nil,
+            last_codex_timestamp: nil
+          }
         ]
       }
 

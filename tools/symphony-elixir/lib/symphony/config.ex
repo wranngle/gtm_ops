@@ -133,7 +133,7 @@ defmodule Symphony.Config do
   def workspace_root(config), do: get_string!(config, "workspace.root")
 
   @spec hooks_timeout_ms(t()) :: pos_integer()
-  def hooks_timeout_ms(config), do: pos_int!(config, "hooks.timeout_ms")
+  def hooks_timeout_ms(config), do: pos_int_or_default(config, "hooks.timeout_ms", 60_000)
 
   @spec hook_script(t(), :after_create | :before_run | :after_run | :before_remove) ::
           binary() | nil
@@ -198,7 +198,10 @@ defmodule Symphony.Config do
         :linear ->
           reasons
           |> add_if_missing(tracker_api_key(config), :missing_tracker_api_key)
-          |> add_if_missing(get_string(config, "tracker.project_slug"), :missing_tracker_project_slug)
+          |> add_if_missing(
+            get_string(config, "tracker.project_slug"),
+            :missing_tracker_project_slug
+          )
 
         :github_issues ->
           add_if_missing(reasons, get_string(config, "tracker.repo"), :missing_tracker_repo)
@@ -238,12 +241,14 @@ defmodule Symphony.Config do
   end
 
   defp do_fetch(value, []), do: {:ok, value}
+
   defp do_fetch(map, [key | rest]) when is_map(map) do
     case Map.fetch(map, key) do
       {:ok, v} -> do_fetch(v, rest)
       :error -> :missing
     end
   end
+
   defp do_fetch(_, _), do: :missing
 
   defp maybe_resolve_env(value, dotted) when is_binary(value) do
@@ -308,14 +313,33 @@ defmodule Symphony.Config do
 
   defp pos_int!(config, dotted) do
     case Map.fetch!(config.resolved, dotted) do
-      v when is_integer(v) and v > 0 -> v
+      v when is_integer(v) and v > 0 ->
+        v
+
       v when is_binary(v) ->
         case Integer.parse(v) do
           {n, ""} when n > 0 -> n
           _ -> raise ArgumentError, "config: #{dotted} not a positive integer (#{inspect(v)})"
         end
+
       v ->
         raise ArgumentError, "config: #{dotted} not a positive integer (#{inspect(v)})"
+    end
+  end
+
+  defp pos_int_or_default(config, dotted, default) do
+    case Map.fetch!(config.resolved, dotted) do
+      v when is_integer(v) and v > 0 ->
+        v
+
+      v when is_binary(v) ->
+        case Integer.parse(v) do
+          {n, ""} when n > 0 -> n
+          _ -> default
+        end
+
+      _ ->
+        default
     end
   end
 

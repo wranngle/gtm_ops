@@ -38,9 +38,14 @@ tools/observability/smoke.sh traces
 It verifies each Victoria service health endpoint, writes one ECS-jsonl
 event into `.symphony/logs/symphony-smoke.jsonl` and reads it back via
 LogsQL, pushes one Prometheus exposition counter and reads it back via
-PromQL, and probes the VictoriaTraces Jaeger API. The traces round-trip
-is reported as **SKIP** until something in the codebase emits real OTLP
-spans (see STACK-070).
+PromQL, and emits one synthetic OTLP span through
+`mix symphony.trace_smoke` before reading it back through the
+VictoriaTraces Jaeger API.
+
+By default the trace smoke posts directly to
+`http://127.0.0.1:10428/insert/opentelemetry/v1/traces` via
+`TRACE_OTLP_ENDPOINT`. To test an OTLP collector or Vector hop instead,
+set `TRACE_OTLP_ENDPOINT=http://127.0.0.1:4318/v1/traces`.
 
 For a manual probe:
 
@@ -57,7 +62,13 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
   --header 'Content-Type: application/x-protobuf' \
   --data 'x'  # expect 400
 
-# 3. End-to-end log path: write one ECS-jsonl line, then read it back.
+# 3. End-to-end trace path: emit a synthetic span, then read it back.
+cd tools/symphony-elixir
+mix symphony.trace_smoke --marker manual-trace-$(date +%s) \
+  --endpoint http://127.0.0.1:10428/insert/opentelemetry/v1/traces
+cd ../..
+
+# 4. End-to-end log path: write one ECS-jsonl line, then read it back.
 echo '{"@timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","log.level":"info","event.action":"observability.smoke","service.name":"manual-smoke","message":"hello"}' \
   >> .symphony/logs/symphony.jsonl
 sleep 5   # Vector tail + VictoriaLogs index latency
@@ -153,32 +164,55 @@ curl -fsS 'http://127.0.0.1:8428/api/v1/series' \
   --data-urlencode 'match[]=agent_evals_evaluations_total'
 ```
 
-## TraceQL — Symphony spans (PLANNED — no spans are emitted yet)
+## TraceQL — Symphony spans
 
-> **Status**: VictoriaTraces is running and the Vector OTLP traces sink
-> is wired (see `tools/observability/vector.yaml`), but **nothing in
-> the codebase emits OTLP spans yet**. Queries below are documented as
-> planned examples so the path is obvious; until STACK-070 lands they will
-> all return empty.
+> **Status**: `tools/symphony-elixir/lib/symphony/tracing.ex` emits
+> OTLP/HTTP protobuf spans. `mix symphony.trace_smoke` emits
+> `symphony.trace_smoke`; the Elixir worker wraps each agent turn in
+> `symphony.turn` with `user.journey="agent-dispatch"` and
+> `issue.identifier`.
 
-The Elixir daemon's snapshot interface exposes per-tick `last_tick_at`
-and per-issue `turn_count`, but these are not yet shaped as OTLP spans.
-STACK-070 designs a `Symphony.Tracing` module that emits one span per
-`turn/start` → `turn/completed` window from the JSON-RPC adapter.
-
-Once spans are flowing, the queries below become useful. VictoriaTraces
-exposes a Jaeger-compatible API:
+VictoriaTraces exposes a Jaeger-compatible API:
 
 ```bash
-# List services (returns {} until spans exist).
+# List services.
 curl -fsS 'http://127.0.0.1:10428/select/jaeger/api/services'
 
-# All spans for one service.
-curl -fsS 'http://127.0.0.1:10428/select/jaeger/api/traces' \
-  --data-urlencode 'service=wranngle-local-symphony'
+# Find a trace smoke span by marker.
+marker="smoke-traces-example"
+start="$(date -d '1 hour ago' +%s%6N)"
+end="$(date +%s%6N)"
+curl -G -fsS 'http://127.0.0.1:10428/select/jaeger/api/traces' \
+  --data-urlencode 'service=wranngle-local-symphony' \
+  --data-urlencode "tags={\"smoke.marker\":\"$marker\"}" \
+  --data-urlencode "start=$start" \
+  --data-urlencode "end=$end" \
+  --data-urlencode 'limit=5'
 
-# Slowest 10 turns in the last hour (TraceQL-style; exact syntax depends
-# on the VictoriaTraces version, see https://docs.victoriametrics.com/victoriatraces/).
+# Slow Symphony turns in the last hour.
+start="$(date -d '1 hour ago' +%s%6N)"
+end="$(date +%s%6N)"
+curl -G -fsS 'http://127.0.0.1:10428/select/jaeger/api/traces' \
+  --data-urlencode 'service=wranngle-local-symphony' \
+  --data-urlencode 'tags={"user.journey":"agent-dispatch"}' \
+  --data-urlencode 'minDuration=2s' \
+  --data-urlencode "start=$start" \
+  --data-urlencode "end=$end" \
+  --data-urlencode 'limit=10'
+```
+
+Current caveat: `Symphony.Tracing` defaults to
+`OTLP_HTTP_ENDPOINT` or `http://127.0.0.1:4318/v1/traces`, matching
+the standard local OTLP intake. On this Vector 0.55 stack, live smoke
+uses VictoriaTraces' direct insert endpoint because the decoded Vector
+trace event is not re-encoded into a valid `resourceSpans` envelope for
+VictoriaTraces. Set `OTLP_HTTP_ENDPOINT` to the direct insert endpoint
+when you need orchestrator spans to land before the Vector forwarding
+slice is fixed:
+
+```bash
+OTLP_HTTP_ENDPOINT=http://127.0.0.1:10428/insert/opentelemetry/v1/traces \
+  mix run --no-halt
 ```
 
 ## "Service startup completes in under 800ms" example
@@ -200,7 +234,6 @@ should be able to ask:
    implement as a TraceQL query that filters by `user_journey` tag and
    returns spans where `duration > 2s`:
    ```bash
-   # Once STACK-070 lands and emits user-journey-tagged spans:
    curl -fsS 'http://127.0.0.1:10428/select/jaeger/api/traces' \
      --data-urlencode 'service=wranngle-local-symphony' \
      --data-urlencode 'tags={"user.journey":"agent-dispatch"}' \
@@ -221,8 +254,9 @@ Current panels:
 - Pending slow-span query surface via VictoriaTraces'
   Jaeger-compatible `/select/jaeger/api/traces` endpoint.
 
-The page degrades gracefully when the stack is offline. Trace rows remain
-empty until STACK-070 adds real OTLP span emission.
+The page degrades gracefully when the stack is offline. Trace rows populate
+after `symphony.turn` or `symphony.trace_smoke` spans have been emitted to
+VictoriaTraces.
 
 ## Operational notes
 
@@ -251,6 +285,8 @@ empty until STACK-070 adds real OTLP span emission.
 - The Elixir daemon (`tools/symphony-elixir/`) emits via
   `Symphony.Logging.Sink {:file, "<path>"}`. The default in `:prod` is
   `.symphony/logs/symphony-elixir.jsonl` (Vector tails this path).
+  It also emits best-effort OTLP spans via `Symphony.Tracing` when
+  `OTLP_HTTP_ENDPOINT` points at a reachable trace ingest endpoint.
 - `packages/agent-evals` writes ECS-jsonl to a configured sink
   (default stderr). Set `AGENT_EVALS_LOG_FILE` to a path under
   `.symphony/logs/` to feed it into the same pipeline.
