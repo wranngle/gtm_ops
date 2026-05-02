@@ -51,7 +51,10 @@ defmodule Symphony.PromptRendererTest do
 
   test "tolerates whitespace inside braces" do
     issue = %Tracker.Issue{id: "a", identifier: "ID", title: "t", state: "s"}
-    {:ok, rendered} = PromptRenderer.render(%{template: "{{   issue.identifier   }}", issue: issue})
+
+    {:ok, rendered} =
+      PromptRenderer.render(%{template: "{{   issue.identifier   }}", issue: issue})
+
     assert rendered == "ID"
   end
 
@@ -119,7 +122,10 @@ defmodule Symphony.PromptRendererTest do
     issue = %Tracker.Issue{id: "a", identifier: "A", title: "t", state: "todo"}
 
     assert {:error, {:template_render_error, {:unknown_filter, "no_such_filter"}}} =
-             PromptRenderer.render(%{template: "{{ issue.title | no_such_filter }}", issue: issue})
+             PromptRenderer.render(%{
+               template: "{{ issue.title | no_such_filter }}",
+               issue: issue
+             })
   end
 
   test "surfaces template_parse_error distinctly from render errors" do

@@ -45,6 +45,23 @@ Either path satisfies the security requirement. Path A is preferred unless we di
   and rejects direct `tools/call` requests before upstream Playwright MCP sees
   them. `EDGE_MCP_NO_UNSAFE_TOOLS=1` is now the default in
   `tools/edge-mcp/launch-mcp.sh` and `tools/edge-mcp/mcp.json`.
-- Still todo: run the live Edge MCP smoke against a real Edge debug session and
-  capture proof that the mediated `tools/list` has 22 tools and direct unsafe
-  calls are denied on the actual transport.
+- 2026-05-02: Live Edge MCP smoke passed against a real Edge CDP endpoint on
+  `EDGE_DEBUG_PORT=9222`:
+
+  ```bash
+  EDGE_DEBUG_PORT=9222 node tools/edge-mcp/smoke/smoke.mjs --record-last-run
+  node tools/edge-mcp/smoke/validate-last-run.mjs --max-age-days 30
+  ```
+
+  Proof recorded in `tools/edge-mcp/smoke/LAST_RUN.md`:
+  `status=pass`, `tool_count=22`, `expected_tool_count=22`,
+  `no_unsafe_tools=true`, and `unsafe_tool_denied=true`. The smoke logs showed
+  the mediator removed one tool from `tools/list` and denied a direct
+  `tools/call browser_run_code_unsafe` request before navigation, screenshot,
+  and accessibility snapshot succeeded.
+
+## Completion
+
+Closed 2026-05-02. Path B is load-bearing and live-verified. No remaining
+live proof is required for the unsafe-tool gate itself; the separate live-CI
+runner story remains tracked by `STACK-021`.

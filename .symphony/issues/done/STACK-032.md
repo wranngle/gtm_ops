@@ -48,3 +48,13 @@ scheduling and backoff math.
   happens.
 
 Dependencies: STACK-011 (running map and worker spawn).
+
+## Completion note
+
+Completed in `tools/symphony-elixir`: `Symphony.RetryQueue.Entry` mirrors the
+spec fields, retry delay math covers continuation, failure, and capped backoff,
+and the orchestrator retry handler re-fetches active candidates, releases
+claims when the issue disappears or is no longer active, requeues when slots are
+full, ignores stale timer tokens, and clears retry entries on redispatch.
+Regression coverage lives in `test/symphony/retry_queue_test.exs` and
+`test/symphony/orchestrator_test.exs`.

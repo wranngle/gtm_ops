@@ -45,3 +45,16 @@ implemented.
 - `docs/references/openai_symphony_harness_engineering_stack_diagrams_explained.txt`
   lines 519-561.
 
+## Handoff notes
+
+Implemented on 2026-05-02 by Worker K:
+
+- Added `scripts/symphony-pr-shepherd.sh` with `gh` wrappers for PR open/update,
+  review comments, check status, failed-log capture, rebase, documented reruns,
+  readiness comments, and opt-in merge.
+- Added `pr_shepherd.*` policy keys to `WORKFLOW.md`; merge is refused unless
+  `SYMPHONY_ALLOW_PR_MERGE=1` is set for the merge command.
+- Added fixture-backed smoke coverage in `tests/symphony-completion-helpers.sh`.
+- Review packet: `.symphony/workspaces/STACK-076/review-packet/manifest.md`.
+
+Remaining scope: true secondary agent review remains TD-008.

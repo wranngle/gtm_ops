@@ -42,3 +42,14 @@ Out of scope:
 - HTTP server / dashboard wiring (covered by spec §5.3 extension
   `server.port`, would be a separate issue).
 - Token accounting itself (see STACK-031).
+
+## Completion note
+
+Completed in `tools/symphony-elixir`: `Symphony.snapshot/0` delegates to the
+orchestrator snapshot and returns `{:error, :unavailable}` or
+`{:error, :timeout}` instead of raising. Snapshot rows include running sessions
+with `turn_count`, retry entries, `codex_totals`, `rate_limits`, tracker
+metadata, and polling state; `seconds_running` is computed from completed
+runtime plus active `started_at` elapsed time. Regression coverage lives in
+`test/symphony/orchestrator_test.exs`, and the adapter matrix is updated in
+`docs/references/symphony-orchestration.md`.

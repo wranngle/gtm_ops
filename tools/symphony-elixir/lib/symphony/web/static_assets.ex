@@ -9,7 +9,10 @@ defmodule Symphony.Web.StaticAssets do
   @dashboard_css_path Path.expand("../../../priv/static/dashboard.css", __DIR__)
   @phoenix_html_js_path Application.app_dir(:phoenix_html, "priv/static/phoenix_html.js")
   @phoenix_js_path Application.app_dir(:phoenix, "priv/static/phoenix.js")
-  @phoenix_live_view_js_path Application.app_dir(:phoenix_live_view, "priv/static/phoenix_live_view.js")
+  @phoenix_live_view_js_path Application.app_dir(
+                               :phoenix_live_view,
+                               "priv/static/phoenix_live_view.js"
+                             )
 
   @external_resource @dashboard_css_path
   @external_resource @phoenix_html_js_path
@@ -25,7 +28,8 @@ defmodule Symphony.Web.StaticAssets do
     "/dashboard.css" => {"text/css", @dashboard_css},
     "/vendor/phoenix_html/phoenix_html.js" => {"application/javascript", @phoenix_html_js},
     "/vendor/phoenix/phoenix.js" => {"application/javascript", @phoenix_js},
-    "/vendor/phoenix_live_view/phoenix_live_view.js" => {"application/javascript", @phoenix_live_view_js}
+    "/vendor/phoenix_live_view/phoenix_live_view.js" =>
+      {"application/javascript", @phoenix_live_view_js}
   }
 
   @spec fetch(String.t()) :: {:ok, String.t(), binary()} | :error

@@ -24,7 +24,14 @@ defmodule Symphony.AgentRunner.CodexAppServer do
 
   @behaviour Symphony.AgentRunner
 
-  alias Symphony.{Codex.AppServer, Config, PromptRenderer, Tracker, WorkflowLoader, WorkspaceManager}
+  alias Symphony.{
+    Codex.AppServer,
+    Config,
+    PromptRenderer,
+    Tracker,
+    WorkflowLoader,
+    WorkspaceManager
+  }
 
   require Logger
 
@@ -106,12 +113,32 @@ defmodule Symphony.AgentRunner.CodexAppServer do
 
   # ============== Turn loop ==============
 
-  defp run_turns(_config, _session, _issue, _prompt, _on_message, _fetcher, _opts, max_turns, turn_number)
+  defp run_turns(
+         _config,
+         _session,
+         _issue,
+         _prompt,
+         _on_message,
+         _fetcher,
+         _opts,
+         max_turns,
+         turn_number
+       )
        when turn_number > max_turns do
     {:ok, %{exit_code: 0, last_session_id: nil, turns: max_turns}}
   end
 
-  defp run_turns(config, session, issue, prompt, on_message, fetcher, opts, max_turns, turn_number) do
+  defp run_turns(
+         config,
+         session,
+         issue,
+         prompt,
+         on_message,
+         fetcher,
+         opts,
+         max_turns,
+         turn_number
+       ) do
     turn_prompt = build_turn_prompt(prompt, opts, turn_number)
 
     case AppServer.run_turn(session, turn_prompt, issue, opts ++ [on_message: on_message]) do
@@ -179,7 +206,15 @@ defmodule Symphony.AgentRunner.CodexAppServer do
 
   # ============== Result shaping ==============
 
-  defp finalize(config, workspace, {:ok, run_summary}, transcript_path, prompt_path, started_at, issue) do
+  defp finalize(
+         config,
+         workspace,
+         {:ok, run_summary},
+         transcript_path,
+         prompt_path,
+         started_at,
+         issue
+       ) do
     _ = WorkspaceManager.run_hook(config, workspace, :after_run)
     duration_ms = System.monotonic_time(:millisecond) - started_at
 
@@ -196,7 +231,15 @@ defmodule Symphony.AgentRunner.CodexAppServer do
      }}
   end
 
-  defp finalize(config, workspace, {:error, reason}, _transcript_path, _prompt_path, _started_at, issue) do
+  defp finalize(
+         config,
+         workspace,
+         {:error, reason},
+         _transcript_path,
+         _prompt_path,
+         _started_at,
+         issue
+       ) do
     _ = WorkspaceManager.run_hook(config, workspace, :after_run)
 
     Logger.warning(
@@ -211,9 +254,13 @@ defmodule Symphony.AgentRunner.CodexAppServer do
   defp run_before_hooks(config, workspace) do
     case workspace.created_now do
       true ->
-        with :ok <- WorkspaceManager.run_hook(config, workspace, :after_create),
-             :ok <- WorkspaceManager.run_hook(config, workspace, :before_run) do
-          :ok
+        case WorkspaceManager.run_hook(config, workspace, :after_create) do
+          :ok ->
+            WorkspaceManager.run_hook(config, workspace, :before_run)
+
+          {:error, _reason} = error ->
+            _ = WorkspaceManager.remove(config, workspace.workspace_key)
+            error
         end
 
       false ->

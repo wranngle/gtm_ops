@@ -34,6 +34,7 @@ LOGS_BASE="${VICTORIALOGS_URL:-http://127.0.0.1:9428}"
 METRICS_BASE="${VICTORIAMETRICS_URL:-http://127.0.0.1:8428}"
 TRACES_BASE="${VICTORIATRACES_URL:-http://127.0.0.1:10428}"
 OTLP_BASE="${OTLP_HTTP_URL:-http://127.0.0.1:4318}"
+TRACE_OTLP_ENDPOINT="${TRACE_OTLP_ENDPOINT:-$TRACES_BASE/insert/opentelemetry/v1/traces}"
 VECTOR_TAIL_DELAY="${VECTOR_TAIL_DELAY:-3}"
 
 PASSES=()
@@ -168,13 +169,8 @@ ${metric_name}{run=\"${marker}\"} 1
 # ---- traces leg ------------------------------------------------------------
 
 run_traces_leg(){
-  hdr "Leg 3 — Traces (OTLP HTTP -> Vector -> VictoriaTraces -> Jaeger API)"
+  hdr "Leg 3 — Traces (OTLP HTTP -> VictoriaTraces -> Jaeger API)"
 
-  # Real OTLP clients send protobuf-encoded payloads; this script does not
-  # pull in the Python/Node SDKs as a dependency, so we only health-check
-  # the path and report SKIP instead of FAIL when no spans have landed.
-  # See STACK-070.md for the design of the Symphony Elixir tracing emitter
-  # that will populate this leg in production.
   local services
   services="$(curl -fsS --max-time 5 "$TRACES_BASE/select/jaeger/api/services" 2>/dev/null || true)"
 
@@ -185,14 +181,55 @@ run_traces_leg(){
     return
   fi
 
-  # If anything has emitted spans, surface the count; otherwise SKIP with
-  # a pointer to the follow-up issue.
-  local count
-  count="$(printf '%s' "$services" | grep -oE '"data":\[[^]]*\]' | tr -cd '"' | wc -c)"
-  if [[ "$count" -gt 2 ]]; then
-    ok "Traces present in VictoriaTraces (services: $services)"
+  local marker="smoke-traces-$$-$(date +%s)"
+  local start_us
+  start_us="$(date +%s%6N)"
+
+  local mix_dir="$REPO_ROOT/tools/symphony-elixir"
+  local -a mix_cmd=(mix)
+
+  if ! command -v mix >/dev/null 2>&1; then
+    if command -v mise >/dev/null 2>&1; then
+      mix_cmd=(mise exec --no-deps erlang@27 elixir@1.19.5-otp-27 -- mix)
+    else
+      fail "Traces smoke span emit" "mix is not on PATH and mise is unavailable"
+      return
+    fi
+  fi
+
+  local emit_output
+  if emit_output="$(
+    cd "$mix_dir" &&
+      "${mix_cmd[@]}" symphony.trace_smoke \
+        --marker "$marker" \
+        --endpoint "$TRACE_OTLP_ENDPOINT" \
+        --timeout-ms 2000
+  )"; then
+    ok "emitted synthetic OTLP span ($marker)"
   else
-    skip "Traces round-trip" "no spans emitted yet — implement Symphony.Tracing per STACK-070"
+    fail "Traces smoke span emit" "${emit_output:-mix task failed}"
+    return
+  fi
+
+  printf '  waiting up to 30s for VictoriaTraces index...\n'
+
+  local resp=""
+  local attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 3
+    resp="$(curl -G -fsS --max-time 5 "$TRACES_BASE/select/jaeger/api/traces" \
+      --data-urlencode "service=wranngle-local-symphony" \
+      --data-urlencode "tags={\"smoke.marker\":\"$marker\"}" \
+      --data-urlencode "limit=5" \
+      --data-urlencode "start=$start_us" \
+      --data-urlencode "end=$(date +%s%6N)" 2>/dev/null || true)"
+    printf '%s' "$resp" | grep -q "$marker" && break
+  done
+
+  if printf '%s' "$resp" | grep -q "$marker"; then
+    ok "Traces round-trip via Jaeger API ($marker found after ${attempt} attempt(s))"
+  else
+    fail "Traces round-trip via Jaeger API" "marker $marker not found in response: ${resp:0:200}..."
   fi
 }
 

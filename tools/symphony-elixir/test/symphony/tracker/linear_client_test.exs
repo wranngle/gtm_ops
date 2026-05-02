@@ -279,7 +279,9 @@ defmodule Symphony.Tracker.Linear.ClientTest do
 
     test "preflight: blank body surfaces :linear_empty_comment_body", %{tmp: tmp} do
       config = workflow_config(tmp, api_key: "lin_xxx", project_slug: "wgte")
-      assert {:error, :linear_empty_comment_body} = Client.post_comment(config, "uuid-1", "  \n  ")
+
+      assert {:error, :linear_empty_comment_body} =
+               Client.post_comment(config, "uuid-1", "  \n  ")
     end
 
     test "preflight: missing api_key surfaces :missing_tracker_api_key", %{tmp: tmp} do

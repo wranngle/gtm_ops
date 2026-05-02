@@ -50,8 +50,11 @@ defmodule Symphony.PromptRenderer do
 
   defp parse_template(template) when is_binary(template) do
     case Solid.parse(template) do
-      {:ok, parsed} -> {:ok, parsed}
-      {:error, %Solid.TemplateError{} = err} -> {:error, {:template_parse_error, Exception.message(err)}}
+      {:ok, parsed} ->
+        {:ok, parsed}
+
+      {:error, %Solid.TemplateError{} = err} ->
+        {:error, {:template_parse_error, Exception.message(err)}}
     end
   end
 

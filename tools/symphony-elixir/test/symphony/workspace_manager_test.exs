@@ -112,6 +112,71 @@ defmodule Symphony.WorkspaceManagerTest do
     assert {:error, {:hook_nonzero_exit, 7}} = WorkspaceManager.run_hook(config, ws, :before_run)
   end
 
+  test "run_hook enforces hooks.timeout_ms and reloads the next timeout value", %{tmp: tmp} do
+    path = Path.join(tmp, "WORKFLOW.md")
+    workspace_root = Path.join(tmp, "ws")
+
+    File.write!(path, """
+    ---
+    workspace:
+      root: #{workspace_root}
+    hooks:
+      timeout_ms: 20
+      before_run: |
+        sleep 0.2
+    ---
+    """)
+
+    {:ok, workflow} = WorkflowLoader.load(path)
+    {:ok, fast_timeout_config} = Config.from_workflow(workflow)
+    {:ok, ws} = WorkspaceManager.ensure_exists(fast_timeout_config, "WGTE-TIMEOUT")
+
+    assert {:error, :hook_timeout} =
+             WorkspaceManager.run_hook(fast_timeout_config, ws, :before_run)
+
+    File.write!(path, """
+    ---
+    workspace:
+      root: #{workspace_root}
+    hooks:
+      timeout_ms: 1000
+      before_run: |
+        sleep 0.05
+    ---
+    """)
+
+    {:ok, workflow} = WorkflowLoader.load(path)
+    {:ok, slow_timeout_config} = Config.from_workflow(workflow)
+
+    assert :ok = WorkspaceManager.run_hook(slow_timeout_config, ws, :before_run)
+  end
+
+  test "remove runs before_remove and ignores hook failures while deleting workspace", %{tmp: tmp} do
+    path = Path.join(tmp, "WORKFLOW.md")
+    marker = Path.join(tmp, "before-remove-ran")
+
+    File.write!(path, """
+    ---
+    workspace:
+      root: #{Path.join(tmp, "ws")}
+    hooks:
+      timeout_ms: 1000
+      before_remove: |
+        echo ran > #{marker}
+        exit 9
+    ---
+    """)
+
+    {:ok, workflow} = WorkflowLoader.load(path)
+    {:ok, config} = Config.from_workflow(workflow)
+    {:ok, ws} = WorkspaceManager.ensure_exists(config, "WGTE-REMOVE")
+
+    assert File.dir?(ws.path)
+    assert :ok = WorkspaceManager.remove(config, "WGTE-REMOVE")
+    refute File.exists?(ws.path)
+    assert File.read!(marker) =~ "ran"
+  end
+
   test "ensure_exists rejects identifier whose sanitized path escapes root", %{tmp: tmp} do
     # Sanitization replaces "/" with "_" 1:1, so a "../escape" identifier
     # becomes ".._escape" — still inside root. The escape invariant

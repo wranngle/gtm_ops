@@ -53,25 +53,21 @@ test/symphony/                   ExUnit tests per module.
 |---|---|
 | 5 Workflow file format          | ✓ loader parses front matter + body, dotted-path getters |
 | 5.3 + 6 Typed config layer      | ✓ `Symphony.Config` — defaults, env `$VAR` resolution, typed getters |
-| 7 Orchestration state machine   | ✓ in-memory state (`running`, `claimed`, `retry_attempts`, `codex_totals`); real dispatch lands in T-6 |
-| 8 Polling, scheduling, reconciliation | ✓ poll tick honors `polling.interval_ms`, fetches candidates, sorts by `(priority, created_at, identifier)`, dispatches up to `agent.max_concurrent_agents`. Stall-detection lands in T-8 |
-| 9 Workspace management + safety | ✓ `Symphony.WorkspaceManager` — sanitized keys, `<root>/<key>` layout, `created_now` gate, `assert_inside_root!` + `assert_safe_cwd!`, hook execution with timeout |
-| 10.7 Agent runner               | ✓ `Symphony.AgentRunner.LocalShell` — pipes prompt through `agent.command`, captures stdout, fires `before_run`/`after_run` hooks. Codex JSON-RPC variant deferred |
+| 7 Orchestration state machine   | ✓ in-memory state (`running`, `claimed`, `retry_attempts`, `codex_totals`) plus Task-supervised worker dispatch |
+| 8 Polling, scheduling, reconciliation | ✓ poll tick honors `polling.interval_ms`, fetches candidates, sorts by `(priority, created_at, identifier)`, dispatches up to `agent.max_concurrent_agents`, reconciles running issues, detects stalls, and redeems retry entries |
+| 8.4 Retry + backoff             | ✓ `Symphony.RetryQueue` — continuation 1s, failure exponential `min(10·2^(n-1)·1000, agent.max_retry_backoff_ms)`, active-candidate re-fetch, stale timer ignore, and retry clear on redispatch |
+| 9 Workspace management + safety | ✓ `Symphony.WorkspaceManager` — sanitized keys, `<root>/<key>` layout, `created_now` gate, `assert_inside_root!` + `assert_safe_cwd!`, and lifecycle hooks (`after_create`, `before_run`, `after_run`, `before_remove`) with timeout |
+| 10.7 Agent runner               | ✓ `Symphony.AgentRunner.LocalShell` plus optional `Symphony.AgentRunner.CodexAppServer` JSON-RPC adapter |
 | 11 Tracker integration          | ✓ `Symphony.Tracker` + `Issue` struct + 3 adapters: `Noop`, `LocalMarkdown` (filesystem parity with `scripts/symphony.sh`), `GitHubIssues` (gh CLI) |
 | 12 Prompt rendering             | ✓ `Symphony.PromptRenderer` — strict `{{ var }}` substitution with unknown-variable rejection. Full Liquid filters/loops deferred |
-| 13.1–13.3 Logging + snapshot    | ✓ `Symphony.Logging` (ECS-jsonl), `Symphony.Logging.Sink` (stderr / file / multi), snapshot includes `running` (with `turn_count`), `retrying`, `codex_totals`, `rate_limits`, `tracker_kind`, `last_tick_at` |
-| 8.4 Retry + backoff             | ✓ `Symphony.RetryQueue` — continuation 1s, failure exponential `min(10·2^(n-1)·1000, agent.max_retry_backoff_ms)`, redeem on tick |
-| 8.5 Reconciliation              | ✓ tick passes call adapter `fetch_issue_states_by_ids/2` for currently-running issues. Stall-detection wires once Task supervision lands |
-| 9 Workspace management          | not yet (T-5) |
-| 10 Agent runner protocol        | not yet (T-6) |
-| 11 Tracker integration          | not yet (T-7) |
-| 13 Logging + observability      | not yet (T-8) |
+| 13.1–13.5 Logging, snapshot, tokens | ✓ `Symphony.Logging` (ECS-jsonl), `Symphony.Logging.Sink` (stderr / file / multi), `Symphony.snapshot/0` with timeout/unavailable errors, live `seconds_running`, delta-aware Codex token totals, and latest rate-limit payload |
 
 ## Design notes
 
 - Default agent command is `scripts/bin/llm.sh` (codex-independent), per the
-  surrounding repo's WORKFLOW.md. The Codex app-server JSON-RPC adapter from
-  spec section 10 is a separate later slice.
+  surrounding repo's WORKFLOW.md. The Codex app-server JSON-RPC adapter is
+  available when `agent.runner_kind: codex_app_server` is set or
+  `codex.command` points at a non-local-shell command.
 - Tracker adapters are pluggable via `tracker.kind`; first targets are
   `local_markdown` (filesystem) and `github_issues` (gh CLI), to match the
   Bash adapter at `scripts/symphony.sh`.

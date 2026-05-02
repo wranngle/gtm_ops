@@ -113,4 +113,31 @@ defmodule Symphony.AgentRunner.LocalShellTest do
     issue = make_issue()
     assert {:error, {:template_render_error, _}} = LocalShell.run(config, issue, ws)
   end
+
+  test "after_create failure aborts and removes a newly-created workspace", %{tmp: tmp} do
+    workflow_path = Path.join(tmp, "WORKFLOW.md")
+    workspace_root = Path.join(tmp, "ws")
+
+    File.write!(workflow_path, """
+    ---
+    workspace:
+      root: #{workspace_root}
+    agent:
+      command: /bin/true
+    hooks:
+      after_create: |
+        exit 3
+    ---
+    Echo template: {{ issue.identifier }}.
+    """)
+
+    {:ok, workflow} = WorkflowLoader.load(workflow_path)
+    {:ok, config} = Config.from_workflow(workflow)
+    issue = make_issue()
+    {:ok, ws} = WorkspaceManager.ensure_exists(config, issue.identifier)
+
+    assert File.dir?(ws.path)
+    assert {:error, {:hook_nonzero_exit, 3}} = LocalShell.run(config, issue, ws)
+    refute File.exists?(ws.path)
+  end
 end

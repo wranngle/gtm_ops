@@ -11,7 +11,6 @@ config :symphony,
 config :symphony, Symphony.Web.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 0],
   server: false,
-  secret_key_base:
-    "test-secret-key-base-must-be-at-least-64-bytes-long-symphony-elixir-test-env"
+  secret_key_base: "test-secret-key-base-must-be-at-least-64-bytes-long-symphony-elixir-test-env"
 
 config :logger, level: :debug

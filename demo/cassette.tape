@@ -13,7 +13,7 @@ Set FontSize 16
 Set Width 1200
 Set Height 720
 Set Padding 20
-Set Theme "Catppuccin Frappé"
+Set Theme "Catppuccin Frappe"
 Set TypingSpeed 40ms
 
 # Step 1: structural / placeholder / layered-architecture validators.

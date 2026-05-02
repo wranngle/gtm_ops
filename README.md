@@ -23,6 +23,7 @@ scripts/validate-knowledge-base.sh
 scripts/symphony.sh validate
 scripts/symphony.sh list
 scripts/symphony.sh once --dry-run
+tests/symphony-completion-helpers.sh
 ```
 
 ## Maintenance

@@ -32,7 +32,9 @@ defmodule Symphony.PathSafetyTest do
 
   describe "assert_inside_root!/2" do
     setup do
-      tmp = Path.join(System.tmp_dir!(), "symphony-pathsafety-#{System.unique_integer([:positive])}")
+      tmp =
+        Path.join(System.tmp_dir!(), "symphony-pathsafety-#{System.unique_integer([:positive])}")
+
       File.mkdir_p!(tmp)
       on_exit(fn -> File.rm_rf!(tmp) end)
       {:ok, tmp: tmp}

@@ -40,3 +40,15 @@ recording, validating, and cleaning up the UI target that Edge should drive.
   DevTools MCP".
 - `docs/QUALITY_SCORE.md` row "Per-worktree app boot".
 
+## Implementation note
+
+Worker J added `tools/ops-console/ops-console.sh` with `start`, `restart`,
+`status`, `stop`, and `url` commands. It writes
+`.symphony/runtime/ops-console-port` and
+`.symphony/runtime/ops-console.json` with `pid`, `port`, `url`, and `log_path`.
+
+`tools/ops-console/smoke.sh` starts two temporary Streamlit runtimes in
+parallel and verifies distinct ports/logs plus HTTP Streamlit responses.
+
+Remaining acceptance item: pair the app helper with live Edge MCP navigation
+on Windows after the Edge debug range has been registered.

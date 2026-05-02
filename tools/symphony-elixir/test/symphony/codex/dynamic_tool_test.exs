@@ -217,7 +217,8 @@ defmodule Symphony.Codex.DynamicToolTest do
 
       assert Jason.decode!(response["output"]) == %{
                "error" => %{
-                 "message" => "Linear GraphQL request failed before receiving a successful response.",
+                 "message" =>
+                   "Linear GraphQL request failed before receiving a successful response.",
                  "reason" => ":timeout"
                }
              }

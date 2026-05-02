@@ -6,7 +6,7 @@ loop (image #3 in `docs/references/`). Adapted to run from WSL2 against
 Edge on Windows.
 
 Status: Active
-Last reviewed: 2026-05-01
+Last reviewed: 2026-05-02
 
 ## Topology
 
@@ -14,10 +14,14 @@ Last reviewed: 2026-05-01
 ┌─────────────────────────────┐                ┌─────────────────────────────┐
 │ WSL                         │                │ Windows                      │
 │                             │                │                              │
-│  Claude Code (npx)          │                │   Edge (msedge.exe)          │
-│   └─► launch-mcp.sh         │   TCP 9222     │     listens on [::1]:9222    │
+│  .symphony/runtime/         │                │   Edge (msedge.exe)          │
+│   ├─ edge-port              │   TCP range    │     listens on one selected  │
+│   └─ edge-debug.json        │   9222-9322    │     loopback debug port      │
+│                             │                │                              │
+│  Claude Code (npx)          │                │   per-worktree profile dir   │
+│   └─► launch-mcp.sh         │                │   EdgeDebugProfile-<key>     │
 │        └─► @playwright/mcp ─┼────────────────┼──► netsh portproxy v4tov6    │
-│             --cdp-endpoint  │                │      0.0.0.0:9222 → ::1:9222 │
+│             --cdp-endpoint  │                │      0.0.0.0:<port> → ::1    │
 │             $WSL_HOST_IP    │                │                              │
 └─────────────────────────────┘                └─────────────────────────────┘
 ```
@@ -26,16 +30,20 @@ Last reviewed: 2026-05-01
 
 | Path | Role |
 |------|------|
-| `tools/edge-mcp/edge-debug-launch.sh` | force-kills any prior `msedge.exe`, launches a fresh one with `--remote-debugging-port=9222 --user-data-dir=EdgeDebugProfile`, waits up to 30s for the CDP endpoint to bind, prints the reachable URL on stdout |
+| `tools/edge-mcp/edge-debug-launch.sh` | allocates or reuses a per-worktree debug port from `EDGE_DEBUG_PORT_RANGE` (default `9222-9322`), stops only the Edge processes using this worktree's debug profile, launches Edge with a per-worktree `--user-data-dir`, writes `.symphony/runtime/edge-port` and `.symphony/runtime/edge-debug.json`, waits up to 30s for CDP, and prints the reachable `/json/version` URL |
 | `tools/edge-mcp/install-edge-shortcut.ps1` | drops `Edge (Debug).lnk` in the Start Menu so a single click launches with the right flags |
-| `tools/edge-mcp/windows/setup-elevated.sh` | one-time UAC-elevated setup: writes the v4tov6 portproxy + firewall allow rule by triggering `Start-Process -Verb RunAs` against the staged `.cmd` files |
-| `tools/edge-mcp/windows/edge-mcp-portproxy.cmd` | netsh: deletes any existing v4tov4 rule, adds v4tov6 from `0.0.0.0:9222` → `[::1]:9222` |
-| `tools/edge-mcp/windows/edge-mcp-firewall.cmd` | netsh advfirewall: adds inbound TCP 9222 allow rule named `edge-mcp-9222` |
-| `tools/edge-mcp/launch-mcp.sh` | resolves the working CDP endpoint at MCP start (host IP / 127.0.0.1 / `[::1]` fallbacks), then runs `@playwright/mcp@latest --browser msedge --cdp-endpoint $resolved`. By default it enables `EDGE_MCP_NO_UNSAFE_TOOLS=1` and runs through `filter-unsafe-tools.mjs`; set `EDGE_MCP_NO_UNSAFE_TOOLS=0` only for deliberate local investigation. Honors `EDGE_MCP_CONSOLE_LEVEL` and `EDGE_MCP_EXTRA_ARGS` |
+| `tools/edge-mcp/windows/setup-elevated.sh` | one-time UAC-elevated setup: writes portproxy + firewall allow rules for a range (`--port-range` or `EDGE_DEBUG_PORT_RANGE`) by triggering `Start-Process -Verb RunAs` against staged `.cmd` files |
+| `tools/edge-mcp/windows/edge-mcp-portproxy.cmd` | netsh: deletes existing v4 proxy rules and adds one rule per port in the selected range; defaults to `v4tov6` from `0.0.0.0:<port>` to `[::1]:<port>` |
+| `tools/edge-mcp/windows/edge-mcp-firewall.cmd` | netsh advfirewall: adds one inbound TCP allow rule for the selected port range |
+| `tools/edge-mcp/launch-mcp.sh` | reads the same worktree runtime port/endpoint that `edge-debug-launch.sh` writes, resolves the working CDP endpoint at MCP start (runtime endpoint / host IP / 127.0.0.1 / `[::1]` fallbacks), then runs `@playwright/mcp@latest --browser msedge --cdp-endpoint $resolved`. By default it enables `EDGE_MCP_NO_UNSAFE_TOOLS=1` and runs through `filter-unsafe-tools.mjs`; set `EDGE_MCP_NO_UNSAFE_TOOLS=0` only for deliberate local investigation. Honors `EDGE_MCP_CONSOLE_LEVEL` and `EDGE_MCP_EXTRA_ARGS` |
 | `tools/edge-mcp/filter-unsafe-tools.mjs` | JSON-RPC stdio mediator that hides `browser_run_code_unsafe` from `tools/list` and rejects `tools/call` for that tool before the request reaches upstream `@playwright/mcp` |
 | `tools/edge-mcp/mcp.json` | Claude Code MCP server registration template — uses `launch-mcp.sh` as the command so endpoint resolution happens fresh each session |
 | `tools/edge-mcp/install-mcp.sh` | idempotent merger that writes the `edge-devtools` entry into `~/.claude/settings.json` (or project-local with `--scope project`) |
 | `tools/edge-mcp/smoke/smoke.mjs` | end-to-end attach loop: initialize → tools/list → navigate → console_messages → screenshot → snapshot. Fails LOUDLY on tool-list shrink/expansion or security-gated-tool drift |
+| `tools/edge-mcp/smoke/LAST_RUN.md` | checked-in live-smoke ratchet: full commit SHA, UTC timestamp, pass/fail status, tool count, and unsafe-tool denial proof from the latest local live run |
+| `tools/edge-mcp/smoke/validate-last-run.mjs` | non-live ratchet validator used by CI and `scripts/gardener.sh`; fails when `LAST_RUN.md` is malformed, stale, failed, or recorded against a non-ancestor commit |
+| `tools/ops-console/ops-console.sh` | per-worktree Streamlit app boot helper: allocates or reuses an app port, writes `.symphony/runtime/ops-console.json`, and supports `start`, `status`, `stop`, `restart`, and `url` |
+| `tools/ops-console/smoke.sh` | non-GUI local smoke that starts two isolated Streamlit instances in parallel runtime dirs and verifies distinct ports/logs plus HTTP responses |
 
 ## One-time owner setup
 
@@ -43,7 +51,7 @@ Already done in this repo's owner environment:
 
 ```bash
 # 1. Apply Windows-side prerequisites (UAC prompt fires once).
-tools/edge-mcp/windows/setup-elevated.sh
+tools/edge-mcp/windows/setup-elevated.sh --port-range 9222-9322
 
 # 2. Install the Edge (Debug) Start Menu shortcut.
 powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w tools/edge-mcp/install-edge-shortcut.ps1)"
@@ -57,11 +65,21 @@ tools/edge-mcp/install-mcp.sh
 ## Per-session use
 
 ```bash
-# Click "Edge (Debug)" in the Start Menu, OR:
+# Start the app target in this worktree.
+tools/ops-console/ops-console.sh start
+# expected stdout: http://127.0.0.1:8501  (or another selected port)
+
+# Start this worktree's isolated Edge debug instance.
 tools/edge-mcp/edge-debug-launch.sh
-# expected stdout: http://172.31.240.1:9222/json/version  (or similar)
+# expected stdout: http://172.31.240.1:9222/json/version  (or another selected port)
+
+# The runtime contracts are worktree-local:
+jq . .symphony/runtime/ops-console.json
+jq . .symphony/runtime/edge-debug.json
 
 # Then drive Edge through Claude Code's `edge-devtools` MCP server.
+# Use the app URL from `tools/ops-console/ops-console.sh url` for
+# browser_navigate so each agent drives its own worktree's UI target.
 # The MCP exposes a safe filtered browser_* tool set by default — see
 # "Tools advertised" below for the full list. Common ones:
 # browser_navigate, browser_snapshot (accessibility tree),
@@ -78,14 +96,14 @@ implementing the loop should program against.
 
 | Image #3 step | Primary tool(s) | Composition / notes | Where it lives |
 |---|---|---|---|
-| 1. Select target | `browser_tabs {action:"list"}` then `browser_tabs {action:"select", index:N}` (or `browser_navigate` to open a fresh target) | A "target" in the diagram corresponds to a Playwright page (one CDP target per Edge tab). For per-worktree isolation see "Per-worktree app boot — gap" below. | `@playwright/mcp` |
+| 1. Select target | `tools/ops-console/ops-console.sh start`, then `browser_navigate {url:<runtime url>}` (or `browser_tabs {action:"select", index:N}` for an existing tab) | A "target" in the diagram corresponds to a Playwright page pointed at this worktree's app URL. Read it with `tools/ops-console/ops-console.sh url` or `.symphony/runtime/ops-console.json`. | `tools/ops-console/ops-console.sh` + `@playwright/mcp` |
 | 2. Clear console | `browser_console_messages {all:true}` to pull the current buffer once and snapshot it; subsequent calls with `all:false` return only post-baseline messages | Upstream has no `browser_console_clear` tool. The agent treats the snapshot taken in step 1 as the "cleared" baseline and diffs forward. Document this in the agent prompt. | `@playwright/mcp` (compose) |
 | 3. Snapshot BEFORE | `browser_snapshot` (accessibility tree) + `browser_take_screenshot` (pixels) + `browser_console_messages` (state) + `browser_network_requests` (HTTP state) | Save all four artifacts to `.playwright-mcp/` so step 8 can diff them. | `@playwright/mcp` (compose) |
 | 4. Trigger UI path | `browser_click`, `browser_fill_form`, `browser_type`, `browser_press_key`, `browser_select_option`, `browser_hover`, `browser_drag`, `browser_drop`, `browser_file_upload`, `browser_handle_dialog` | Pick the highest-level tool that fits — `browser_fill_form` for forms, single `browser_click` for buttons. Use refs from the latest snapshot. | `@playwright/mcp` |
 | 5. Observe runtime events DURING interaction | `browser_console_messages {all:false}` (log/warning/error stream) + `browser_network_requests` (XHR/fetch list) + `browser_network_request {index:N}` (full headers/body for one request) | Call between user interactions, not just at the end. The diagram shows runtime events fan out from app to DevTools. Both tools are read-only and cheap. | `@playwright/mcp` (compose) |
 | 6. Snapshot AFTER | `browser_snapshot` + `browser_take_screenshot` + `browser_console_messages` + `browser_network_requests` | Same artifacts as step 3, captured after the trigger. The agent reasons about deltas. | `@playwright/mcp` (compose) |
 | 7. Apply fix | (out of scope for the MCP — agent edits files in the repo) | The MCP loop is the *validator*. Code edits happen via Claude Code's regular Write/Edit tools. | Claude Code core |
-| 8. Restart | `tools/edge-mcp/edge-debug-launch.sh` (force-kills + relaunches Edge) followed by reissuing `browser_navigate` | Fully isolated restart. The launcher already force-kills `msedge.exe` per owner directive. For a clean profile, set `EDGE_DEBUG_FRESH_PROFILE=1`. | `tools/edge-mcp/edge-debug-launch.sh` |
+| 8. Restart | `tools/ops-console/ops-console.sh restart` when the app changed, `tools/edge-mcp/edge-debug-launch.sh` when the browser profile/port needs a clean restart, then reissue `browser_navigate` | Both restarts are worktree-scoped. Edge stops only the process using this worktree's debug profile by default; set `EDGE_DEBUG_FRESH_PROFILE=1` for a clean browser profile. | `tools/ops-console/ops-console.sh` + `tools/edge-mcp/edge-debug-launch.sh` |
 | 9. Re-run validation (LOOP UNTIL CLEAN) | Repeat steps 3–6, comparing the new AFTER snapshot to the previous BEFORE | An agent-side loop; see "Worked example: loop until clean" below. | Agent prompt |
 
 Key naming gotchas an agent author needs up front:
@@ -212,9 +230,17 @@ To regenerate the inventory snapshot before changing the pin:
 node tools/edge-mcp/smoke/smoke.mjs --tool-snapshot | jq .
 ```
 
-## Verified smoke test (recorded 2026-05-01)
+To update the checked-in live-proof ratchet after a successful local smoke:
 
-End-to-end smoke run after `setup-elevated.sh` + `edge-debug-launch.sh`:
+```bash
+node tools/edge-mcp/smoke/smoke.mjs --record-last-run
+node tools/edge-mcp/smoke/validate-last-run.mjs
+```
+
+## Verified smoke test
+
+End-to-end smoke run after `setup-elevated.sh` + `edge-debug-launch.sh`
+was first recorded on 2026-05-01:
 
 ```bash
 $ tools/edge-mcp/edge-debug-launch.sh
@@ -252,14 +278,41 @@ exercised by `tools/edge-mcp/smoke/smoke.mjs`, which spawns
    the `heading "Example Domain"` node.
 
 ```bash
-$ node tools/edge-mcp/smoke/smoke.mjs
-{ "pass": true, "failures": [], "toolCount": 22, "expectedToolCount": 22, "noUnsafeTools": true, ... }
+$ node tools/edge-mcp/smoke/smoke.mjs --record-last-run
+{ "pass": true, "failures": [], "toolCount": 22, "expectedToolCount": 22, "noUnsafeTools": true, "unsafeToolDenied": true, ... }
 ```
 
 This is sufficient evidence the full chain (Edge bind → portproxy
 forward → firewall allow → WSL host-IP route → launch-mcp endpoint
 resolution → npx fetch → @playwright/mcp stdio → CDP attach → DOM)
 is functioning end-to-end.
+
+## LAST_RUN ratchet
+
+`tools/edge-mcp/smoke/LAST_RUN.md` is the local-only live gate. A valid record
+must contain:
+
+- `commit_sha`: full 40-character Git commit that was checked out for the live
+  run. It must be an ancestor of current `HEAD`.
+- `timestamp_utc`: ISO UTC timestamp for the live run.
+- `status`: `pass`.
+- `tool_count` and `expected_tool_count`: equal positive integers. The current
+  safe inventory is 22 tools.
+- `no_unsafe_tools`: `true`.
+- `unsafe_tool_denied`: `true`, proving a direct `tools/call
+  browser_run_code_unsafe` request was rejected by the mediator.
+
+`node tools/edge-mcp/smoke/validate-last-run.mjs --max-age-days 30` enforces
+that shape without launching Edge. It also fails when the recorded commit is
+more than 30 days behind `HEAD` by commit timestamp, or when the timestamp
+itself is more than 30 days old. `scripts/gardener.sh` reports the same failure
+as an `edge-mcp-last-run` warning, while `.github/workflows/knowledge-base.yml`
+blocks on it as a non-live freshness check.
+
+Live run proof from 2026-05-02 is recorded in
+`tools/edge-mcp/smoke/LAST_RUN.md`: `status=pass`, `tool_count=22`,
+`expected_tool_count=22`, `no_unsafe_tools=true`, and
+`unsafe_tool_denied=true`.
 
 ## Why Edge binds `[::1]` instead of `127.0.0.1`
 
@@ -275,24 +328,28 @@ across Edge updates.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `tools/edge-mcp/edge-debug-launch.sh` reports `edge.debug-unreachable` | Edge didn't bind in 30s, or networking gap | Re-run launcher; if still failing, run `tools/edge-mcp/windows/setup-elevated.sh` |
-| `curl ... /json/version` returns 000 (timeout) | Firewall blocks inbound 9222 | `netsh advfirewall firewall add rule name=edge-mcp-9222 dir=in action=allow protocol=TCP localport=9222` (admin) |
+| `tools/edge-mcp/edge-debug-launch.sh` reports `edge.debug-unreachable` | Edge didn't bind in 30s, or networking gap | Re-run launcher; if still failing, run `tools/edge-mcp/windows/setup-elevated.sh --port-range 9222-9322` |
+| `curl ... /json/version` returns 000 (timeout) | Firewall blocks the selected Edge debug port | Re-run `tools/edge-mcp/windows/setup-elevated.sh --port-range <range>` or add an equivalent inbound TCP allow rule for the selected range |
 | Connection works from Windows but not WSL | Portproxy missing or `v4tov4` instead of `v4tov6` | Re-run `tools/edge-mcp/windows/setup-elevated.sh` |
 | MCP server registration not visible in Claude Code | Settings file not loaded | Restart Claude Code; check `~/.claude/settings.json` for the `edge-devtools` entry |
-| Edge already running with the owner's main profile (different `--user-data-dir`) | Owner clicked the regular Edge icon before launching debug Edge | The launcher's `Stop-Process -Force msedge` kills *all* msedge.exe, including the owner's main session. Save your work first; this is by owner directive ("Force-kill / restart Edge whenever needed"). Once killed, `edge-debug-launch.sh` relaunches only the Debug profile. The owner's tabs reload from their normal session restore on next manual launch. |
+| Edge already running with the owner's main profile (different `--user-data-dir`) | Owner clicked the regular Edge icon before launching debug Edge | No action required for normal per-worktree use. The launcher stops only Edge processes whose command line contains this worktree's debug profile. Set `EDGE_DEBUG_KILL_SCOPE=all` only for deliberate manual cleanup. |
 | Smoke reports `tools/list: SHRUNK` after `npm` cache update | Upstream `@playwright/mcp@latest` dropped a tool we relied on | (a) downgrade by pinning a known-good version inside `launch-mcp.sh`, or (b) accept the change: remove the tool from `EXPECTED_BASE_TOOLS` in `smoke.mjs` and from the inventory tables in this doc + `tools/edge-mcp/README.md` |
 | Smoke reports `tools/list: EXPANDED — new tools advertised that we don't track` | Upstream added a useful new tool | Decide whether the loop benefits from it. If yes, append the name to `EXPECTED_BASE_TOOLS` and to the inventory tables. If no, the smoke will keep failing until acknowledged — that's intentional, treat it as a documentation drift signal |
 | Smoke reports `security-gated tool drift` for `browser_run_code_unsafe` | Upstream renamed/removed the unsafe tool or the mediator stopped filtering it | Update `SECURITY_GATED_TOOLS` in `smoke.mjs`, `filter-unsafe-tools.mjs`, and the Security section here |
-| `setup-elevated.sh` declined or partially applied | UAC prompt dismissed mid-flow | Re-run `setup-elevated.sh`. The script is idempotent: each `.cmd` deletes any existing rule before adding the new one, so re-running cannot stack duplicate rules. Verify with `netsh interface portproxy show all` and `netsh advfirewall firewall show rule name=edge-mcp-9222` |
+| `setup-elevated.sh` declined or partially applied | UAC prompt dismissed mid-flow | Re-run `setup-elevated.sh`. The script is idempotent: each `.cmd` deletes any existing rule before adding the new one, so re-running cannot stack duplicate rules. Verify with `netsh interface portproxy show all` and `netsh advfirewall firewall show rule name=edge-mcp-<start>-<end>` |
 | `cmd.exe` reports `wslpath: Result not representable` | Repo is mounted at a UNC path the launcher can't translate | Move the repo under a normal `/mnt/c/` path, or set `EDGE_EXE_PATH` and `EDGE_DEBUG_PROFILE` to absolute Windows paths |
+| `tools/ops-console/ops-console.sh status` reports `stale` | PID exited, port stopped answering, or the process was killed outside the helper | Run `tools/ops-console/ops-console.sh restart`; the helper removes stale runtime files and reuses the saved port if it is free |
 
 ### Idempotency check for `setup-elevated.sh`
 
 The script is safe to re-run. Each Windows-side `.cmd` deletes any existing
 rule before re-adding it:
 
-- `edge-mcp-portproxy.cmd`: `netsh ... portproxy delete v4tov4 ...` then `netsh ... portproxy add v4tov6 ...`. Re-runs replace the rule, never stack duplicates.
-- `edge-mcp-firewall.cmd`: `netsh advfirewall firewall delete rule name="edge-mcp-9222"` then `netsh advfirewall firewall add rule name="edge-mcp-9222" ...`. Same pattern.
+- `edge-mcp-portproxy.cmd`: for every port in the selected range, deletes
+  existing `v4tov4`/`v4tov6` rules before adding the requested proxy mode.
+- `edge-mcp-firewall.cmd`: deletes `edge-mcp-<start>-<end>` before adding
+  the inbound TCP allow rule for the selected range. It also deletes the
+  legacy `edge-mcp-9222` single-port rule.
 
 Verify after each run by inspecting `C:\Users\<user>\edge-mcp-fix.log`,
 which is overwritten on each invocation and contains the before/after of
@@ -338,7 +395,7 @@ declared allowlist).
 
 ## CI integration
 
-The smoke test does not run on stock GitHub Actions runners because:
+The live smoke test does not run on stock GitHub Actions runners because:
 
 - Runners do not have Microsoft Edge installed (they have Chromium
   preinstalled, not the `msedge` channel the launcher targets).
@@ -347,7 +404,19 @@ The smoke test does not run on stock GitHub Actions runners because:
 - Edge cold-start is 8–15 seconds with a screen present; the headless
   CI environment exposes a different timing profile we have not validated.
 
-The smoke is therefore a **local-only** check, intended to be run:
+The policy decision for now is **local-only live smoke plus non-live CI
+ratchet**:
+
+- `.github/workflows/knowledge-base.yml` runs
+  `node tools/edge-mcp/filter-unsafe-tools.mjs --self-test`, which proves the
+  mediator's in-process filtering and denial behavior without Edge.
+- The same workflow runs
+  `node tools/edge-mcp/smoke/validate-last-run.mjs --max-age-days 30`, which
+  blocks stale or malformed live-smoke proof.
+- `scripts/gardener.sh` also invokes the validator and reports failures as
+  `edge-mcp-last-run` warnings for local doc-gardening loops.
+
+The live smoke remains intended to be run:
 
 - After every change to `tools/edge-mcp/`.
 - Before merging anything that touches the Symphony harness.
@@ -355,8 +424,11 @@ The smoke is therefore a **local-only** check, intended to be run:
   drift (see "Tools advertised" — the smoke fails LOUDLY on tool-list
   changes).
 
-If/when self-hosted runners with Edge become available, this section
-should be replaced with the workflow path. Tracked by `STACK-021`.
+If/when a self-hosted Windows runner with Edge becomes available, the remaining
+work is to add a separate live workflow with `runs-on: [self-hosted, windows,
+edge]`, pre-provision `tools/edge-mcp/windows/setup-elevated.sh`, and run
+`node tools/edge-mcp/smoke/smoke.mjs --record-last-run` on changes under
+`tools/edge-mcp/`. Tracked by `STACK-021`.
 
 ## MCP server upgrade story
 
@@ -373,22 +445,59 @@ known-good version after a breaking upstream:
    version passes.
 4. Note the pin in the "Tools advertised" section above with the date.
 
-## Per-worktree app boot — gap
+## Per-worktree Edge/App Boot Contract
 
-The Harness Engineering post emphasizes per-worktree app instances so
-agents can drive an isolated copy of the application. Our current
-`edge-debug-launch.sh` launches a single Edge instance bound to a single
-debug port (9222) with a single user-data-dir. Multi-agent / multi-worktree
-parallelism would race for that one Edge. Tracked by `STACK-019`.
+Each git worktree owns two runtime records under `.symphony/runtime/`:
+
+- `edge-port` and `edge-debug.json` from
+  `tools/edge-mcp/edge-debug-launch.sh`.
+- `ops-console-port` and `ops-console.json` from
+  `tools/ops-console/ops-console.sh start`.
+
+The Edge launcher defaults to `EDGE_DEBUG_PORT_RANGE=9222-9322`; the
+ops-console helper defaults to `OPS_CONSOLE_PORT_RANGE=8501-8599`.
+Both helpers use an inter-process lock under `/tmp` while allocating a port
+so two worktrees launched in parallel do not select the same port. Both write
+plain port files for shell consumers and JSON runtime files for agents that
+need `url`, `pid`, `log_path`, `profile`, or endpoint metadata.
+
+The normal loop is:
+
+```bash
+tools/ops-console/ops-console.sh start
+tools/edge-mcp/edge-debug-launch.sh
+app_url=$(tools/ops-console/ops-console.sh url)
+# Use browser_navigate {url: app_url} through the edge-devtools MCP server.
+```
+
+Cleanup is symmetric:
+
+```bash
+tools/ops-console/ops-console.sh stop
+# Edge cleanup is profile-scoped by re-running edge-debug-launch.sh, or by
+# setting EDGE_DEBUG_KILL_SCOPE=all for a deliberate manual browser cleanup.
+```
+
+The non-GUI app boot smoke is:
+
+```bash
+tools/ops-console/smoke.sh
+```
+
+It creates two temporary runtime dirs, starts two Streamlit processes in
+parallel, asserts distinct ports and log paths, and verifies both URLs return
+a Streamlit response. A full Edge dual-worktree smoke still requires live
+Windows GUI/Edge and the elevated portproxy range.
 
 ## Owner directives applied
 
 - Edge (not Chrome). Path: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
-- Force-kill / restart Edge whenever needed (launcher does this every run).
+- Worktree-scoped Edge restart by default; `EDGE_DEBUG_KILL_SCOPE=all` remains
+  available for deliberate manual cleanup.
 - Open outside the active window (positioned at 30000,30000 offscreen).
 - Single click on the Start Menu shortcut auto-launches with debug flags.
-- Separate `EdgeDebugProfile` user-data-dir so the owner's main browser
-  session stays untouched between debug runs.
+- Separate per-worktree `EdgeDebugProfile-<worktree-key>` user-data-dir so the
+  owner's main browser session and parallel agent sessions stay isolated.
 
 ## Related references
 

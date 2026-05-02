@@ -36,7 +36,7 @@ These pieces from the source material require multi-day infrastructure decisions
 - ~~Recurring gardener agent~~ — wired as `.github/workflows/gardener.yml` running every Monday 09:17 UTC. Opens a tracking issue when findings exist.
 - ~~Per-domain structural tests~~ — `packages/agent-evals/tests/structure.test.ts` enforces layer presence, index.ts surfaces, no-stray-files, and node:* IO discipline.
 - Symphony spec fidelity: ~~nested YAML keys~~ ~~`github_issues` adapter~~; long-running daemon shape, Codex app-server JSON-RPC protocol, state machine, reconciliation, retry queue, hooks, Liquid template engine, token accounting, snapshot interface still deferred (TD-007).
-- Agent-to-agent review loop and PR shepherding (TD-008).
+- ~~PR shepherding helper~~ — `scripts/symphony-pr-shepherd.sh` now wraps PR open/update, review reads, failed-log capture, rebase, documented reruns, readiness comments, and opt-in merge. True agent-to-agent review remains deferred in TD-008.
 
 ## Symphony Worktree Note
 

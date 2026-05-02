@@ -46,12 +46,14 @@ defmodule Symphony.WorkflowLoader do
   end
 
   defp do_fetch(value, [], _default), do: value
+
   defp do_fetch(map, [key | rest], default) when is_map(map) do
     case Map.fetch(map, key) do
       {:ok, value} -> do_fetch(value, rest, default)
       :error -> default
     end
   end
+
   defp do_fetch(_value, _path, default), do: default
 
   defp resolve_path(nil), do: Application.get_env(:symphony, :workflow_path)

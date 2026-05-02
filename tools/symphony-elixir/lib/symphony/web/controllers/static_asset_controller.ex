@@ -18,7 +18,8 @@ defmodule Symphony.Web.StaticAssetController do
   def phoenix_js(conn, _params), do: serve(conn, "/vendor/phoenix/phoenix.js")
 
   @spec phoenix_live_view_js(Conn.t(), map()) :: Conn.t()
-  def phoenix_live_view_js(conn, _params), do: serve(conn, "/vendor/phoenix_live_view/phoenix_live_view.js")
+  def phoenix_live_view_js(conn, _params),
+    do: serve(conn, "/vendor/phoenix_live_view/phoenix_live_view.js")
 
   defp serve(conn, path) do
     case StaticAssets.fetch(path) do

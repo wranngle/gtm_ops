@@ -10,7 +10,10 @@ defmodule Symphony.Codex.AppServerTest do
 
   setup do
     test_root =
-      Path.join(System.tmp_dir!(), "symphony-codex-app-server-#{System.unique_integer([:positive])}")
+      Path.join(
+        System.tmp_dir!(),
+        "symphony-codex-app-server-#{System.unique_integer([:positive])}"
+      )
 
     File.mkdir_p!(test_root)
     on_exit(fn -> File.rm_rf!(test_root) end)
@@ -430,7 +433,9 @@ defmodule Symphony.Codex.AppServerTest do
 
         %{
           "success" => true,
-          "contentItems" => [%{"type" => "inputText", "text" => ~s({"data":{"viewer":{"id":"u_1"}}})}]
+          "contentItems" => [
+            %{"type" => "inputText", "text" => ~s({"data":{"viewer":{"id":"u_1"}}})}
+          ]
         }
       end
 
@@ -549,5 +554,4 @@ defmodule Symphony.Codex.AppServerTest do
       assert tokens.total == 1750
     end
   end
-
 end

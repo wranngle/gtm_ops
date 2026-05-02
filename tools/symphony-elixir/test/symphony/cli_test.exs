@@ -74,7 +74,9 @@ defmodule Symphony.CLITest do
     end
 
     test "returns ok when workflow + config validate cleanly" do
-      tmp_root = Path.join(System.tmp_dir!(), "cli-validate-#{System.unique_integer([:positive])}")
+      tmp_root =
+        Path.join(System.tmp_dir!(), "cli-validate-#{System.unique_integer([:positive])}")
+
       File.mkdir_p!(tmp_root)
       issues_dir = Path.join(tmp_root, ".symphony/issues")
       File.mkdir_p!(issues_dir)
@@ -269,7 +271,10 @@ defmodule Symphony.CLITest do
 
       workflow = %{
         config: %{
-          "tracker" => %{"kind" => "local_markdown", "issues_root" => Path.join(tmp_dir, "issues")},
+          "tracker" => %{
+            "kind" => "local_markdown",
+            "issues_root" => Path.join(tmp_dir, "issues")
+          },
           "agent" => %{"command" => "scripts/bin/llm.sh"},
           "codex" => %{"command" => "codex app-server"},
           "workspace" => %{"root" => tmp_dir}
@@ -278,7 +283,8 @@ defmodule Symphony.CLITest do
         source_path: workflow_file
       }
 
-      result = CLI.run(["--workflow", workflow_file, "validate"], deps_with_capture({:ok, workflow}))
+      result =
+        CLI.run(["--workflow", workflow_file, "validate"], deps_with_capture({:ok, workflow}))
 
       assert result == :ok
       assert Application.get_env(:symphony, :workflow_path) == Path.expand(workflow_file)
@@ -295,7 +301,9 @@ defmodule Symphony.CLITest do
         end
       end)
 
-      bogus = Path.join(System.tmp_dir!(), "cli-flag-bogus-#{System.unique_integer([:positive])}.md")
+      bogus =
+        Path.join(System.tmp_dir!(), "cli-flag-bogus-#{System.unique_integer([:positive])}.md")
+
       refute File.exists?(bogus)
 
       deps = %{

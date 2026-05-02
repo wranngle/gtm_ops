@@ -15,7 +15,13 @@ defmodule Symphony.Providers.AnthropicTest do
       assert payload["model"] == "claude-haiku-4-5"
       assert payload["max_tokens"] == 1024
 
-      assert [%{"type" => "text", "text" => "WORKFLOW.md contents go here", "cache_control" => cc}] =
+      assert [
+               %{
+                 "type" => "text",
+                 "text" => "WORKFLOW.md contents go here",
+                 "cache_control" => cc
+               }
+             ] =
                payload["system"]
 
       assert cc == %{"type" => "ephemeral"}
@@ -116,7 +122,9 @@ defmodule Symphony.Providers.AnthropicTest do
     end
 
     test "decodes a JSON-encoded body string" do
-      body = Jason.encode!(%{"content" => [], "usage" => %{"input_tokens" => 1, "output_tokens" => 1}})
+      body =
+        Jason.encode!(%{"content" => [], "usage" => %{"input_tokens" => 1, "output_tokens" => 1}})
+
       assert {:ok, parsed} = Anthropic.decode_success_for_test(body)
       assert parsed.usage.input_tokens == 1
     end

@@ -53,7 +53,9 @@ defmodule Mix.Tasks.Symphony.SpecsCheck do
 
       {:error, failures} ->
         Enum.each(failures, fn {id, reason} ->
-          Mix.shell().error("symphony.specs_check check=#{id} outcome=failure reason=#{inspect(reason)}")
+          Mix.shell().error(
+            "symphony.specs_check check=#{id} outcome=failure reason=#{inspect(reason)}"
+          )
         end)
 
         Mix.raise("symphony.specs_check failed with #{length(failures)} check failure(s)")

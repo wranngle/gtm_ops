@@ -54,7 +54,9 @@ defmodule Symphony.RetryQueueTest do
     end
 
     test "continuation reason has fixed 1s delay regardless of attempt" do
-      first = RetryQueue.next_attempt(nil, :continuation, issue_id: "1", identifier: "1", now_ms: 0)
+      first =
+        RetryQueue.next_attempt(nil, :continuation, issue_id: "1", identifier: "1", now_ms: 0)
+
       assert first.due_at_ms == 1_000
 
       tenth = %{first | attempt: 10}

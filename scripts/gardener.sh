@@ -193,6 +193,19 @@ done < <(
       done
 )
 
+if command -v node >/dev/null 2>&1; then
+  if ! edge_last_run_output=$(node tools/edge-mcp/smoke/validate-last-run.mjs 2>&1); then
+    findings=$((findings + 1))
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      printf '[warn] edge-mcp-last-run: %s\n' "$line"
+    done <<< "$edge_last_run_output"
+  fi
+else
+  findings=$((findings + 1))
+  printf '[warn] edge-mcp-last-run: node not found; cannot validate tools/edge-mcp/smoke/LAST_RUN.md\n'
+fi
+
 if (( findings > 0 )); then
   emit_event warn gardener.findings failure "count=$findings"
   printf '\n%s staleness finding(s); a gardener agent should open a fix-up PR\n' "$findings"

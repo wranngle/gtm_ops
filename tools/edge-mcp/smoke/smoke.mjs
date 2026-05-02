@@ -21,10 +21,12 @@
 // Run: node tools/edge-mcp/smoke/smoke.mjs
 //   --skip-screenshot   skip the screenshot step (slow on cold profiles)
 //   --tool-snapshot     print the full tool list as JSON and exit 0
+//   --record-last-run   write tools/edge-mcp/smoke/LAST_RUN.md
 //
 // Exit 0 on full pass; non-zero with diagnostic stderr otherwise.
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -74,10 +76,13 @@ const SECURITY_GATED_TOOLS = ["browser_run_code_unsafe"];
 const args = new Set(process.argv.slice(2));
 const skipScreenshot = args.has("--skip-screenshot");
 const toolSnapshotOnly = args.has("--tool-snapshot");
+const recordLastRun = args.has("--record-last-run");
 const noUnsafeTools = process.env.EDGE_MCP_NO_UNSAFE_TOOLS !== "0";
 const EXPECTED_ADVERTISED_TOOLS = noUnsafeTools
   ? EXPECTED_BASE_TOOLS.filter((name) => !SECURITY_GATED_TOOLS.includes(name))
   : EXPECTED_BASE_TOOLS;
+const lastRunPath = resolve(here, "LAST_RUN.md");
+const repoRoot = resolve(here, "..", "..", "..");
 
 function log(level, msg, extra = {}) {
   const ts = new Date().toISOString();
@@ -225,6 +230,65 @@ function diffSets(actual, expected) {
   return { missing, extra };
 }
 
+function gitOutput(args, fallback = "") {
+  try {
+    return execFileSync("git", args, {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return fallback;
+  }
+}
+
+function formatList(items) {
+  if (!items.length) return "- none\n";
+  return items.map((item) => `- ${item}`).join("\n") + "\n";
+}
+
+function writeLastRun(report) {
+  const timestamp = new Date().toISOString();
+  const commitSha = gitOutput(["rev-parse", "HEAD"], "unknown");
+  const worktreeStatus = gitOutput(["status", "--short"], "");
+  const status = report.pass ? "pass" : "fail";
+  const content =
+    `---\n` +
+    `schema_version: 1\n` +
+    `commit_sha: ${commitSha}\n` +
+    `timestamp_utc: ${timestamp}\n` +
+    `status: ${status}\n` +
+    `command: node tools/edge-mcp/smoke/smoke.mjs --record-last-run\n` +
+    `tool_count: ${report.toolCount}\n` +
+    `expected_tool_count: ${report.expectedToolCount}\n` +
+    `no_unsafe_tools: ${report.noUnsafeTools}\n` +
+    `unsafe_tool_denied: ${report.unsafeToolDenied}\n` +
+    `worktree_dirty: ${worktreeStatus ? "true" : "false"}\n` +
+    `---\n` +
+    `# Edge MCP Smoke LAST_RUN\n\n` +
+    `This file is the checked-in ratchet for the local-only Edge MCP live smoke.\n` +
+    `Update it by running:\n\n` +
+    `\`\`\`bash\n` +
+    `node tools/edge-mcp/smoke/smoke.mjs --record-last-run\n` +
+    `\`\`\`\n\n` +
+    `## Recorded Result\n\n` +
+    `- Status: ${status}\n` +
+    `- Commit: ${commitSha}\n` +
+    `- Timestamp UTC: ${timestamp}\n` +
+    `- Tool count: ${report.toolCount}\n` +
+    `- Expected tool count: ${report.expectedToolCount}\n` +
+    `- EDGE_MCP_NO_UNSAFE_TOOLS active: ${report.noUnsafeTools}\n` +
+    `- Direct unsafe-tool call denied: ${report.unsafeToolDenied}\n` +
+    `- Worktree dirty during run: ${worktreeStatus ? "true" : "false"}\n\n` +
+    `## Failures\n\n` +
+    formatList(report.failures) +
+    `\n## Tool Names\n\n` +
+    formatList(report.toolNames);
+
+  writeFileSync(lastRunPath, content);
+  log("info", "last_run.recorded", { path: lastRunPath, status, commitSha });
+}
+
 async function main() {
   log("info", "spawn", { launcher });
   const child = spawn(launcher, [], {
@@ -236,6 +300,7 @@ async function main() {
 
   const failures = [];
   let toolNames = [];
+  let unsafeToolDenied = false;
 
   try {
     // 1. initialize
@@ -326,6 +391,7 @@ async function main() {
         if (!/EDGE_MCP_NO_UNSAFE_TOOLS|disabled/.test(err.message)) {
           failures.push(`browser_run_code_unsafe: denial error had unexpected shape: ${err.message}`);
         } else {
+          unsafeToolDenied = true;
           log("info", "browser_run_code_unsafe.denied.ok");
         }
       }
@@ -442,8 +508,12 @@ async function main() {
     toolNames,
     expectedToolCount: EXPECTED_ADVERTISED_TOOLS.length,
     noUnsafeTools,
+    unsafeToolDenied: noUnsafeTools ? unsafeToolDenied : null,
   };
   process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+  if (recordLastRun) {
+    writeLastRun(report);
+  }
   if (!report.pass) {
     process.exit(1);
   }
