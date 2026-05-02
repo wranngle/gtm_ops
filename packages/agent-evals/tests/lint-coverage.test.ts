@@ -47,6 +47,9 @@ function toPosixPath(input: string): string {
 
 const repoRoot = locateRepoRoot();
 const lintScript = toPosixPath(join(repoRoot, "scripts", "lint-layered-architecture.sh"));
+const structuredLoggingScript = toPosixPath(
+  join(repoRoot, "scripts", "lint-structured-logging.sh"),
+);
 const repoRootPosix = toPosixPath(repoRoot);
 const scratchPkg = join(repoRoot, "packages", "_lint_test_scratch");
 const scratchSrc = join(scratchPkg, "src");
@@ -315,5 +318,173 @@ describe("layered-architecture lint coverage", () => {
     );
     const { exitCode } = runLint();
     expect(exitCode).toBe(0);
+  });
+});
+
+// scripts/lint-structured-logging.sh — STACK-040.
+//
+// Reuses the same scratch-package pattern but invokes the structured-logging
+// lint script. The lint scans every packages/*/src/<layer>/ for forbidden
+// `console.*` and `process.{stderr,stdout}.write` calls outside the runtime
+// layer (and outside providers/logger.ts, which IS the structured emitter).
+const structuredLoggingInvocations: Array<{ cmd: string; argv: string[] }> = [
+  { cmd: "bash", argv: ["-c", `cd "${repoRootPosix}" && "${structuredLoggingScript}"`] },
+  {
+    cmd: "wsl.exe",
+    argv: ["bash", "-c", `cd "${repoRootPosix}" && "${structuredLoggingScript}"`],
+  },
+];
+
+function runStructuredLoggingLint(): {
+  exitCode: number;
+  stderr: string;
+  stdout: string;
+} {
+  for (const inv of structuredLoggingInvocations) {
+    const result = spawnSync(inv.cmd, inv.argv, { encoding: "utf-8" });
+    if (
+      result.error &&
+      "code" in result.error &&
+      (result.error as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      continue;
+    }
+    return {
+      exitCode: result.status ?? -1,
+      stderr: result.stderr ?? "",
+      stdout: result.stdout ?? "",
+    };
+  }
+  throw new Error(
+    "could not invoke scripts/lint-structured-logging.sh — neither bash nor wsl.exe is on PATH",
+  );
+}
+
+describe("structured-logging lint coverage (STACK-040)", () => {
+  test("lint passes against the real codebase baseline", () => {
+    if (existsSync(scratchPkg)) {
+      rmSync(scratchPkg, { recursive: true, force: true });
+    }
+    const { exitCode } = runStructuredLoggingLint();
+    expect(exitCode).toBe(0);
+  });
+
+  // Every non-runtime layer + console method must be flagged.
+  const forbiddenLayers: Layer[] = [
+    "types",
+    "config",
+    "repo",
+    "providers",
+    "service",
+    "ui",
+  ];
+  const consoleMethods = ["log", "info", "warn", "error", "debug", "trace"];
+
+  for (const layer of forbiddenLayers) {
+    for (const method of consoleMethods) {
+      test(`forbidden: console.${method} in ${layer}/`, () => {
+        setupScratchPackage();
+        plantStatement(
+          layer,
+          `console-${method}.ts`,
+          `export function emit() { console.${method}("nope"); }\n`,
+        );
+        const { exitCode, stderr } = runStructuredLoggingLint();
+        expect(exitCode).not.toBe(0);
+        expect(stderr).toContain(`console.${method}`);
+        expect(stderr).toContain(layer);
+      });
+    }
+
+    test(`forbidden: process.stderr.write in ${layer}/`, () => {
+      setupScratchPackage();
+      plantStatement(
+        layer,
+        "stderr.ts",
+        `export function emit() { process.stderr.write("nope\\n"); }\n`,
+      );
+      const { exitCode, stderr } = runStructuredLoggingLint();
+      expect(exitCode).not.toBe(0);
+      expect(stderr).toContain("process.stderr.write");
+    });
+
+    test(`forbidden: process.stdout.write in ${layer}/`, () => {
+      setupScratchPackage();
+      plantStatement(
+        layer,
+        "stdout.ts",
+        `export function emit() { process.stdout.write("nope\\n"); }\n`,
+      );
+      const { exitCode, stderr } = runStructuredLoggingLint();
+      expect(exitCode).not.toBe(0);
+      expect(stderr).toContain("process.stdout.write");
+    });
+  }
+
+  test("allowed: console.log in runtime/", () => {
+    setupScratchPackage();
+    plantStatement(
+      "runtime",
+      "boot.ts",
+      `export function boot() { console.log("starting"); }\n`,
+    );
+    const { exitCode } = runStructuredLoggingLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("allowed: process.stderr.write in runtime/", () => {
+    setupScratchPackage();
+    plantStatement(
+      "runtime",
+      "cli.ts",
+      `export function cli() { process.stderr.write("usage\\n"); }\n`,
+    );
+    const { exitCode } = runStructuredLoggingLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("allowed: process.stderr.write in providers/logger.ts (the structured emitter)", () => {
+    setupScratchPackage();
+    plantStatement(
+      "providers",
+      "logger.ts",
+      `export const sink = { write(line: string) { process.stderr.write(line); } };\n`,
+    );
+    const { exitCode } = runStructuredLoggingLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("ignores 'console.log' inside a line comment", () => {
+    setupScratchPackage();
+    plantStatement(
+      "service",
+      "comment.ts",
+      `// console.log("nope");\nexport const ok = 1;\n`,
+    );
+    const { exitCode } = runStructuredLoggingLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("ignores 'console.log' inside a block comment (multi-line)", () => {
+    setupScratchPackage();
+    plantStatement(
+      "service",
+      "block-comment.ts",
+      `/*\n  console.log("nope");\n*/\nexport const ok = 1;\n`,
+    );
+    const { exitCode } = runStructuredLoggingLint();
+    expect(exitCode).toBe(0);
+  });
+
+  test("violation message includes a remediation hint pointing at the logger provider", () => {
+    setupScratchPackage();
+    plantStatement(
+      "service",
+      "noisy.ts",
+      `export function noisy() { console.error("oops"); }\n`,
+    );
+    const { stderr } = runStructuredLoggingLint();
+    expect(stderr).toContain("providers/logger");
+    expect(stderr).toContain("docs/references/layered-domain-architecture.md");
   });
 });

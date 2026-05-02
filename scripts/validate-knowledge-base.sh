@@ -100,6 +100,7 @@ required_files=(
   "tools/observability/vector.yaml"
   "tools/observability/README.md"
   "scripts/lint-layered-architecture.sh"
+  "scripts/lint-structured-logging.sh"
   "scripts/gardener.sh"
   ".github/workflows/gardener.yml"
   "packages/agent-evals/README.md"
@@ -127,7 +128,6 @@ required_files=(
   "docs/QUALITY_SCORE.md"
   "docs/RELIABILITY.md"
   "docs/SECURITY.md"
-  ".symphony/issues/todo/WGTE-001.md"
   ".symphony/issues/in_progress/.gitkeep"
   ".symphony/issues/human_review/.gitkeep"
   ".symphony/issues/done/.gitkeep"
@@ -144,6 +144,15 @@ for path in "${required_files[@]}"; do
     missing=1
   fi
 done
+
+# WGTE-001 must exist somewhere under .symphony/issues/ but its specific
+# state directory (todo/doing/done/human_review/cancelled) is fluid as
+# the dogfood loop or operators move it through the lifecycle. Hardcoding
+# the todo/ path made any non-todo state look like missing knowledge.
+if ! find .symphony/issues -name 'WGTE-001.md' -type f -print -quit | grep -q .; then
+  printf 'missing required knowledge file: .symphony/issues/**/WGTE-001.md (in any state)\n' >&2
+  missing=1
+fi
 
 if (( missing )); then
   exit 1
@@ -211,6 +220,11 @@ fi
 
 if ! scripts/lint-layered-architecture.sh; then
   printf 'layered-architecture lint failed; fix the import-direction violations above\n' >&2
+  exit 1
+fi
+
+if ! scripts/lint-structured-logging.sh; then
+  printf 'structured-logging lint failed; route log emission through the package logger provider\n' >&2
   exit 1
 fi
 

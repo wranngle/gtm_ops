@@ -105,6 +105,26 @@ This keeps multi-domain growth intentional rather than emergent. See `packages/a
 
 The lint is a fast first-line check, not a security boundary. For deeper guarantees, add structural tests inside the package — see `packages/agent-evals/tests/structure.test.ts` and `packages/agent-evals/tests/lint-coverage.test.ts`.
 
+## Structured logging
+
+Companion lint: `scripts/lint-structured-logging.sh` (STACK-040).
+
+Every log emission inside `packages/<name>/src/<layer>/` must route through that package's structured logger provider — typically `packages/<name>/src/providers/logger.ts`. The logger emits ECS-shaped JSON the rest of the observability pipeline (Vector → VictoriaLogs → ops-console) can index reliably; raw `console.*` calls drift the format and break query consumers downstream.
+
+Forbidden in any layer except `runtime/` and `providers/logger.{ts,tsx}`:
+
+- `console.{log,info,warn,error,debug,trace}(...)`
+- `process.stderr.write(...)`, `process.stdout.write(...)`
+
+Allowed exceptions (intentional carve-outs):
+
+- `packages/<name>/src/runtime/` — bootstrap and CLI may emit a startup banner or usage message via `process.stdout.write` / `process.stderr.write` directly. Runtime is the one layer where we tolerate non-structured output because operators read it interactively, not through the log pipeline.
+- `packages/<name>/src/providers/logger.ts` (or `providers/logger/...`) — the logger provider IS the structured emitter. It owns the only direct `process.stderr.write` call the rest of the package is allowed to bypass through.
+
+The lint strips `//` and `/* */` comments before pattern matching so commented-out demo lines do not trigger violations. Negative- and positive-case coverage lives in `packages/agent-evals/tests/lint-coverage.test.ts` under the "structured-logging lint coverage" describe block — every forbidden layer × method combination is exercised, plus the runtime / logger-provider exemptions.
+
+When a violation fires, the message names the package's logger provider and points operators back to this section so the remediation is one search away from the agent's working context.
+
 ## When to break the rule
 
 Don't. If a layer needs something it can't reach, the right move is one of:
