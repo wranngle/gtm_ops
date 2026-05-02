@@ -14,11 +14,20 @@ tapeFilePath=${1:-demo/cassette.tape}
 [[ -f $tapeFilePath ]]||{ emitEcsEventOnStderr error hero.tape-missing failure "tape not found: $tapeFilePath";exit 1;}
 emitEcsEventOnStderr info hero.start success '' "tape=$tapeFilePath"
 mkdir -p demo
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/vhs" ghcr.io/charmbracelet/vhs "$tapeFilePath"||{ emitEcsEventOnStderr error hero.vhs-failed failure 'vhs render exited nonzero';exit 1;}
+vhsDockerImage=${VHS_DOCKER_IMAGE:-ghcr.io/charmbracelet/vhs}
+docker run --rm --cap-add=SYS_ADMIN -v "$PWD:/vhs" "$vhsDockerImage" "$tapeFilePath"||{ emitEcsEventOnStderr error hero.vhs-failed failure 'vhs render exited nonzero';exit 1;}
 rawRenderedGif=demo/cassette.gif
 [[ -f $rawRenderedGif ]]||{ emitEcsEventOnStderr error hero.no-gif failure "vhs produced no $rawRenderedGif";exit 1;}
-ffmpeg -y -i "$rawRenderedGif" -vf "fps=10,scale=720:-1:flags=lanczos" -loop 0 demo/hero.gif 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-gif-failed failure 'ffmpeg gif optimization failed';exit 1;}
-ffmpeg -y -i "$rawRenderedGif" -vcodec libwebp -lossless 0 -q:v 70 -loop 0 -an demo/hero.webp 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-webp-failed failure 'ffmpeg webp encoding failed';exit 1;}
+docker run --rm -v "$PWD:/vhs" --entrypoint chown "$vhsDockerImage" "$(id -u):$(id -g)" "/vhs/$rawRenderedGif" 2>/dev/null || true
+runFfmpeg(){
+  if command -v ffmpeg >/dev/null 2>&1; then
+    ffmpeg "$@"
+  else
+    docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/vhs" -w /vhs --entrypoint ffmpeg "$vhsDockerImage" "$@"
+  fi
+}
+runFfmpeg -y -i "$rawRenderedGif" -vf "fps=10,scale=720:-1:flags=lanczos" -loop 0 demo/hero.gif 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-gif-failed failure 'ffmpeg gif optimization failed';exit 1;}
+runFfmpeg -y -i "$rawRenderedGif" -vcodec libwebp -lossless 0 -q:v 70 -loop 0 -an demo/hero.webp 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-webp-failed failure 'ffmpeg webp encoding failed';exit 1;}
 gifByteSize=$(stat -c%s demo/hero.gif 2>/dev/null||stat -f%z demo/hero.gif)
 webpByteSize=$(stat -c%s demo/hero.webp 2>/dev/null||stat -f%z demo/hero.webp)
 emitEcsEventOnStderr info hero.complete success '' "gif=${gifByteSize}b webp=${webpByteSize}b"
