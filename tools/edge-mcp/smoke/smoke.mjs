@@ -10,12 +10,13 @@
 // In addition to the happy path, this smoke also fails LOUDLY when the
 // upstream tool inventory changes in ways an agent author needs to know about:
 //
-//   - Any tool from EXPECTED_BASE_TOOLS disappears (regression / breaking change).
-//   - The set of advertised tools differs from EXPECTED_BASE_TOOLS without
-//     STACK acknowledgement (new tools must be added to the expected set
+//   - Any expected advertised tool disappears (regression / breaking change).
+//   - The advertised tool set differs from EXPECTED_BASE_TOOLS after applying
+//     the EDGE_MCP_NO_UNSAFE_TOOLS filter (new tools must be acknowledged
 //     intentionally, with docs updated to match).
-//   - browser_run_code_unsafe disappears or appears unexpectedly (security
-//     posture change — see docs/references/edge-devtools-mcp.md "Security").
+//   - browser_run_code_unsafe disappears or appears unexpectedly relative to
+//     EDGE_MCP_NO_UNSAFE_TOOLS (security posture change — see
+//     docs/references/edge-devtools-mcp.md "Security").
 //
 // Run: node tools/edge-mcp/smoke/smoke.mjs
 //   --skip-screenshot   skip the screenshot step (slow on cold profiles)
@@ -73,6 +74,10 @@ const SECURITY_GATED_TOOLS = ["browser_run_code_unsafe"];
 const args = new Set(process.argv.slice(2));
 const skipScreenshot = args.has("--skip-screenshot");
 const toolSnapshotOnly = args.has("--tool-snapshot");
+const noUnsafeTools = process.env.EDGE_MCP_NO_UNSAFE_TOOLS !== "0";
+const EXPECTED_ADVERTISED_TOOLS = noUnsafeTools
+  ? EXPECTED_BASE_TOOLS.filter((name) => !SECURITY_GATED_TOOLS.includes(name))
+  : EXPECTED_BASE_TOOLS;
 
 function log(level, msg, extra = {}) {
   const ts = new Date().toISOString();
@@ -278,11 +283,11 @@ async function main() {
     }
 
     // Loud failure if the inventory drifted from what our docs/this constant claim.
-    const { missing, extra } = diffSets(toolNames, EXPECTED_BASE_TOOLS);
+    const { missing, extra } = diffSets(toolNames, EXPECTED_ADVERTISED_TOOLS);
     if (missing.length) {
       failures.push(
         `tools/list: SHRUNK — expected tools missing: ${missing.join(", ")}. ` +
-          `Update upstream pin or remove from EXPECTED_BASE_TOOLS + docs.`,
+          `Update upstream pin or remove from EXPECTED_BASE_TOOLS / EXPECTED_ADVERTISED_TOOLS + docs.`,
       );
     }
     if (extra.length) {
@@ -296,12 +301,33 @@ async function main() {
     // Security-gated tools: presence/absence both need explicit acknowledgement.
     for (const name of SECURITY_GATED_TOOLS) {
       const present = toolNames.includes(name);
-      const expectedPresent = EXPECTED_BASE_TOOLS.includes(name);
+      const expectedPresent = EXPECTED_ADVERTISED_TOOLS.includes(name);
       if (present !== expectedPresent) {
         failures.push(
           `security-gated tool drift: "${name}" present=${present} expected=${expectedPresent}. ` +
             `Update SECURITY_GATED_TOOLS / EXPECTED_BASE_TOOLS + docs.`,
         );
+      }
+    }
+
+    if (noUnsafeTools) {
+      log("info", "step.browser_run_code_unsafe.denied");
+      try {
+        await client.request(
+          "tools/call",
+          {
+            name: "browser_run_code_unsafe",
+            arguments: { code: "return 1 + 1;" },
+          },
+          REQUEST_TIMEOUT_MS,
+        );
+        failures.push("browser_run_code_unsafe: call unexpectedly succeeded with EDGE_MCP_NO_UNSAFE_TOOLS enabled");
+      } catch (err) {
+        if (!/EDGE_MCP_NO_UNSAFE_TOOLS|disabled/.test(err.message)) {
+          failures.push(`browser_run_code_unsafe: denial error had unexpected shape: ${err.message}`);
+        } else {
+          log("info", "browser_run_code_unsafe.denied.ok");
+        }
       }
     }
 
@@ -414,7 +440,8 @@ async function main() {
     failures,
     toolCount: toolNames.length,
     toolNames,
-    expectedToolCount: EXPECTED_BASE_TOOLS.length,
+    expectedToolCount: EXPECTED_ADVERTISED_TOOLS.length,
+    noUnsafeTools,
   };
   process.stdout.write(JSON.stringify(report, null, 2) + "\n");
   if (!report.pass) {

@@ -17,19 +17,24 @@ Chrome DevTools MCP" loop.
   Run from PowerShell on Windows (or from WSL via `powershell.exe -File`).
 - `mcp.json` — MCP server registration template using
   [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp). The server
-  advertises 23 `browser_*` tools — see "Tools advertised" below for the full
-  list. Common ones: `browser_navigate`, `browser_snapshot` (accessibility
-  tree), `browser_take_screenshot`, `browser_click`, `browser_fill_form`,
-  `browser_evaluate`.
+  advertises a safe filtered `browser_*` tool set by default — see "Tools
+  advertised" below for the full list. Common ones: `browser_navigate`,
+  `browser_snapshot` (accessibility tree), `browser_take_screenshot`,
+  `browser_click`, `browser_fill_form`, `browser_evaluate`.
+- `filter-unsafe-tools.mjs` — JSON-RPC stdio mediator enabled by default
+  through `EDGE_MCP_NO_UNSAFE_TOOLS=1`. It hides `browser_run_code_unsafe`
+  from `tools/list` and rejects direct `tools/call` attempts before they
+  reach upstream `@playwright/mcp`.
 - `smoke/smoke.mjs` — node-only JSON-RPC client that spawns
   `launch-mcp.sh`, runs `initialize` + `tools/list` + `browser_navigate` +
   `browser_console_messages` + `browser_take_screenshot` + `browser_snapshot`
   against `https://example.com`, and asserts the accessibility tree contains
   "Example Domain". Also fails LOUDLY when the upstream tool inventory
   shrinks/expands or when the security-gated `browser_run_code_unsafe`
-  appears/disappears. Run with `node tools/edge-mcp/smoke/smoke.mjs`. No
-  npm deps. Use `--tool-snapshot` to dump the live tool list as JSON when
-  intentionally re-pinning the inventory.
+  appears/disappears relative to `EDGE_MCP_NO_UNSAFE_TOOLS`. Run with
+  `node tools/edge-mcp/smoke/smoke.mjs`. No npm deps. Use
+  `--tool-snapshot` to dump the live tool list as JSON when intentionally
+  re-pinning the inventory.
 - `install-mcp.sh` — idempotent merger: writes the `edge-devtools` MCP
   server entry into `~/.claude/settings.json` (or project-local
   `.claude/settings.json` with `--scope project`), preserving any other
@@ -132,8 +137,8 @@ Verify with `netsh interface portproxy show all`. Remove with
 
 ## Tools advertised
 
-Verified against `@playwright/mcp@1.60.0-alpha-1777669338000` (npm `@latest`)
-on 2026-05-01 via `tools/edge-mcp/smoke/smoke.mjs`:
+Default safe inventory verified against `@playwright/mcp@1.60.0-alpha-1777669338000`
+(npm `@latest`) on 2026-05-01 via `tools/edge-mcp/smoke/smoke.mjs`:
 
 ```
 browser_click            browser_close              browser_console_messages
@@ -141,7 +146,7 @@ browser_drag             browser_drop               browser_evaluate
 browser_file_upload      browser_fill_form          browser_handle_dialog
 browser_hover            browser_navigate           browser_navigate_back
 browser_network_request  browser_network_requests   browser_press_key
-browser_resize           browser_run_code_unsafe    browser_select_option
+browser_resize           browser_select_option
 browser_snapshot         browser_tabs               browser_take_screenshot
 browser_type             browser_wait_for
 ```
@@ -149,8 +154,9 @@ browser_type             browser_wait_for
 Notes:
 - `browser_take_screenshot` (not `browser_screenshot`) is the screenshot tool.
 - `browser_fill_form` (not `browser_fill`) is the form-fill tool.
-- `browser_run_code_unsafe` evaluates arbitrary Playwright JS — treat
-  exposure to untrusted prompts accordingly.
+- Upstream still exposes `browser_run_code_unsafe`, which evaluates
+  arbitrary Playwright JS. The default `EDGE_MCP_NO_UNSAFE_TOOLS=1`
+  wrapper hides it from `tools/list` and denies direct `tools/call`.
 - `browser_navigate` returns the post-navigation accessibility snapshot
   inline, so a separate `browser_snapshot` call is optional.
 

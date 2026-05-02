@@ -90,13 +90,26 @@ defmodule Symphony.Orchestrator do
     # tick, surfaced through the snapshot per spec § 13.5.
     tick_timer_ref: nil,
     tick_token: nil,
-    next_poll_due_at_ms: nil
+    next_poll_due_at_ms: nil,
+    poll_check_in_progress: false
   }
+
+  @poll_check_key {__MODULE__, :poll_check_in_progress}
+  @snapshot_cache_key {__MODULE__, :snapshot_cache}
 
   # ============== Public API ==============
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  defp call_snapshot(pid) do
+    try do
+      GenServer.call(pid, :snapshot, 10_000)
+    catch
+      :exit, {:timeout, _} -> {:error, :timeout}
+      :exit, {:noproc, _} -> {:error, :unavailable}
+    end
   end
 
   @spec snapshot() :: {:ok, map()} | {:error, :unavailable | :timeout}
@@ -106,11 +119,37 @@ defmodule Symphony.Orchestrator do
         {:error, :unavailable}
 
       pid ->
-        try do
-          GenServer.call(pid, :snapshot, 10_000)
-        catch
-          :exit, {:timeout, _} -> {:error, :timeout}
-          :exit, {:noproc, _} -> {:error, :unavailable}
+        if poll_check_visible?() do
+          case cached_snapshot() do
+            %{} = snapshot ->
+              {:ok, snapshot}
+
+            _ ->
+              call_snapshot(pid)
+          end
+        else
+          call_snapshot(pid)
+        end
+    end
+  end
+
+  @spec request_refresh() ::
+          {:ok, %{queued: true, coalesced: boolean()}} | {:error, :unavailable | :timeout}
+  def request_refresh do
+    case GenServer.whereis(__MODULE__) do
+      nil ->
+        {:error, :unavailable}
+
+      pid ->
+        if poll_check_visible?() do
+          {:ok, %{queued: true, coalesced: true}}
+        else
+          try do
+            GenServer.call(pid, :request_refresh, 10_000)
+          catch
+            :exit, {:timeout, _} -> {:error, :timeout}
+            :exit, {:noproc, _} -> {:error, :unavailable}
+          end
         end
     end
   end
@@ -161,6 +200,7 @@ defmodule Symphony.Orchestrator do
   @impl true
   def init(_opts) do
     state = build_initial_state()
+    clear_poll_check_cache()
 
     # Spec § 8.6 startup terminal workspace cleanup. Best-effort: a fetch
     # failure is logged and ignored so the daemon still boots.
@@ -188,9 +228,14 @@ defmodule Symphony.Orchestrator do
     # running, then re-arm so the next tick is `interval_ms` from now
     # rather than racing with a stale timer.
     state = cancel_pending_tick(state)
-    new_state = run_tick(state)
+    new_state = run_checking_tick(state)
     new_state = schedule_tick(new_state, poll_interval(new_state))
     {:reply, :ok, new_state}
+  end
+
+  def handle_call(:request_refresh, _from, state) do
+    {new_state, coalesced?} = queue_refresh(state)
+    {:reply, {:ok, %{queued: true, coalesced: coalesced?}}, new_state}
   end
 
   def handle_call({:inject_running, issue_id, entry}, _from, state) do
@@ -216,7 +261,7 @@ defmodule Symphony.Orchestrator do
   # the mailbox.
   def handle_info({:tick, token}, %{tick_token: token} = state) when is_reference(token) do
     state = %{state | tick_timer_ref: nil, tick_token: nil, next_poll_due_at_ms: nil}
-    new_state = run_tick(state)
+    new_state = run_checking_tick(state)
     new_state = schedule_tick(new_state, poll_interval(new_state))
     {:noreply, new_state}
   end
@@ -228,7 +273,7 @@ defmodule Symphony.Orchestrator do
   # next interval.
   def handle_info(:tick, state) do
     state = cancel_pending_tick(state)
-    new_state = run_tick(state)
+    new_state = run_checking_tick(state)
     new_state = schedule_tick(new_state, poll_interval(new_state))
     {:noreply, new_state}
   end
@@ -298,7 +343,11 @@ defmodule Symphony.Orchestrator do
                 "symphony.worker.exit outcome=abnormal issue_id=#{issue_id} identifier=#{entry_identifier(entry)} reason=#{inspect(other)}"
               )
 
-              schedule_issue_retry(state_after_pop, issue_id, entry, :failure,
+              schedule_issue_retry(
+                state_after_pop,
+                issue_id,
+                entry,
+                :failure,
                 "agent exited: #{inspect(other)}"
               )
           end
@@ -363,6 +412,35 @@ defmodule Symphony.Orchestrator do
     |> reconcile_running()
     |> dispatch_with_preflight()
     |> Map.put(:last_tick_at, DateTime.utc_now())
+  end
+
+  defp run_checking_tick(state) do
+    state = mark_poll_check(state, true)
+
+    try do
+      run_tick(state)
+    after
+      :persistent_term.put(@poll_check_key, false)
+    end
+    |> mark_poll_check(false)
+  end
+
+  defp queue_refresh(state) do
+    coalesced? = state.poll_check_in_progress or is_reference(state.tick_timer_ref)
+
+    cond do
+      state.poll_check_in_progress ->
+        {state, true}
+
+      true ->
+        new_state =
+          state
+          |> Map.put(:poll_check_in_progress, true)
+          |> schedule_tick(0)
+          |> cache_checking_snapshot()
+
+        {new_state, coalesced?}
+    end
   end
 
   # Spec § 6.3 / § 8.1: per-tick dispatch preflight. On failure, skip
@@ -451,14 +529,18 @@ defmodule Symphony.Orchestrator do
   # their issue goes terminal (with workspace cleanup) or non-active
   # (no cleanup); refresh the snapshot otherwise.
   defp reconcile_tracker_states(%{adapter: nil} = state), do: state
-  defp reconcile_tracker_states(%{running: running} = state) when map_size(running) == 0, do: state
+
+  defp reconcile_tracker_states(%{running: running} = state) when map_size(running) == 0,
+    do: state
 
   defp reconcile_tracker_states(%{adapter: adapter, config: config} = state) do
     ids = Map.keys(state.running)
 
     case adapter.fetch_issue_states_by_ids(config, ids) do
       {:ok, states} when is_map(states) ->
-        terminal = MapSet.new(Enum.map(Config.tracker_terminal_states(config), &normalize_state/1))
+        terminal =
+          MapSet.new(Enum.map(Config.tracker_terminal_states(config), &normalize_state/1))
+
         active = MapSet.new(Enum.map(Config.tracker_active_states(config), &normalize_state/1))
         apply_tracker_state_refresh(state, states, terminal, active)
 
@@ -513,9 +595,7 @@ defmodule Symphony.Orchestrator do
     available = available_slots(state)
 
     if available <= 0 do
-      Logger.debug(
-        "symphony.dispatch.skipped reason=no_slots running=#{map_size(state.running)}"
-      )
+      Logger.debug("symphony.dispatch.skipped reason=no_slots running=#{map_size(state.running)}")
 
       state
     else
@@ -740,7 +820,9 @@ defmodule Symphony.Orchestrator do
     end
   rescue
     e ->
-      Logger.warning("symphony.workspace.cleanup_failed identifier=#{identifier} reason=#{inspect(e)}")
+      Logger.warning(
+        "symphony.workspace.cleanup_failed identifier=#{identifier} reason=#{inspect(e)}"
+      )
   end
 
   defp cleanup_issue_workspace(_config, _entry), do: :ok
@@ -973,18 +1055,21 @@ defmodule Symphony.Orchestrator do
   end
 
   defp normalize_pos_int(n) when is_integer(n) and n > 0, do: n
+
   defp normalize_pos_int(s) when is_binary(s) do
     case Integer.parse(s) do
       {n, ""} when n > 0 -> n
       _ -> nil
     end
   end
+
   defp normalize_pos_int(_), do: nil
 
   defp normalize_state(s) when is_binary(s), do: s |> String.downcase() |> String.trim()
   defp normalize_state(_), do: ""
 
   defp stall_timeout_ms(nil), do: 0
+
   defp stall_timeout_ms(config) do
     case Map.get(config.resolved, "codex.stall_timeout_ms", 300_000) do
       n when is_integer(n) -> n
@@ -1157,6 +1242,52 @@ defmodule Symphony.Orchestrator do
     _ -> 30_000
   end
 
+  defp mark_poll_check(state, checking?) when is_boolean(checking?) do
+    state = %{state | poll_check_in_progress: checking?}
+    :persistent_term.put(@poll_check_key, checking?)
+
+    if checking? do
+      :persistent_term.put(@snapshot_cache_key, snapshot_payload(state))
+    else
+      :persistent_term.erase(@snapshot_cache_key)
+    end
+
+    state
+  end
+
+  defp cache_checking_snapshot(%{poll_check_in_progress: true} = state) do
+    :persistent_term.put(@poll_check_key, true)
+    :persistent_term.put(@snapshot_cache_key, snapshot_payload(state))
+    state
+  end
+
+  defp cache_checking_snapshot(state), do: state
+
+  defp poll_check_in_progress? do
+    :persistent_term.get(@poll_check_key, false) == true
+  end
+
+  defp poll_check_visible? do
+    poll_check_in_progress?() or cached_snapshot_checking?()
+  end
+
+  defp cached_snapshot do
+    :persistent_term.get(@snapshot_cache_key, nil)
+  end
+
+  defp cached_snapshot_checking? do
+    case cached_snapshot() do
+      %{polling: %{checking?: true}} -> true
+      _ -> false
+    end
+  end
+
+  defp clear_poll_check_cache do
+    :persistent_term.put(@poll_check_key, false)
+    :persistent_term.erase(@snapshot_cache_key)
+    :ok
+  end
+
   # ============== Snapshot ==============
 
   defp snapshot_payload(state) do
@@ -1224,7 +1355,8 @@ defmodule Symphony.Orchestrator do
     # `polling: %{checking?, next_poll_in_ms, poll_interval_ms}`).
     polling_info = %{
       poll_interval_ms: poll_interval(state),
-      next_poll_in_ms: next_poll_in_ms(state.next_poll_due_at_ms, now_ms)
+      next_poll_in_ms: next_poll_in_ms(state.next_poll_due_at_ms, now_ms),
+      checking?: state.poll_check_in_progress == true
     }
 
     %{

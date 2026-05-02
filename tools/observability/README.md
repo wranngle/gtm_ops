@@ -31,6 +31,21 @@ OBSERVABILITY_PROJECT=foo docker compose -p foo config \
 
 Default project is `wranngle-obs`.
 
+## Namespace isolation check
+
+Run the static isolation test before changing `docker-compose.yml`:
+
+```bash
+tools/observability/test-namespace-isolation.sh
+```
+
+The test renders `docker compose config` for two random project names without
+starting containers. It fails if the compose project name, any
+`container_name`, any network name, or any volume name is missing the expected
+namespace or appears in both rendered configs. `scripts/validate-knowledge-base.sh`
+runs this check automatically when `docker compose` is available and prints a
+clear skip when Docker is not installed.
+
 ## Endpoints (host-localhost)
 
 - VictoriaLogs:    `http://127.0.0.1:9428` — LogsQL via `/select/logsql/query`

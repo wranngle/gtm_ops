@@ -4,7 +4,8 @@
     "edge-devtools": {
       "command": "tools/edge-mcp/launch-mcp.sh",
       "env": {
-        "PLAYWRIGHT_MCP_DESCRIPTION": "Drives Microsoft Edge over the Chrome DevTools Protocol (port 9222) launched via tools/edge-mcp/edge-debug-launch.sh. Provides navigate, screenshot, accessibility tree, click, fill, and evaluate."
+        "EDGE_MCP_NO_UNSAFE_TOOLS": "1",
+        "PLAYWRIGHT_MCP_DESCRIPTION": "Drives Microsoft Edge over the Chrome DevTools Protocol (port 9222) launched via tools/edge-mcp/edge-debug-launch.sh. Provides navigate, screenshot, accessibility tree, click, fill, and evaluate. browser_run_code_unsafe is filtered by default."
       }
     }
   }

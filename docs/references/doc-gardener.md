@@ -12,9 +12,10 @@ The Harness Engineering post (Lopopolo, 2026) describes a recurring "doc-gardeni
 
 - Reads the repo as it stands, modifies nothing.
 - Scans these targets: `AGENTS.md`, `ARCHITECTURE.md`, `WORKFLOW.md`, `README.md`, `docs/`, `packages/`, `apps/`.
-- Reports two classes of finding:
+- Reports three classes of finding:
   - **Staleness markers** in prose: `TODO`, `TKTK`, `FIXME`, `XXX`, `placeholder`, `coming soon`, `TBD`.
   - **Broken intra-repo doc links**: any `](path/to/file.md)` whose target does not exist.
+  - **Broken inline code paths**: any backtick-quoted repo-relative path-like span, such as `docs/foo.md` or `scripts/foo.sh`, whose target does not exist.
 - Excludes from the marker scan:
   - `docs/exec-plans/active/` and `docs/exec-plans/completed/` — plans
     legitimately discuss markers and use words like "TODO" / "TBD" in scope
@@ -24,6 +25,9 @@ The Harness Engineering post (Lopopolo, 2026) describes a recurring "doc-gardeni
   - `docs/references/openai_*.txt` and `docs/references/*.png` — read-only
     upstream source authority. They legitimately contain placeholder words
     and relative links pointing outside this repo. Do not edit them.
+- Excludes fenced code blocks from the inline code-path scan so shell examples,
+  YAML snippets, and intentionally missing negative cases do not become
+  path-drift findings.
 - Emits ECS-jsonl events on stderr (`gardener.start`, `gardener.findings`, `gardener.clean`).
 - Exits 0 when clean, 1 when findings exist, 2 on invocation error.
 
@@ -47,6 +51,7 @@ The Harness Engineering post (Lopopolo, 2026) describes a recurring "doc-gardeni
 
 - The marker regex is intentionally broad. False-positives are expected; the gardener agent's first job is to triage.
 - The broken-link check uses `realpath -m` and only catches Markdown links that resolve to absolute filesystem paths. URL anchors (`#section`), relative links to non-Markdown files, and external URLs are out of scope.
+- The inline code-path check intentionally uses a conservative heuristic: the span must contain `/`, start with a known repo root such as `docs/`, `packages/`, `apps/`, `scripts/`, `tools/`, `demo/`, `.github/`, or `.symphony/`, and either end in a known repo-file suffix or match a command/package/state-directory shape the repo owns.
 
 ## Wiring
 

@@ -207,17 +207,22 @@ should be able to ask:
      --data-urlencode 'minDuration=2s'
    ```
 
-## ops-console wiring (planned)
+## ops-console wiring
 
 The Streamlit ops-console at `apps/ops-console/` reads
-`EvaluationResult[]` JSON today. A future slice will:
+`EvaluationResult[]` JSON and includes an `Observability` page backed by
+`apps/ops-console/observability_client.py`.
 
-- Add a `domain.MetricsClient` that issues PromQL queries against
-  `http://127.0.0.1:8428` for the four counters above.
-- Render trend charts via Streamlit's `st.line_chart`.
+Current panels:
 
-That work is **outside the canonicalization in-scope** and lands
-alongside showcase project work after the stack closes out.
+- Recent events from VictoriaLogs via `/select/logsql/query`.
+- `agent_evals_evaluations_total` rate over the last hour via
+  VictoriaMetrics `/api/v1/query_range`.
+- Slow span placeholder/query surface via VictoriaTraces'
+  Jaeger-compatible `/select/jaeger/api/traces` endpoint.
+
+The page degrades gracefully when the stack is offline. Trace rows remain
+empty until STACK-070 adds real OTLP span emission.
 
 ## Operational notes
 

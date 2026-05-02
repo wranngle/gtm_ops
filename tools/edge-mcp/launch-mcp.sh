@@ -8,14 +8,12 @@
 #
 # Env knobs:
 #   EDGE_DEBUG_PORT             default 9222
-#   EDGE_MCP_NO_UNSAFE_TOOLS    if "1", emit a stderr warning that the
-#                               browser_run_code_unsafe tool is RCE-equivalent
-#                               and gating must be enforced at the MCP client
-#                               layer (Claude Code permission denylist) —
-#                               @playwright/mcp@latest has no native flag to
-#                               drop a single tool. See
-#                               docs/references/edge-devtools-mcp.md
-#                               "Security" for the gating mechanisms.
+#   EDGE_MCP_NO_UNSAFE_TOOLS    default "1". When enabled, run @playwright/mcp
+#                               through filter-unsafe-tools.mjs so
+#                               browser_run_code_unsafe is hidden from
+#                               tools/list and rejected before it reaches the
+#                               upstream MCP server. Set to "0" only for
+#                               deliberate local investigation.
 #   EDGE_MCP_CONSOLE_LEVEL      pass-through to --console-level
 #                               (error|warning|info|debug)
 #   EDGE_MCP_EXTRA_ARGS         extra args appended verbatim, e.g.
@@ -24,6 +22,7 @@
 set -euo pipefail
 
 debug_port=${EDGE_DEBUG_PORT:-9222}
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Prefer the candidate the launcher already proved works.
 candidates=()
@@ -53,11 +52,16 @@ if [[ -n "${EDGE_MCP_EXTRA_ARGS:-}" ]]; then
   extra_args+=( $EDGE_MCP_EXTRA_ARGS )
 fi
 
-if [[ "${EDGE_MCP_NO_UNSAFE_TOOLS:-0}" == "1" ]]; then
-  printf 'launch-mcp: EDGE_MCP_NO_UNSAFE_TOOLS=1 is a marker only — @playwright/mcp@latest has no flag to disable browser_run_code_unsafe. Enforce the gate at the MCP client (Claude Code permission denylist on tool name "edge-devtools:browser_run_code_unsafe") or wrap launch-mcp.sh with a JSON-RPC filter. See docs/references/edge-devtools-mcp.md "Security".\n' >&2
+cmd=(
+  npx -y "@playwright/mcp@latest"
+  --browser msedge
+  --cdp-endpoint "$selected"
+  "${extra_args[@]}"
+)
+
+if [[ "${EDGE_MCP_NO_UNSAFE_TOOLS:-1}" == "1" ]]; then
+  exec node "$script_dir/filter-unsafe-tools.mjs" -- "${cmd[@]}"
 fi
 
-exec npx -y "@playwright/mcp@latest" \
-  --browser msedge \
-  --cdp-endpoint "$selected" \
-  "${extra_args[@]}"
+printf 'launch-mcp: EDGE_MCP_NO_UNSAFE_TOOLS=0 leaves browser_run_code_unsafe exposed. Use only for deliberate local investigation.\n' >&2
+exec "${cmd[@]}"

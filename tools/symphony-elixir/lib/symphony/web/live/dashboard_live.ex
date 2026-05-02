@@ -104,6 +104,12 @@ defmodule Symphony.Web.Live.DashboardLive do
             <p class="metric-value numeric"><%= format_runtime_seconds(total_runtime_seconds(@payload, @now)) %></p>
             <p class="metric-detail">Total Codex runtime across completed and active sessions.</p>
           </article>
+
+          <article class="metric-card">
+            <p class="metric-label">Polling</p>
+            <p class="metric-value"><%= polling_status(@payload.polling) %></p>
+            <p class="metric-detail numeric"><%= polling_detail(@payload.polling) %></p>
+          </article>
         </section>
 
         <section class="section-card">
@@ -274,7 +280,8 @@ defmodule Symphony.Web.Live.DashboardLive do
       end)
   end
 
-  defp format_runtime_and_turns(started_at, turn_count, now) when is_integer(turn_count) and turn_count > 0 do
+  defp format_runtime_and_turns(started_at, turn_count, now)
+       when is_integer(turn_count) and turn_count > 0 do
     "#{format_runtime_seconds(runtime_seconds_from_started_at(started_at, now))} / #{turn_count}"
   end
 
@@ -286,11 +293,31 @@ defmodule Symphony.Web.Live.DashboardLive do
     "#{div(whole, 60)}m #{rem(whole, 60)}s"
   end
 
+  defp polling_status(%{checking?: true}), do: "Checking now"
+  defp polling_status(_polling), do: "Waiting"
+
+  defp polling_detail(%{next_poll_in_ms: ms}) when is_integer(ms) do
+    "Next poll in #{format_poll_interval(ms)}"
+  end
+
+  defp polling_detail(%{poll_interval_ms: ms}) when is_integer(ms) do
+    "Every #{format_poll_interval(ms)}"
+  end
+
+  defp polling_detail(_polling), do: "Next poll n/a"
+
+  defp format_poll_interval(ms) when is_integer(ms) and ms >= 60_000 do
+    "#{div(ms, 60_000)}m #{rem(div(ms, 1_000), 60)}s"
+  end
+
+  defp format_poll_interval(ms) when is_integer(ms), do: "#{div(max(ms, 0), 1_000)}s"
+
   defp runtime_seconds_from_started_at(%DateTime{} = started_at, %DateTime{} = now) do
     DateTime.diff(now, started_at, :second)
   end
 
-  defp runtime_seconds_from_started_at(started_at, %DateTime{} = now) when is_binary(started_at) do
+  defp runtime_seconds_from_started_at(started_at, %DateTime{} = now)
+       when is_binary(started_at) do
     case DateTime.from_iso8601(started_at) do
       {:ok, parsed, _} -> runtime_seconds_from_started_at(parsed, now)
       _ -> 0
@@ -314,14 +341,23 @@ defmodule Symphony.Web.Live.DashboardLive do
     normalized = state |> to_string() |> String.downcase()
 
     cond do
-      String.contains?(normalized, ["progress", "running", "active"]) -> "#{base} state-badge-active"
-      String.contains?(normalized, ["blocked", "error", "failed"]) -> "#{base} state-badge-danger"
-      String.contains?(normalized, ["todo", "queued", "pending", "retry"]) -> "#{base} state-badge-warning"
-      true -> base
+      String.contains?(normalized, ["progress", "running", "active"]) ->
+        "#{base} state-badge-active"
+
+      String.contains?(normalized, ["blocked", "error", "failed"]) ->
+        "#{base} state-badge-danger"
+
+      String.contains?(normalized, ["todo", "queued", "pending", "retry"]) ->
+        "#{base} state-badge-warning"
+
+      true ->
+        base
     end
   end
 
-  defp short_session(id) when is_binary(id) and byte_size(id) > 12, do: String.slice(id, 0, 12) <> "..."
+  defp short_session(id) when is_binary(id) and byte_size(id) > 12,
+    do: String.slice(id, 0, 12) <> "..."
+
   defp short_session(id) when is_binary(id), do: id
   defp short_session(_), do: "n/a"
 

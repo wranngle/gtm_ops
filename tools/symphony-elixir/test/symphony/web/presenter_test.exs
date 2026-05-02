@@ -43,12 +43,17 @@ defmodule Symphony.Web.PresenterTest do
           error: "stub error"
         }
       ],
-      codex_totals: %{input_tokens: 100, output_tokens: 200, total_tokens: 300, seconds_running: 5},
+      codex_totals: %{
+        input_tokens: 100,
+        output_tokens: 200,
+        total_tokens: 300,
+        seconds_running: 5
+      },
       rate_limits: nil,
       workflow_loaded: true,
       tracker_kind: :local_markdown,
       last_tick_at: nil,
-      polling: %{poll_interval_ms: 30_000, next_poll_in_ms: 12_500}
+      polling: %{poll_interval_ms: 30_000, next_poll_in_ms: 12_500, checking?: true}
     }
 
     payload = Presenter.state_payload(stub_snapshot(snapshot))
@@ -74,7 +79,7 @@ defmodule Symphony.Web.PresenterTest do
     # `polling: %{poll_interval_ms, next_poll_in_ms, checking?}`.
     assert payload.polling.poll_interval_ms == 30_000
     assert payload.polling.next_poll_in_ms == 12_500
-    assert payload.polling.checking? == false
+    assert payload.polling.checking? == true
   end
 
   test "state_payload/1 tolerates snapshots without a :polling key" do
@@ -111,7 +116,9 @@ defmodule Symphony.Web.PresenterTest do
 
   test "issue_payload/2 returns :issue_not_found when neither running nor retrying matches" do
     snapshot = %{running: [], retrying: [], codex_totals: %{}, rate_limits: nil}
-    assert Presenter.issue_payload("UNKNOWN", stub_snapshot(snapshot)) == {:error, :issue_not_found}
+
+    assert Presenter.issue_payload("UNKNOWN", stub_snapshot(snapshot)) ==
+             {:error, :issue_not_found}
   end
 
   test "issue_payload/2 returns the running entry when present" do
