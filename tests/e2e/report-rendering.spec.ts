@@ -7,9 +7,9 @@
  * - Proper formatting of currency and dates
  * - Visual regression (screenshot comparison)
  */
-import { test, expect } from './fixtures/base.fixture';
-import { ReportPage } from './pages/report.page';
-import { findLatestReport } from './utils/find-report';
+import { test, expect } from './fixtures/base.fixture.js';
+import { ReportPage } from './pages/report.page.js';
+import { findLatestReport } from './utils/find-report.js';
 
 // Get report path once at module load
 const reportPath = findLatestReport();

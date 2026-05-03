@@ -12,14 +12,14 @@ import {
   createDentalIntake,
   createIntakeWithSystems,
   type IntakeData
-} from '../support/factories/intake.factory';
+} from '../support/factories/intake.factory.js';
 import {
   createIntegration,
   createDentalIntegrations,
   createGenericCategoryTestCases,
   createDeduplicationTestCases,
   type IntegrationData
-} from '../support/factories/integration.factory';
+} from '../support/factories/integration.factory.js';
 
 // Import the module under test
 // Note: Using dynamic import for ESM compatibility

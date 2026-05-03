@@ -5,8 +5,8 @@
  */
 import { join } from 'path';
 import { faker } from '@faker-js/faker';
-import { createDentalIntake, type IntakeData } from './intake.factory';
-import { createIntegrationResearch, type IntegrationResearch } from './integration.factory';
+import { createDentalIntake, type IntakeData } from './intake.factory.js';
+import { createIntegrationResearch, type IntegrationResearch } from './integration.factory.js';
 
 /**
  * Project Identity - Generated from intake

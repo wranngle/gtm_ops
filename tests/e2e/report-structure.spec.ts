@@ -13,9 +13,9 @@
  * 6. report-proposal-p1 - Proposal (white)
  * 7. report-commercial-strategy - Commercial Strategy (white)
  */
-import { test, expect } from './fixtures/base.fixture';
-import { ReportPage } from './pages/report.page';
-import { findLatestReport } from './utils/find-report';
+import { test, expect } from './fixtures/base.fixture.js';
+import { ReportPage } from './pages/report.page.js';
+import { findLatestReport } from './utils/find-report.js';
 
 const reportPath = findLatestReport();
 const EXPECTED_SHEET_COUNT = 7;

@@ -4,9 +4,9 @@
  *
  * Test Count: 20 tests
  */
-import { test, expect } from './fixtures/base.fixture';
-import { ScopePage } from './pages/scope.page';
-import { findLatestReport } from './utils/find-report';
+import { test, expect } from './fixtures/base.fixture.js';
+import { ScopePage } from './pages/scope.page.js';
+import { findLatestReport } from './utils/find-report.js';
 
 const reportPath = findLatestReport();
 

@@ -16,7 +16,7 @@ import {
   createEvaluationTestSuite,
   type CaseStudy,
   type CaseStudySolution,
-} from '../../support/factories/case_study.factory';
+} from '../../support/factories/case_study.factory.js';
 
 describe('Case Study Factory', () => {
   describe('createSolution', () => {

@@ -15,7 +15,7 @@ import {
   createProjectIntake,
   PricingScenarios,
   EdgeCases
-} from '../support/factories/product.factory';
+} from '../support/factories/product.factory.js';
 
 // Import module under test
 let calculateProductPricing: (intake: any, options?: any) => any;

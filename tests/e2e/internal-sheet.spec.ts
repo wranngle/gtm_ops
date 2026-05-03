@@ -10,9 +10,9 @@
  * - Walk-away pricing from finops
  * - Sales strategy config injection (market context, scripts, objections)
  */
-import { test, expect } from './fixtures/base.fixture';
-import { InternalSheetPage } from './pages/internal-sheet.page';
-import { findLatestInternalSheet } from './utils/find-report';
+import { test, expect } from './fixtures/base.fixture.js';
+import { InternalSheetPage } from './pages/internal-sheet.page.js';
+import { findLatestInternalSheet } from './utils/find-report.js';
 
 // Get internal sheet path once at module load
 const internalSheetPath = findLatestInternalSheet();

@@ -14,7 +14,7 @@ import {
   createProjectIntake,
   EdgeCases,
   DetectionTestCases
-} from '../support/factories/product.factory';
+} from '../support/factories/product.factory.js';
 
 // Import module under test
 let detectProductType: (intake: any) => any;

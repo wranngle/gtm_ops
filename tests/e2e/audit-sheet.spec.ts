@@ -4,10 +4,10 @@
  *
  * Test Count: 25 tests
  */
-import { test, expect } from './fixtures/base.fixture';
-import { ReportPage } from './pages/report.page';
-import { AuditPage } from './pages/audit.page';
-import { findLatestReport } from './utils/find-report';
+import { test, expect } from './fixtures/base.fixture.js';
+import { ReportPage } from './pages/report.page.js';
+import { AuditPage } from './pages/audit.page.js';
+import { findLatestReport } from './utils/find-report.js';
 
 const reportPath = findLatestReport();
 

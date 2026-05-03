@@ -9,19 +9,19 @@ import {
   createIntake,
   createDentalIntake,
   type IntakeData
-} from './intake.factory';
+} from './intake.factory.js';
 import {
   createPipelineSchema,
   createTierAssessment,
   createPricingStructure,
   type TierAssessment,
   type PricingStructure
-} from './pipeline.factory';
+} from './pipeline.factory.js';
 import {
   createIntegration,
   createDentalIntegrations,
   type IntegrationData
-} from './integration.factory';
+} from './integration.factory.js';
 
 /**
  * Case Study Solution - Ground truth data for comparison
