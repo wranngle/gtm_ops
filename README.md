@@ -12,6 +12,12 @@ Voice-AI-led GTM motion runtime. An inbound voice agent enriches the lead from C
 - **`workflows/`** — three to five sanitized n8n example workflows; the full library lives at [`wranngle/n8n`](https://github.com/wranngle/n8n).
 - **`tokens/`** — machine-readable extracts of the brand system (`tokens.css`, `tokens.json`, `tokens.tailwind.js`); see [`DESIGN.md`](DESIGN.md) for the long-form spec.
 
+## Demo
+
+🎬 _Loom walkthrough coming soon — 3-min architecture tour: lead intake → enrichment → voice → post-call → presales → ops-console._
+
+<!-- Replace with: <a href="https://www.loom.com/share/<id>"><img src="https://cdn.loom.com/sessions/thumbnails/<id>-with-play.gif" alt="Architecture walkthrough"></a> -->
+
 ## Architecture
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the product layers (intake → enrichment → voice → post-call → presales → ops-console) and how this repo connects to its satellites:
