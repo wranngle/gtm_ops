@@ -1,0 +1,34 @@
+{
+  "_comment": "evaluation-report.example.json — synthetic placeholder for the gitignored evaluation-report.json. Copy to evaluation-report.json (or regenerate via the eval pipeline). Gitignored because real eval reports embed customer intake data; this placeholder shows only the schema.",
+  "_shape": "Eval report emitted by the presales pipeline. Captures pipeline scores per stage and per generated document for a single client run.",
+  "report_id": "eval_demo_2026-01-15",
+  "generated_at": "2026-01-15T12:00:00Z",
+  "client": {
+    "name": "Acme Corp",
+    "slug": "acme-corp",
+    "tier": "standard"
+  },
+  "pipeline_run": {
+    "input_file": "input/sample-intake.txt",
+    "output_dir": "output/acme-corp/",
+    "duration_ms": 45000,
+    "status": "ok"
+  },
+  "stage_scores": {
+    "extract": {"passed": true, "duration_ms": 8000, "notes": "all required fields present"},
+    "research": {"passed": true, "duration_ms": 12000, "notes": "tier=standard, confidence=0.85"},
+    "project_plan": {"passed": true, "duration_ms": 9000, "notes": "4 milestones"},
+    "proposal": {"passed": true, "duration_ms": 7000, "notes": "ROI computed"},
+    "audit": {"passed": true, "duration_ms": 6000, "notes": "scorecard rendered"},
+    "render": {"passed": true, "duration_ms": 2000, "notes": "all 4 sheets rendered"},
+    "polish": {"passed": true, "duration_ms": 1000, "notes": "no rewrites needed"}
+  },
+  "document_checks": {
+    "audit": {"display_fields_complete": true, "no_undefined_values": true},
+    "project_plan": {"display_fields_complete": true, "no_undefined_values": true},
+    "proposal": {"display_fields_complete": true, "no_undefined_values": true, "roi_payback_months": 3.0, "annual_savings_display": "$120,000"},
+    "scope": {"display_fields_complete": true, "no_undefined_values": true}
+  },
+  "verdict": "pass",
+  "warnings": []
+}
