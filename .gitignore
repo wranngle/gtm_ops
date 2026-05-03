@@ -76,6 +76,15 @@ openspec/changes/
 # Playwright MCP runtime artifacts (transient agent snapshots)
 .playwright-mcp/
 
+# Cloudflare Wrangler / Pages local dev runtime cache
+.wrangler/
+
+# SQLite WAL/SHM/journal sidecars from test runtime (DBs already covered by *.db)
+*.db-journal
+*.sqlite-journal
+*.db-wal
+*.db-shm
+
 # Demo render artifacts (regenerate via scripts/hero.sh)
 demo/cassette.gif
 demo/hero.gif
