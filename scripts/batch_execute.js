@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Batch Execute All Inputs
  * Runs the pipeline against all input files in sequence

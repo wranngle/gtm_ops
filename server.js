@@ -997,7 +997,11 @@ app.get('/api/sample', generalLimiter, async (req, res) => {
       }
     }
 
-    return null;
+    // 4. Hardcoded emergency fallback (ensure demo mode always has something to show)
+    return {
+      text: "Acme HVAC Services is a regional HVAC contractor (~30 employees) handling residential and light commercial. They want a voice agent that answers after-hours, gathers caller details, and routes urgency-tagged dispatches to the on-call tech via SMS.",
+      note: `Static demo fallback (${reason})`
+    };
   };
 
   try {
@@ -1005,8 +1009,7 @@ app.get('/api/sample', generalLimiter, async (req, res) => {
     if (!apiKey) {
       console.log('[SAMPLE] No GEMINI_API_KEY, using file fallback');
       const fallback = loadFileSample('no API key');
-      if (fallback) return res.json(fallback);
-      return res.status(500).json({ error: 'No API key and no sample files found' });
+      return res.json(fallback);
     }
 
     const genai = new GoogleGenAI({ apiKey });

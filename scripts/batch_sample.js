@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Batch Execute Sample Inputs
  * Runs the pipeline against a diverse sample of 10 inputs
