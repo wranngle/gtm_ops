@@ -440,7 +440,7 @@ test.describe('Atomic: Metric Threshold Validation', () => {
             const largeAbbrevMatch = metric.value_display.match(/([\d.]+)\s*([KMB])(?:\s|$)/);
             if (largeAbbrevMatch && metric.value > 1000) {
               const abbrevNum = parseFloat(largeAbbrevMatch[1]);
-              const multiplier = { K: 1000, M: 1000000, B: 1000000000 }[largeAbbrevMatch[2]] || 1;
+              const multiplier = ({ K: 1000, M: 1000000, B: 1000000000 } as const)[largeAbbrevMatch[2] as 'K' | 'M' | 'B'] || 1;
               const expectedValue = abbrevNum * multiplier;
               // Check if within 10% tolerance for large numbers
               matchFound = Math.abs(expectedValue - metric.value) / metric.value < 0.1;

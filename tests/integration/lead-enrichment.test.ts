@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import express from 'express';
 import fetch from 'node-fetch';
+import type { Server } from 'node:http';
+
+type EnrichmentResponse = {
+  company_name?: string;
+  company_domain?: string;
+  ai_research?: string;
+  [k: string]: unknown;
+};
 
 describe('Centralized Lead Enrichment Webhook', () => {
-  let mockServer;
-  let webhookUrl;
+  let mockServer: Server;
+  let webhookUrl: string;
 
   beforeAll(async () => {
     const app = express();
@@ -25,7 +33,9 @@ describe('Centralized Lead Enrichment Webhook', () => {
 
     await new Promise((resolve) => {
       mockServer = app.listen(0, '127.0.0.1', () => {
-        webhookUrl = `http://127.0.0.1:${mockServer.address().port}/webhook/lead-enrichment`;
+        const addr = mockServer.address();
+        if (!addr || typeof addr === 'string') throw new Error('No server address');
+        webhookUrl = `http://127.0.0.1:${addr.port}/webhook/lead-enrichment`;
         process.env.N8N_ENRICHMENT_WEBHOOK_URL = webhookUrl;
         resolve(true);
       });
@@ -44,7 +54,7 @@ describe('Centralized Lead Enrichment Webhook', () => {
     });
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as EnrichmentResponse;
     expect(data.company_name).toBe('Clay.com');
     expect(data.ai_research).toContain('automate outbound sales');
   });

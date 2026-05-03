@@ -443,7 +443,7 @@ describe('Comparator', () => {
 
       // Agent type should match (outbound)
       const agentDim = result.dimensions.find(d => d.dimension === 'agent_type_alignment');
-      expect(agentDim.score).toBe(1);
+      expect(agentDim?.score).toBe(1);
     });
 
     it('[P0] detects mismatch in HVAC holdout case', () => {

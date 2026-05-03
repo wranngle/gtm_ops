@@ -235,13 +235,13 @@ test.describe('Data Integrity - Cross-Section Consistency', () => {
       '.stat:has-text("Total") .value'
     ];
 
-    let total: string | undefined = null;
+    let total: string | undefined;
     for (const selector of selectors) {
       const locator = page.locator(selector).first();
       const count = await locator.count();
       if (count > 0) {
         try {
-          total = await locator.textContent({ timeout: 2000 });
+          total = (await locator.textContent({ timeout: 2000 })) ?? undefined;
           if (total) break;
         } catch {
           continue;

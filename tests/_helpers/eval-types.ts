@@ -1,6 +1,11 @@
 import type { IntakeData } from '../support/factories/intake.factory.js';
 
-export type CompareDimension = { dimension: string; score: number; details?: unknown };
+export type CompareDimension = {
+  dimension: string;
+  score: number;
+  rationale?: string;
+  details?: { missing?: unknown[]; matched?: unknown[]; [k: string]: unknown };
+};
 
 export type CompareResult = {
   aggregate_score: number;

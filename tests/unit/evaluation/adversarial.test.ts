@@ -70,8 +70,8 @@ describe('Schema Drift Detection', () => {
     // The tier_match score should be LOW (0.25) because extraction failed.
     // This is a canary: if the pipeline schema drifts, tier scores drop.
     const tierDim = result.dimensions.find((d: any) => d.dimension === 'tier_match');
-    expect(tierDim.score).toBeLessThanOrEqual(0.25);
-    expect(tierDim.rationale).toContain('Missing');
+    expect(tierDim?.score).toBeLessThanOrEqual(0.25);
+    expect(tierDim?.rationale).toContain('Missing');
   });
 
   it('[P0] compare() surfaces when integration extraction yields empty', () => {
@@ -97,8 +97,8 @@ describe('Schema Drift Detection', () => {
     const intDim = result.dimensions.find((d: any) => d.dimension === 'integration_coverage');
 
     // Integrations should fail because the comparator can't find them
-    expect(intDim.score).toBeLessThan(0.5);
-    expect(intDim.details.missing.length).toBeGreaterThan(0);
+    expect(intDim?.score).toBeLessThan(0.5);
+    expect(intDim?.details?.missing?.length).toBeGreaterThan(0);
   });
 
   it('[P0] compare() surfaces when price extraction yields null', () => {
@@ -122,7 +122,7 @@ describe('Schema Drift Detection', () => {
     const priceDim = result.dimensions.find((d: any) => d.dimension === 'pricing_reasonableness');
 
     // Should get 0.5 "missing data" not 1.0
-    expect(priceDim.score).toBeLessThanOrEqual(0.5);
+    expect(priceDim?.score).toBeLessThanOrEqual(0.5);
   });
 });
 
@@ -526,7 +526,7 @@ describe('Regression Canaries', () => {
       { inferred_tier: 'standard' },
     );
     const tierDim = result.dimensions.find((d: any) => d.dimension === 'tier_match');
-    expect(tierDim.score).toBe(1);
+    expect(tierDim?.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline finds integrations at research.integrations[].integration', () => {
@@ -535,7 +535,7 @@ describe('Regression Canaries', () => {
       { integrations: [{ system_name: 'Dentrix' }] },
     );
     const intDim = result.dimensions.find((d: any) => d.dimension === 'integration_coverage');
-    expect(intDim.score).toBe(1);
+    expect(intDim?.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline finds price at pricing.final_price', () => {
@@ -544,7 +544,7 @@ describe('Regression Canaries', () => {
       { pricing_model: { total_cost: 10_000 } },
     );
     const priceDim = result.dimensions.find((d: any) => d.dimension === 'pricing_reasonableness');
-    expect(priceDim.score).toBe(1);
+    expect(priceDim?.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline finds features at root .features', () => {
@@ -553,7 +553,7 @@ describe('Regression Canaries', () => {
       { key_features: ['scheduling', 'sms reminders'] },
     );
     const featDim = result.dimensions.find((d: any) => d.dimension === 'feature_coverage');
-    expect(featDim.score).toBe(1);
+    expect(featDim?.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline infers agent type from workflow name', () => {
@@ -565,6 +565,6 @@ describe('Regression Canaries', () => {
       { agent_type: 'inbound' },
     );
     const agentDim = result.dimensions.find((d: any) => d.dimension === 'agent_type_alignment');
-    expect(agentDim.score).toBe(1);
+    expect(agentDim?.score).toBe(1);
   });
 });

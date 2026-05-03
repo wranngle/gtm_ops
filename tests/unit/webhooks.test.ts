@@ -137,7 +137,7 @@ describe('[P0] WebhookManager - CRUD Operations', () => {
 
     // THEN: Should return only ws-1 webhooks
     expect(webhooks).toHaveLength(2);
-    expect(webhooks.every(w => w.workspace_id === 'ws-1')).toBe(true);
+    expect(webhooks.every((w: { workspace_id: string }) => w.workspace_id === 'ws-1')).toBe(true);
 
     await manager.close();
   });

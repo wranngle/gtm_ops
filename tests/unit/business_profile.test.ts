@@ -139,8 +139,11 @@ describe('[P1] Pricing integration with business profile', () => {
     await initPricing();
 
     const baseAudit = { systems: ['A', 'B'] };
-    const withoutProfile = assessComplexity(baseAudit, {});
-    const withProfile = assessComplexity(baseAudit, { company_size_segment: 'enterprise' });
+    const withoutProfile = assessComplexity(baseAudit, {}) as Record<string, number | undefined>;
+    const withProfile = assessComplexity(
+      baseAudit,
+      { company_size_segment: 'enterprise' } as Parameters<typeof assessComplexity>[1]
+    ) as Record<string, number | undefined>;
 
     expect(withoutProfile.company_size).toBeUndefined();
     expect(withProfile.company_size).toBe(1.3);
@@ -161,7 +164,10 @@ describe('[P1] Pricing integration with business profile', () => {
     const { calculateModeledOpportunity } = await import('../../lib/pricing_calculator.js');
 
     const uncapped = calculateModeledOpportunity({ daily_volume: 100, average_deal_value: 5000 }, 5000);
-    const capped = calculateModeledOpportunity({ daily_volume: 100, average_deal_value: 5000, revenue_midpoint: 1_000_000 }, 5000);
+    const capped = calculateModeledOpportunity(
+      { daily_volume: 100, average_deal_value: 5000, revenue_midpoint: 1_000_000 } as Parameters<typeof calculateModeledOpportunity>[0],
+      5000
+    );
 
     expect(capped.annual).toBeLessThanOrEqual(1_000_000 * 0.05);
     expect(capped.was_capped).toBe(true);

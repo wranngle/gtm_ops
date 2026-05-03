@@ -320,7 +320,7 @@ describe('[P1] SQLite Adapter - Transactions', () => {
     await adapter.run('CREATE TABLE test (id INTEGER PRIMARY KEY, value INTEGER)');
 
     // WHEN: Running transaction
-    await adapter.transaction(async (tx) => {
+    await adapter.transaction(async (tx: { run: (sql: string, params?: unknown[]) => Promise<unknown> }) => {
       await tx.run('INSERT INTO test (value) VALUES (?)', [100]);
       await tx.run('INSERT INTO test (value) VALUES (?)', [200]);
     });
@@ -342,7 +342,7 @@ describe('[P1] SQLite Adapter - Transactions', () => {
 
     // WHEN: Running failing transaction
     try {
-      await adapter.transaction(async (tx) => {
+      await adapter.transaction(async (tx: { run: (sql: string, params?: unknown[]) => Promise<unknown> }) => {
         await tx.run('INSERT INTO test (value) VALUES (?)', [100]);
         throw new Error('Simulated failure');
       });
@@ -364,7 +364,7 @@ describe('[P1] SQLite Adapter - Transactions', () => {
     await adapter.run('CREATE TABLE test (id INTEGER PRIMARY KEY, value INTEGER)');
 
     // WHEN: Running transaction that returns value
-    const result = await adapter.transaction(async (tx) => {
+    const result = await adapter.transaction(async (tx: { run: (sql: string, params?: unknown[]) => Promise<unknown> }) => {
       await tx.run('INSERT INTO test (value) VALUES (?)', [42]);
       return 'success';
     });

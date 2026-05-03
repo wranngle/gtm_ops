@@ -416,6 +416,9 @@ export function createMaskedIntakeSync(
 
   // Manual masking without async dependency
   const masked: IntakeData = {
+    intake_version: '1.0',
+    captured_at: new Date().toISOString(),
+    captured_by: 'evaluation_factory',
     prepared_for: {
       account_id: `eval-${cs.id}`,
       account_name: `[Evaluation] ${problem.prepared_for?.account_name || 'Test Company'}`,

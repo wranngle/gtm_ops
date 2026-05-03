@@ -362,7 +362,7 @@ describe('Real Module Integration Tests', () => {
       const intake = createDentalIntake();
 
       // WHEN: Generating identity
-      const identity = generateProjectIdentity(intake, {
+      const identity = generateProjectIdentity(intake as unknown as Record<string, unknown>, {
         documentType: 'proposal'
       });
 

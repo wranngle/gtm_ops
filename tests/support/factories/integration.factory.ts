@@ -6,6 +6,7 @@ import { faker } from '@faker-js/faker';
 
 export interface IntegrationData {
   system: string;
+  integration?: string;
   type?: string;
   integration_type?: string;
   complexity?: string;

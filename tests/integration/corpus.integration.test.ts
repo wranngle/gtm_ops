@@ -18,7 +18,7 @@ import {
   resetDb,
   createCaseStudy,
   getCaseStudyById,
-  listCaseStudies,
+  listCaseStudies as _listCaseStudies,
   updateCaseStudyMeta,
   deleteCaseStudy,
   getCorpusStats,
@@ -26,9 +26,33 @@ import {
   createEvaluationRun,
   updateEvaluationRun,
   getEvaluationRunById,
-  listEvaluationRuns,
-  getEvaluationsForCaseStudy,
+  listEvaluationRuns as _listEvaluationRuns,
+  getEvaluationsForCaseStudy as _getEvaluationsForCaseStudy,
 } from '../../lib/evaluation/corpus.js';
+
+type CaseStudyRecord = {
+  id: string;
+  source: { vendor: string; url?: string };
+  meta: { holdout?: boolean; quality_score?: number; [k: string]: unknown };
+  problem?: Record<string, unknown>;
+  solution?: Record<string, unknown>;
+  [k: string]: unknown;
+};
+type EvaluationRunRecord = {
+  id: string;
+  case_study_id: string;
+  pipeline_version: string;
+  status?: string;
+  aggregate_score?: number;
+  scores?: Record<string, unknown>;
+  [k: string]: unknown;
+};
+const listCaseStudies = (...args: Parameters<typeof _listCaseStudies>): Promise<CaseStudyRecord[]> =>
+  _listCaseStudies(...args) as Promise<CaseStudyRecord[]>;
+const listEvaluationRuns = (...args: Parameters<typeof _listEvaluationRuns>): Promise<EvaluationRunRecord[]> =>
+  _listEvaluationRuns(...args) as Promise<EvaluationRunRecord[]>;
+const getEvaluationsForCaseStudy = (...args: Parameters<typeof _getEvaluationsForCaseStudy>): Promise<EvaluationRunRecord[]> =>
+  _getEvaluationsForCaseStudy(...args) as Promise<EvaluationRunRecord[]>;
 
 // Test database path
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -180,7 +204,7 @@ describe('Corpus CRUD Integration Tests', () => {
       const highQualityCases = await listCaseStudies({ minQuality: 4 });
 
       expect(highQualityCases.length).toBeGreaterThanOrEqual(1);
-      expect(highQualityCases.every(cs => cs.meta.quality_score >= 4)).toBe(true);
+      expect(highQualityCases.every(cs => (cs.meta.quality_score ?? 0) >= 4)).toBe(true);
     });
 
     it('[P0] respects limit and offset', async () => {
@@ -416,7 +440,7 @@ describe('Corpus CRUD Integration Tests', () => {
       const highScoreRuns = await listEvaluationRuns({ minScore: 80 });
 
       expect(highScoreRuns.length).toBeGreaterThanOrEqual(1);
-      expect(highScoreRuns.every(r => r.aggregate_score >= 80)).toBe(true);
+      expect(highScoreRuns.every(r => (r.aggregate_score ?? 0) >= 80)).toBe(true);
     });
 
     it('[P0] lists evaluation runs with pipeline version filter', async () => {

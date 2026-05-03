@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // Import module under test
 let getSystemIntelligence: (name: string, options?: Record<string, unknown>) => Promise<any>;
 let getAllSystemIntelligence: (names: string[]) => Promise<Map<string, any>>;
-let getCatalogBaseline: (systemName: string) => Promise<any>;
+let getCatalogBaseline: (systemName: string) => unknown;
 let clearCache: () => void;
 let SYSTEM_ALIASES: Record<string, string>;
 
