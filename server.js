@@ -1054,9 +1054,20 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     if (validatedProfile.company_url || validatedProfile.email) {
       try {
         const enrichmentWebhook = process.env.N8N_ENRICHMENT_WEBHOOK_URL || 'https://n8n.wranngle.com/webhook/lead-enrichment';
+        const webhookSecret = process.env.N8N_WEBHOOK_SECRET;
+        if (!webhookSecret) {
+          // Graceful no-op: still call the webhook (useful in dev where the
+          // n8n instance may be unsecured), but warn so prod operators notice.
+          // Mirrors the contract in lib/enrichment.js.
+          console.warn(
+            'N8N_WEBHOOK_SECRET is not set; calling lead-enrichment webhook without auth header. Set N8N_WEBHOOK_SECRET in production.'
+          );
+        }
+        const enrichHeaders = { 'Content-Type': 'application/json' };
+        if (webhookSecret) enrichHeaders['X-Webhook-Secret'] = webhookSecret;
         const enrichRes = await fetch(enrichmentWebhook, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: enrichHeaders,
           body: JSON.stringify({
             email: validatedProfile.email,
             company_url: validatedProfile.company_url,
