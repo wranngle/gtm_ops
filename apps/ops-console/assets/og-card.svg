@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12111a"/>
+      <stop offset="100%" stop-color="#2d0914"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff5f00"/>
+      <stop offset="100%" stop-color="#cf3c69"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0" r="0.6">
+      <stop offset="0%" stop-color="#ff5f00" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ff5f00" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g transform="translate(80,80)">
+    <path d="M0 80 L20 0 L40 60 L60 0 L80 80" fill="none" stroke="url(#accent)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="110" y="60" fill="#fcfaf5" font-size="40" font-weight="700" letter-spacing="-0.02em">Wranngle GTM Ops</text>
+  </g>
+  <text x="80" y="320" fill="#fcfaf5" font-size="84" font-weight="800" letter-spacing="-0.03em">Lead in.</text>
+  <text x="80" y="420" fill="url(#accent)" font-size="84" font-weight="800" letter-spacing="-0.03em">Branded proposal out.</text>
+  <text x="80" y="500" fill="#dac39f" font-size="32" font-weight="500">Open-source AI presales pipeline for service businesses.</text>
+  <text x="80" y="560" fill="#847d9a" font-size="22" font-family="JetBrains Mono, monospace">preview.gtm-ops.pages.dev</text>
+</svg>

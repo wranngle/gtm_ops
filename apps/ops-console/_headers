@@ -5,13 +5,36 @@
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-site
   X-Robots-Tag: index, follow
+  # CSP intentionally permissive for the unpkg/jsdelivr CDN-driven console.
+  # If you self-host these libs, tighten script-src and style-src to 'self'.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'
 
 # Long-cache the immutable token assets
 /tokens/*
   Cache-Control: public, max-age=31536000, immutable
 
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # Long-cache the synthetic fixtures (DEMO_MODE data is stable per-deploy)
 /fixtures/*
+  Cache-Control: public, max-age=3600
+
+# Don't cache HTML — let users see deploys immediately
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Sitemap / robots — short cache so updates propagate
+/robots.txt
+  Cache-Control: public, max-age=3600
+/sitemap.xml
   Cache-Control: public, max-age=3600

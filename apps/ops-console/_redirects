@@ -5,7 +5,8 @@
 # before the canonical `/api/eval/runs` route landed in server.js.
 /api/eval-runs    /fixtures/eval-runs.json    302
 
-# Redirect bare `/api/*` calls in DEMO_MODE to the fixture equivalent.
-# (The DEMO_MODE shim in each HTML page already handles this client-side,
-# but a 404 fallback to fixtures keeps non-shim consumers from breaking.)
+# Fallback for unported /api/* GETs in DEMO_MODE → fixture equivalent.
+# (Pages Functions under functions/api/* take precedence — this only fires
+# when there is no Function and the static fall-through misses. The JS shim
+# in each HTML page also handles this client-side.)
 /api/*            /fixtures/:splat.json       302

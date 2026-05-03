@@ -1,0 +1,12 @@
+{
+  "name": "Wranngle GTM Ops",
+  "short_name": "Wranngle",
+  "description": "Open-source AI presales pipeline. Lead in, branded proposal out.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12111a",
+  "theme_color": "#12111a",
+  "icons": [
+    { "src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Wranngle GTM Ops</title>
+    <meta name="description" content="That page does not exist on Wranngle GTM Ops.">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#12111a">
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/tokens/tokens.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-body);
+            background:
+                radial-gradient(ellipse 60% 60% at 50% 0%, rgba(255, 95, 0, 0.18), transparent 60%),
+                radial-gradient(ellipse 40% 50% at 50% 80%, rgba(207, 60, 105, 0.14), transparent 60%),
+                var(--night-950);
+            color: var(--sand-50);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px;
+            line-height: 1.5;
+        }
+        main {
+            text-align: center;
+            max-width: 540px;
+        }
+        .code {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--sunset-300);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(64px, 12vw, 120px);
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            background: linear-gradient(120deg, var(--sunset-500), var(--violet-500));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            margin-bottom: 16px;
+        }
+        h2 {
+            font-family: var(--font-display); font-weight: 700; font-size: 24px;
+            margin-bottom: 12px; letter-spacing: -0.02em;
+        }
+        p {
+            color: var(--sand-300); font-size: 15px;
+            margin-bottom: 32px;
+        }
+        .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        a {
+            text-decoration: none;
+            font-family: var(--font-display); font-weight: 600;
+            font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase;
+            padding: 12px 22px;
+            border-radius: var(--radius-md);
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+        .primary {
+            background: linear-gradient(135deg, var(--sunset-500), var(--sunset-600));
+            color: #fff;
+            box-shadow: 0 8px 22px rgba(255, 95, 0, 0.25);
+        }
+        .primary:hover { transform: translateY(-1px); }
+        .ghost {
+            background: transparent;
+            color: var(--sand-50);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .ghost:hover { border-color: var(--sunset-500); color: var(--sunset-300); }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="code">// 404</div>
+        <h1>Lost the lead.</h1>
+        <h2>That page does not exist.</h2>
+        <p>The URL you followed has no match. Head back to the homepage or open the live operator console.</p>
+        <div class="actions">
+            <a class="primary" href="/">Back home</a>
+            <a class="ghost" href="/console/">Open console</a>
+        </div>
+    </main>
+</body>
+</html>
