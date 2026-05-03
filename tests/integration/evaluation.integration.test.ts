@@ -20,7 +20,7 @@ import {
   createMockPipelineOutput,
   createSolution,
   createEvaluationTestSuite,
-} from '../support/factories';
+} from '../support/factories/index.js';
 
 // Import evaluation modules
 import { toIntake, validateNoSolutionLeakage } from '../../lib/evaluation/masker.js';

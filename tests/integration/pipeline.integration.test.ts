@@ -21,7 +21,7 @@ import {
   createTechnicalApproach,
   createTierAssessment,
   createIntegrationResearch
-} from '../support/factories';
+} from '../support/factories/index.js';
 
 // Import actual pipeline modules (no mocking needed for these)
 import { buildTechnicalApproach } from '../../lib/build_technical_approach.js';

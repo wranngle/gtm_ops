@@ -26,7 +26,7 @@ import {
   createSolution,
   createMockPipelineOutput,
   createEvaluationTestSuite,
-} from '../../support/factories';
+} from '../../support/factories/index.js';
 
 describe('Comparator', () => {
   describe('scoreTierMatch', () => {

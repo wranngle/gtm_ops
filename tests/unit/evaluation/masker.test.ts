@@ -17,8 +17,8 @@ import {
   createDentalCaseStudy,
   createSolution,
   createEvaluationTestSuite,
-} from '../../support/factories';
-import { createIntake } from '../../support/factories';
+} from '../../support/factories/index.js';
+import { createIntake } from '../../support/factories/index.js';
 
 describe('Masker', () => {
   describe('toIntake - Factory-Based Tests', () => {

@@ -16,7 +16,7 @@ import {
   createFinOpsCalculation,
   createTechnicalApproach,
   createPipelineResult
-} from '../support/factories';
+} from '../support/factories/index.js';
 
 describe('Schema Validation (ATDD)', () => {
   describe('AC1: Schema Structure Requirements', () => {
