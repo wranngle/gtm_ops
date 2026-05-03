@@ -76,7 +76,7 @@ function startServer() {
 /**
  * Open URL in default browser (Not used automatically)
  */
-function openBrowser(url) {
+function _openBrowser(url) {
   // Function preserved but not called automatically per user preference
   const {platform} = process;
   let cmd;
@@ -298,7 +298,7 @@ async function main() {
     }
   };
   
-  es.onerror = (err) => {
+  es.onerror = (_err) => {
     if (!pipelineComplete) {
       console.error(`${ansi.dim}SSE connection error - continuing...${ansi.reset}`);
     }

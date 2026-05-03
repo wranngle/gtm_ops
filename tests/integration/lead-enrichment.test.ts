@@ -32,9 +32,9 @@ describe('Centralized Lead Enrichment Webhook', () => {
     });
   });
 
-  afterAll((done) => {
-    mockServer.close(done);
-  });
+  afterAll(() => new Promise<void>((resolve) => {
+    mockServer.close(() => resolve());
+  }));
 
   it('should enrich a business profile using the central webhook', async () => {
     const response = await fetch(webhookUrl, {
