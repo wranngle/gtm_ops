@@ -17,12 +17,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ANSI color codes
 const colors = {
-  reset: '\x1b[0m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  bold: '\x1b[1m'
+  reset: '\u001B[0m',
+  red: '\u001B[31m',
+  green: '\u001B[32m',
+  yellow: '\u001B[33m',
+  blue: '\u001B[34m',
+  bold: '\u001B[1m'
 };
 
 function log(message, color = 'reset') {
@@ -40,9 +40,7 @@ function logCheck(pass, message) {
  * Get nested value from object using dot notation path
  */
 function getNestedValue(obj, path) {
-  return path.split('.').reduce((current, key) => {
-    return current && current[key] !== undefined ? current[key] : undefined;
-  }, obj);
+  return path.split('.').reduce((current, key) => current && current[key] !== undefined ? current[key] : undefined, obj);
 }
 
 /**

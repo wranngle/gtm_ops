@@ -250,8 +250,9 @@ export function validateSalesStrategy(data: unknown): SalesStrategy | null {
   if (result.success) {
     // Add _last flag to last objection for Mustache styling
     const strategy = result.data;
-    if (strategy.objections.length > 0) {
-      strategy.objections[strategy.objections.length - 1]._last = true;
+    const lastObjection = strategy.objections.at(-1);
+    if (lastObjection) {
+      lastObjection._last = true;
     }
     return strategy;
   }

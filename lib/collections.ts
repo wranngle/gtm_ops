@@ -27,9 +27,7 @@ export type KeyedCollection<T> = {
  * Type constraint for items that can be used in a keyed collection
  * Items must have a key field for indexing
  */
-export type Keyed<K extends string = 'id'> = {
-  [key in K]: string;
-};
+export type Keyed<K extends string = 'id'> = Record<K, string>;
 
 /**
  * Mustache-compatible collection with iteration helpers
@@ -355,7 +353,7 @@ export function toMustacheCollection<T>(
     hasItems: items.length > 0,
     isEmpty: items.length === 0,
     first: items[0] || null,
-    last: items[items.length - 1] || null
+    last: items.at(-1) || null
   };
 }
 

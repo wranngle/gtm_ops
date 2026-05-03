@@ -245,11 +245,11 @@ export class GroqAdapter {
 
   private getNextFallbackModel(): string | null {
     const currentIdx = GROQ_FALLBACK_ORDER.indexOf(this.model);
-    if (currentIdx < 0 || currentIdx >= GROQ_FALLBACK_ORDER.length - 1) return null;
+    if (currentIdx === -1 || currentIdx >= GROQ_FALLBACK_ORDER.length - 1) return null;
     return GROQ_FALLBACK_ORDER[currentIdx + 1];
   }
 
-  private sleep(ms: number): Promise<void> {
+  private async sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
@@ -459,7 +459,7 @@ export class LLMExecutor {
     }
   }
 
-  private sleep(ms: number): Promise<void> {
+  private async sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
@@ -818,7 +818,7 @@ export class BatchLLMExecutor {
     }
   }
 
-  private sleep(ms: number): Promise<void> {
+  private async sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
@@ -935,7 +935,7 @@ export class BatchLLMExecutor {
   }
 
   private parseJSON(text: string): any {
-    let cleaned = text
+    const cleaned = text
       .replace(/^```(?:json)?\s*\n?/gim, '')
       .replace(/\n?```$/gim, '')
       .trim();
@@ -947,7 +947,7 @@ export class BatchLLMExecutor {
   async fillAllNarratives(reportJson: any): Promise<any> {
     const startTime = Date.now();
     const docType = detectDocumentType(reportJson);
-    let systemPrompt: string, userPrompt: string;
+    let systemPrompt: string; let userPrompt: string;
 
     if (docType === 'proposal') {
       console.log('Stage 1: Generating proposal narratives in single LLM call...');
@@ -1107,7 +1107,7 @@ export async function executeLLMJson(
   const result = await executor.callLLM(prompt, {});
   try {
     // Strip any markdown code blocks (handle various formats)
-    let cleaned = result.content
+    const cleaned = result.content
       .replace(/```(?:json|javascript|js)?\s*\n/gi, '')  // Opening code fence
       .replace(/\n```\s*$/gi, '')                         // Closing code fence at end
       .replace(/```\s*$/gi, '')                           // Closing code fence without newline

@@ -84,7 +84,7 @@ async function nativeRequest(url: string, options: RequestOptions = {}): Promise
       });
     });
 
-    req.on('error', (e) => reject(e));
+    req.on('error', (e) => { reject(e); });
 
     if (options.body) {
       req.write(typeof options.body === 'string' ? options.body : JSON.stringify(options.body));

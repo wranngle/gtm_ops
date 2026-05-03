@@ -404,7 +404,7 @@ export function validateMonetaryAmount(
   const {maxAmount = 100_000_000, minAmount = 0} = options;
 
   if (typeof amount !== 'number' || isNaN(amount)) {
-    throw new Error(`${label} is not a valid number: ${amount}`);
+    throw new TypeError(`${label} is not a valid number: ${amount}`);
   }
 
   if (amount < minAmount) {

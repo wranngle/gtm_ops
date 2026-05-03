@@ -48,7 +48,7 @@ db.all(`
         flawCounts[flaw] = (flawCounts[flaw] || 0) + 1;
       }
 
-      const flawStr = result.flaws.length ? result.flaws.join(', ') : 'none';
+      const flawStr = result.flaws.length > 0 ? result.flaws.join(', ') : 'none';
       console.log('  ' + row.case_study_id + ': ' + result.aggregate_score.toFixed(1) + '/100 | ' + flawStr);
     } catch (e) {
       console.log('  ' + row.case_study_id + ': ERROR - ' + e.message);

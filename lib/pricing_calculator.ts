@@ -337,18 +337,18 @@ export function calculatePricing(auditData: any, options: PricingOptions = {}): 
   const complexity = assessComplexity(auditData, options);
 
   // Calculate base price from effort estimation
-  let basePrice = calculateBasePrice(findings, auditData);
+  const basePrice = calculateBasePrice(findings, auditData);
 
   // Apply complexity multipliers
   const multiplier = calculateTotalMultiplier(complexity);
-  let adjustedPrice = basePrice * multiplier;
+  const adjustedPrice = basePrice * multiplier;
 
   // Apply discounts if any
   const discount = calculateDiscount(adjustedPrice, options);
   let finalPrice = adjustedPrice - discount.amount;
 
   // Round the pre-discount price to get subtotal
-  let subtotal = roundToIncrement(finalPrice, BASE_RATES!.rounding_increment);
+  const subtotal = roundToIncrement(finalPrice, BASE_RATES!.rounding_increment);
 
   // Calculate milestone allocations from SUBTOTAL (before credits/discounts)
   const milestones = allocateMilestones(subtotal);
@@ -365,7 +365,10 @@ export function calculatePricing(auditData: any, options: PricingOptions = {}): 
   let earlyAdopterDiscount: EarlyAdopterDiscount = null;
   const afterCredit = subtotal - auditCreditAmount;
 
-  if (options.early_adopter !== false) {
+  if (options.early_adopter === false) {
+    finalPrice = roundToIncrement(afterCredit, BASE_RATES!.rounding_increment);
+    finalPrice = Math.max(finalPrice, BASE_RATES!.minimum_project_value);
+  } else {
     const earlyAdopterPercent = options.early_adopter_percent || 10;
     // Calculate the target final price first (after all discounts and rounding)
     const rawFinal = afterCredit * (1 - earlyAdopterPercent / 100);
@@ -380,9 +383,6 @@ export function calculatePricing(auditData: any, options: PricingOptions = {}): 
       display: formatCurrency(earlyAdopterAmount),
       note: 'Thank you for being an early adopter as we grow'
     };
-  } else {
-    finalPrice = roundToIncrement(afterCredit, BASE_RATES!.rounding_increment);
-    finalPrice = Math.max(finalPrice, BASE_RATES!.minimum_project_value);
   }
 
   return {
@@ -718,7 +718,7 @@ function calculateDiscount(price: number, options: PricingOptions): DiscountResu
   const amount = price * (totalPercentage / 100);
 
   // Default to 15% approval threshold if not configured
-  const approvalThreshold = (DISCOUNT_RULES && DISCOUNT_RULES.notes && DISCOUNT_RULES.notes.approval_required_above) || 15;
+  const approvalThreshold = (DISCOUNT_RULES?.notes?.approval_required_above) || 15;
 
   return {
     discounts_applied: discounts,
@@ -923,8 +923,8 @@ export function calculateModeledOpportunity(
   const volumeNote = volumeSource === 'inferred_from_bleed'
     ? '(from bleed)'
     : volumeSource === 'config_override'
-    ? '(specified)'
-    : '(default)';
+      ? '(specified)'
+      : '(default)';
 
   const formulaBase = `${Math.round(dailyLeads)} ${volumeNote}/day × 30 × ${liftPercent}% × $${avgDealValue.toLocaleString()}`;
   const formula = wasCapped ? `${formulaBase} (${capReason})` : formulaBase;
@@ -1075,7 +1075,7 @@ export function calculateROI(
 export function formatPaybackPeriod(months: number): string {
   if (months < 1) {
     const weeks = Math.ceil(months * 4.33);
-    return `${weeks} week${weeks !== 1 ? 's' : ''}`;
+    return `${weeks} week${weeks === 1 ? '' : 's'}`;
   }
   const roundedMonths = Math.ceil(months * 10) / 10;
   if (roundedMonths === 1) return '1 month';

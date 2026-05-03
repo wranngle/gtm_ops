@@ -56,7 +56,9 @@ for (const parentPath of parentsToMove) {
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
 
   // Move if target doesn't exist
-  if (!fs.existsSync(targetPath)) {
+  if (fs.existsSync(targetPath)) {
+    console.log(`Skipped (exists): ${relativePath}`);
+  } else {
     try {
       fs.renameSync(parentPath, targetPath);
       movedCount++;
@@ -64,8 +66,6 @@ for (const parentPath of parentsToMove) {
     } catch (e) {
       console.log(`Failed to move: ${relativePath} - ${e.message}`);
     }
-  } else {
-    console.log(`Skipped (exists): ${relativePath}`);
   }
 }
 

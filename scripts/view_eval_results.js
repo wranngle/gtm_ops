@@ -25,8 +25,8 @@ async function main() {
 
   for (const run of runs) {
     const flaws = JSON.parse(run.flaws_detected || '[]');
-    const flawStr = flaws.length ? flaws.join(', ') : 'none';
-    const score = run.aggregate_score != null ? run.aggregate_score.toFixed(1) : 'ERR';
+    const flawStr = flaws.length > 0 ? flaws.join(', ') : 'none';
+    const score = run.aggregate_score == null ? 'ERR' : run.aggregate_score.toFixed(1);
     console.log(`  ${run.case_study_id}: ${score}/100 | Status: ${run.status} | Flaws: ${flawStr}`);
 
     if (run.aggregate_score != null) {

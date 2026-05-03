@@ -163,7 +163,7 @@ export function extractCanonicalIdentity(schema: Schema): Identity | null {
   ];
 
   for (const source of sources) {
-    if (source && source.client_name) {
+    if (source?.client_name) {
       return source;
     }
   }

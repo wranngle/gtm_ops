@@ -137,7 +137,7 @@ async function migrateDown() {
       return;
     }
 
-    const lastVersion = applied[applied.length - 1];
+    const lastVersion = applied.at(-1);
     const filename = `${lastVersion}.sql`;
 
     await runMigration(pool, filename, 'down');

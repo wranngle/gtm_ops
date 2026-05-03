@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { runEvaluation } from '../lib/evaluation/runner.js';
 
-console.log('GEMINI_API_KEY set:', !!process.env.GEMINI_API_KEY);
+console.log('GEMINI_API_KEY set:', Boolean(process.env.GEMINI_API_KEY));
 console.log('Running single evaluation on vapi-dental-001...\n');
 
 const result = await runEvaluation('vapi-dental-001', { directExecution: true });

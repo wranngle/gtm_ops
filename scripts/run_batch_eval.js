@@ -43,7 +43,7 @@ async function main() {
 
   console.log('\n=== PER-CASE SCORES ===');
   for (const run of results.runs || []) {
-    const score = run.aggregate_score != null ? run.aggregate_score.toFixed(1) : 'ERR';
+    const score = run.aggregate_score == null ? 'ERR' : run.aggregate_score.toFixed(1);
     const flawsStr = run.flaws?.length ? run.flaws.join(', ') : 'none';
     console.log(`  ${run.case_study_id}: ${score} | Flaws: ${flawsStr}`);
   }
