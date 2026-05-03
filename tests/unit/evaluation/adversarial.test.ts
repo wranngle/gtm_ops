@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import {
-  compare,
+  compare as _compare,
   scoreTierMatch,
   scoreIntegrationCoverage,
   scoreAgentTypeAlignment,
@@ -21,7 +21,11 @@ import {
   scoreFeatureCoverage,
   detectFlaws,
 } from '../../../lib/evaluation/comparator.js';
-import { toIntake } from '../../../lib/evaluation/masker.js';
+import { toIntake as _toIntake } from '../../../lib/evaluation/masker.js';
+import type { CompareResult, EvalIntake } from '../../_helpers/eval-types.js';
+
+const compare = (...args: Parameters<typeof _compare>): CompareResult => _compare(...args) as CompareResult;
+const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
 
 // =============================================================================
 // 1. Schema Drift Detection

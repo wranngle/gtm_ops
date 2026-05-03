@@ -14,8 +14,11 @@ import {
   scoreFeatureCoverage,
   calculateAggregateScore,
   detectFlaws,
-  compare,
+  compare as _compare,
 } from '../../../lib/evaluation/comparator.js';
+import type { CompareResult } from '../../_helpers/eval-types.js';
+
+const compare = (...args: Parameters<typeof _compare>): CompareResult => _compare(...args) as CompareResult;
 
 // Use factories - eating our own dog food
 import {

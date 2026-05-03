@@ -23,8 +23,12 @@ import {
 } from '../support/factories/index.js';
 
 // Import evaluation modules
-import { toIntake, validateNoSolutionLeakage } from '../../lib/evaluation/masker.js';
-import { compare, detectFlaws, calculateAggregateScore } from '../../lib/evaluation/comparator.js';
+import { toIntake as _toIntake, validateNoSolutionLeakage } from '../../lib/evaluation/masker.js';
+import { compare as _compare, detectFlaws, calculateAggregateScore } from '../../lib/evaluation/comparator.js';
+import type { CompareResult, EvalIntake } from '../_helpers/eval-types.js';
+
+const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
+const compare = (...args: Parameters<typeof _compare>): CompareResult => _compare(...args) as CompareResult;
 
 // Test output directory
 const TEST_OUTPUT_DIR = path.join(process.cwd(), 'output_test', 'evaluation');
@@ -137,7 +141,7 @@ describe('Evaluation Integration Tests', () => {
       const result = compare(pipelineOutput, caseStudy.solution);
 
       const tierDim = result.dimensions.find(d => d.dimension === 'tier_match');
-      expect(tierDim.score).toBeLessThan(1);
+      expect(tierDim?.score).toBeLessThan(1);
     });
 
     it('[P0] missing integrations detected', () => {

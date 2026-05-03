@@ -6,10 +6,13 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  toIntake,
+  toIntake as _toIntake,
   validateNoSolutionLeakage,
   generateMaskingReport,
 } from '../../../lib/evaluation/masker.js';
+import type { EvalIntake } from '../../_helpers/eval-types.js';
+
+const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
 
 // Use factories - eating our own dog food
 import {

@@ -24,8 +24,17 @@ import {
 } from '../support/factories/index.js';
 
 // Import actual pipeline modules (no mocking needed for these)
-import { buildTechnicalApproach } from '../../lib/build_technical_approach.js';
+import { buildTechnicalApproach as _buildTechnicalApproach } from '../../lib/build_technical_approach.js';
 import { generateProjectIdentity } from '../../lib/project_identity.js';
+
+type TechApproachResult = {
+  integrations: Array<{ system_name: string; [k: string]: unknown }>;
+  technology_stack: string[];
+  specificity: { specific_count: number; generic_count?: number; [k: string]: unknown };
+  [k: string]: unknown;
+};
+const buildTechnicalApproach = (...args: Parameters<typeof _buildTechnicalApproach>): TechApproachResult =>
+  _buildTechnicalApproach(...args) as TechApproachResult;
 
 // Test output directory
 const TEST_OUTPUT_DIR = path.join(process.cwd(), 'output_test', 'integration');

@@ -16,15 +16,50 @@ import {
   updateEvaluationRun,
   getCorpusStats,
 } from '../../../lib/evaluation/corpus.js';
-import { toIntake, generateMaskingReport } from '../../../lib/evaluation/masker.js';
-import { compare, detectFlaws } from '../../../lib/evaluation/comparator.js';
+import { toIntake as _toIntake, generateMaskingReport } from '../../../lib/evaluation/masker.js';
+import { compare as _compare, detectFlaws } from '../../../lib/evaluation/comparator.js';
+import type { CompareResult, EvalIntake } from '../../_helpers/eval-types.js';
+
+const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
+const compare = (...args: Parameters<typeof _compare>): CompareResult => _compare(...args) as CompareResult;
 
 // Import after mocks
 import {
-  runEvaluation,
-  runBatchEvaluation,
-  checkReadiness,
+  runEvaluation as _runEvaluation,
+  runBatchEvaluation as _runBatchEvaluation,
+  checkReadiness as _checkReadiness,
 } from '../../../lib/evaluation/runner.js';
+
+type RunResult = {
+  status?: string;
+  reason?: string;
+  masked_intake?: unknown;
+  masking_report?: unknown;
+  scores?: unknown;
+  flaws?: unknown[];
+  [k: string]: unknown;
+};
+type BatchResult = {
+  total: number;
+  message?: string;
+  results?: RunResult[];
+  summary?: Record<string, unknown>;
+  [k: string]: unknown;
+};
+type ReadinessResult = {
+  ready: boolean;
+  total_case_studies?: number;
+  reasons?: string[];
+  issues: string[];
+  pipeline_version?: string;
+  [k: string]: unknown;
+};
+const runEvaluation = (...args: Parameters<typeof _runEvaluation>): Promise<RunResult> =>
+  _runEvaluation(...args) as Promise<RunResult>;
+const runBatchEvaluation = (...args: Parameters<typeof _runBatchEvaluation>): Promise<BatchResult> =>
+  _runBatchEvaluation(...args) as Promise<BatchResult>;
+const checkReadiness = (...args: Parameters<typeof _checkReadiness>): Promise<ReadinessResult> =>
+  _checkReadiness(...args) as Promise<ReadinessResult>;
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -112,11 +147,11 @@ describe('Runner', () => {
 
     beforeEach(() => {
       vi.mocked(getCaseStudyById).mockResolvedValue(mockCaseStudy);
-      vi.mocked(toIntake).mockReturnValue(mockMaskedIntake);
-      vi.mocked(generateMaskingReport).mockReturnValue({ masked_fields: 10 });
+      vi.mocked(_toIntake).mockReturnValue(mockMaskedIntake as never);
+      vi.mocked(generateMaskingReport).mockReturnValue({ masked_fields: 10 } as never);
       vi.mocked(createEvaluationRun).mockResolvedValue({ id: 'run-001' });
       vi.mocked(updateEvaluationRun).mockResolvedValue({});
-      vi.mocked(compare).mockReturnValue(mockScores);
+      vi.mocked(_compare).mockReturnValue(mockScores as never);
       vi.mocked(detectFlaws).mockReturnValue([]);
     });
 
@@ -163,7 +198,7 @@ describe('Runner', () => {
 
       // dryRun doesn't create a run, but we can verify mocking works
       expect(getCaseStudyById).toHaveBeenCalledWith('test-case-001');
-      expect(toIntake).toHaveBeenCalledWith(mockCaseStudy, expect.any(Object));
+      expect(_toIntake).toHaveBeenCalledWith(mockCaseStudy, expect.any(Object));
     });
   });
 
@@ -209,15 +244,15 @@ describe('Runner', () => {
         solution: {},
         meta: { holdout: false },
       });
-      vi.mocked(toIntake).mockReturnValue({});
-      vi.mocked(generateMaskingReport).mockReturnValue({});
+      vi.mocked(_toIntake).mockReturnValue({} as never);
+      vi.mocked(generateMaskingReport).mockReturnValue({} as never);
       vi.mocked(createEvaluationRun).mockResolvedValue({ id: 'run-001' });
-      vi.mocked(compare).mockReturnValue({ aggregate_score: 50, dimensions: [] });
+      vi.mocked(_compare).mockReturnValue({ aggregate_score: 50, dimensions: [] } as never);
       vi.mocked(detectFlaws).mockReturnValue([]);
 
-      const progressCalls: any[] = [];
+      const progressCalls: unknown[] = [];
       await runBatchEvaluation({
-        onProgress: (progress) => progressCalls.push(progress),
+        onProgress: (progress: unknown) => progressCalls.push(progress),
       });
 
       expect(progressCalls.length).toBeGreaterThan(0);

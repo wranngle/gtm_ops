@@ -6,7 +6,17 @@
  * @priority P0 - Critical for evaluation scoring
  */
 import { describe, it, expect } from 'vitest';
-import { buildTechnicalApproach } from '../../../lib/build_technical_approach.js';
+import { buildTechnicalApproach as _buildTechnicalApproach } from '../../../lib/build_technical_approach.js';
+
+type TechApproachResult = {
+  features: string[];
+  integrations: Array<{ system_name: string; [k: string]: unknown }>;
+  technology_stack: string[];
+  specificity?: { specific_count: number; [k: string]: unknown };
+  [k: string]: unknown;
+};
+const buildTechnicalApproach = (...args: Parameters<typeof _buildTechnicalApproach>): TechApproachResult =>
+  _buildTechnicalApproach(...args) as TechApproachResult;
 
 describe('Feature Extraction', () => {
   describe('AC1: Keyword-based feature extraction', () => {
