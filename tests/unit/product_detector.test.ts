@@ -450,8 +450,11 @@ describe('[P1] getKeywordConfig - Configuration Access', () => {
 // =============================================================================
 
 describe('[P0] detectProductType - Parameterized Test Cases', () => {
-  for (const testCase of DetectionTestCases) {
-    it(`[P0] ${testCase.name}: ${testCase.description}`, async () => {
+  // it.each scopes its callback per-row; avoids no-loop-func on the closure
+  // over the imported detectProductType binding.
+  it.each(DetectionTestCases as any[])(
+    '[P0] $name: $description',
+    async (testCase: any) => {
       // WHEN: Detecting product type
       const result = detectProductType(testCase.intake);
 
@@ -460,6 +463,6 @@ describe('[P0] detectProductType - Parameterized Test Cases', () => {
       expect(result.project_type).toBe(testCase.expectedProjectType);
       expect(result.confidence).toBeGreaterThanOrEqual(testCase.expectedMinConfidence);
       expect(result.confidence).toBeLessThanOrEqual(testCase.expectedMaxConfidence);
-    });
-  }
+    }
+  );
 });

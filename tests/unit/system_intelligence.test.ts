@@ -388,13 +388,14 @@ describe('[P2] Edge Cases', () => {
     // GIVEN: System names with special characters
     const specialNames = ['Phone/SMS', 'VoIP/PBX', 'CAD/CAM'];
 
-    for (const name of specialNames) {
+    // Use forEach to scope the callback (avoids no-loop-func from a for-of body).
+    await Promise.all(specialNames.map(async name => {
       // WHEN: Looking up
       const result = await getSystemIntelligence(name);
 
       // THEN: Should handle gracefully (either find or return null)
-      expect(async () => getSystemIntelligence(name)).not.toThrow();
-    }
+      expect(result === null || typeof result === 'object').toBe(true);
+    }));
   });
 
   it('[P2] should handle whitespace variations', async () => {
@@ -405,13 +406,14 @@ describe('[P2] Edge Cases', () => {
       'SalesForce\t',    // Tab character
     ];
 
-    for (const name of variations) {
+    // Use forEach-style mapping to avoid no-loop-func on the inner closure.
+    await Promise.all(variations.map(async name => {
       // WHEN: Looking up
       const result = await getSystemIntelligence(name);
 
-      // THEN: Should not throw
-      expect(async () => getSystemIntelligence(name)).not.toThrow();
-    }
+      // THEN: Should resolve without throwing
+      expect(result === null || typeof result === 'object').toBe(true);
+    }));
   });
 
   it('[P2] should be consistent across multiple rapid lookups', async () => {

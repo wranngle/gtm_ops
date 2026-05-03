@@ -466,8 +466,11 @@ describe('[P0] calculateProductPricing - Pricing Scenarios', () => {
     PricingScenarios.growthBundle()
   ];
 
-  for (const scenario of scenarios) {
-    it(`[P0] ${scenario.name}: ${scenario.description}`, async () => {
+  // it.each scopes its callback per-row; avoids no-loop-func on the closure
+  // over the imported calculateProductPricing binding.
+  it.each(scenarios)(
+    '[P0] $name: $description',
+    async (scenario) => {
       // WHEN: Calculating product pricing
       const result = calculateProductPricing(scenario.intake, {
         monthlyBleed: scenario.monthlyBleed,
@@ -490,8 +493,8 @@ describe('[P0] calculateProductPricing - Pricing Scenarios', () => {
       expect(result.roi.net_monthly_savings).toBe(
         scenario.monthlyBleed - result.monthly.amount
       );
-    });
-  }
+    }
+  );
 });
 
 // =============================================================================
