@@ -1,0 +1,21 @@
+# Cloudflare Pages config for the gtm_ops DEMO_MODE static site.
+#
+# This deploys ONLY the vanilla HTML/JS operator UI at apps/ops-console/.
+# The Express server.js + live /api/* routes do NOT run on Pages — that's
+# a separate hosting decision (Fly.io / Render / Railway). DEMO_MODE shim
+# in each HTML page intercepts /api/* fetches and serves fixtures/*.json,
+# so the deployed site is fully interactive without a backend.
+#
+# Operator setup (one-time):
+#   1) `wrangler login` (browser OAuth — covers all future deploys)
+#   2) `wrangler pages project create gtm-ops --production-branch main`
+#   3) `bun run deploy` (or `wrangler pages deploy apps/ops-console`)
+#
+# OR connect the repo in the CF dashboard:
+#   Build command: (none)
+#   Build output directory: apps/ops-console
+#   Root directory: /
+
+name = "gtm-ops"
+compatibility_date = "2024-12-01"
+pages_build_output_dir = "apps/ops-console"

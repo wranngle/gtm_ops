@@ -50,3 +50,43 @@ In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/f
 ## License
 
 See [`LICENSE`](./LICENSE).
+
+## Deploy (Cloudflare Pages — DEMO_MODE only)
+
+The static `apps/ops-console/` UI is deployable to Cloudflare Pages out of the
+box. The `server.js` Express runtime is NOT included in this deploy; the
+DEMO_MODE shim in each HTML page intercepts every `/api/*` call and resolves
+to `apps/ops-console/fixtures/*.json`, so the deployed site is fully
+interactive without a backend.
+
+### One-time setup
+
+```bash
+npx wrangler login                                  # browser OAuth
+wrangler pages project create gtm-ops --production-branch main
+```
+
+Or connect the GitHub repo in the Cloudflare dashboard:
+- Build command: *(none — static)*
+- Build output directory: `apps/ops-console`
+- Root directory: `/`
+
+### Deploy
+
+```bash
+bun run deploy                                      # production
+bun run deploy:preview                              # preview branch
+bun run pages:dev                                   # local CF Pages emulator
+```
+
+### Files
+
+- [`wrangler.toml`](wrangler.toml) — Pages config (`pages_build_output_dir = "apps/ops-console"`)
+- [`apps/ops-console/_headers`](apps/ops-console/_headers) — security + cache headers (X-Frame-Options, immutable tokens, fixture caching)
+- [`apps/ops-console/_redirects`](apps/ops-console/_redirects) — `/api/*` → `/fixtures/*.json` fallback for non-shim consumers
+
+### Live runtime (separate hosting)
+
+The live Express runtime (`bun run start`) needs a different host since CF
+Pages is static + Workers Functions only. Options: Fly.io, Render, Railway.
+That deploy isn't set up yet; the Pages target is DEMO_MODE only.
