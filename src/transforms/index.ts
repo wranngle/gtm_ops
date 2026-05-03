@@ -1864,22 +1864,42 @@ function generateIntegrationNotes(integration: Record<string, unknown>, apiInfo:
     paragraph += `OAuth 2.0 with Gmail API. Trigger-based email monitoring. Client provides: Workspace access, parsing rules.`;
   } else if (systemLower.includes('llm') || systemLower.includes('gpt') || systemLower.includes('ai') || systemLower.includes('production')) {
     paragraph += `Structured output mode with validation. Client provides: API credentials, prompt templates.`;
-  } else if (typeLower === 'webhook') {
-    paragraph += `Endpoint configuration with payload validation. Client provides: sample payload, auth headers.`;
-  } else if (typeLower === 'email') {
-    paragraph += `Email parsing with structured data extraction. Client provides: filter rules, sample formats.`;
-  } else if (typeLower === 'scraping') {
-    paragraph += `Rate-limited scraping with validation. Client provides: target URLs, data fields.`;
   } else {
-    paragraph += `REST API with retry logic and rate limit handling. Client provides: API credentials, endpoint docs.`;
+    switch (typeLower) {
+      case 'webhook': {
+        paragraph += `Endpoint configuration with payload validation. Client provides: sample payload, auth headers.`;
+        break;
+      }
+      case 'email': {
+        paragraph += `Email parsing with structured data extraction. Client provides: filter rules, sample formats.`;
+        break;
+      }
+      case 'scraping': {
+        paragraph += `Rate-limited scraping with validation. Client provides: target URLs, data fields.`;
+        break;
+      }
+      default: {
+        paragraph += `REST API with retry logic and rate limit handling. Client provides: API credentials, endpoint docs.`;
+      }
+    }
   }
 
-  if (complexity === 'complex') {
-    paragraph += ' ⚠ Complex: extended testing phase.';
-  } else if (complexity === 'high_risk') {
-    paragraph += ' ⚠ High risk: requires live environment testing.';
-  } else if (complexity === 'moderate') {
-    paragraph += ' OAuth consent flow required.';
+  switch (complexity) {
+    case 'complex': {
+      paragraph += ' ⚠ Complex: extended testing phase.';
+      break;
+    }
+    case 'high_risk': {
+      paragraph += ' ⚠ High risk: requires live environment testing.';
+      break;
+    }
+    case 'moderate': {
+      paragraph += ' OAuth consent flow required.';
+      break;
+    }
+    default: {
+      // No additional note
+    }
   }
 
   return paragraph.trim();

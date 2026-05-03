@@ -416,12 +416,22 @@ test.describe('Atomic: Metric Threshold Validation', () => {
             const unit = timeMatch[2].toLowerCase();
             // Check if value matches common conversions
             // e.g., "3h" display with value 180 (minutes) or value 3 (hours)
-            if (unit === 'h') {
-              matchFound = metric.value === displayNum || Math.abs(metric.value - displayNum * 60) < 1;
-            } else if (unit === 'm') {
-              matchFound = metric.value === displayNum || Math.abs(metric.value - displayNum) < 1;
-            } else if (unit === 's') {
-              matchFound = metric.value === displayNum || Math.abs(metric.value - displayNum / 60) < 1;
+            switch (unit) {
+              case 'h': {
+                matchFound = metric.value === displayNum || Math.abs(metric.value - displayNum * 60) < 1;
+                break;
+              }
+              case 'm': {
+                matchFound = metric.value === displayNum || Math.abs(metric.value - displayNum) < 1;
+                break;
+              }
+              case 's': {
+                matchFound = metric.value === displayNum || Math.abs(metric.value - displayNum / 60) < 1;
+                break;
+              }
+              default: {
+                // Unrecognized time unit; leave matchFound as-is.
+              }
             }
           }
 
