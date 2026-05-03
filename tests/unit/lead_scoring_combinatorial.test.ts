@@ -168,7 +168,7 @@ async function withRetry<T>(fn: () => T | Promise<T>, maxRetries = 3): Promise<T
     }
   }
 
-  throw lastError;
+  throw lastError ?? new Error('Retry failed without surfacing an error');
 }
 
 // =============================================================================
@@ -724,8 +724,8 @@ describe('[P0] getCompanyProfile - Field Extraction', () => {
     '[P1] missing $field should be null',
     ({ field, profileKey }) => {
       const formData = createFormData();
-      delete (formData as any)[field];
-      const profile = getCompanyProfile(formData);
+      const { [field]: _omitted, ...rest } = formData as Record<string, unknown>;
+      const profile = getCompanyProfile(rest);
 
       expect(profile[profileKey]).toBeNull();
     }

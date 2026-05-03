@@ -377,14 +377,12 @@ test.describe('Atomic: Metric Threshold Validation', () => {
 
           // Soft validation: check if status is approximately correct
           // Some edge cases may have different thresholds or calculation logic
-          if (direction === 'lower_is_better' && warning_max !== undefined) {
-            if (value > warning_max * 1.5) {
-              // Far above warning_max should definitely be critical or warning
-              expect(
-                ['critical', 'warning'].includes(metric.status),
-                `${inputFile}/${metric.name}: value ${value} > warning_max ${warning_max} * 1.5, should be critical/warning`
-              ).toBe(true);
-            }
+          if (direction === 'lower_is_better' && warning_max !== undefined && value > warning_max * 1.5) {
+            // Far above warning_max should definitely be critical or warning
+            expect(
+              ['critical', 'warning'].includes(metric.status),
+              `${inputFile}/${metric.name}: value ${value} > warning_max ${warning_max} * 1.5, should be critical/warning`
+            ).toBe(true);
           }
         }
       }

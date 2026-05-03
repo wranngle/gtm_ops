@@ -197,7 +197,7 @@ test.describe('Report Structure - Print Media', () => {
     const count = await sheets.count();
     for (let i = 1; i < count; i++) {
       const pageBreak = await sheets.nth(i).evaluate(el =>
-        getComputedStyle(el).pageBreakBefore || getComputedStyle(el).breakBefore
+        getComputedStyle(el).breakBefore
       );
       // Accept 'always', 'page', or 'auto' as valid
       expect(['always', 'page', 'auto', '']).toContain(pageBreak);

@@ -267,11 +267,11 @@ function deriveStatus(measurement: Measurement): string {
     if (threshold.healthy_max !== undefined && value <= threshold.healthy_max) return 'healthy';
     if (threshold.warning_max !== undefined && value <= threshold.warning_max) return 'warning';
     return 'critical';
-  } else {
-    if (threshold.healthy_min !== undefined && value >= threshold.healthy_min) return 'healthy';
-    if (threshold.warning_min !== undefined && value >= threshold.warning_min) return 'warning';
-    return 'critical';
   }
+
+  if (threshold.healthy_min !== undefined && value >= threshold.healthy_min) return 'healthy';
+  if (threshold.warning_min !== undefined && value >= threshold.warning_min) return 'warning';
+  return 'critical';
 }
 
 type SystemType = 'crm' | 'marketing_automation' | 'email' | 'sms' | 'forms' |
@@ -565,7 +565,7 @@ function buildScorecardRows(measurements: MeasurementsData, maxRows = 3): Array<
       has_metrics: true,
       finding: {
         summary: `[LLM_PLACEHOLDER: finding_summary for ${measName}]`,
-        risk: status !== 'healthy' ? `[LLM_PLACEHOLDER: finding_risk for ${measName}]` : null
+        risk: status === 'healthy' ? null : `[LLM_PLACEHOLDER: finding_risk for ${measName}]`
       },
       metrics: metrics,
       measurement_ids: [m.id]
@@ -607,7 +607,7 @@ function buildBleed(measurements: MeasurementsData): Record<string, unknown> {
         period: 'monthly',
         display: bleedData.display || `$${bleedData.value.toLocaleString()}`
       },
-      driver_measurement_ids: measurements.measurements.filter(m => m && m.status === 'critical').map(m => m.id)
+      driver_measurement_ids: measurements.measurements.filter(m => m?.status === 'critical').map(m => m.id)
     }],
     assumptions: assumptions.map(a => ({
       assumption_id: a.id,
@@ -905,7 +905,9 @@ export function getLLMPlaceholders(reportJson: Record<string, unknown>): Array<{
         });
       }
     } else if (Array.isArray(obj)) {
-      obj.forEach((item, idx) => findPlaceholders(item, `${path}[${idx}]`));
+      obj.forEach((item, idx) => {
+        findPlaceholders(item, `${path}[${idx}]`);
+      });
     } else if (obj && typeof obj === 'object') {
       Object.entries(obj as Record<string, unknown>).forEach(([key, value]) => {
         findPlaceholders(value, path ? `${path}.${key}` : key);
@@ -1369,7 +1371,9 @@ export function getPlaceholderPaths(proposal: Record<string, unknown>, prefix = 
     if (typeof obj === 'string' && obj.startsWith('[LLM_PLACEHOLDER:')) {
       paths.push(path);
     } else if (Array.isArray(obj)) {
-      obj.forEach((item, index) => traverse(item, `${path}[${index}]`));
+      obj.forEach((item, index) => {
+        traverse(item, `${path}[${index}]`);
+      });
     } else if (obj && typeof obj === 'object') {
       for (const [key, value] of Object.entries(obj)) {
         traverse(value, path ? `${path}.${key}` : key);
@@ -1396,7 +1400,7 @@ export function setValueAtPath(obj: Record<string, unknown>, path: string, value
     current = current[part] as Record<string, unknown>;
   }
 
-  current[parts[parts.length - 1]] = value;
+  current[parts.at(-1)!] = value;
 }
 
 /**
@@ -1500,7 +1504,7 @@ function generateProjectSummary(intake: Record<string, unknown>): string {
     'mixed': 'comprehensive automation solution'
   };
 
-  return `Implement a ${typeDescriptions[projectType as string] || typeDescriptions['mixed']} for ${clientName}.`;
+  return `Implement a ${typeDescriptions[projectType as string] || typeDescriptions.mixed} for ${clientName}.`;
 }
 
 function cleanVersionLockedText(text: string): string {
@@ -1701,7 +1705,7 @@ function generateArchitectureSummary(intake: Record<string, unknown>): string {
     'mixed': 'Hybrid solution combining workflow automation, AI processing, and system integration.'
   };
 
-  return summaries[projectType] || summaries['mixed'];
+  return summaries[projectType] || summaries.mixed;
 }
 
 function classifyTechCategory(tech: string): string {
@@ -1792,7 +1796,7 @@ function determineAIModelTypes(intake: Record<string, unknown>): string[] {
     types.add('Deep Research');
   }
 
-  return Array.from(types);
+  return [...types];
 }
 
 function recommendTechStack(intake: Record<string, unknown>, research: Record<string, unknown>): Record<string, unknown> {
@@ -1907,7 +1911,7 @@ function generateIntegrationNotes(integration: Record<string, unknown>, apiInfo:
 
 function enrichNotesWithResearch(notes: string, research: Record<string, unknown>, integrationName: string): { notes: string; citationsUsed: number } {
   const enrichments: string[] = [];
-  let citationsUsed = 0;
+  const citationsUsed = 0;
 
   const intInfo = (research.integrations as Array<Record<string, unknown>>)?.find(
     i => (i.name as string)?.toLowerCase() === integrationName.toLowerCase()
@@ -1980,7 +1984,7 @@ function mapPlanIntegrations(intake: Record<string, unknown>, research: Record<s
 
       let notes = generateIntegrationNotes(integration, apiInfo, complexity);
 
-      if (n8nResearch && (n8nResearch.found as boolean) !== false) {
+      if (n8nResearch && (n8nResearch.found as boolean)) {
         const enriched = enrichNotesWithResearch(notes, n8nResearch, integration.name as string);
         notes = enriched.notes;
       }
@@ -1998,7 +2002,7 @@ function mapPlanIntegrations(intake: Record<string, unknown>, research: Record<s
         complexity_score: complexityScore, // Explicit score for frontend transparency
         estimated_hours: estimatedHours, // Explicit hours for frontend transparency
         notes,
-        research_available: !!(n8nResearch as Record<string, unknown>)?.from_cache,
+        research_available: Boolean((n8nResearch as Record<string, unknown>)?.from_cache),
         research_confidence: (n8nResearch as Record<string, unknown>)?.confidence || null,
         has_native_node: intInfos?.[0]?.has_native_node || null
       });
@@ -2072,28 +2076,28 @@ function generatePlanPaymentSchedule(estimate: Record<string, unknown>): Record<
       terms: 'NET 15',
       notes: '100% upfront to secure build slot. Production Activation occurs upon completion.'
     };
-  } else {
-    const upfrontAmount = Math.round(total * 0.50);
-    const finalAmount = total - upfrontAmount;
-
-    return {
-      type: 'milestone',
-      schedule: [
-        {
-          milestone: 'Project Deposit (50%)',
-          percentage: 50,
-          amount: upfrontAmount
-        },
-        {
-          milestone: 'Production Activation (Go-Live)',
-          percentage: 50,
-          amount: finalAmount
-        }
-      ],
-      terms: 'NET 15',
-      notes: 'Final payment triggers Production Activation (Go-Live). Workflow instance provisioned upon final payment receipt.'
-    };
   }
+
+  const upfrontAmount = Math.round(total * 0.50);
+  const finalAmount = total - upfrontAmount;
+
+  return {
+    type: 'milestone',
+    schedule: [
+      {
+        milestone: 'Project Deposit (50%)',
+        percentage: 50,
+        amount: upfrontAmount
+      },
+      {
+        milestone: 'Production Activation (Go-Live)',
+        percentage: 50,
+        amount: finalAmount
+      }
+    ],
+    terms: 'NET 15',
+    notes: 'Final payment triggers Production Activation (Go-Live). Workflow instance provisioned upon final payment receipt.'
+  };
 }
 
 function generatePlanNextSteps(): string[] {

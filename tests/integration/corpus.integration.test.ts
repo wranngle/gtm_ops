@@ -47,12 +47,12 @@ type EvaluationRunRecord = {
   scores?: Record<string, unknown>;
   [k: string]: unknown;
 };
-const listCaseStudies = (...args: Parameters<typeof _listCaseStudies>): Promise<CaseStudyRecord[]> =>
-  _listCaseStudies(...args) as Promise<CaseStudyRecord[]>;
-const listEvaluationRuns = (...args: Parameters<typeof _listEvaluationRuns>): Promise<EvaluationRunRecord[]> =>
-  _listEvaluationRuns(...args) as Promise<EvaluationRunRecord[]>;
-const getEvaluationsForCaseStudy = (...args: Parameters<typeof _getEvaluationsForCaseStudy>): Promise<EvaluationRunRecord[]> =>
-  _getEvaluationsForCaseStudy(...args) as Promise<EvaluationRunRecord[]>;
+const listCaseStudies = async (...args: Parameters<typeof _listCaseStudies>): Promise<CaseStudyRecord[]> =>
+  (await _listCaseStudies(...args)) as CaseStudyRecord[];
+const listEvaluationRuns = async (...args: Parameters<typeof _listEvaluationRuns>): Promise<EvaluationRunRecord[]> =>
+  (await _listEvaluationRuns(...args)) as EvaluationRunRecord[];
+const getEvaluationsForCaseStudy = async (...args: Parameters<typeof _getEvaluationsForCaseStudy>): Promise<EvaluationRunRecord[]> =>
+  (await _getEvaluationsForCaseStudy(...args)) as EvaluationRunRecord[];
 
 // Test database path
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

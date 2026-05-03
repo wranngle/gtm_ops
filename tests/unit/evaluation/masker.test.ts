@@ -11,17 +11,16 @@ import {
   generateMaskingReport,
 } from '../../../lib/evaluation/masker.js';
 import type { EvalIntake } from '../../_helpers/eval-types.js';
-
-const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
-
 // Use factories - eating our own dog food
 import {
   createCaseStudy,
   createDentalCaseStudy,
   createSolution,
   createEvaluationTestSuite,
+  createIntake,
 } from '../../support/factories/index.js';
-import { createIntake } from '../../support/factories/index.js';
+
+const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
 
 describe('Masker', () => {
   describe('toIntake - Factory-Based Tests', () => {

@@ -4,18 +4,18 @@
  *
  * Test Count: 25 tests
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:3000';
 
 // Helper to open settings modal
-async function openSettings(page: import('@playwright/test').Page) {
+async function openSettings(page: Page) {
   await page.click('button:has-text("Settings")');
   await expect(page.locator('#settings-modal')).toBeVisible();
 }
 
 // Helper to select a settings tab
-async function selectTab(page: import('@playwright/test').Page, tabName: string) {
+async function selectTab(page: Page, tabName: string) {
   await page.click(`.settings-tab[data-settings-tab="${tabName}"]`);
 }
 

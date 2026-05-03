@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import express from 'express';
-import fetch from 'node-fetch';
 import type { Server } from 'node:http';
 
 type EnrichmentResponse = {
@@ -42,8 +41,10 @@ describe('Centralized Lead Enrichment Webhook', () => {
     });
   });
 
-  afterAll(() => new Promise<void>((resolve) => {
-    mockServer.close(() => resolve());
+  afterAll(async () => new Promise<void>((resolve) => {
+    mockServer.close(() => {
+      resolve();
+    });
   }));
 
   it('should enrich a business profile using the central webhook', async () => {

@@ -243,7 +243,7 @@ test.describe('Atomic: Pricing Rendering', () => {
         const milestoneCount = Object.keys(milestones).length;
 
         // Look for milestone indicators (should have percentage signs)
-        const percentageElements = await page.locator('.milestone, text=/\\d+%/').count();
+        const percentageElements = await page.locator(String.raw`.milestone, text=/\d+%/`).count();
 
         // Should have multiple percentage displays for milestones
         expect(percentageElements).toBeGreaterThan(0);

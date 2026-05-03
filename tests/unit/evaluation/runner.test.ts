@@ -19,16 +19,14 @@ import {
 import { toIntake as _toIntake, generateMaskingReport } from '../../../lib/evaluation/masker.js';
 import { compare as _compare, detectFlaws } from '../../../lib/evaluation/comparator.js';
 import type { CompareResult, EvalIntake } from '../../_helpers/eval-types.js';
-
-const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
-const compare = (...args: Parameters<typeof _compare>): CompareResult => _compare(...args) as CompareResult;
-
-// Import after mocks
 import {
   runEvaluation as _runEvaluation,
   runBatchEvaluation as _runBatchEvaluation,
   checkReadiness as _checkReadiness,
 } from '../../../lib/evaluation/runner.js';
+
+const toIntake = (cs: object): EvalIntake => _toIntake(cs) as EvalIntake;
+const compare = (...args: Parameters<typeof _compare>): CompareResult => _compare(...args) as CompareResult;
 
 type RunResult = {
   status?: string;
@@ -54,12 +52,12 @@ type ReadinessResult = {
   pipeline_version?: string;
   [k: string]: unknown;
 };
-const runEvaluation = (...args: Parameters<typeof _runEvaluation>): Promise<RunResult> =>
-  _runEvaluation(...args) as Promise<RunResult>;
-const runBatchEvaluation = (...args: Parameters<typeof _runBatchEvaluation>): Promise<BatchResult> =>
-  _runBatchEvaluation(...args) as Promise<BatchResult>;
-const checkReadiness = (...args: Parameters<typeof _checkReadiness>): Promise<ReadinessResult> =>
-  _checkReadiness(...args) as Promise<ReadinessResult>;
+const runEvaluation = async (...args: Parameters<typeof _runEvaluation>): Promise<RunResult> =>
+  (await _runEvaluation(...args)) as RunResult;
+const runBatchEvaluation = async (...args: Parameters<typeof _runBatchEvaluation>): Promise<BatchResult> =>
+  (await _runBatchEvaluation(...args)) as BatchResult;
+const checkReadiness = async (...args: Parameters<typeof _checkReadiness>): Promise<ReadinessResult> =>
+  (await _checkReadiness(...args)) as ReadinessResult;
 
 // Mock child_process
 vi.mock('child_process', () => ({

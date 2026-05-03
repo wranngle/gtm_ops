@@ -103,6 +103,7 @@ describe('[P0] sanitizeInput - Input Sanitization', () => {
     expect(sanitized).not.toContain('script');
   });
 
+  /* eslint-disable no-script-url -- this test asserts the sanitizer strips javascript: URLs */
   it('[P0] should remove javascript: URLs', () => {
     // GIVEN: Input with javascript URL
     const input = 'Click <a href="javascript:alert(1)">here</a>';
@@ -113,6 +114,7 @@ describe('[P0] sanitizeInput - Input Sanitization', () => {
     // THEN: javascript: should be removed
     expect(sanitized).not.toContain('javascript:');
   });
+  /* eslint-enable no-script-url */
 
   it('[P0] should remove event handlers', () => {
     // GIVEN: Input with event handlers

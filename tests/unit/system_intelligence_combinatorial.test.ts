@@ -113,7 +113,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
     }
   }
 
-  throw lastError;
+  throw lastError ?? new Error('Retry failed without surfacing an error');
 }
 
 /**

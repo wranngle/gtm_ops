@@ -42,7 +42,7 @@ export const test = base.extend<{
   },
 
   // Test output directory fixture with auto-cleanup
-  async testOutputDir({}, use) {
+  async testOutputDir(_unused, use) {
     const testDir = path.join(process.cwd(), 'output_test', `test-${Date.now()}`);
     fs.mkdirSync(testDir, { recursive: true });
 
@@ -55,7 +55,7 @@ export const test = base.extend<{
   },
 
   // Track files for cleanup
-  async cleanupFiles({}, use) {
+  async cleanupFiles(_unused, use) {
     const files: string[] = [];
 
     await use(files);

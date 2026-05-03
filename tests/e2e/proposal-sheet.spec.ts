@@ -188,7 +188,7 @@ test.describe('Proposal Sheet - CTA and Validity', () => {
     const validUntil = await page.locator('.wrn-header-meta, .cta-expires').first().textContent();
     if (validUntil) {
       // Just check it contains a date-like pattern or validity text
-      expect(validUntil).toMatch(/(?:\d{1,2}[/\-]){2}\d{2,4}|\w+ \d{1,2},? \d{4}|valid|expires/i);
+      expect(validUntil).toMatch(/(?:\d{1,2}[/-]){2}\d{2,4}|\w+ \d{1,2},? \d{4}|valid|expires/i);
     }
   });
 
