@@ -945,14 +945,56 @@ app.get('/api/stream', (req, res) => {
 app.get('/api/sample', generalLimiter, async (req, res) => {
   const inputDir = path.join(__dirname, 'input');
   const samples = ['upwork_job_post.txt', 'healthcare_intake.txt', 'test_receptionist.txt'];
-  
-  // Helper: Load random file sample
+
+  // Helper: Load a packaged fixture (DEMO_MODE / no-API-key path).
+  // Order: apps/ops-console/fixtures/sample.json (canonical demo fixture used
+  // by the static Cloudflare Pages build), then any examples/*.json that
+  // expose a client_brief/text field, then legacy input/*.txt samples.
+  // Always returns the {text, note} shape that existing /api/sample callers
+  // (apps/ops-console/index.html, public/index.html) expect — never the raw
+  // fixture envelope.
   const loadFileSample = (reason) => {
-    const randomSample = samples[Math.floor(Math.random() * samples.length)];
-    const samplePath = path.join(inputDir, randomSample);
-    if (fsSync.existsSync(samplePath)) {
-      const text = fsSync.readFileSync(samplePath, 'utf8');
-      return { text, note: `Fallback sample: ${randomSample} (${reason})` };
+    // 1. Canonical demo fixture
+    const fixturePath = path.join(__dirname, 'apps', 'ops-console', 'fixtures', 'sample.json');
+    if (fsSync.existsSync(fixturePath)) {
+      try {
+        const raw = fsSync.readFileSync(fixturePath, 'utf8');
+        const parsed = JSON.parse(raw);
+        const text = parsed.client_brief || parsed.text || (typeof parsed === 'string' ? parsed : null);
+        if (text && String(text).trim().length > 0) {
+          return { text: String(text), note: `Demo fixture: apps/ops-console/fixtures/sample.json (${reason})` };
+        }
+      } catch (parseErr) {
+        console.warn('[SAMPLE] Failed to parse fixtures/sample.json:', parseErr.message);
+      }
+    }
+
+    // 2. examples/*.json (only if any contain a client_brief / text field)
+    const examplesDir = path.join(__dirname, 'examples');
+    if (fsSync.existsSync(examplesDir)) {
+      const candidates = fsSync.readdirSync(examplesDir).filter((f) => f.endsWith('.json'));
+      for (const file of candidates) {
+        try {
+          const raw = fsSync.readFileSync(path.join(examplesDir, file), 'utf8');
+          const parsed = JSON.parse(raw);
+          const text = parsed.client_brief || parsed.text;
+          if (text && String(text).trim().length > 0) {
+            return { text: String(text), note: `Example fixture: examples/${file} (${reason})` };
+          }
+        } catch {
+          // Skip non-parseable / non-matching examples
+        }
+      }
+    }
+
+    // 3. Legacy input/*.txt samples
+    if (fsSync.existsSync(inputDir)) {
+      const randomSample = samples[Math.floor(Math.random() * samples.length)];
+      const samplePath = path.join(inputDir, randomSample);
+      if (fsSync.existsSync(samplePath)) {
+        const text = fsSync.readFileSync(samplePath, 'utf8');
+        return { text, note: `Fallback sample: ${randomSample} (${reason})` };
+      }
     }
 
     return null;
