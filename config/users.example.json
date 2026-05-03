@@ -1,0 +1,19 @@
+{
+  "_comment": "users.example.json — synthetic placeholder for the gitignored config/users.db SQLite database. Schema is auto-created by lib/rbac.js on first run. Tracks workspace membership and pending invitations.",
+  "_db_path": "config/users.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS workspace_users (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, email TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'member', joined_at INTEGER NOT NULL, invited_by TEXT, status TEXT DEFAULT 'active', UNIQUE(workspace_id, email))",
+      "CREATE TABLE IF NOT EXISTS invitations (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, email TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'member', invited_by TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, status TEXT DEFAULT 'pending')"
+    ]
+  },
+  "rows": {
+    "workspace_users": [
+      {"id": "wu_demo_001", "workspace_id": "ws_demo_acme", "email": "owner@example.com", "role": "owner", "joined_at": 1735603200000, "invited_by": null, "status": "active"},
+      {"id": "wu_demo_002", "workspace_id": "ws_demo_acme", "email": "member@example.com", "role": "member", "joined_at": 1735689600000, "invited_by": "owner@example.com", "status": "active"}
+    ],
+    "invitations": [
+      {"id": "inv_demo_001", "workspace_id": "ws_demo_acme", "email": "newhire@example.com", "role": "member", "invited_by": "owner@example.com", "created_at": 1735776000000, "expires_at": 1736380800000, "status": "pending"}
+    ]
+  }
+}

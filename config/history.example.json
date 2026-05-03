@@ -1,0 +1,23 @@
+{
+  "_comment": "history.example.json — synthetic placeholder for the gitignored config/history.db SQLite database. Schema is auto-created by lib/history.js on first run. Tracks projects, executions, and artifacts for the GTM ops pipeline.",
+  "_db_path": "config/history.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, client_slug TEXT NOT NULL, project_slug TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(client_slug, project_slug))",
+      "CREATE TABLE IF NOT EXISTS executions (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, timestamp INTEGER, revision INTEGER NOT NULL, input_hash TEXT, input_path TEXT, output_dir TEXT, status TEXT, slug TEXT, metadata TEXT, FOREIGN KEY(project_id) REFERENCES projects(id))",
+      "CREATE TABLE IF NOT EXISTS artifacts (id INTEGER PRIMARY KEY AUTOINCREMENT, execution_id INTEGER, kind TEXT, path TEXT, size_bytes INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(execution_id) REFERENCES executions(id))"
+    ]
+  },
+  "rows": {
+    "projects": [
+      {"id": 1, "name": "Acme Corp - HVAC Intake Automation", "client_slug": "acme-corp", "project_slug": "hvac-intake", "created_at": "2026-01-01 00:00:00"}
+    ],
+    "executions": [
+      {"id": 1, "project_id": 1, "timestamp": 1735689600000, "revision": 1, "input_hash": "0000000000000000000000000000000000000000000000000000000000000001", "input_path": "input/acme-intake.txt", "output_dir": "output/acme-corp/", "status": "completed", "slug": "WRN-AI-acme-corp-hvac-intake-26r1", "metadata": "{\"tier\":\"standard\"}"}
+    ],
+    "artifacts": [
+      {"id": 1, "execution_id": 1, "kind": "pdf", "path": "output/acme-corp/proposal.pdf", "size_bytes": 524288, "created_at": "2026-01-01 00:01:00"},
+      {"id": 2, "execution_id": 1, "kind": "html", "path": "output/acme-corp/proposal.html", "size_bytes": 131072, "created_at": "2026-01-01 00:01:00"}
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "_comment": "usage.example.json — synthetic placeholder for the gitignored config/usage.db SQLite database. Schema is auto-created by lib/usage.js on first run. Logs per-event usage for billing/analytics.",
+  "_db_path": "config/usage.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS usage_events (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id TEXT DEFAULT 'default', user_id TEXT DEFAULT 'anonymous', event_type TEXT NOT NULL, resource_id TEXT, metadata TEXT, timestamp INTEGER NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+    ]
+  },
+  "rows": {
+    "usage_events": [
+      {"id": 1, "workspace_id": "ws_demo_acme", "user_id": "user_demo_001", "event_type": "presales.generate", "resource_id": "run_demo_001", "metadata": "{\"tokens\":4200,\"duration_ms\":45000}", "timestamp": 1735689600000, "created_at": "2026-01-01 00:00:00"},
+      {"id": 2, "workspace_id": "ws_demo_acme", "user_id": "user_demo_001", "event_type": "presales.export", "resource_id": "run_demo_001", "metadata": "{\"format\":\"pdf\"}", "timestamp": 1735693200000, "created_at": "2026-01-01 01:00:00"}
+    ]
+  }
+}

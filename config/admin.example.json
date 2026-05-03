@@ -1,0 +1,22 @@
+{
+  "_comment": "admin.example.json — synthetic placeholder for the gitignored config/admin.db SQLite database. Schema is auto-created by lib/admin.js on first run. Stores admin metrics and activity feed.",
+  "_db_path": "config/admin.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS metric_buckets (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, metric_type TEXT NOT NULL, bucket_hour INTEGER NOT NULL, value REAL NOT NULL DEFAULT 0, count INTEGER NOT NULL DEFAULT 1, UNIQUE(workspace_id, metric_type, bucket_hour))",
+      "CREATE TABLE IF NOT EXISTS metric_daily (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, metric_type TEXT NOT NULL, bucket_date INTEGER NOT NULL, value REAL NOT NULL DEFAULT 0, count INTEGER NOT NULL DEFAULT 0, UNIQUE(workspace_id, metric_type, bucket_date))",
+      "CREATE TABLE IF NOT EXISTS activity_feed (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, user_id TEXT, activity_type TEXT NOT NULL, payload TEXT, created_at INTEGER NOT NULL)"
+    ]
+  },
+  "rows": {
+    "metric_buckets": [
+      {"id": "mb_demo_001", "workspace_id": "ws_demo_acme", "metric_type": "presales.runs", "bucket_hour": 470121, "value": 5, "count": 5}
+    ],
+    "metric_daily": [
+      {"id": "md_demo_001", "workspace_id": "ws_demo_acme", "metric_type": "presales.runs", "bucket_date": 19589, "value": 12, "count": 12}
+    ],
+    "activity_feed": [
+      {"id": "af_demo_001", "workspace_id": "ws_demo_acme", "user_id": "user_demo_001", "activity_type": "presales.generated", "payload": "{\"client\":\"Acme Corp\",\"slug\":\"acme-corp\"}", "created_at": 1735689600000}
+    ]
+  }
+}

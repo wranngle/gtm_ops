@@ -1,0 +1,29 @@
+{
+  "_comment": "audit.example.json — synthetic placeholder for the gitignored config/audit.db SQLite database. Schema is auto-created by lib/audit.js on first run. Audit logs are immutable in production (hash-chained).",
+  "_db_path": "config/audit.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, log_id TEXT UNIQUE NOT NULL, workspace_id TEXT, user_id TEXT, action TEXT NOT NULL, resource_type TEXT, resource_id TEXT, ip_address TEXT, user_agent TEXT, metadata TEXT, hash TEXT NOT NULL, previous_hash TEXT, timestamp INTEGER NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+    ]
+  },
+  "rows": {
+    "audit_logs": [
+      {
+        "id": 1,
+        "log_id": "log_demo_001",
+        "workspace_id": "ws_demo_acme",
+        "user_id": "user_demo_001",
+        "action": "ops.run",
+        "resource_type": "ops_run",
+        "resource_id": "run_demo_acme_001",
+        "ip_address": "203.0.113.10",
+        "user_agent": "Mozilla/5.0 (placeholder UA)",
+        "metadata": "{\"input_file\":\"input/sample-intake.txt\"}",
+        "hash": "0000000000000000000000000000000000000000000000000000000000000001",
+        "previous_hash": null,
+        "timestamp": 1735689600000,
+        "created_at": "2026-01-01 00:00:00"
+      }
+    ]
+  }
+}

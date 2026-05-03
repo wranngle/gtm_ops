@@ -1,0 +1,40 @@
+{
+  "_comment": "webhooks.example.json — synthetic placeholder for the gitignored config/webhooks.db SQLite database. Schema is auto-created by lib/webhooks.js on first run; this file shows the shape with 1 sample row per table.",
+  "_db_path": "config/webhooks.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS webhooks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id TEXT DEFAULT 'default', name TEXT NOT NULL, url TEXT NOT NULL, secret TEXT NOT NULL, events TEXT NOT NULL, enabled INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+      "CREATE TABLE IF NOT EXISTS webhook_deliveries (id INTEGER PRIMARY KEY AUTOINCREMENT, webhook_id INTEGER NOT NULL, delivery_id TEXT NOT NULL, event_type TEXT NOT NULL, payload TEXT NOT NULL, status TEXT DEFAULT 'pending', attempts INTEGER DEFAULT 0, response_status INTEGER, response_body TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, completed_at TEXT, FOREIGN KEY (webhook_id) REFERENCES webhooks(id) ON DELETE CASCADE)"
+    ]
+  },
+  "rows": {
+    "webhooks": [
+      {
+        "id": 1,
+        "workspace_id": "ws_demo_acme",
+        "name": "Demo Lead Capture",
+        "url": "https://example.com/webhooks/lead-capture",
+        "secret": "your-webhook-shared-secret-here",
+        "events": "[\"lead.created\", \"lead.qualified\"]",
+        "enabled": 1,
+        "created_at": "2026-01-01 00:00:00",
+        "updated_at": "2026-01-01 00:00:00"
+      }
+    ],
+    "webhook_deliveries": [
+      {
+        "id": 1,
+        "webhook_id": 1,
+        "delivery_id": "dlv_demo_001",
+        "event_type": "lead.created",
+        "payload": "{\"client\":\"Acme Corp\",\"contact_email\":\"test@example.com\"}",
+        "status": "delivered",
+        "attempts": 1,
+        "response_status": 200,
+        "response_body": "{\"ok\":true}",
+        "created_at": "2026-01-15 12:00:00",
+        "completed_at": "2026-01-15 12:00:01"
+      }
+    ]
+  }
+}

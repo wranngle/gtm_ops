@@ -1,0 +1,31 @@
+{
+  "_comment": "evaluation.example.json — synthetic placeholder for the gitignored config/evaluation.db SQLite database. Schema is auto-created by lib/evaluation/corpus.js on first run.",
+  "_db_path": "config/evaluation.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS case_studies (id TEXT PRIMARY KEY, source_json TEXT NOT NULL, problem_json TEXT NOT NULL, solution_json TEXT NOT NULL, meta_json TEXT NOT NULL, harvested_at TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+      "CREATE TABLE IF NOT EXISTS evaluation_runs (id TEXT PRIMARY KEY, case_study_id TEXT NOT NULL REFERENCES case_studies(id), pipeline_version TEXT NOT NULL, schema_version TEXT DEFAULT '1.0.0', status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'completed', 'failed', 'skipped')), error_message TEXT, input_json TEXT NOT NULL, output_json TEXT, scores_json TEXT, aggregate_score REAL, flaws_detected TEXT DEFAULT '[]', triggered_by TEXT DEFAULT 'manual', run_at TEXT NOT NULL, completed_at TEXT, duration_ms INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+      "CREATE TABLE IF NOT EXISTS flaw_patterns (id TEXT PRIMARY KEY, pattern_code TEXT NOT NULL, description TEXT NOT NULL, business_impact TEXT, affected_runs TEXT DEFAULT '[]', total_evaluations INTEGER DEFAULT 0, frequency_percent REAL DEFAULT 0, severity TEXT CHECK(severity IN ('low', 'medium', 'high', 'critical')), severity_rationale TEXT, recommendations TEXT DEFAULT '[]', affected_code_paths TEXT DEFAULT '[]', first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, status TEXT DEFAULT 'active' CHECK(status IN ('active', 'investigating', 'fixed', 'wont_fix')), created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+      "CREATE TABLE IF NOT EXISTS batch_evaluations (id TEXT PRIMARY KEY, total_cases INTEGER NOT NULL, completed INTEGER DEFAULT 0, failed INTEGER DEFAULT 0, skipped INTEGER DEFAULT 0, mean_score REAL, median_score REAL, min_score REAL, max_score REAL, std_dev REAL, score_distribution_json TEXT, top_flaws_json TEXT, run_ids TEXT DEFAULT '[]', started_at TEXT NOT NULL, completed_at TEXT, total_duration_ms INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+    ]
+  },
+  "rows": {
+    "case_studies": [
+      {
+        "id": "cs_demo_acme",
+        "source_json": "{\"url\":\"https://example.com/case-studies/acme\",\"channel\":\"public-website\"}",
+        "problem_json": "{\"summary\":\"Manual lead intake taking 4 hours/day\"}",
+        "solution_json": "{\"summary\":\"AI-powered intake bot reduces handling to 20 min/day\"}",
+        "meta_json": "{\"industry\":\"hvac\",\"size\":\"50-100\"}",
+        "harvested_at": "2026-01-01T00:00:00Z",
+        "created_at": "2026-01-01 00:00:00",
+        "updated_at": "2026-01-01 00:00:00"
+      }
+    ],
+    "evaluation_runs": [
+      {"id": "run_demo_001", "case_study_id": "cs_demo_acme", "pipeline_version": "v3.1.0", "schema_version": "1.0.0", "status": "completed", "error_message": null, "input_json": "{\"client_name\":\"Acme Corp\"}", "output_json": "{\"audit_score\":85}", "scores_json": "{\"completeness\":0.95}", "aggregate_score": 0.90, "flaws_detected": "[]", "triggered_by": "manual", "run_at": "2026-01-15T12:00:00Z", "completed_at": "2026-01-15T12:01:00Z", "duration_ms": 60000, "created_at": "2026-01-15 12:00:00"}
+    ],
+    "flaw_patterns": [],
+    "batch_evaluations": []
+  }
+}

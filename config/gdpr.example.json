@@ -1,0 +1,23 @@
+{
+  "_comment": "gdpr.example.json — synthetic placeholder for the gitignored config/gdpr.db SQLite database. Schema is auto-created by lib/gdpr.js on first run. Tracks user consents, export requests, and deletion requests.",
+  "_db_path": "config/gdpr.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS user_consents (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, consent_type TEXT NOT NULL, version TEXT NOT NULL, consented INTEGER NOT NULL, ip_address TEXT, user_agent TEXT, consented_at INTEGER NOT NULL)",
+      "CREATE TABLE IF NOT EXISTS export_jobs (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, file_path TEXT, file_size INTEGER, created_at INTEGER NOT NULL, started_at INTEGER, completed_at INTEGER, expires_at INTEGER, error TEXT)",
+      "CREATE TABLE IF NOT EXISTS deletion_requests (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, requested_at INTEGER NOT NULL, processed_at INTEGER, error TEXT)"
+    ]
+  },
+  "rows": {
+    "user_consents": [
+      {"id": "uc_demo_001", "user_id": "user_demo_001", "consent_type": "tos", "version": "v1.0", "consented": 1, "ip_address": "203.0.113.10", "user_agent": "Mozilla/5.0 (placeholder UA)", "consented_at": 1735689600000},
+      {"id": "uc_demo_002", "user_id": "user_demo_001", "consent_type": "marketing", "version": "v1.0", "consented": 0, "ip_address": "203.0.113.10", "user_agent": "Mozilla/5.0 (placeholder UA)", "consented_at": 1735689600000}
+    ],
+    "export_jobs": [
+      {"id": "ej_demo_001", "user_id": "user_demo_001", "status": "completed", "file_path": "exports/user_demo_001_2026-01-01.zip", "file_size": 12345, "created_at": 1735689600000, "started_at": 1735689610000, "completed_at": 1735689650000, "expires_at": 1738281600000, "error": null}
+    ],
+    "deletion_requests": [
+      {"id": "dr_demo_001", "user_id": "user_demo_002", "status": "pending", "requested_at": 1735689600000, "processed_at": null, "error": null}
+    ]
+  }
+}

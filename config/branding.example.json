@@ -1,0 +1,48 @@
+{
+  "_comment": "branding.example.json — synthetic placeholder for the gitignored config/branding.db SQLite database. Schema is auto-created by lib/branding.js on first run; this file shows the shape with 1 sample row per table.",
+  "_db_path": "config/branding.db",
+  "schema": {
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS workspace_branding (workspace_id TEXT PRIMARY KEY, logo_url TEXT, logo_width INTEGER, logo_height INTEGER, primary_color TEXT DEFAULT '#ff5f00', secondary_color TEXT DEFAULT '#cf3c69', background_color TEXT DEFAULT '#fcfaf5', text_color TEXT DEFAULT '#12111a', success_color TEXT DEFAULT '#5D8C61', font_family TEXT, white_label INTEGER DEFAULT 0, powered_by_visible INTEGER DEFAULT 1, custom_footer TEXT, updated_at INTEGER NOT NULL)",
+      "CREATE TABLE IF NOT EXISTS custom_domains (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, domain TEXT UNIQUE NOT NULL, verification_token TEXT NOT NULL, status TEXT DEFAULT 'pending', ssl_issued INTEGER DEFAULT 0, ssl_expires_at INTEGER, verified_at INTEGER, created_at INTEGER NOT NULL, last_check_at INTEGER)",
+      "CREATE TABLE IF NOT EXISTS domain_verification_logs (id TEXT PRIMARY KEY, domain_id TEXT NOT NULL, check_type TEXT NOT NULL, success INTEGER NOT NULL, error TEXT, created_at INTEGER NOT NULL)"
+    ]
+  },
+  "rows": {
+    "workspace_branding": [
+      {
+        "workspace_id": "ws_demo_acme",
+        "logo_url": "https://example.com/branding/acme-logo.png",
+        "logo_width": 240,
+        "logo_height": 60,
+        "primary_color": "#ff5f00",
+        "secondary_color": "#cf3c69",
+        "background_color": "#fcfaf5",
+        "text_color": "#12111a",
+        "success_color": "#5D8C61",
+        "font_family": "Outfit, Inter, sans-serif",
+        "white_label": 0,
+        "powered_by_visible": 1,
+        "custom_footer": "Powered by Wranngle Systems",
+        "updated_at": 1735689600000
+      }
+    ],
+    "custom_domains": [
+      {
+        "id": "dom_demo_001",
+        "workspace_id": "ws_demo_acme",
+        "domain": "ops.example.com",
+        "verification_token": "your-verification-token-here",
+        "status": "verified",
+        "ssl_issued": 1,
+        "ssl_expires_at": 1751212800000,
+        "verified_at": 1735689600000,
+        "created_at": 1735603200000,
+        "last_check_at": 1735689600000
+      }
+    ],
+    "domain_verification_logs": [
+      {"id": "dvl_demo_001", "domain_id": "dom_demo_001", "check_type": "dns_txt", "success": 1, "error": null, "created_at": 1735689600000}
+    ]
+  }
+}
