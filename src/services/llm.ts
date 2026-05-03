@@ -966,7 +966,7 @@ export class BatchLLMExecutor {
       generatedContent = this.parseJSON(genResult.content);
     } catch (err) {
       console.error('Failed to parse generated content:', (err as Error).message);
-      console.error('Raw output:', genResult.content.substring(0, 500));
+      console.error('Raw output:', genResult.content.slice(0, 500));
       throw new Error('LLM returned invalid JSON');
     }
 
@@ -1130,7 +1130,7 @@ export async function executeLLMJson(
   } catch (parseError) {
     // Log the parsing error for debugging
     console.warn('⚠️ JSON parsing failed:', (parseError as Error).message);
-    console.warn('   Raw content starts with:', result.content.substring(0, 100));
+    console.warn('   Raw content starts with:', result.content.slice(0, 100));
 
     // Return empty object instead of raw string to prevent downstream errors
     return {};

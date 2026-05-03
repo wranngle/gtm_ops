@@ -1443,7 +1443,7 @@ function collectCitations(integrationResearch: Array<Record<string, unknown>>): 
 
 function generatePlanId(): string {
   const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
+  const random = Math.random().toString(36).slice(2, 8);
   return `plan_${timestamp}_${random}`;
 }
 
