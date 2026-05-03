@@ -434,7 +434,7 @@ export function withValidation<TInput, TOutput>(
   inputSchema: z.ZodSchema<TInput>,
   outputSchema: z.ZodSchema<TOutput> | null = null
 ): (input: TInput, ...args: any[]) => TOutput {
-  return function validatedFn(input: TInput, ...args: any[]): TOutput {
+  return function (input: TInput, ...args: any[]): TOutput {
     // Validate first argument as inputs
     if (inputSchema && input) {
       const inputResult = inputSchema.safeParse(input);

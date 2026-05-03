@@ -277,13 +277,13 @@ async function main() {
   let pipelineComplete = false;
   let pipelineSuccess = true;
   
-  es.onmessage = (event) => {
+  es.addEventListener('message', (event) => {
     try {
       const data = JSON.parse(event.data);
       if (data.msg) {
         // Print log message (already has ANSI colors from pipeline)
         console.log(data.msg);
-        
+
         // Check for completion (detect multiple success patterns)
         if (data.msg.includes('COMPLETED SUCCESSFULLY') || data.msg.includes('PIPELINE COMPLETE')) {
           pipelineComplete = true;
@@ -296,13 +296,13 @@ async function main() {
     } catch {
       // Ignore parse errors
     }
-  };
-  
-  es.onerror = (_err) => {
+  });
+
+  es.addEventListener('error', () => {
     if (!pipelineComplete) {
       console.error(`${ansi.dim}SSE connection error - continuing...${ansi.reset}`);
     }
-  };
+  });
   
   // Submit to server API (this will trigger the SSE events)
   try {
@@ -326,6 +326,7 @@ async function main() {
     const maxWait = 10 * 60 * 1000;
     const startTime = Date.now();
     
+    // eslint-disable-next-line no-unmodified-loop-condition -- pipelineComplete is mutated asynchronously by SSE handler
     while (!pipelineComplete && (Date.now() - startTime) < maxWait) {
       await new Promise(resolve => setTimeout(resolve, 500));
     }

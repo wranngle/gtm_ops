@@ -19,6 +19,7 @@ module.exports = [
       'templates/**/*.html',
       'playwright-report/**',
       'test-results/**',
+      '**/*.d.ts',
     ],
     rules: {
       'unicorn/filename-case': ['error', {

@@ -216,7 +216,7 @@ export function removeFromCollection<T>(
     return collection;
   }
 
-  delete collection.byId[id];
+  Reflect.deleteProperty(collection.byId, id);
   collection.order = collection.order.filter(key => key !== id);
   collection.count = collection.order.length;
 

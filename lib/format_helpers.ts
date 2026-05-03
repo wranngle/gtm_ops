@@ -145,8 +145,7 @@ export function duration(dv: DurationValue | number, options: DurationOptions = 
   const {defaultUnit = 'hours'} = options;
 
   // Handle raw numbers
-  let dvTyped: DurationValue;
-  dvTyped = typeof dv === 'number' ? {value: dv, unit: defaultUnit} : dv;
+  const dvTyped: DurationValue = typeof dv === 'number' ? {value: dv, unit: defaultUnit} : dv;
 
   if (!dvTyped || typeof dvTyped.value !== 'number') {
     return '0 hours';

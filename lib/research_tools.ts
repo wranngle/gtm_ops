@@ -70,7 +70,9 @@ async function nativeRequest(url: string, options: RequestOptions = {}): Promise
 
     const req = https.request(reqOptions, (res) => {
       let data = '';
-      res.on('data', (chunk) => data += chunk);
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
           try {

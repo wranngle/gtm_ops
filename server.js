@@ -43,6 +43,7 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const port = process.env.PORT || 3000;
+// eslint-disable-next-line unicorn/prefer-event-target -- need Node EventEmitter API (.on/.off/.emit) used by SSE handlers below
 const logEmitter = new EventEmitter();
 
 app.use(express.json({ limit: '10mb' }));
@@ -1232,7 +1233,7 @@ app.get('/api/eval/stats', generalLimiter, async (req, res) => {
         failed: runs.filter(r => r.status === 'failed').length,
       },
       scores: scores.length > 0 ? {
-        mean: +(scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2),
+        mean: Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)),
         min: Math.min(...scores),
         max: Math.max(...scores),
       } : null,
