@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Cleanup script to archive broken output schemas
  * These are outputs from earlier pipeline versions missing required fields
