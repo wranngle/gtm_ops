@@ -1,21 +1,44 @@
-# Cloudflare Pages config for the gtm_ops DEMO_MODE static site.
+# Cloudflare Pages config for the gtm_ops full-stack deploy.
 #
-# This deploys ONLY the vanilla HTML/JS operator UI at apps/ops-console/.
-# The Express server.js + live /api/* routes do NOT run on Pages — that's
-# a separate hosting decision (Fly.io / Render / Railway). DEMO_MODE shim
-# in each HTML page intercepts /api/* fetches and serves fixtures/*.json,
-# so the deployed site is fully interactive without a backend.
+# The static UI at apps/ops-console/ ships as before; in addition, every
+# /api/* request is intercepted by a Pages Function under functions/api/*
+# before the static fall-through. Functions read from D1 first and fall
+# back to the bundled fixtures (the same JSON used by the DEMO_MODE shim)
+# when D1 is empty or unbound — see docs/cf-fullstack-feasibility.md
+# "Fallback model".
 #
-# Operator setup (one-time):
-#   1) `wrangler login` (browser OAuth — covers all future deploys)
+# Operator setup (one-time, all interactive — see scripts/migrate-d1.sh):
+#   1) `wrangler login`
 #   2) `wrangler pages project create gtm-ops --production-branch main`
-#   3) `bun run deploy` (or `wrangler pages deploy apps/ops-console`)
-#
-# OR connect the repo in the CF dashboard:
-#   Build command: (none)
-#   Build output directory: apps/ops-console
-#   Root directory: /
+#   3) `wrangler d1 create presales-d1`         (paste returned id below)
+#   4) `wrangler kv:namespace create TEMPLATES` (paste returned id below)
+#   5) `wrangler pages secret put GEMINI_API_KEY --project-name=gtm-ops`
+#   6) `wrangler pages secret put N8N_WEBHOOK_SECRET --project-name=gtm-ops`
+#   7) `bash scripts/migrate-d1.sh`             (loads config/seed_presales.sql)
+#   8) `bun run deploy:preview`                  (preview branch, NOT main)
 
 name = "gtm-ops"
 compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "apps/ops-console"
+
+# D1 — relational store (presales config seed + Phase 2.5 runtime tables).
+# Until the operator runs `wrangler d1 create presales-d1` and pastes the
+# returned database_id below, deploys still succeed: every Pages Function
+# detects an unbound DB and falls back to the bundled fixture JSON.
+[[d1_databases]]
+binding = "DB"
+database_name = "presales-d1"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# KV — bundled template strings + small read-mostly settings.
+[[kv_namespaces]]
+binding = "TEMPLATES"
+id = "0000000000000000000000000000000000"
+
+# Browser Rendering — used by the /api/generate route's Phase 2.5 PDF path
+# (replacement for puppeteer; see lib/pdf_generator.js). The binding is
+# declared up front so the operator only needs to enable Browser Rendering
+# in the Cloudflare dashboard and redeploy.
+[browser]
+binding = "BROWSER"
