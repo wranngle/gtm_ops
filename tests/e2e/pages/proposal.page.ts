@@ -11,7 +11,7 @@
  * - Stats: .stat, .stat__value, .stat__label
  * - Timeline: .project-timeline
  */
-import { Page, Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 
 export class ProposalPage {
   readonly page: Page;
@@ -53,7 +53,7 @@ export class ProposalPage {
   }
 
   async getMilestoneCount(): Promise<number> {
-    return await this.milestones.count();
+    return this.milestones.count();
   }
 
   async getMilestoneAmounts(): Promise<string[]> {
@@ -64,6 +64,7 @@ export class ProposalPage {
       const amount = await this.milestones.nth(i).locator('.badge--accent, .amount').first().textContent();
       if (amount) amounts.push(amount.trim());
     }
+
     return amounts;
   }
 
@@ -95,7 +96,7 @@ export class ProposalPage {
   }
 
   async getTierCount(): Promise<number> {
-    return await this.tierCards.count();
+    return this.tierCards.count();
   }
 
   async hasCTAButton(): Promise<boolean> {
@@ -115,6 +116,6 @@ export class ProposalPage {
   }
 
   async getStatCount(): Promise<number> {
-    return await this.stats.count();
+    return this.stats.count();
   }
 }

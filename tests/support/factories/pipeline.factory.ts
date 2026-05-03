@@ -3,15 +3,15 @@
  * Provides pre-computed pipeline stage outputs for testing
  * Eliminates need for LLM calls in most tests
  */
-import { faker } from '@faker-js/faker';
 import { join } from 'path';
+import { faker } from '@faker-js/faker';
 import { createDentalIntake, type IntakeData } from './intake.factory';
 import { createIntegrationResearch, type IntegrationResearch } from './integration.factory';
 
 /**
  * Project Identity - Generated from intake
  */
-export interface ProjectIdentity {
+export type ProjectIdentity = {
   client_name: string;
   client_slug: string;
   process_name: string;
@@ -27,9 +27,9 @@ export interface ProjectIdentity {
 
 export function createProjectIdentity(overrides: Partial<ProjectIdentity> = {}): ProjectIdentity {
   const clientName = overrides.client_name || 'Bright Smile Dental';
-  const clientSlug = clientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 15);
+  const clientSlug = clientName.toLowerCase().replaceAll(/[^a-z\d]+/g, '-').slice(0, 15);
   const processName = overrides.process_name || 'Patient Scheduling';
-  const processSlug = processName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 15);
+  const processSlug = processName.toLowerCase().replaceAll(/[^a-z\d]+/g, '-').slice(0, 15);
   const year = new Date().getFullYear();
 
   return {
@@ -51,7 +51,7 @@ export function createProjectIdentity(overrides: Partial<ProjectIdentity> = {}):
 /**
  * Tier Assessment
  */
-export interface TierAssessment {
+export type TierAssessment = {
   key: string;
   label: string;
   base_hours: number;
@@ -61,7 +61,7 @@ export interface TierAssessment {
 
 export function createTierAssessment(overrides: Partial<TierAssessment> = {}): TierAssessment {
   const tiers = [
-    { key: 'standard', label: 'Standard', base_hours: 80, risk_multiplier: 1.0 },
+    { key: 'standard', label: 'Standard', base_hours: 80, risk_multiplier: 1 },
     { key: 'moderate', label: 'Moderate', base_hours: 120, risk_multiplier: 1.15 },
     { key: 'complex', label: 'Complex', base_hours: 180, risk_multiplier: 1.3 },
     { key: 'enterprise', label: 'Enterprise', base_hours: 280, risk_multiplier: 1.5 }
@@ -82,7 +82,7 @@ export function createTierAssessment(overrides: Partial<TierAssessment> = {}): T
 /**
  * Bleed Calculation
  */
-export interface BleedCalculation {
+export type BleedCalculation = {
   volume_per_period: number;
   period_unit: string;
   current_cost_per_item: number;
@@ -102,17 +102,24 @@ export function createBleedCalculation(overrides: Partial<BleedCalculation> = {}
   // Calculate monthly volume based on period
   let monthlyVolume: number;
   switch (periodUnit) {
-    case 'day':
+    case 'day': {
       monthlyVolume = volumePerPeriod * 22; // Working days
       break;
-    case 'week':
+    }
+
+    case 'week': {
       monthlyVolume = volumePerPeriod * 4;
       break;
-    case 'month':
+    }
+
+    case 'month': {
       monthlyVolume = volumePerPeriod;
       break;
-    default:
+    }
+
+    default: {
       monthlyVolume = volumePerPeriod * 22;
+    }
   }
 
   const annualVolume = monthlyVolume * 12;
@@ -136,20 +143,20 @@ export function createBleedCalculation(overrides: Partial<BleedCalculation> = {}
 /**
  * Pricing Structure
  */
-export interface PricingStructure {
+export type PricingStructure = {
   currency: string;
   pricing_model: string;
   hourly_rate: number;
   total_hours: number;
   subtotal: number;
-  audit_credit: number | null;
-  early_adopter_discount: number | null;
+  audit_credit: number | undefined;
+  early_adopter_discount: number | undefined;
   final_price: number;
   final_price_display: string;
   milestones: Record<string, MilestonePayment>;
 }
 
-export interface MilestonePayment {
+export type MilestonePayment = {
   milestone_name: string;
   percentage: number;
   amount: number;
@@ -168,8 +175,8 @@ export function createPricingStructure(totalHours?: number, overrides: Partial<P
     design: {
       milestone_name: 'Design & Planning',
       percentage: 20,
-      amount: Math.round(finalPrice * 0.20),
-      amount_display: `$${Math.round(finalPrice * 0.20).toLocaleString()}`
+      amount: Math.round(finalPrice * 0.2),
+      amount_display: `$${Math.round(finalPrice * 0.2).toLocaleString()}`
     },
     build: {
       milestone_name: 'Build & Configure',
@@ -186,8 +193,8 @@ export function createPricingStructure(totalHours?: number, overrides: Partial<P
     deploy: {
       milestone_name: 'Deploy & Support',
       percentage: 10,
-      amount: Math.round(finalPrice * 0.10),
-      amount_display: `$${Math.round(finalPrice * 0.10).toLocaleString()}`
+      amount: Math.round(finalPrice * 0.1),
+      amount_display: `$${Math.round(finalPrice * 0.1).toLocaleString()}`
     }
   };
 
@@ -209,7 +216,7 @@ export function createPricingStructure(totalHours?: number, overrides: Partial<P
 /**
  * FinOps / ROI Calculation
  */
-export interface FinOpsCalculation {
+export type FinOpsCalculation = {
   payback_period_months: number;
   payback_period_display: string;
   roi_percentage: number;
@@ -228,11 +235,11 @@ export function createFinOpsCalculation(pricing?: PricingStructure, bleed?: Blee
   const bleedData = bleed || createBleedCalculation();
 
   // Hard savings = 70% of bleed captured
-  const hardSavingsMonthly = Math.round(bleedData.monthly_bleed * 0.70);
+  const hardSavingsMonthly = Math.round(bleedData.monthly_bleed * 0.7);
   const hardSavingsAnnual = hardSavingsMonthly * 12;
 
   // Modeled opportunity = 30% additional
-  const modeledMonthly = Math.round(bleedData.monthly_bleed * 0.30);
+  const modeledMonthly = Math.round(bleedData.monthly_bleed * 0.3);
   const modeledAnnual = modeledMonthly * 12;
 
   const totalMonthly = hardSavingsMonthly + modeledMonthly;
@@ -274,7 +281,7 @@ export function createFinOpsCalculation(pricing?: PricingStructure, bleed?: Blee
 /**
  * Technical Approach
  */
-export interface TechnicalApproach {
+export type TechnicalApproach = {
   summary: string;
   technology_stack: string[];
   integrations: IntegrationItem[];
@@ -282,7 +289,7 @@ export interface TechnicalApproach {
   citations: Citation[];
 }
 
-export interface IntegrationItem {
+export type IntegrationItem = {
   system: string;
   type: string;
   complexity: string;
@@ -290,13 +297,13 @@ export interface IntegrationItem {
   notes: string;
 }
 
-export interface LaborFactor {
+export type LaborFactor = {
   factor: string;
   impact: string;
   hours_adjustment: number;
 }
 
-export interface Citation {
+export type Citation = {
   id: number;
   url: string;
   type: string;
@@ -314,7 +321,7 @@ export function createTechnicalApproach(systems?: string[]): TechnicalApproach {
 
   const integrations: IntegrationItem[] = systemList.map((sys, idx) => ({
     system: sys.split(' (')[0],
-    type: sys.includes('(') ? sys.match(/\(([^)]+)\)/)?.[1] || 'Integration' : 'Integration',
+    type: sys.includes('(') ? (/\(([^)]+)\)/.exec(sys))?.[1] || 'Integration' : 'Integration',
     complexity: faker.helpers.arrayElement(['Low', 'Medium', 'High']),
     has_native_node: faker.datatype.boolean(),
     notes: `Standard ${sys.split(' ')[0]} integration`
@@ -337,7 +344,7 @@ export function createTechnicalApproach(systems?: string[]): TechnicalApproach {
 /**
  * Complete Pipeline Schema
  */
-export interface PipelineSchema {
+export type PipelineSchema = {
   $schema: string;
   version: string;
   generated_at: string;
@@ -381,7 +388,7 @@ export function createPipelineSchema(overrides: Partial<PipelineSchema> = {}): P
 /**
  * Pipeline Result (what run() returns)
  */
-export interface PipelineResult {
+export type PipelineResult = {
   success: boolean;
   stats: {
     startTime: number;
@@ -406,14 +413,14 @@ export function createPipelineResult(success = true, schema?: PipelineSchema): P
   return {
     success,
     stats: {
-      startTime: Date.now() - 30000,
+      startTime: Date.now() - 30_000,
       endTime: Date.now(),
-      duration: 30000,
+      duration: 30_000,
       stages: {
         extract: { duration: 5000 },
         research: { duration: 3000 },
         estimate: { duration: 2000 },
-        render: { duration: 10000 },
+        render: { duration: 10_000 },
         polish: { duration: 8000 },
         pdf: { duration: 2000 }
       }

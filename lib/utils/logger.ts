@@ -7,7 +7,7 @@ import { sanitize } from './errors.js';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogEntry {
+type LogEntry = {
   timestamp: string;
   level: LogLevel;
   correlationId: string;

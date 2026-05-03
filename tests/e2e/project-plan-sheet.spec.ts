@@ -29,9 +29,9 @@ test.describe('Project Plan - Timeline Section', () => {
     const plan = new ProjectPlanPage(page);
     await page.goto(`file://${reportPath}`);
     const names = await plan.getPhaseNames();
-    names.forEach(name => {
+    for (const name of names) {
       expect(name.length).toBeGreaterThan(0);
-    });
+    }
   });
 
   test('[P1][PP-004] should have at least 3 phases', async ({ page }) => {
@@ -204,7 +204,7 @@ test.describe('Project Plan - Success Metrics', () => {
 
   test('[P2][PP-024] metrics should be measurable', async ({ page }) => {
     await page.goto(`file://${reportPath}`);
-    const measurable = await page.locator('text=/%|\\$|hour|day|week|month/i').count();
+    const measurable = await page.locator(String.raw`text=/%|\$|hour|day|week|month/i`).count();
     expect(measurable).toBeGreaterThan(0);
   });
 

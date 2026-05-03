@@ -162,7 +162,7 @@ test.describe('Atomic: Volume & Timing Extraction', () => {
 
       if (hasVolumeInInput) {
         expect(runsPerPeriod, `${inputFile}: q06_runs_per_period should be populated`).toBeTruthy();
-        const numValue = parseInt(runsPerPeriod);
+        const numValue = parseInt(runsPerPeriod, 10);
         expect(numValue).toBeGreaterThan(0);
       }
     }

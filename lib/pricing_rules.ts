@@ -25,19 +25,6 @@
 // =============================================================================
 
 // Re-export all enterprise pricing validation functions from pricing_calculator
-export {
-  enforceProfitFloor,
-  calculateHardLaborSavings,
-  calculateModeledOpportunity,
-  validateHardFloorRule,
-  validatePayback,
-  calculateROI,
-  formatPaybackPeriod
-} from './pricing_calculator.js';
-
-// Re-export formatting utilities from project_identity
-export { formatCurrency } from './project_identity.js';
-
 // Import constants for the default config object
 import {
   PROFIT_FLOOR_PERCENT,
@@ -53,6 +40,19 @@ import {
   PRICE_ROUNDING_INCREMENT,
   MILESTONE_ALLOCATION
 } from './constants.js';
+
+export {
+  enforceProfitFloor,
+  calculateHardLaborSavings,
+  calculateModeledOpportunity,
+  validateHardFloorRule,
+  validatePayback,
+  calculateROI,
+  formatPaybackPeriod
+} from './pricing_calculator.js';
+
+// Re-export formatting utilities from project_identity
+export { formatCurrency } from './project_identity.js';
 
 // =============================================================================
 // TYPES
@@ -172,7 +172,7 @@ export function calculateMargin(price: number, cost: number): number {
 export function calculateInternalCost(
   hours: number,
   hourlyRate: number = INTERNAL_HOURLY_RATE,
-  computeEstimate: number = 0
+  computeEstimate = 0
 ): number {
   return (hours * hourlyRate) + computeEstimate;
 }

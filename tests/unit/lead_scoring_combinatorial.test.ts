@@ -112,7 +112,7 @@ function createSystemsList(count: number): string[] {
 
 function createTextOfLength(length: number): string {
   if (length === 0) return '';
-  return faker.lorem.words(Math.ceil(length / 5)).substring(0, length);
+  return faker.lorem.words(Math.ceil(length / 5)).slice(0, Math.max(0, length));
 }
 
 function createSystemIntelligenceMap(systems: string[], complexityScore = 5): Map<string, any> {
@@ -126,6 +126,7 @@ function createSystemIntelligenceMap(systems: string[], complexityScore = 5): Ma
       complexity_score: complexityScore,
     });
   }
+
   return map;
 }
 
@@ -163,9 +164,10 @@ async function withRetry<T>(fn: () => T | Promise<T>, maxRetries = 3): Promise<T
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      await new Promise(r => setTimeout(r, Math.pow(2, i) * 10));
+      await new Promise(r => setTimeout(r, 2**i * 10));
     }
   }
+
   throw lastError;
 }
 
@@ -184,15 +186,15 @@ describe('[P0] Budget Alignment - Combinatorial', () => {
   };
 
   // Generate 100+ test cases for budget values
-  const budgetTestCases = BUDGET_VALUES.flatMap(budget => {
+  const budgetTestCases = BUDGET_VALUES.flatMap(budget => 
     // Test each budget with multiple volume/timeline combinations
-    return VOLUME_RANGES.slice(0, 10).map(vol => ({
+    VOLUME_RANGES.slice(0, 10).map(vol => ({
       budget,
       runs: vol.runs,
       unit: vol.unit,
       expected: budgetExpectations[budget as string] ?? 30,
-    }));
-  });
+    }))
+  );
 
   it.each(budgetTestCases)(
     '[P0] budget=$budget with volume $runs/$unit should score ~$expected',
@@ -250,16 +252,12 @@ describe('[P0] Integration Complexity - Combinatorial', () => {
   ];
 
   // Generate combinatorial tests: system count × budget × timeline
-  const complexityTestCases = complexityExpectations.flatMap(({ count, expected }) => {
-    return BUDGET_VALUES.slice(0, 5).flatMap(budget => {
-      return TIMELINE_VALUES.slice(0, 3).map(timeline => ({
-        systemCount: count,
-        budget,
-        timeline,
-        expectedComplexity: expected,
-      }));
-    });
-  });
+  const complexityTestCases = complexityExpectations.flatMap(({ count, expected }) => BUDGET_VALUES.slice(0, 5).flatMap(budget => TIMELINE_VALUES.slice(0, 3).map(timeline => ({
+    systemCount: count,
+    budget,
+    timeline,
+    expectedComplexity: expected,
+  }))));
 
   it.each(complexityTestCases)(
     '[P0] $systemCount systems, budget=$budget, timeline=$timeline',
@@ -301,15 +299,13 @@ describe('[P0] Integration Complexity - Combinatorial', () => {
 
 describe('[P0] Volume Potential - Combinatorial', () => {
   // Generate ~200 volume test cases
-  const volumeTestCases = VOLUME_RANGES.flatMap(({ runs, unit, expectedRange }) => {
-    return BUDGET_VALUES.slice(0, 5).map(budget => ({
-      runs,
-      unit,
-      budget,
-      expectedMin: expectedRange[0],
-      expectedMax: expectedRange[1],
-    }));
-  });
+  const volumeTestCases = VOLUME_RANGES.flatMap(({ runs, unit, expectedRange }) => BUDGET_VALUES.slice(0, 5).map(budget => ({
+    runs,
+    unit,
+    budget,
+    expectedMin: expectedRange[0],
+    expectedMax: expectedRange[1],
+  })));
 
   it.each(volumeTestCases)(
     '[P0] volume $runs/$unit with budget=$budget',
@@ -331,10 +327,10 @@ describe('[P0] Volume Potential - Combinatorial', () => {
 
   // Extreme volume edge cases
   it.each([
-    [1000000, 'day', 100],  // Extremely high volume
+    [1_000_000, 'day', 100],  // Extremely high volume
     [0.5, 'hour', 80],      // Fractional (0.5/hr = 360/mo = high)
     [-10, 'day', 30],       // Negative (treated as 0)
-    [NaN, 'day', 30],       // NaN
+    [Number.NaN, 'day', 30],       // NaN
     [Infinity, 'day', 100], // Infinity
   ])('[P1] extreme volume %d/%s should score ~%d', async (runs, unit, expected) => {
     const formData = createFormData({
@@ -381,16 +377,12 @@ describe('[P0] Timeline Urgency - Combinatorial', () => {
   };
 
   // Generate combinatorial tests
-  const timelineTestCases = TIMELINE_VALUES.flatMap(timeline => {
-    return BUDGET_VALUES.slice(0, 5).flatMap(budget => {
-      return DECISION_MAKER_VALUES.slice(0, 3).map(dm => ({
-        timeline,
-        budget,
-        decisionMaker: dm,
-        expected: timelineExpectations[timeline as string] ?? 50,
-      }));
-    });
-  });
+  const timelineTestCases = TIMELINE_VALUES.flatMap(timeline => BUDGET_VALUES.slice(0, 5).flatMap(budget => DECISION_MAKER_VALUES.slice(0, 3).map(dm => ({
+    timeline,
+    budget,
+    decisionMaker: dm,
+    expected: timelineExpectations[timeline as string] ?? 50,
+  }))));
 
   it.each(timelineTestCases)(
     '[P0] timeline=$timeline, budget=$budget, dm=$decisionMaker',
@@ -425,16 +417,12 @@ describe('[P0] Decision Maker Access - Combinatorial', () => {
   };
 
   // Generate combinatorial tests
-  const dmTestCases = DECISION_MAKER_VALUES.flatMap(dm => {
-    return TIMELINE_VALUES.slice(0, 4).flatMap(timeline => {
-      return BUDGET_VALUES.slice(0, 4).map(budget => ({
-        dm,
-        timeline,
-        budget,
-        expected: dmExpectations[dm as string] ?? 50,
-      }));
-    });
-  });
+  const dmTestCases = DECISION_MAKER_VALUES.flatMap(dm => TIMELINE_VALUES.slice(0, 4).flatMap(timeline => BUDGET_VALUES.slice(0, 4).map(budget => ({
+    dm,
+    timeline,
+    budget,
+    expected: dmExpectations[dm as string] ?? 50,
+  }))));
 
   it.each(dmTestCases)(
     '[P0] dm=$dm, timeline=$timeline, budget=$budget',
@@ -477,32 +465,26 @@ describe('[P0] Pain Severity - Voice Agent Parity - Combinatorial', () => {
   ];
 
   // Generate massive combinatorial tests: current_solution × text_lengths × volume
-  const painTestCases = CURRENT_SOLUTION_VALUES.flatMap(solution => {
-    return TEXT_LENGTHS.filter(l => l <= 60).flatMap(costLength => {
-      return TEXT_LENGTHS.filter(l => l <= 40).flatMap(failuresLength => {
-        return TEXT_LENGTHS.filter(l => l <= 30).map(fixLength => {
-          let expectedScore = 50; // Base
+  const painTestCases = CURRENT_SOLUTION_VALUES.flatMap(solution => TEXT_LENGTHS.filter(l => l <= 60).flatMap(costLength => TEXT_LENGTHS.filter(l => l <= 40).flatMap(failuresLength => TEXT_LENGTHS.filter(l => l <= 30).map(fixLength => {
+    let expectedScore = 50; // Base
 
-          if (solution && typeof solution === 'string' && solution in currentSolutionScores) {
-            expectedScore = currentSolutionScores[solution] ?? 50;
-          }
+    if (solution && typeof solution === 'string' && solution in currentSolutionScores) {
+      expectedScore = currentSolutionScores[solution] ?? 50;
+    }
 
-          if (costLength > 50) expectedScore += 15;
-          if (failuresLength > 30) expectedScore += 10;
-          if (fixLength > 20) expectedScore += 10;
+    if (costLength > 50) expectedScore += 15;
+    if (failuresLength > 30) expectedScore += 10;
+    if (fixLength > 20) expectedScore += 10;
 
-          return {
-            solution,
-            costLength,
-            failuresLength,
-            fixLength,
-            expectedMin: Math.min(expectedScore, 100) - 5,
-            expectedMax: Math.min(expectedScore, 100) + 5,
-          };
-        });
-      });
-    });
-  });
+    return {
+      solution,
+      costLength,
+      failuresLength,
+      fixLength,
+      expectedMin: Math.min(expectedScore, 100) - 5,
+      expectedMax: Math.min(expectedScore, 100) + 5,
+    };
+  }))));
 
   // Run subset of tests (full combinatorial would be 1000+)
   const sampledTestCases = painTestCases.filter((_, i) => i % 10 === 0); // Every 10th
@@ -548,14 +530,12 @@ describe('[P0] Pain Severity - Voice Agent Parity - Combinatorial', () => {
 
 describe('[P0] API Readiness - Combinatorial', () => {
   // Test with different intelligence map configurations
-  const apiReadinessTestCases = SYSTEM_COUNTS.flatMap(count => {
-    return [1, 3, 5, 7, 9].map(complexityScore => ({
-      systemCount: count,
-      complexityScore,
-      // Lower complexity = higher readiness: (10 - complexity) * 10
-      expectedReadiness: count === 0 ? 50 : (10 - complexityScore) * 10,
-    }));
-  });
+  const apiReadinessTestCases = SYSTEM_COUNTS.flatMap(count => [1, 3, 5, 7, 9].map(complexityScore => ({
+    systemCount: count,
+    complexityScore,
+    // Lower complexity = higher readiness: (10 - complexity) * 10
+    expectedReadiness: count === 0 ? 50 : (10 - complexityScore) * 10,
+  })));
 
   it.each(apiReadinessTestCases)(
     '[P0] $systemCount systems, complexity=$complexityScore',
@@ -616,7 +596,7 @@ describe('[P0] Total Score Boundaries', () => {
       q28_budget_range: faker.helpers.arrayElement([...BUDGET_VALUES, faker.lorem.word()]),
       q27_timeline: faker.helpers.arrayElement([...TIMELINE_VALUES, faker.lorem.word()]),
       q26_decision_maker: faker.helpers.arrayElement([...DECISION_MAKER_VALUES, faker.lorem.word()]),
-      q06_runs_per_period: faker.number.int({ min: -100, max: 10000 }),
+      q06_runs_per_period: faker.number.int({ min: -100, max: 10_000 }),
       q06_period_unit: faker.helpers.arrayElement([...PERIOD_UNIT_VALUES, faker.lorem.word()]),
       current_solution: faker.helpers.arrayElement([...CURRENT_SOLUTION_VALUES, faker.lorem.word()]),
       q10_systems_involved: faker.datatype.boolean() ? createSystemsList(faker.number.int({ min: 0, max: 15 })) : undefined,

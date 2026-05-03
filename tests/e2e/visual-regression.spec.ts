@@ -33,7 +33,7 @@ test.describe('Visual - Typography', () => {
     // This test only flags extremely tiny fonts that would be unreadable
     const smallFonts = await page.locator('.sheet *').evaluateAll(els =>
       els.filter(el => {
-        const fontSize = parseFloat(getComputedStyle(el).fontSize);
+        const fontSize = Number.parseFloat(getComputedStyle(el).fontSize);
         const text = el.textContent?.trim();
         // Only flag fonts smaller than 8px that have actual content and aren't decorative
         const hasContent = text && text.length > 3 && !/^[•→✓✗⚠×÷+\-=\d.,$%]+$/.test(text);
@@ -47,7 +47,7 @@ test.describe('Visual - Typography', () => {
     await page.goto(`file://${reportPath}`);
     const heading = page.locator('h2, .section-header').first();
     const weight = await heading.evaluate(el => getComputedStyle(el).fontWeight);
-    expect(parseInt(weight)).toBeGreaterThanOrEqual(600);
+    expect(Number.parseInt(weight, 10)).toBeGreaterThanOrEqual(600);
   });
 });
 
@@ -172,9 +172,7 @@ test.describe('Visual - Responsive Behavior', () => {
 
   test('[P2][VR-017] content should not overflow horizontally', async ({ page }) => {
     await page.goto(`file://${reportPath}`);
-    const overflowX = await page.evaluate(() => {
-      return document.body.scrollWidth > document.body.clientWidth;
-    });
+    const overflowX = await page.evaluate(() => document.body.scrollWidth > document.body.clientWidth);
     expect(overflowX).toBe(false);
   });
 

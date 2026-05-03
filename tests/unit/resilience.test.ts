@@ -43,9 +43,9 @@ describe('[P0] calculateBackoff - Exponential Backoff', () => {
 
     // WHEN: Calculating backoff for attempts 0, 1, 2
     // Note: There's jitter, so we check the range
-    const delay0 = calculateBackoff(0, baseDelay, 30000);
-    const delay1 = calculateBackoff(1, baseDelay, 30000);
-    const delay2 = calculateBackoff(2, baseDelay, 30000);
+    const delay0 = calculateBackoff(0, baseDelay, 30_000);
+    const delay1 = calculateBackoff(1, baseDelay, 30_000);
+    const delay2 = calculateBackoff(2, baseDelay, 30_000);
 
     // THEN: Delays should roughly double (within jitter range)
     expect(delay0).toBeGreaterThanOrEqual(750);
@@ -72,7 +72,7 @@ describe('[P0] calculateBackoff - Exponential Backoff', () => {
   it('[P1] should add jitter to prevent thundering herd', () => {
     // GIVEN: Same parameters
     const baseDelay = 1000;
-    const maxDelay = 30000;
+    const maxDelay = 30_000;
 
     // WHEN: Calculating multiple backoffs for same attempt
     const delays = Array.from({ length: 10 }, () =>
@@ -217,7 +217,7 @@ describe('[P0] withTimeout - Timeout Handling', () => {
     vi.useRealTimers();
 
     // GIVEN: A slow promise
-    const promise = new Promise(resolve => setTimeout(() => resolve('slow'), 200));
+    const promise = new Promise(resolve => { setTimeout(() => { resolve('slow'); }, 200); });
 
     // WHEN/THEN: Should timeout
     await expect(withTimeout(promise, 50)).rejects.toThrow('timed out after 50ms');
@@ -240,16 +240,16 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
     // GIVEN: Circuit breaker with low threshold
     const cb = new CircuitBreaker({
       failureThreshold: 3,
-      failureWindowMs: 60000
+      failureWindowMs: 60_000
     });
 
     // WHEN: Recording failures up to threshold
-    const failingFn = () => Promise.reject(new Error('fail'));
+    const failingFn = async () => { throw new Error('fail'); };
 
     for (let i = 0; i < 3; i++) {
       try {
         await cb.execute(failingFn);
-      } catch (e) {
+      } catch {
         // Expected
       }
     }
@@ -264,11 +264,11 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
 
     // GIVEN: An open circuit breaker
     const cb = new CircuitBreaker({ failureThreshold: 1 });
-    const failingFn = () => Promise.reject(new Error('fail'));
+    const failingFn = async () => { throw new Error('fail'); };
 
     try {
       await cb.execute(failingFn);
-    } catch (e) {
+    } catch {
       // Trip the circuit
     }
 
@@ -283,16 +283,16 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
 
     // GIVEN: An open circuit breaker
     const cb = new CircuitBreaker({ failureThreshold: 1 });
-    const failingFn = () => Promise.reject(new Error('fail'));
+    const failingFn = async () => { throw new Error('fail'); };
 
     try {
       await cb.execute(failingFn);
-    } catch (e) {
+    } catch {
       // Trip the circuit
     }
 
     // WHEN: Providing a fallback
-    const result = await cb.execute(() => Promise.resolve('not called'), 'fallback');
+    const result = await cb.execute(async () => 'not called', 'fallback');
 
     // THEN: Should return fallback
     expect(result).toBe('fallback');
@@ -307,10 +307,10 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
       resetTimeoutMs: 100
     });
 
-    const failingFn = () => Promise.reject(new Error('fail'));
+    const failingFn = async () => { throw new Error('fail'); };
     try {
       await cb.execute(failingFn);
-    } catch (e) {
+    } catch {
       // Trip the circuit
     }
 
@@ -334,14 +334,14 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
     });
 
     try {
-      await cb.execute(() => Promise.reject(new Error('fail')));
-    } catch (e) {}
+      await cb.execute(async () => { throw new Error('fail'); });
+    } catch {}
 
     await new Promise(resolve => setTimeout(resolve, 100));
     expect(cb.getState()).toBe(CircuitState.HALF_OPEN);
 
     // WHEN: Successful request
-    await cb.execute(() => Promise.resolve('success'));
+    await cb.execute(async () => 'success');
 
     // THEN: Should be closed
     expect(cb.getState()).toBe(CircuitState.CLOSED);
@@ -357,16 +357,16 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
     });
 
     try {
-      await cb.execute(() => Promise.reject(new Error('fail')));
-    } catch (e) {}
+      await cb.execute(async () => { throw new Error('fail'); });
+    } catch {}
 
     await new Promise(resolve => setTimeout(resolve, 100));
     expect(cb.getState()).toBe(CircuitState.HALF_OPEN);
 
     // WHEN: Failed request
     try {
-      await cb.execute(() => Promise.reject(new Error('still failing')));
-    } catch (e) {}
+      await cb.execute(async () => { throw new Error('still failing'); });
+    } catch {}
 
     // THEN: Should be open again
     expect(cb.getState()).toBe(CircuitState.OPEN);
@@ -379,11 +379,11 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
     const cb = new CircuitBreaker({ failureThreshold: 5 });
 
     // WHEN: Making successful and failed requests
-    await cb.execute(() => Promise.resolve('success'));
-    await cb.execute(() => Promise.resolve('success'));
+    await cb.execute(async () => 'success');
+    await cb.execute(async () => 'success');
     try {
-      await cb.execute(() => Promise.reject(new Error('fail')));
-    } catch (e) {}
+      await cb.execute(async () => { throw new Error('fail'); });
+    } catch {}
 
     // THEN: Stats should reflect activity
     const stats = cb.getStats();
@@ -404,8 +404,8 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
 
     // WHEN: Tripping the circuit
     try {
-      await cb.execute(() => Promise.reject(new Error('fail')));
-    } catch (e) {}
+      await cb.execute(async () => { throw new Error('fail'); });
+    } catch {}
 
     // THEN: Callback should be called
     expect(onStateChange).toHaveBeenCalledWith(CircuitState.OPEN, expect.any(Object));
@@ -417,8 +417,8 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
     // GIVEN: An open circuit breaker
     const cb = new CircuitBreaker({ failureThreshold: 1 });
     try {
-      await cb.execute(() => Promise.reject(new Error('fail')));
-    } catch (e) {}
+      await cb.execute(async () => { throw new Error('fail'); });
+    } catch {}
 
     expect(cb.getState()).toBe(CircuitState.OPEN);
 
@@ -435,11 +435,11 @@ describe('[P1] Default Options', () => {
   it('[P1] should have correct Gemini retry options', () => {
     expect(GEMINI_RETRY_OPTIONS.maxAttempts).toBe(5);
     expect(GEMINI_RETRY_OPTIONS.baseDelayMs).toBe(1000);
-    expect(GEMINI_RETRY_OPTIONS.timeoutMs).toBe(60000);
+    expect(GEMINI_RETRY_OPTIONS.timeoutMs).toBe(60_000);
   });
 
   it('[P1] should have correct Puppeteer retry options', () => {
     expect(PUPPETEER_RETRY_OPTIONS.maxAttempts).toBe(3);
-    expect(PUPPETEER_RETRY_OPTIONS.timeoutMs).toBe(120000); // 2 minutes
+    expect(PUPPETEER_RETRY_OPTIONS.timeoutMs).toBe(120_000); // 2 minutes
   });
 });

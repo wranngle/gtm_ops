@@ -10,7 +10,7 @@
  * - Key stats: .key-stats
  * - Phases shown via milestone sections
  */
-import { Page, Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 
 export class ProjectPlanPage {
   readonly page: Page;
@@ -53,7 +53,7 @@ export class ProjectPlanPage {
   }
 
   async getMilestoneCount(): Promise<number> {
-    return await this.milestones.count();
+    return this.milestones.count();
   }
 
   async getMilestoneNames(): Promise<string[]> {
@@ -63,6 +63,7 @@ export class ProjectPlanPage {
       const name = await this.milestones.nth(i).locator('.milestone-name, h4, h5').first().textContent();
       if (name) names.push(name.trim());
     }
+
     return names;
   }
 
@@ -72,6 +73,7 @@ export class ProjectPlanPage {
     if (await clientPrice.count() > 0) {
       return await clientPrice.textContent() || 'N/A';
     }
+
     return await this.laborCost.textContent() || 'N/A';
   }
 
@@ -80,11 +82,11 @@ export class ProjectPlanPage {
   }
 
   async getStatCount(): Promise<number> {
-    return await this.stats.count();
+    return this.stats.count();
   }
 
   async getCardCount(): Promise<number> {
-    return await this.cards.count();
+    return this.cards.count();
   }
 
   async hasTimeline(): Promise<boolean> {
@@ -96,16 +98,16 @@ export class ProjectPlanPage {
   }
 
   async getSectionCount(): Promise<number> {
-    return await this.sectionHeaders.count();
+    return this.sectionHeaders.count();
   }
 
   // Phase methods - phases are represented by milestone cards in the grid
   async getPhaseCount(): Promise<number> {
-    return await this.getMilestoneCount();
+    return this.getMilestoneCount();
   }
 
   async getPhaseNames(): Promise<string[]> {
-    return await this.getMilestoneNames();
+    return this.getMilestoneNames();
   }
 
   // AI Ops cost - look for AI-related stat
@@ -116,13 +118,14 @@ export class ProjectPlanPage {
         return (await aiOpsEl.textContent()) || 'N/A';
       }
     } catch { /* element not found */ }
+
     return 'N/A';
   }
 
   // Risk section methods
   async getRiskCount(): Promise<number> {
     const riskItems = this.page.locator('#report-risk-assessment .card, .risk-item, .risk-row');
-    return await riskItems.count();
+    return riskItems.count();
   }
 
   async hasRiskSection(): Promise<boolean> {
@@ -137,12 +140,12 @@ export class ProjectPlanPage {
 
   async getTeamMemberCount(): Promise<number> {
     const teamMembers = this.page.locator('.team-member, .role-card');
-    return await teamMembers.count();
+    return teamMembers.count();
   }
 
   // Alias for spec file compatibility
   async getTeamRoleCount(): Promise<number> {
-    return await this.getTeamMemberCount();
+    return this.getTeamMemberCount();
   }
 
   // Success metrics methods
@@ -153,6 +156,6 @@ export class ProjectPlanPage {
 
   async getSuccessMetricCount(): Promise<number> {
     const metrics = this.page.locator('.metric-card, .kpi-card, .success-metric');
-    return await metrics.count();
+    return metrics.count();
   }
 }

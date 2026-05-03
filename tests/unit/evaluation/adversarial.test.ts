@@ -44,7 +44,7 @@ describe('Schema Drift Detection', () => {
         integrations: [{ integration: 'Dentrix' }],
       },
       estimate: {
-        total_cost: { value: 10000 },
+        total_cost: { value: 10_000 },
         hours: { total: 160 },
       },
       features: ['scheduling'],
@@ -77,7 +77,7 @@ describe('Schema Drift Detection', () => {
         // Schema drift: integrations renamed to systems
         systems: [{ name: 'Dentrix' }, { name: 'Twilio' }],
       },
-      estimate: { total_cost: 10000, hours: { total: 160 } },
+      estimate: { total_cost: 10_000, hours: { total: 160 } },
       features: ['scheduling'],
     };
 
@@ -101,7 +101,7 @@ describe('Schema Drift Detection', () => {
     const pipelineOutput = {
       research: { tier_assessment: { key: 'standard' }, integrations: [] },
       // Schema drift: pricing is now under cost_summary.total
-      cost_summary: { total: 15000 },
+      cost_summary: { total: 15_000 },
       features: [],
     };
 
@@ -109,7 +109,7 @@ describe('Schema Drift Detection', () => {
       inferred_tier: 'standard',
       integrations: [],
       agent_type: 'inbound',
-      pricing_model: { total_cost: 15000 },
+      pricing_model: { total_cost: 15_000 },
       key_features: [],
       timeline_weeks: 4,
     };
@@ -132,7 +132,7 @@ describe('Silent Degradation', () => {
       inferred_tier: 'standard',
       integrations: [{ system_name: 'Dentrix' }],
       agent_type: 'inbound',
-      pricing_model: { total_cost: 10000 },
+      pricing_model: { total_cost: 10_000 },
       key_features: ['scheduling', 'reminders'],
       timeline_weeks: 4,
     });
@@ -152,7 +152,7 @@ describe('Silent Degradation', () => {
         ], // Completely wrong systems
       },
       estimate: {
-        total_cost: { value: 200000 }, // Way over
+        total_cost: { value: 200_000 }, // Way over
         hours: { total: 800 }, // 20 weeks vs 3
       },
       features: ['machine learning', 'blockchain', 'quantum computing'], // Nonsense
@@ -214,13 +214,13 @@ describe('Solution Leakage Prevention', () => {
         { system_name: 'Dentrix G7', integration_type: 'api', purpose: 'scheduling' },
         { system_name: 'Twilio', integration_type: 'api', purpose: 'sms' },
       ],
-      pricing_model: { total_cost: 18500, monthly_cost: 650, setup_cost: 6200 },
+      pricing_model: { total_cost: 18_500, monthly_cost: 650, setup_cost: 6200 },
       timeline_weeks: 6,
       roi_achieved: {
         hours_saved_per_month: 140,
         calls_automated_percent: 78,
         monthly_savings: 3500,
-        annual_savings: 42000,
+        annual_savings: 42_000,
       },
       key_features: ['24/7 scheduling', 'Insurance verification'],
       inferred_tier: 'standard',
@@ -327,7 +327,7 @@ describe('Edge Cases', () => {
 
   it('[P0] scoreIntegrationCoverage handles null lists', () => {
     const result = scoreIntegrationCoverage(null, null);
-    expect(result.score).toBe(1.0); // Both empty = match
+    expect(result.score).toBe(1); // Both empty = match
   });
 
   it('[P0] scoreIntegrationCoverage handles mixed null items', () => {
@@ -335,7 +335,7 @@ describe('Edge Cases', () => {
       [null, undefined, 'Dentrix', ''],
       ['Dentrix'],
     );
-    expect(result.score).toBe(1.0);
+    expect(result.score).toBe(1);
     expect(result.details.missing.length).toBe(0);
   });
 
@@ -410,13 +410,13 @@ describe('Flaw Detection Completeness', () => {
   });
 
   it('[P0] detects PRICE_TOO_HIGH', () => {
-    const result = scorePricingReasonableness(100000, 10000);
+    const result = scorePricingReasonableness(100_000, 10_000);
     expect(result.score).toBe(0);
     expect(result.details.direction).toBe('high');
   });
 
   it('[P0] detects PRICE_TOO_LOW', () => {
-    const result = scorePricingReasonableness(1000, 10000);
+    const result = scorePricingReasonableness(1000, 10_000);
     expect(result.score).toBe(0);
     expect(result.details.direction).toBe('low');
   });
@@ -496,7 +496,7 @@ describe('Fuzzy Matching Adversarial', () => {
       ['Salesforce', 'HubSpot'],
     );
     // Should match despite parentheses/brackets
-    expect(result.score).toBe(1.0);
+    expect(result.score).toBe(1);
   });
 
   it('[P1] handles numbers-only system names', () => {
@@ -522,7 +522,7 @@ describe('Regression Canaries', () => {
       { inferred_tier: 'standard' },
     );
     const tierDim = result.dimensions.find((d: any) => d.dimension === 'tier_match');
-    expect(tierDim.score).toBe(1.0);
+    expect(tierDim.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline finds integrations at research.integrations[].integration', () => {
@@ -531,16 +531,16 @@ describe('Regression Canaries', () => {
       { integrations: [{ system_name: 'Dentrix' }] },
     );
     const intDim = result.dimensions.find((d: any) => d.dimension === 'integration_coverage');
-    expect(intDim.score).toBe(1.0);
+    expect(intDim.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline finds price at pricing.final_price', () => {
     const result = compare(
-      { research: {}, pricing: { final_price: 10000 } },
-      { pricing_model: { total_cost: 10000 } },
+      { research: {}, pricing: { final_price: 10_000 } },
+      { pricing_model: { total_cost: 10_000 } },
     );
     const priceDim = result.dimensions.find((d: any) => d.dimension === 'pricing_reasonableness');
-    expect(priceDim.score).toBe(1.0);
+    expect(priceDim.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline finds features at root .features', () => {
@@ -549,7 +549,7 @@ describe('Regression Canaries', () => {
       { key_features: ['scheduling', 'sms reminders'] },
     );
     const featDim = result.dimensions.find((d: any) => d.dimension === 'feature_coverage');
-    expect(featDim.score).toBe(1.0);
+    expect(featDim.score).toBe(1);
   });
 
   it('[P0] extractFromPipeline infers agent type from workflow name', () => {
@@ -561,6 +561,6 @@ describe('Regression Canaries', () => {
       { agent_type: 'inbound' },
     );
     const agentDim = result.dimensions.find((d: any) => d.dimension === 'agent_type_alignment');
-    expect(agentDim.score).toBe(1.0);
+    expect(agentDim.score).toBe(1);
   });
 });

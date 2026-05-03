@@ -6,14 +6,14 @@
  *
  * Test Matrix: Validates data integrity across all schema sections
  */
-import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { test, expect } from '@playwright/test';
 
 // Load all schema files for testing
-function loadAllSchemas(): { schema: any; file: string }[] {
+function loadAllSchemas(): Array<{ schema: any; file: string }> {
   const outputDir = path.join(process.cwd(), 'output');
-  const schemas: { schema: any; file: string }[] = [];
+  const schemas: Array<{ schema: any; file: string }> = [];
 
   function findSchemas(dir: string) {
     try {
@@ -26,12 +26,12 @@ function loadAllSchemas(): { schema: any; file: string }[] {
           try {
             const schema = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
             schemas.push({ schema, file: fullPath });
-          } catch (e) {
+          } catch {
             // Skip invalid JSON
           }
         }
       }
-    } catch (e) {
+    } catch {
       // Skip inaccessible directories
     }
   }
@@ -48,7 +48,7 @@ test.describe('Atomic: Identity Consistency Across Sections', () => {
 
   test('[CC-001] identity and project_identity match', () => {
     for (const { schema, file } of schemas) {
-      const identity = schema.identity;
+      const {identity} = schema;
       const projectIdentity = schema.project_identity;
 
       if (identity && projectIdentity) {
@@ -167,14 +167,14 @@ test.describe('Atomic: Integration Data Flow', () => {
 
       // Higher complexity should correlate with higher tier
       // But other factors (system count, industry regulations) can override
-      const highTiers = ['enterprise', 'complex', 'complex_integration', 'complex_enterprise'];
-      const lowTiers = ['standard', 'starter', 'simple', 'moderate'];
+      const highTiers = new Set(['enterprise', 'complex', 'complex_integration', 'complex_enterprise']);
+      const lowTiers = new Set(['standard', 'starter', 'simple', 'moderate']);
 
       if (avgComplexity >= 7) {
         // High complexity SHOULD map to high tier, but allow exceptions
         // when other factors justify a lower tier
-        const hasHighTier = highTiers.includes(tierKey);
-        const hasLowTier = lowTiers.includes(tierKey);
+        const hasHighTier = highTiers.has(tierKey);
+        const hasLowTier = lowTiers.has(tierKey);
 
         // At minimum, tier should be one of the known values
         expect(
@@ -183,7 +183,7 @@ test.describe('Atomic: Integration Data Flow', () => {
         ).toBe(true);
       } else if (avgComplexity <= 2) {
         // Low complexity can map to any tier (other factors may justify higher)
-        const hasValidTier = highTiers.includes(tierKey) || lowTiers.includes(tierKey);
+        const hasValidTier = highTiers.has(tierKey) || lowTiers.has(tierKey);
         expect(
           hasValidTier,
           `${file}: low complexity (${avgComplexity}) has unknown tier: ${tierKey}`
@@ -229,7 +229,7 @@ test.describe('Atomic: Financial Data Flow', () => {
 
         // Should be within 0.3x to 3x of tier baseline (wider range for LLM variability)
         expect(
-          ratio >= 0.3 && ratio <= 3.0,
+          ratio >= 0.3 && ratio <= 3,
           `${file}: effort hours ratio to tier (${ratio.toFixed(2)}) should be 0.3-3.0`
         ).toBe(true);
       }
@@ -251,7 +251,7 @@ test.describe('Atomic: Financial Data Flow', () => {
         // Adjusted hours should be at least base (ratio >= 1)
         // and at most 3x base (accounting for high risk projects)
         expect(
-          ratio >= 1.0 && ratio <= 3.0,
+          ratio >= 1 && ratio <= 3,
           `${file}: adjusted/base ratio (${ratio.toFixed(2)}) should be 1.0-3.0`
         ).toBe(true);
       }

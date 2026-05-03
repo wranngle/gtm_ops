@@ -79,8 +79,7 @@ export function buildResearchQueries(intake: Intake): string[] {
 
   // API documentation research for each integration
   for (const integration of targetIntegrations) {
-    searchQueries.push(`${integration.name} API documentation`);
-    searchQueries.push(`${integration.name} API authentication`);
+    searchQueries.push(`${integration.name} API documentation`, `${integration.name} API authentication`);
   }
 
   return searchQueries;
@@ -116,13 +115,13 @@ Consolidate findings for tier assessment.
 export async function quickTierAssessment(intake: Intake): Promise<TierAssessment> {
   // Extract client info from various possible locations in intake structure
   const accountName = intake.prepared_for?.account_name ||
-                      intake.client?.name ||
-                      'Unknown';
+    intake.client?.name ||
+    'Unknown';
 
   // Extract workflow/project info
   const processName = intake.section_a_workflow_definition?.q01_workflow_name ||
-                      intake.project?.workflow_name ||
-                      'Unknown';
+    intake.project?.workflow_name ||
+    'Unknown';
 
   // Extract systems/integrations from section_c
   const declaredSystems = intake.section_c_systems_handoffs?.q10_systems_involved || [];
@@ -134,8 +133,8 @@ export async function quickTierAssessment(intake: Intake): Promise<TierAssessmen
   // Estimate complexity from system count
   const integrationCount = consolidatedSystems.length;
   const estimatedComplexity = integrationCount > 5 ? 'enterprise'
-                            : integrationCount > 2 ? 'mid-market'
-                            : 'startup';
+    : integrationCount > 2 ? 'mid-market'
+      : 'startup';
 
   const tierAssessmentPrompt = `
 Based on this project intake, provide a quick client tier assessment:
@@ -151,7 +150,7 @@ Return JSON:
   "label": "Standard Integration",
   "tier": "${estimatedComplexity}",
   "baseHours": ${integrationCount <= 2 ? 40 : integrationCount <= 5 ? 80 : 120},
-  "riskMultiplier": ${integrationCount > 5 ? 1.3 : integrationCount > 2 ? 1.15 : 1.0},
+  "riskMultiplier": ${integrationCount > 5 ? 1.3 : integrationCount > 2 ? 1.15 : 1},
   "pricing_strategy": "standard",
   "confidence": 0.7,
   "rationale": "Based on ${integrationCount} systems requiring integration",

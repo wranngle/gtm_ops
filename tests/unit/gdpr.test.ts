@@ -7,10 +7,10 @@
  * - Account deletion workflow
  * - Legal documents
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,7 +52,7 @@ afterEach(async () => {
   if (testDbPath && fs.existsSync(testDbPath)) {
     try {
       fs.unlinkSync(testDbPath);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }
@@ -272,7 +272,7 @@ describe('[P0] Data Export - Job Status', () => {
     await gdpr.updateExportJob(created.job_id, {
       status: ExportStatus.COMPLETED,
       file_path: '/exports/user-1.zip',
-      file_size: 12345,
+      file_size: 12_345,
       completed_at: Date.now(),
     });
 
@@ -280,7 +280,7 @@ describe('[P0] Data Export - Job Status', () => {
     const job = await gdpr.getExportJob(created.job_id);
     expect(job.status).toBe(ExportStatus.COMPLETED);
     expect(job.file_path).toBe('/exports/user-1.zip');
-    expect(job.file_size).toBe(12345);
+    expect(job.file_size).toBe(12_345);
   });
 
   it('[P0] should return null for non-existent job', async () => {
@@ -408,7 +408,7 @@ describe('[P1] Legal Documents', () => {
   it('[P1] should not return future documents', async () => {
     // GIVEN: Future effective document
     await gdpr.setLegalDocument('terms', '1.0', 'Current', Date.now() - 1000);
-    await gdpr.setLegalDocument('terms', '2.0', 'Future', Date.now() + 86400000);
+    await gdpr.setLegalDocument('terms', '2.0', 'Future', Date.now() + 86_400_000);
 
     // WHEN: Getting document
     const doc = await gdpr.getLegalDocument('terms');

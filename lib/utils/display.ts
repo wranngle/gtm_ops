@@ -3,7 +3,7 @@
  * @module lib/utils/display
  */
 
-export interface NumericWithDisplay {
+export type NumericWithDisplay = {
   value: number;
   display: string;
 }
@@ -78,7 +78,7 @@ export function createMultiplier(value: number): NumericWithDisplay {
  * Format: "3:1"
  */
 export function createRatio(numerator: number, denominator: number): NumericWithDisplay {
-  const value = denominator !== 0 ? numerator / denominator : 0;
+  const value = denominator === 0 ? 0 : numerator / denominator;
   return {
     value,
     display: `${numerator}:${denominator}`,
@@ -93,8 +93,9 @@ export function batchCreateCurrency<T extends Record<string, number>>(
   obj: T
 ): Record<keyof T, NumericWithDisplay> {
   const result = {} as Record<keyof T, NumericWithDisplay>;
-  for (const key of Object.keys(obj) as (keyof T)[]) {
+  for (const key of Object.keys(obj) as Array<keyof T>) {
     result[key] = createCurrency(obj[key]);
   }
+
   return result;
 }

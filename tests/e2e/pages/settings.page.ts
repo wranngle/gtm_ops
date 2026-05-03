@@ -3,7 +3,7 @@
  *
  * Provides methods for interacting with the Enterprise Settings modal
  */
-import { Page, Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from '@playwright/test';
 
 export class SettingsPage {
   readonly page: Page;
@@ -64,9 +64,11 @@ export class SettingsPage {
     if (action) {
       await this.page.selectOption('#audit-action-filter', action);
     }
+
     if (startDate) {
       await this.page.fill('#audit-start-date', startDate);
     }
+
     if (endDate) {
       await this.page.fill('#audit-end-date', endDate);
     }
@@ -110,11 +112,7 @@ export class SettingsPage {
   async setConsent(type: string, enabled: boolean) {
     await this.selectTab('gdpr');
     const checkbox = this.page.locator(`#consent-${type}`);
-    if (enabled) {
-      await checkbox.check();
-    } else {
-      await checkbox.uncheck();
-    }
+    await (enabled ? checkbox.check() : checkbox.uncheck());
   }
 
   // Branding Tab Methods

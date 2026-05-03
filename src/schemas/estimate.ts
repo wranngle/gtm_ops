@@ -48,7 +48,7 @@ export const BleedInputsSchema = z.object({
     .min(0.5, { message: 'Task must take at least 30 seconds' })
     .max(480, { 
       message: 'Task exceeds 8 hours (480 minutes) - this seems unrealistic. ' +
-               'If accurate, break into subtasks or use hours_per_item.'
+        'If accurate, break into subtasks or use hours_per_item.'
     }),
   
   hourly_rate: z.number()
@@ -108,8 +108,8 @@ export const TierAssessmentSchema = z.object({
     .min(20, { message: 'Base hours below 20 - very small project' })
     .max(500, { message: 'Base hours above 500 - consider breaking into phases' }),
   risk_multiplier: z.number()
-    .min(1.0, { message: 'Risk multiplier cannot be below 1.0' })
-    .max(2.0, { message: 'Risk multiplier above 2.0 is excessive' }),
+    .min(1, { message: 'Risk multiplier cannot be below 1.0' })
+    .max(2, { message: 'Risk multiplier above 2.0 is excessive' }),
   adjusted_hours: z.number().optional(),
   rationale: z.string().optional()
 });

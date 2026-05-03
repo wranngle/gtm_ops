@@ -7,10 +7,10 @@
  * Location: n8n/context/technical-research/research.db
  */
 
-import sqlite3 from 'sqlite3';
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import sqlite3 from 'sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,12 +44,12 @@ export type ResearchEntryRow = {
   file_format: string;
   created_at: string;
   updated_at: string;
-  complexity_score: number | null;
-  effort_tier: string | null;
-  confidence: number | null;
-  base_hours: number | null;
-  business_process: string | null;
-  research_type: string | null;
+  complexity_score: number | undefined;
+  effort_tier: string | undefined;
+  confidence: number | undefined;
+  base_hours: number | undefined;
+  business_process: string | undefined;
+  research_type: string | undefined;
   generated: number;
 };
 
@@ -112,7 +112,7 @@ const DB_PATH = join(N8N_RESEARCH_PATH, 'research.db');
 // =============================================================================
 
 export class ResearchDB {
-  private db: sqlite3.Database;
+  private readonly db: sqlite3.Database;
 
   constructor() {
     this.db = new sqlite3.Database(DB_PATH);
@@ -203,12 +203,12 @@ export class ResearchDB {
           entry.business_process, entry.research_type, entry.generated ? 1 : 0
         ];
 
-        this.db.run(sql, params, function(err) {
+        this.db.run(sql, params, (err) => {
           if (err) {
             console.error('Error inserting research:', err);
             // rollback handled by not committing? sqlite node driver is tricky with transaction scope in serialize
             // We'll proceed but this is a simplified implementation
-            return reject(err);
+            reject(err); 
           }
 
           // const researchId = this.lastID || this.changes; // simplified
@@ -222,7 +222,7 @@ export class ResearchDB {
         this.db.get<{ id: number }>('SELECT id FROM research_entries WHERE slug = ?', [entry.slug], (err, row) => {
           if (err || !row) {
             this.db.run('ROLLBACK');
-            return reject(err || new Error('ID lookup failed'));
+            reject(err || new Error('ID lookup failed')); return;
           }
 
           const researchId = row.id;
@@ -235,6 +235,7 @@ export class ResearchDB {
           for (const name of integrations) {
             stmt.run(name.toLowerCase(), researchId);
           }
+
           stmt.finalize();
 
           this.db.run('COMMIT', (err) => {
@@ -291,8 +292,8 @@ export async function syncDatabase(): Promise<void> {
         };
         await db.addEntry(entry, meta.integrations || []);
       }
-    } catch (e) {
-      console.error('[ResearchDB] Error reading library-index.json:', (e as Error).message);
+    } catch (error) {
+      console.error('[ResearchDB] Error reading library-index.json:', (error as Error).message);
     }
   }
 
@@ -309,7 +310,7 @@ export async function syncDatabase(): Promise<void> {
       // Determine integrations list
       const integrations = new Set<string>();
       if (content.integration) integrations.add(content.integration);
-      if (content.integrations) content.integrations.forEach(i => integrations.add(i));
+      if (content.integrations) for (const i of content.integrations) integrations.add(i);
 
       const entry: ResearchEntry = {
         slug,
@@ -324,9 +325,9 @@ export async function syncDatabase(): Promise<void> {
         generated: content.generated || false
       };
 
-      await db.addEntry(entry, Array.from(integrations));
-    } catch (e) {
-      console.warn(`[ResearchDB] Skipping invalid JSON file ${file}:`, (e as Error).message);
+      await db.addEntry(entry, [...integrations]);
+    } catch (error) {
+      console.warn(`[ResearchDB] Skipping invalid JSON file ${file}:`, (error as Error).message);
     }
   }
 

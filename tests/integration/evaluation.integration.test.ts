@@ -6,9 +6,9 @@
  *
  * @priority P0 - Critical path tests for evaluation framework
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 // Import factories - eating our own dog food
 import {
@@ -137,7 +137,7 @@ describe('Evaluation Integration Tests', () => {
       const result = compare(pipelineOutput, caseStudy.solution);
 
       const tierDim = result.dimensions.find(d => d.dimension === 'tier_match');
-      expect(tierDim.score).toBeLessThan(1.0);
+      expect(tierDim.score).toBeLessThan(1);
     });
 
     it('[P0] missing integrations detected', () => {
@@ -172,8 +172,8 @@ describe('Evaluation Integration Tests', () => {
     it('[P0] detects PRICE_TOO_LOW when pipeline underprices', () => {
       const caseStudy = createCaseStudy({
         solution: createSolution({
-          price_min: 20000,
-          price_max: 25000,
+          price_min: 20_000,
+          price_max: 25_000,
         }),
       });
 

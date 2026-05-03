@@ -14,7 +14,7 @@ import { faker } from '@faker-js/faker';
 // TYPES
 // =============================================================================
 
-export interface ProductTestIntake {
+export type ProductTestIntake = {
   intake_version: string;
   captured_at: string;
   captured_by: string;
@@ -34,9 +34,9 @@ export interface ProductTestIntake {
     q06_period_unit: string;
     q07_avg_trigger_to_end: string;
     q07_time_unit: string;
-    q08_worst_case_delay: string | null;
-    q08_delay_unit: string | null;
-    q09_business_hours_expected: string | null;
+    q08_worst_case_delay: string | undefined;
+    q08_delay_unit: string | undefined;
+    q09_business_hours_expected: string | undefined;
   };
   section_c_systems_handoffs: {
     q10_systems_involved: string[];
@@ -54,13 +54,13 @@ export interface ProductTestIntake {
   classification?: {
     project_type: string;
     is_product: boolean;
-    product_key: string | null;
+    product_key: string | undefined;
     confidence: number;
     pricing_model: string;
   };
 }
 
-export interface ProductPricingScenario {
+export type ProductPricingScenario = {
   name: string;
   description: string;
   intake: ProductTestIntake;
@@ -74,7 +74,7 @@ export interface ProductPricingScenario {
   tier: 'core_protection' | 'growth_bundle';
 }
 
-export interface DetectionTestCase {
+export type DetectionTestCase = {
   name: string;
   description: string;
   intake: ProductTestIntake;
@@ -535,7 +535,7 @@ export const PricingScenarios = {
           q12_human_decision_gates: 'Complex custom business rules'
         }
       }),
-      monthlyBleed: 10000,
+      monthlyBleed: 10_000,
       expectedSetupHours: 40, // Capped
       expectedSetupFee: 5000,
       expectedMonthly: 250,
@@ -590,12 +590,12 @@ export const PricingScenarios = {
     return createProductPricingScenario('High Bleed Voice Agent', {
       description: 'High monthly bleed - fast payback',
       intake: createVoiceAgentIntake(),
-      monthlyBleed: 15000,
+      monthlyBleed: 15_000,
       expectedSetupHours: 16,
       expectedSetupFee: 2000,
       expectedMonthly: 250,
       expectedFirstYear: 5000,
-      expectedNetMonthlySavings: 14750, // 15000 - 250
+      expectedNetMonthlySavings: 14_750, // 15000 - 250
       expectedPaybackMonths: 0.1 // 2000 / 14750 ≈ 0.14
     });
   }
@@ -616,7 +616,7 @@ export const DetectionTestCases: DetectionTestCase[] = [
     expectedIsProduct: true,
     expectedProjectType: 'voice_agent',
     expectedMinConfidence: 0.8,
-    expectedMaxConfidence: 1.0
+    expectedMaxConfidence: 1
   },
   {
     name: 'Standard Project',
@@ -660,8 +660,8 @@ export const DetectionTestCases: DetectionTestCase[] = [
     intake: EdgeCases.maxScore(),
     expectedIsProduct: true,
     expectedProjectType: 'voice_agent',
-    expectedMinConfidence: 1.0,
-    expectedMaxConfidence: 1.0
+    expectedMinConfidence: 1,
+    expectedMaxConfidence: 1
   },
   {
     name: 'Industry Only',

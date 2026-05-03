@@ -6,10 +6,10 @@
  *
  * @priority P0 - Critical path tests for evaluation data storage
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 // Import corpus module
 import {
@@ -317,7 +317,7 @@ describe('Corpus CRUD Integration Tests', () => {
         scores: {
           aggregate_score: 75.5,
           dimensions: [
-            { dimension: 'tier_match', score: 1.0 },
+            { dimension: 'tier_match', score: 1 },
             { dimension: 'integration_coverage', score: 0.8 },
           ],
         },
@@ -341,7 +341,7 @@ describe('Corpus CRUD Integration Tests', () => {
       await updateEvaluationRun(run.id, {
         output_json: {
           research: { tier_assessment: { key: 'standard' } },
-          pricing: { final_price: 12500 },
+          pricing: { final_price: 12_500 },
         },
         duration_ms: 5000,
       });
@@ -533,7 +533,7 @@ describe('Corpus CRUD Integration Tests', () => {
       // harvested_at should be a valid ISO date string
       const harvestedAt = new Date(caseStudy.harvested_at);
       expect(harvestedAt.getTime()).toBeLessThanOrEqual(Date.now());
-      expect(harvestedAt.getTime()).toBeGreaterThan(Date.now() - 60000); // Within last minute
+      expect(harvestedAt.getTime()).toBeGreaterThan(Date.now() - 60_000); // Within last minute
     });
   });
 });

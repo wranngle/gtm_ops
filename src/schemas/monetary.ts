@@ -122,9 +122,10 @@ export const PercentageValueSchema = z.object({
   (data) => {
     if (data.format === 'decimal') {
       return data.value >= 0 && data.value <= 1;
-    } else {
-      return data.value >= 0 && data.value <= 100;
     }
+ 
+    return data.value >= 0 && data.value <= 100;
+    
   },
   { message: 'Value out of range for specified format' }
 );
@@ -179,22 +180,35 @@ export function safeParseMonetary(data: unknown): {
  */
 export function toMonthlyAmount(mv: MonetaryValue): MonetaryValue {
   switch (mv.period) {
-    case 'monthly':
+    case 'monthly': {
       return mv;
-    case 'annual':
+    }
+
+    case 'annual': {
       return createMonetary(Math.round(mv.amount / 12), 'monthly', mv.currency);
-    case 'quarterly':
+    }
+
+    case 'quarterly': {
       return createMonetary(Math.round(mv.amount / 3), 'monthly', mv.currency);
-    case 'weekly':
+    }
+
+    case 'weekly': {
       return createMonetary(Math.round(mv.amount * 4.33), 'monthly', mv.currency);
-    case 'daily':
+    }
+
+    case 'daily': {
       return createMonetary(Math.round(mv.amount * 30), 'monthly', mv.currency);
-    case 'hourly':
+    }
+
+    case 'hourly': {
       // Assume 160 working hours per month
       return createMonetary(Math.round(mv.amount * 160), 'monthly', mv.currency);
-    default:
+    }
+
+    default: {
       // once, per_item - can't convert
       return mv;
+    }
   }
 }
 
@@ -203,22 +217,35 @@ export function toMonthlyAmount(mv: MonetaryValue): MonetaryValue {
  */
 export function toAnnualAmount(mv: MonetaryValue): MonetaryValue {
   switch (mv.period) {
-    case 'annual':
+    case 'annual': {
       return mv;
-    case 'monthly':
+    }
+
+    case 'monthly': {
       return createMonetary(mv.amount * 12, 'annual', mv.currency);
-    case 'quarterly':
+    }
+
+    case 'quarterly': {
       return createMonetary(mv.amount * 4, 'annual', mv.currency);
-    case 'weekly':
+    }
+
+    case 'weekly': {
       return createMonetary(Math.round(mv.amount * 52), 'annual', mv.currency);
-    case 'daily':
+    }
+
+    case 'daily': {
       return createMonetary(Math.round(mv.amount * 365), 'annual', mv.currency);
-    case 'hourly':
+    }
+
+    case 'hourly': {
       // Assume 2080 working hours per year
       return createMonetary(Math.round(mv.amount * 2080), 'annual', mv.currency);
-    default:
+    }
+
+    default: {
       // once, per_item - can't convert
       return mv;
+    }
   }
 }
 

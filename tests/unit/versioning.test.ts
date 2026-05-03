@@ -8,10 +8,10 @@
  * - Version comparison/diff
  * - Cleanup of old versions
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_FILES_DIR = path.join(__dirname, '..', '..', 'config', 'test_artifacts');
@@ -29,6 +29,7 @@ beforeEach(async () => {
   if (fs.existsSync(TEST_FILES_DIR)) {
     fs.rmSync(TEST_FILES_DIR, { recursive: true });
   }
+
   fs.mkdirSync(TEST_FILES_DIR, { recursive: true });
 
   const historyModule = await import('../../lib/history.js');
@@ -44,14 +45,15 @@ afterEach(async () => {
   if (fs.existsSync(TEST_FILES_DIR)) {
     try {
       fs.rmSync(TEST_FILES_DIR, { recursive: true });
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }
+
   if (testDbPath && fs.existsSync(testDbPath)) {
     try {
       fs.unlinkSync(testDbPath);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }

@@ -466,7 +466,7 @@ describe('[P0] calculateProductPricing - Pricing Scenarios', () => {
     PricingScenarios.growthBundle()
   ];
 
-  scenarios.forEach((scenario) => {
+  for (const scenario of scenarios) {
     it(`[P0] ${scenario.name}: ${scenario.description}`, async () => {
       // WHEN: Calculating product pricing
       const result = calculateProductPricing(scenario.intake, {
@@ -491,7 +491,7 @@ describe('[P0] calculateProductPricing - Pricing Scenarios', () => {
         scenario.monthlyBleed - result.monthly.amount
       );
     });
-  });
+  }
 });
 
 // =============================================================================

@@ -254,16 +254,16 @@ export type BatchEvaluationSummary = z.infer<typeof BatchEvaluationSummarySchema
  * Configurable weights for scoring dimensions
  */
 export const ScoringWeightsSchema = z.object({
-  tier_match: z.number().default(0.20),
+  tier_match: z.number().default(0.2),
   integration_coverage: z.number().default(0.25),
   agent_type_alignment: z.number().default(0.15),
-  pricing_reasonableness: z.number().default(0.20),
-  timeline_realism: z.number().default(0.10),
-  feature_coverage: z.number().default(0.10),
+  pricing_reasonableness: z.number().default(0.2),
+  timeline_realism: z.number().default(0.1),
+  feature_coverage: z.number().default(0.1),
 }).refine(
   (weights) => {
     const sum = Object.values(weights).reduce((a, b) => a + b, 0);
-    return Math.abs(sum - 1.0) < 0.001;
+    return Math.abs(sum - 1) < 0.001;
   },
   { message: 'Scoring weights must sum to 1.0' }
 );
@@ -275,15 +275,15 @@ export type ScoringWeights = z.infer<typeof ScoringWeightsSchema>;
  */
 export const ScoringThresholdsSchema = z.object({
   // Pricing reasonableness
-  pricing_exact_threshold: z.number().default(0.30), // Within 30% = 1.0
-  pricing_acceptable_threshold: z.number().default(0.50), // Within 50% = 0.5
+  pricing_exact_threshold: z.number().default(0.3), // Within 30% = 1.0
+  pricing_acceptable_threshold: z.number().default(0.5), // Within 50% = 0.5
 
   // Timeline realism
   timeline_exact_weeks: z.number().default(2), // Within 2 weeks = 1.0
   timeline_acceptable_weeks: z.number().default(4), // Within 4 weeks = 0.5
 
   // Pattern detection
-  pattern_min_frequency: z.number().default(0.30), // 30% to flag as pattern
+  pattern_min_frequency: z.number().default(0.3), // 30% to flag as pattern
   pattern_min_samples: z.number().default(5), // Need at least 5 runs
 });
 
@@ -352,19 +352,19 @@ export function validateFlawPattern(data: unknown): {
  */
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   weights: {
-    tier_match: 0.20,
+    tier_match: 0.2,
     integration_coverage: 0.25,
     agent_type_alignment: 0.15,
-    pricing_reasonableness: 0.20,
-    timeline_realism: 0.10,
-    feature_coverage: 0.10,
+    pricing_reasonableness: 0.2,
+    timeline_realism: 0.1,
+    feature_coverage: 0.1,
   },
   thresholds: {
-    pricing_exact_threshold: 0.30,
-    pricing_acceptable_threshold: 0.50,
+    pricing_exact_threshold: 0.3,
+    pricing_acceptable_threshold: 0.5,
     timeline_exact_weeks: 2,
     timeline_acceptable_weeks: 4,
-    pattern_min_frequency: 0.30,
+    pattern_min_frequency: 0.3,
     pattern_min_samples: 5,
   },
 };

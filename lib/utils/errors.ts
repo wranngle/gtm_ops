@@ -5,12 +5,12 @@
 
 // Patterns that match API keys - NEVER let these appear in logs
 const SENSITIVE_PATTERNS = [
-  /sk-[a-zA-Z0-9]{20,}/g,           // OpenAI
-  /AIza[a-zA-Z0-9_-]{35}/g,         // Google
-  /gsk_[a-zA-Z0-9]{50,}/g,          // Groq
-  /xai-[a-zA-Z0-9]{50,}/g,          // xAI
-  /Bearer [a-zA-Z0-9._-]+/gi,       // Bearer tokens
-  /api[_-]?key[=:]\s*["']?[a-zA-Z0-9_-]+["']?/gi,
+  /sk-[a-zA-Z\d]{20,}/g,           // OpenAI
+  /AIza[\w-]{35}/g,         // Google
+  /gsk_[a-zA-Z\d]{50,}/g,          // Groq
+  /xai-[a-zA-Z\d]{50,}/g,          // xAI
+  /bearer [\w.-]+/gi,       // Bearer tokens
+  /api[_-]?key[=:]\s*["']?[\w-]+["']?/gi,
 ];
 
 /**
@@ -21,6 +21,7 @@ export function sanitize(text: string): string {
   for (const pattern of SENSITIVE_PATTERNS) {
     result = result.replace(pattern, '[REDACTED]');
   }
+
   return result;
 }
 
@@ -53,9 +54,7 @@ export class PipelineError extends Error {
     this.cause = options.cause;
 
     // Sanitize the stack trace too
-    if (this.stack) {
-      this.stack = sanitize(this.stack);
-    }
+    this.stack &&= sanitize(this.stack);
   }
 
   toJSON() {

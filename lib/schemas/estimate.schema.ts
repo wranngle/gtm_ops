@@ -33,7 +33,7 @@ export const EffortSchema = z.object({
   base_hours: HoursBreakdownSchema,
   adjusted_hours: HoursBreakdownSchema,
   risk_factors: z.array(z.string()).default([]),
-  risk_multiplier: z.number().min(1).max(2).default(1.0),
+  risk_multiplier: z.number().min(1).max(2).default(1),
   complexity_score: z.number().min(0).max(10).optional(),
   integrations: z.array(IntegrationComplexitySchema).default([]),
 });

@@ -202,7 +202,7 @@ const DEFAULT_PROPOSAL_CONFIG: ProposalConfig = {
     producer_email: process.env.PRODUCER_EMAIL || ''
   },
   defaults: {
-    valid_days: parseInt(process.env.DEFAULT_VALIDITY_DAYS || '14') || 14,
+    valid_days: parseInt(process.env.DEFAULT_VALIDITY_DAYS || '14', 10) || 14,
     platform: process.env.DEFAULT_PLATFORM || 'direct',
     warranty_days: 30
   },

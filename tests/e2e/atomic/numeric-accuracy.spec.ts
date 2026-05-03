@@ -6,14 +6,14 @@
  *
  * Test Matrix: Validates every calculation formula for reproducibility
  */
-import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { test, expect } from '@playwright/test';
 
 // Load all schema files for testing
-function loadAllSchemas(): { schema: any; file: string }[] {
+function loadAllSchemas(): Array<{ schema: any; file: string }> {
   const outputDir = path.join(process.cwd(), 'output');
-  const schemas: { schema: any; file: string }[] = [];
+  const schemas: Array<{ schema: any; file: string }> = [];
 
   function findSchemas(dir: string) {
     try {
@@ -26,12 +26,12 @@ function loadAllSchemas(): { schema: any; file: string }[] {
           try {
             const schema = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
             schemas.push({ schema, file: fullPath });
-          } catch (e) {
+          } catch {
             // Skip invalid JSON
           }
         }
       }
-    } catch (e) {
+    } catch {
       // Skip inaccessible directories
     }
   }
@@ -99,7 +99,7 @@ test.describe('Atomic: Bleed Calculation Accuracy', () => {
 
       if (bleedTotal?.value && bleedTotal?.display) {
         // Extract number from display
-        const displayNum = parseFloat(bleedTotal.display.replace(/[$,\/a-z]/gi, ''));
+        const displayNum = Number.parseFloat(bleedTotal.display.replaceAll(/[$,/a-z]/gi, ''));
 
         expect(
           Math.abs(bleedTotal.value - displayNum) < 1,
@@ -325,7 +325,7 @@ test.describe('Atomic: Effort Calculation Accuracy', () => {
 
         // Ratio should be at least 1 (no negative adjustment) and at most 3x
         expect(
-          ratio >= 1.0 && ratio <= 3.0,
+          ratio >= 1 && ratio <= 3,
           `${file}: adjusted/base ratio ${ratio.toFixed(2)} should be 1.0-3.0`
         ).toBe(true);
       }
@@ -377,6 +377,7 @@ test.describe('Atomic: Display Field Consistency', () => {
       if (pricing?.total) {
         expect(pricing.total_display, `${file}: pricing.total_display required`).toBeTruthy();
       }
+
       if (pricing?.labor) {
         expect(pricing.labor_display, `${file}: pricing.labor_display required`).toBeTruthy();
       }
@@ -455,11 +456,9 @@ test.describe('Atomic: Numeric Edge Cases', () => {
 
       // Bleed total should not be 0 for most cases
       const bleed = schema.measurements?.bleed_total?.value;
-      if (bleed !== undefined) {
-        // Allow 0 for stress_10_zero_values input
-        if (!file.includes('zero_values')) {
-          expect(bleed, `${file}: bleed total should not be 0`).toBeGreaterThan(0);
-        }
+      if (bleed !== undefined && // Allow 0 for stress_10_zero_values input
+        !file.includes('zero_values')) {
+        expect(bleed, `${file}: bleed total should not be 0`).toBeGreaterThan(0);
       }
     }
   });

@@ -6,9 +6,9 @@
  *
  * @priority P0 - Critical path tests
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 // Import factories
 import {
@@ -131,7 +131,7 @@ describe('Pipeline Data Flow Integration Tests', () => {
       });
 
       // THEN: Slug should be lowercase with hyphens
-      expect(identity.client_slug).toMatch(/^[a-z0-9-]+$/);
+      expect(identity.client_slug).toMatch(/^[a-z\d-]+$/);
       expect(identity.client_slug).not.toContain(' ');
     });
   });
@@ -142,7 +142,7 @@ describe('Pipeline Data Flow Integration Tests', () => {
       const identity = createProjectIdentity();
 
       // THEN: Slug should match format
-      expect(identity.document_slug).toMatch(/^WRN-AI-[\w-]+-[\w-]+-\d{2}r\d+$/);
+      expect(identity.document_slug).toMatch(/^WRN-AI(?:-[\w-]+){2}-\d{2}r\d+$/);
     });
 
     it('[P0] should include current year', () => {
@@ -165,9 +165,9 @@ describe('Pipeline Data Flow Integration Tests', () => {
       expect(pricing.final_price_display).toMatch(/^\$[\d,]+$/);
 
       // AND: Milestones should be formatted
-      Object.values(pricing.milestones).forEach(m => {
+      for (const m of Object.values(pricing.milestones)) {
         expect(m.amount_display).toMatch(/^\$[\d,]+$/);
-      });
+      }
     });
 
     it('[P0] should format bleed calculations', () => {
@@ -195,7 +195,7 @@ describe('Pipeline Data Flow Integration Tests', () => {
     it('[P0] should calculate payback period', () => {
       // GIVEN: Finops with known values
       const pricing = createPricingStructure();
-      pricing.final_price = 10000;
+      pricing.final_price = 10_000;
 
       const bleed = createBleedCalculation();
       bleed.monthly_bleed = 5000;
@@ -227,7 +227,7 @@ describe('Pipeline Data Flow Integration Tests', () => {
       const pricing = createPricingStructure();
 
       // WHEN: Extracting numeric from display
-      const displayNumeric = parseInt(pricing.final_price_display.replace(/[$,]/g, ''), 10);
+      const displayNumeric = Number.parseInt(pricing.final_price_display.replaceAll(/[$,]/g, ''), 10);
 
       // THEN: Should match
       expect(displayNumeric).toBe(pricing.final_price);
@@ -238,8 +238,8 @@ describe('Pipeline Data Flow Integration Tests', () => {
       const finops = createFinOpsCalculation();
 
       // WHEN: Extracting numeric from display
-      const displayNumeric = parseInt(
-        finops.value_breakdown.total_annual_display.replace(/[$,]/g, ''),
+      const displayNumeric = Number.parseInt(
+        finops.value_breakdown.total_annual_display.replaceAll(/[$,]/g, ''),
         10
       );
 
@@ -252,10 +252,10 @@ describe('Pipeline Data Flow Integration Tests', () => {
       const pricing = createPricingStructure();
 
       // THEN: Each milestone should sync
-      Object.values(pricing.milestones).forEach(milestone => {
-        const displayNumeric = parseInt(milestone.amount_display.replace(/[$,]/g, ''), 10);
+      for (const milestone of Object.values(pricing.milestones)) {
+        const displayNumeric = Number.parseInt(milestone.amount_display.replaceAll(/[$,]/g, ''), 10);
         expect(displayNumeric).toBe(milestone.amount);
-      });
+      }
     });
   });
 
@@ -372,18 +372,18 @@ describe('Data Contract Validation', () => {
       const schema = createPipelineSchema();
 
       // Validate pricing display sync
-      const pricingDisplay = parseInt(schema.pricing.final_price_display.replace(/[$,]/g, ''), 10);
+      const pricingDisplay = Number.parseInt(schema.pricing.final_price_display.replaceAll(/[$,]/g, ''), 10);
       expect(pricingDisplay).toBe(schema.pricing.final_price);
 
       // Validate finops display sync
-      const finopsDisplay = parseInt(
-        schema.finops.value_breakdown.total_annual_display.replace(/[$,]/g, ''),
+      const finopsDisplay = Number.parseInt(
+        schema.finops.value_breakdown.total_annual_display.replaceAll(/[$,]/g, ''),
         10
       );
       expect(finopsDisplay).toBe(schema.finops.value_breakdown.total_annual_value);
 
       // Validate bleed display sync
-      const bleedDisplay = parseInt(schema.bleed.monthly_bleed_display.replace(/[$,]/g, ''), 10);
+      const bleedDisplay = Number.parseInt(schema.bleed.monthly_bleed_display.replaceAll(/[$,]/g, ''), 10);
       expect(bleedDisplay).toBe(schema.bleed.monthly_bleed);
     }
   });

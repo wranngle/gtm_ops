@@ -9,8 +9,7 @@
  */
 
 import { fmt } from './format_helpers.js';
-import { isMonetaryValue, getMonthlyAmount, getAnnualAmount } from './types.js';
-import type { MonetaryValue } from './types.js';
+import { isMonetaryValue, getMonthlyAmount, getAnnualAmount, type MonetaryValue  } from './types.js';
 
 // =============================================================================
 // TYPES
@@ -298,7 +297,7 @@ export function buildTemplateContext(schema: Schema): TemplateContext {
   const proposalTotal = schema.proposal?.pricing?.total;
   const proposalPrice = proposalTotal && typeof proposalTotal === 'object' && 'amount' in proposalTotal ? proposalTotal.amount : (typeof proposalTotal === 'number' ? proposalTotal : 0);
   const targetPrice = clientPrice || finops.target_price || proposalPrice || 0;
-  _fmt.investment = fmt.currency({ amount: targetPrice as number, period: 'once', currency: 'USD' });
+  _fmt.investment = fmt.currency({ amount: targetPrice, period: 'once', currency: 'USD' });
   _fmt.total_price = _fmt.investment;
 
   // Margin
@@ -362,7 +361,7 @@ export function buildTemplateContext(schema: Schema): TemplateContext {
   const internalPricing = schema.proposal?.pricing || {};
   // Client-facing values take priority
   const subtotalValue = clientPricing.subtotal || (isMonetaryValue(internalPricing.subtotal) ? (internalPricing.subtotal as MonetaryValue).amount : (internalPricing.subtotal || 0));
-  const totalValueForFmt = clientPricing.final_price || (clientPricing.total && typeof clientPricing.total === 'object' && 'amount' in clientPricing.total ? clientPricing.total.amount : 0) || (isMonetaryValue(internalPricing.total) ? (internalPricing.total as MonetaryValue).amount : (typeof internalPricing.total === 'number' ? internalPricing.total : 0));
+  const totalValueForFmt = clientPricing.final_price || (clientPricing.total && typeof clientPricing.total === 'object' && 'amount' in clientPricing.total ? clientPricing.total.amount : 0) || (isMonetaryValue(internalPricing.total) ? (internalPricing.total).amount : (typeof internalPricing.total === 'number' ? internalPricing.total : 0));
   _fmt.pricing_subtotal = fmt.currency({ amount: subtotalValue, period: 'once', currency: 'USD' });
   _fmt.pricing_total = fmt.currency({ amount: totalValueForFmt, period: 'once', currency: 'USD' });
 
@@ -375,13 +374,13 @@ export function buildTemplateContext(schema: Schema): TemplateContext {
   // Using 5 business days per week for accurate week calculation
   const estWeeks = Math.ceil(estDays / 5);
   _fmt.est_weeks = estWeeks;
-  _fmt.est_weeks_display = `${estWeeks} week${estWeeks !== 1 ? 's' : ''}`;
+  _fmt.est_weeks_display = `${estWeeks} week${estWeeks === 1 ? '' : 's'}`;
   // total_duration as object with .display for template compatibility
   // IMPORTANT: Derive from est_days to ensure consistency (100 days → 20 weeks, not 12)
   _fmt.total_duration = {
     value: estWeeks,
     unit: 'weeks',
-    display: `${estWeeks} week${estWeeks !== 1 ? 's' : ''}`
+    display: `${estWeeks} week${estWeeks === 1 ? '' : 's'}`
   };
 
   // === RISK ANALYSIS ===
@@ -402,9 +401,9 @@ export function buildTemplateContext(schema: Schema): TemplateContext {
   // For the ROI breakdown display in proposal
   // NOTE: showPeriod: false - matches _display behavior
   const roiSection = schema.roi || finops.roi || {};
-  _fmt.annual_value = fmt.currency({ amount: (roiSection.annual_value || valueBreakdown.total_annual_value || 0) as number, period: 'annual', currency: 'USD' }, { showPeriod: false });
-  _fmt.monthly_value = fmt.currency({ amount: (roiSection.monthly_value || valueBreakdown.total_monthly_value || 0) as number, period: 'monthly', currency: 'USD' }, { showPeriod: false });
-  _fmt.investment_amount = fmt.currency({ amount: (roiSection.investment || targetPrice) as number, period: 'once', currency: 'USD' });
+  _fmt.annual_value = fmt.currency({ amount: (roiSection.annual_value || valueBreakdown.total_annual_value || 0), period: 'annual', currency: 'USD' }, { showPeriod: false });
+  _fmt.monthly_value = fmt.currency({ amount: (roiSection.monthly_value || valueBreakdown.total_monthly_value || 0), period: 'monthly', currency: 'USD' }, { showPeriod: false });
+  _fmt.investment_amount = fmt.currency({ amount: (roiSection.investment || targetPrice), period: 'once', currency: 'USD' });
 
   // === IDENTITY SHORTCUTS ===
   // Allow templates to use {{_fmt.client_name}} as shortcut
@@ -431,13 +430,15 @@ export function buildTemplateContext(schema: Schema): TemplateContext {
  * Format a single monetary value at render time
  * For use in templates with {{#_fmt.money}}{{amount}}{{/_fmt.money}} pattern
  */
-export function formatMoney(value: MonetaryValue | number | { amount?: number; value?: number }, period: string = 'once'): string {
+export function formatMoney(value: MonetaryValue | number | { amount?: number; value?: number }, period = 'once'): string {
   if (typeof value === 'number') {
     return fmt.currency({ amount: value, period: period as any, currency: 'USD' });
   }
+
   if (isMonetaryValue(value)) {
     return fmt.currency(value);
   }
+
   return fmt.currency({ amount: (value as any)?.amount || (value as any)?.value || 0, period: period as any, currency: 'USD' });
 }
 
@@ -449,23 +450,27 @@ export function buildSectionContext(section: any, sectionType: string): Formatte
   const _fmt: FormattedValues = {};
 
   switch (sectionType) {
-    case 'finops':
+    case 'finops': {
       _fmt.target_price = formatMoney(section.target_price);
       _fmt.margin_percent = fmt.percent(section.margin_percent || 0);
       break;
+    }
 
-    case 'bleed':
+    case 'bleed': {
       _fmt.total = formatMoney(section.total?.amount || 0, 'monthly');
       _fmt.annual = formatMoney((section.total?.amount || 0) * 12, 'annual');
       break;
+    }
 
-    case 'roi':
+    case 'roi': {
       _fmt.percent = fmt.roi(section.percent || 0).display;
       _fmt.payback = fmt.payback(section.payback_period_months || 0);
       break;
+    }
 
-    default:
+    default: {
       break;
+    }
   }
 
   return _fmt;

@@ -14,7 +14,7 @@ export const LLMProviderConfigSchema = z.object({
   model: z.string().optional(),
   temperature: z.number().min(0).max(2).default(0.7),
   maxTokens: z.number().positive().default(4096),
-  timeout: z.number().positive().default(60000),
+  timeout: z.number().positive().default(60_000),
 });
 
 export type LLMProviderConfig = z.infer<typeof LLMProviderConfigSchema>;

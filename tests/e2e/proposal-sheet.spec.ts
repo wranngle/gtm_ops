@@ -29,9 +29,9 @@ test.describe('Proposal Sheet - Payment Schedule', () => {
     const proposal = new ProposalPage(page);
     await page.goto(`file://${reportPath}`);
     const amounts = await proposal.getMilestoneAmounts();
-    amounts.forEach(amount => {
+    for (const amount of amounts) {
       expect(amount).toMatch(/\$[\d,]+/);
-    });
+    }
   });
 
   test('[P1][PR-004] milestone amounts should sum to total', async ({ page }) => {
@@ -39,7 +39,7 @@ test.describe('Proposal Sheet - Payment Schedule', () => {
     await page.goto(`file://${reportPath}`);
     const amounts = await proposal.getMilestoneAmounts();
     const total = amounts.reduce((sum, amt) => {
-      const num = parseFloat(amt.replace(/[$,]/g, ''));
+      const num = Number.parseFloat(amt.replaceAll(/[$,]/g, ''));
       return sum + (isNaN(num) ? 0 : num);
     }, 0);
     expect(total).toBeGreaterThan(0);
@@ -130,7 +130,7 @@ test.describe('Proposal Sheet - Neural Ops Tiers', () => {
     for (let i = 0; i < count; i++) {
       const price = await tiers.nth(i).locator('.tier-card__price, .price').textContent();
       // Prices can be numeric ($X,XXX) or "Custom" for enterprise tiers
-      if (price) expect(price).toMatch(/\$[\d,]+|Custom/i);
+      if (price) expect(price).toMatch(/\$[\d,]+|custom/i);
     }
   });
 
@@ -188,7 +188,7 @@ test.describe('Proposal Sheet - CTA and Validity', () => {
     const validUntil = await page.locator('.wrn-header-meta, .cta-expires').first().textContent();
     if (validUntil) {
       // Just check it contains a date-like pattern or validity text
-      expect(validUntil).toMatch(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\w+ \d{1,2},? \d{4}|valid|expires/i);
+      expect(validUntil).toMatch(/(?:\d{1,2}[/\-]){2}\d{2,4}|\w+ \d{1,2},? \d{4}|valid|expires/i);
     }
   });
 
@@ -211,7 +211,7 @@ test.describe('Proposal Sheet - Investment Summary', () => {
     await page.goto(`file://${reportPath}`);
     // Template uses investment-table with total-row, or stat with Total label
     const total = await page.locator('.investment-table .total-row, .investment-table .total-amount, .stat:has-text("Total")').first().textContent();
-    expect(total).toMatch(/\$[\d,]+|Total/i);
+    expect(total).toMatch(/\$[\d,]+|total/i);
   });
 
   test('[P1][PR-022] should break down investment components', async ({ page }) => {

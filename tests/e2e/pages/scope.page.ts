@@ -10,7 +10,7 @@
  * - Tech stack: .tech-pills, .badge
  * - Integrations: table with .integration-generic rows
  */
-import { Page, Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 
 export class ScopePage {
   readonly page: Page;
@@ -54,7 +54,7 @@ export class ScopePage {
   }
 
   async getTechStackCount(): Promise<number> {
-    return await this.techPills.count();
+    return this.techPills.count();
   }
 
   async getTechStackNames(): Promise<string[]> {
@@ -64,20 +64,21 @@ export class ScopePage {
       const name = await this.techPills.nth(i).textContent();
       if (name) names.push(name.trim());
     }
+
     return names;
   }
 
   // Alias for backwards compatibility with spec files
   async getTechStackItems(): Promise<string[]> {
-    return await this.getTechStackNames();
+    return this.getTechStackNames();
   }
 
   async getIntegrationCount(): Promise<number> {
-    return await this.integrationRows.count();
+    return this.integrationRows.count();
   }
 
-  async getIntegrations(): Promise<{ name: string; type: string; complexity: string }[]> {
-    const integrations: { name: string; type: string; complexity: string }[] = [];
+  async getIntegrations(): Promise<Array<{ name: string; type: string; complexity: string }>> {
+    const integrations: Array<{ name: string; type: string; complexity: string }> = [];
     const count = await this.integrationRows.count();
     for (let i = 0; i < count; i++) {
       const row = this.integrationRows.nth(i);
@@ -88,11 +89,12 @@ export class ScopePage {
         complexity: (await cells.nth(2).textContent() || '').trim(),
       });
     }
+
     return integrations;
   }
 
   async getInScopeCount(): Promise<number> {
-    return await this.inScopeItems.count();
+    return this.inScopeItems.count();
   }
 
   // Alias for backwards compatibility with spec files
@@ -103,11 +105,12 @@ export class ScopePage {
       const text = await this.inScopeItems.nth(i).textContent();
       if (text) items.push(text.trim());
     }
+
     return items;
   }
 
   async getOutOfScopeCount(): Promise<number> {
-    return await this.outOfScopeItems.count();
+    return this.outOfScopeItems.count();
   }
 
   // Alias for backwards compatibility with spec files  
@@ -118,19 +121,20 @@ export class ScopePage {
       const text = await this.outOfScopeItems.nth(i).textContent();
       if (text) items.push(text.trim());
     }
+
     return items;
   }
 
   async getDeliverableCount(): Promise<number> {
-    return await this.deliverablesList.count();
+    return this.deliverablesList.count();
   }
 
   async getBadgeCount(): Promise<number> {
-    return await this.badges.count();
+    return this.badges.count();
   }
 
   async getSectionCount(): Promise<number> {
-    return await this.sectionHeaders.count();
+    return this.sectionHeaders.count();
   }
 
   async hasN8nInStack(): Promise<boolean> {

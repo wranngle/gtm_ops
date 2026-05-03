@@ -7,10 +7,10 @@
  * - Custom domain handling
  * - Document branding
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -61,7 +61,7 @@ afterEach(async () => {
   if (testDbPath && fs.existsSync(testDbPath)) {
     try {
       fs.unlinkSync(testDbPath);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }

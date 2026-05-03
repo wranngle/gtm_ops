@@ -6,9 +6,9 @@
  *
  * AC5: Sales strategy config is loaded and injected
  */
-import { describe, it, expect, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // Path to the sales strategy config
 const CONFIG_PATH = path.join(process.cwd(), 'config', 'sales_strategy.json');
@@ -58,7 +58,7 @@ describe('[P0] Sales Strategy Config - File Structure', () => {
 
   it('[P0] should have valid version string', () => {
     // GIVEN: Config version
-    const version = config.version;
+    const {version} = config;
 
     // WHEN: Checking format
     // THEN: Should be semver format
@@ -152,7 +152,7 @@ describe('[P1] Sales Strategy Config - Pricing Strategy', () => {
 
   it('[AC7] should have at least 3 packages (Full Bundle, Core, Setup)', () => {
     // GIVEN: Packages
-    const packages = config.pricing_strategy.packages;
+    const {packages} = config.pricing_strategy;
 
     // WHEN: Checking count
     // THEN: Should have 3+ packages
@@ -161,7 +161,7 @@ describe('[P1] Sales Strategy Config - Pricing Strategy', () => {
 
   it('[AC7] each package should have required fields', () => {
     // GIVEN: Packages
-    const packages = config.pricing_strategy.packages;
+    const {packages} = config.pricing_strategy;
 
     // WHEN: Checking each package
     // THEN: All should have name, price, display, includes
@@ -177,7 +177,7 @@ describe('[P1] Sales Strategy Config - Pricing Strategy', () => {
 
   it('[AC7] should have anchor package marked', () => {
     // GIVEN: Packages
-    const packages = config.pricing_strategy.packages;
+    const {packages} = config.pricing_strategy;
 
     // WHEN: Finding anchor
     const anchor = packages.find((p: any) => p.is_anchor);
@@ -189,7 +189,7 @@ describe('[P1] Sales Strategy Config - Pricing Strategy', () => {
 
   it('[AC7] should have target close package marked', () => {
     // GIVEN: Packages
-    const packages = config.pricing_strategy.packages;
+    const {packages} = config.pricing_strategy;
 
     // WHEN: Finding target
     const target = packages.find((p: any) => p.is_target);
@@ -210,7 +210,7 @@ describe('[P1] Sales Strategy Config - Cold Call Scripts', () => {
 
   it('[AC8] should have scripts.cold_call with goal', () => {
     // GIVEN: Scripts
-    const scripts = config.scripts;
+    const {scripts} = config;
 
     // WHEN: Checking cold_call
     // THEN: Should have goal and segments
@@ -232,7 +232,7 @@ describe('[P1] Sales Strategy Config - Cold Call Scripts', () => {
 
   it('[AC8] each segment should have label and script', () => {
     // GIVEN: Segments
-    const segments = config.scripts.cold_call.segments;
+    const {segments} = config.scripts.cold_call;
 
     // WHEN: Checking each segment
     // THEN: All should have label and script
@@ -263,7 +263,7 @@ describe('[P1] Sales Strategy Config - Objection Handlers', () => {
 
   it('[AC9] should have at least 4 objection handlers', () => {
     // GIVEN: Objections
-    const objections = config.objections;
+    const {objections} = config;
 
     // WHEN: Checking count
     // THEN: Should have 4+ handlers
@@ -272,7 +272,7 @@ describe('[P1] Sales Strategy Config - Objection Handlers', () => {
 
   it('[AC9] each objection should have trigger and response', () => {
     // GIVEN: Objections
-    const objections = config.objections;
+    const {objections} = config;
 
     // WHEN: Checking each objection
     // THEN: All should have trigger and response
@@ -303,7 +303,7 @@ describe('[P1] Sales Strategy Config - Compliance Notes', () => {
 
   it('[AC10] should have at least 2 compliance notes', () => {
     // GIVEN: Compliance
-    const compliance = config.compliance;
+    const {compliance} = config;
 
     // WHEN: Checking count
     // THEN: Should have 2+ notes
@@ -312,7 +312,7 @@ describe('[P1] Sales Strategy Config - Compliance Notes', () => {
 
   it('[AC10] each note should have title, content, and style flags', () => {
     // GIVEN: Compliance notes
-    const compliance = config.compliance;
+    const {compliance} = config;
 
     // WHEN: Checking each note
     // THEN: All should have required fields (style_warning and style_healthy booleans)
@@ -328,7 +328,7 @@ describe('[P1] Sales Strategy Config - Compliance Notes', () => {
 
   it('[AC10] should have Inbound Safe Harbor note with healthy style', () => {
     // GIVEN: Compliance notes
-    const compliance = config.compliance;
+    const {compliance} = config;
 
     // WHEN: Finding inbound calls note (case-insensitive)
     const inbound = compliance.find((n: any) =>
@@ -343,7 +343,7 @@ describe('[P1] Sales Strategy Config - Compliance Notes', () => {
 
   it('[AC10] should have AI Disclosure note with warning style', () => {
     // GIVEN: Compliance notes
-    const compliance = config.compliance;
+    const {compliance} = config;
 
     // WHEN: Finding disclosure note (case-insensitive)
     const disclosure = compliance.find((n: any) =>

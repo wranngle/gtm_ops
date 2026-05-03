@@ -393,7 +393,7 @@ describe('[P2] Edge Cases', () => {
       const result = await getSystemIntelligence(name);
 
       // THEN: Should handle gracefully (either find or return null)
-      expect(() => getSystemIntelligence(name)).not.toThrow();
+      expect(async () => getSystemIntelligence(name)).not.toThrow();
     }
   });
 
@@ -410,7 +410,7 @@ describe('[P2] Edge Cases', () => {
       const result = await getSystemIntelligence(name);
 
       // THEN: Should not throw
-      expect(() => getSystemIntelligence(name)).not.toThrow();
+      expect(async () => getSystemIntelligence(name)).not.toThrow();
     }
   });
 
@@ -419,7 +419,7 @@ describe('[P2] Edge Cases', () => {
     const systemName = 'hubspot';
 
     // WHEN: Multiple rapid lookups
-    const promises = Array(10).fill(null).map(() => getSystemIntelligence(systemName));
+    const promises = Array.from({length: 10}).fill(null).map(async () => getSystemIntelligence(systemName));
     const results = await Promise.all(promises);
 
     // THEN: All results should be identical

@@ -75,11 +75,7 @@ export function currency(mv: MonetaryValue | number, options: CurrencyOptions = 
   // Format the number
   let formatted: string;
   if (compact && amount >= 1000) {
-    if (amount >= 1000000) {
-      formatted = `$${(amount / 1000000).toFixed(1)}M`;
-    } else {
-      formatted = `$${(amount / 1000).toFixed(0)}K`;
-    }
+    formatted = amount >= 1_000_000 ? `$${(amount / 1_000_000).toFixed(1)}M` : `$${(amount / 1000).toFixed(0)}K`;
   } else {
     formatted = `$${amount.toLocaleString()}`;
   }
@@ -87,15 +83,22 @@ export function currency(mv: MonetaryValue | number, options: CurrencyOptions = 
   // Add period suffix
   if (showPeriod) {
     switch (period) {
-      case 'monthly':
+      case 'monthly': {
         return `${formatted}/mo`;
-      case 'annual':
+      }
+
+      case 'annual': {
         return `${formatted}/yr`;
-      case 'per_item':
+      }
+
+      case 'per_item': {
         return `${formatted}/item`;
+      }
+
       case 'once':
-      default:
+      default: {
         return formatted;
+      }
     }
   }
 
@@ -143,11 +146,7 @@ export function duration(dv: DurationValue | number, options: DurationOptions = 
 
   // Handle raw numbers
   let dvTyped: DurationValue;
-  if (typeof dv === 'number') {
-    dvTyped = {value: dv, unit: defaultUnit};
-  } else {
-    dvTyped = dv;
-  }
+  dvTyped = typeof dv === 'number' ? {value: dv, unit: defaultUnit} : dv;
 
   if (!dvTyped || typeof dvTyped.value !== 'number') {
     return '0 hours';
@@ -257,21 +256,26 @@ export function date(dateValue: string | Date, options: DateOptions = {}): strin
   }
 
   switch (format) {
-    case 'short':
+    case 'short': {
       return d.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
       });
-    case 'iso':
+    }
+
+    case 'iso': {
       return d.toISOString().split('T')[0];
+    }
+
     case 'long':
-    default:
+    default: {
       return d.toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
         year: 'numeric'
       });
+    }
   }
 }
 

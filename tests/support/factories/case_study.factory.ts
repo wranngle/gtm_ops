@@ -26,7 +26,7 @@ import {
 /**
  * Case Study Solution - Ground truth data for comparison
  */
-export interface CaseStudySolution {
+export type CaseStudySolution = {
   tier: string;
   price_min: number;
   price_max: number;
@@ -40,7 +40,7 @@ export interface CaseStudySolution {
 /**
  * Complete Case Study - Problem + Solution for blind evaluation
  */
-export interface CaseStudy {
+export type CaseStudy = {
   id: string;
   vendor: string;
   source_url?: string;
@@ -57,7 +57,7 @@ export interface CaseStudy {
  */
 export function createSolution(overrides: Partial<CaseStudySolution> = {}): CaseStudySolution {
   const tier = overrides.tier || faker.helpers.arrayElement(['lite', 'standard', 'enterprise', 'flagship']);
-  const basePrice = tier === 'lite' ? 5000 : tier === 'standard' ? 12000 : tier === 'enterprise' ? 25000 : 45000;
+  const basePrice = tier === 'lite' ? 5000 : tier === 'standard' ? 12_000 : tier === 'enterprise' ? 25_000 : 45_000;
   const variance = 0.2;
 
   return {
@@ -99,17 +99,17 @@ export function createCaseStudy(overrides: Partial<CaseStudy> = {}): CaseStudy {
   const defaultIntake = createIntake();
   const problem = overrides.problem
     ? {
-        ...defaultIntake,
-        ...overrides.problem,
-        section_a_workflow_definition: {
-          ...defaultIntake.section_a_workflow_definition,
-          ...overrides.problem.section_a_workflow_definition,
-        },
-        section_c_systems_handoffs: {
-          ...defaultIntake.section_c_systems_handoffs,
-          ...overrides.problem.section_c_systems_handoffs,
-        },
-      }
+      ...defaultIntake,
+      ...overrides.problem,
+      section_a_workflow_definition: {
+        ...defaultIntake.section_a_workflow_definition,
+        ...overrides.problem.section_a_workflow_definition,
+      },
+      section_c_systems_handoffs: {
+        ...defaultIntake.section_c_systems_handoffs,
+        ...overrides.problem.section_c_systems_handoffs,
+      },
+    }
     : defaultIntake;
 
   // Derive solution from problem when possible
@@ -153,8 +153,8 @@ export function createDentalCaseStudy(overrides: Partial<CaseStudy> = {}): CaseS
     problem,
     solution: {
       tier: 'standard',
-      price_min: 10000,
-      price_max: 15000,
+      price_min: 10_000,
+      price_max: 15_000,
       timeline_weeks: 4,
       integrations: [
         'Dentrix G7',
@@ -214,8 +214,8 @@ export function createRealEstateCaseStudy(overrides: Partial<CaseStudy> = {}): C
     problem,
     solution: {
       tier: 'standard',
-      price_min: 12000,
-      price_max: 18000,
+      price_min: 12_000,
+      price_max: 18_000,
       timeline_weeks: 5,
       integrations: [
         'Salesforce',
@@ -275,8 +275,8 @@ export function createHVACCaseStudy(overrides: Partial<CaseStudy> = {}): CaseStu
     problem,
     solution: {
       tier: 'enterprise',
-      price_min: 22000,
-      price_max: 30000,
+      price_min: 22_000,
+      price_max: 30_000,
       timeline_weeks: 6,
       integrations: [
         'ServiceTitan',
@@ -336,9 +336,9 @@ export function createEvaluationTestSuite(): Array<{
       name: 'Exact tier match with full integration coverage',
       caseStudy: createDentalCaseStudy(),
       expectedScores: {
-        tier_match: 1.0,
-        integration_coverage: 1.0,
-        agent_type_alignment: 1.0
+        tier_match: 1,
+        integration_coverage: 1,
+        agent_type_alignment: 1
       }
     },
     {
@@ -369,7 +369,7 @@ export function createEvaluationTestSuite(): Array<{
       expectedScores: {
         tier_match: 0.5,
         integration_coverage: 0.5,
-        agent_type_alignment: 1.0
+        agent_type_alignment: 1
       }
     }
   ];
@@ -412,7 +412,7 @@ export function createMaskedIntakeSync(
   caseStudy?: Partial<CaseStudy>
 ): IntakeData {
   const cs = caseStudy ? createCaseStudy(caseStudy) : createCaseStudy();
-  const problem = cs.problem;
+  const {problem} = cs;
 
   // Manual masking without async dependency
   return {

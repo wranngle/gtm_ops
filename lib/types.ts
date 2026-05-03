@@ -73,10 +73,10 @@ export const PercentageValueValidator = type({
 export function createMonetaryValue(
   amount: number,
   period: MonetaryPeriod,
-  currency: string = 'USD'
+  currency = 'USD'
 ): MonetaryValue {
   if (typeof amount !== 'number' || isNaN(amount)) {
-    throw new Error(`Invalid amount: ${amount}. Must be a number.`);
+    throw new TypeError(`Invalid amount: ${amount}. Must be a number.`);
   }
 
   const validPeriods: MonetaryPeriod[] = ['once', 'monthly', 'annual', 'per_item'];
@@ -103,7 +103,7 @@ export function createMonetaryValue(
  */
 export function createDurationValue(value: number, unit: DurationUnit): DurationValue {
   if (typeof value !== 'number' || isNaN(value)) {
-    throw new Error(`Invalid value: ${value}. Must be a number.`);
+    throw new TypeError(`Invalid value: ${value}. Must be a number.`);
   }
 
   const validUnits: DurationUnit[] = ['minutes', 'hours', 'days', 'weeks', 'months'];
@@ -127,9 +127,9 @@ export function createDurationValue(value: number, unit: DurationUnit): Duration
  * createPercentageValue(0.15, "total_cost")
  * // => { value: 0.15, basis: "total_cost" }
  */
-export function createPercentageValue(value: number, basis: string = ''): PercentageValue {
+export function createPercentageValue(value: number, basis = ''): PercentageValue {
   if (typeof value !== 'number' || isNaN(value)) {
-    throw new Error(`Invalid value: ${value}. Must be a number.`);
+    throw new TypeError(`Invalid value: ${value}. Must be a number.`);
   }
 
   return {
@@ -193,18 +193,27 @@ export function getMonthlyAmount(mv: MonetaryValue): MonetaryValue {
   }
 
   switch (mv.period) {
-    case 'monthly':
+    case 'monthly': {
       return mv;
-    case 'annual':
+    }
+
+    case 'annual': {
       return createMonetaryValue(Math.round(mv.amount / 12), 'monthly', mv.currency);
-    case 'once':
+    }
+
+    case 'once': {
       // One-time costs don't convert to monthly
       return mv;
-    case 'per_item':
+    }
+
+    case 'per_item': {
       // Per-item costs need volume context
       return mv;
-    default:
+    }
+
+    default: {
       return mv;
+    }
   }
 }
 
@@ -223,18 +232,27 @@ export function getAnnualAmount(mv: MonetaryValue): MonetaryValue {
   }
 
   switch (mv.period) {
-    case 'annual':
+    case 'annual': {
       return mv;
-    case 'monthly':
+    }
+
+    case 'monthly': {
       return createMonetaryValue(mv.amount * 12, 'annual', mv.currency);
-    case 'once':
+    }
+
+    case 'once': {
       // One-time costs don't convert to annual
       return mv;
-    case 'per_item':
+    }
+
+    case 'per_item': {
       // Per-item costs need volume context
       return mv;
-    default:
+    }
+
+    default: {
       return mv;
+    }
   }
 }
 
@@ -263,9 +281,11 @@ export function sumMonetaryValues(values: MonetaryValue[]): MonetaryValue {
     if (!isMonetaryValue(v)) {
       throw new Error('All values must be valid MonetaryValues');
     }
+
     if (v.period !== firstPeriod) {
       throw new Error(`Cannot sum values with different periods: ${v.period} vs ${firstPeriod}`);
     }
+
     if (v.currency !== firstCurrency) {
       throw new Error(`Cannot sum values with different currencies: ${v.currency} vs ${firstCurrency}`);
     }
@@ -315,8 +335,8 @@ export function migrateToMonetaryValue(
 
     // Validate period before creating
     const validPeriods: MonetaryPeriod[] = ['once', 'monthly', 'annual', 'per_item'];
-    const finalPeriod = validPeriods.includes(mappedPeriod as MonetaryPeriod)
-      ? (mappedPeriod as MonetaryPeriod)
+    const finalPeriod = validPeriods.includes(mappedPeriod)
+      ? (mappedPeriod)
       : assumedPeriod;
 
     return createMonetaryValue(

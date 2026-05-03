@@ -10,7 +10,7 @@ import { faker } from '@faker-js/faker';
 // Types
 // ============================================================================
 
-export interface GeneratedInput {
+export type GeneratedInput = {
   companyName: string;
   projectName: string;
   industry: string;
@@ -25,7 +25,7 @@ export interface GeneratedInput {
   rawText: string;
 }
 
-export interface InputOverrides {
+export type InputOverrides = {
   companyName?: string;
   projectName?: string;
   industry?: string;
@@ -50,7 +50,7 @@ const INDUSTRY_TEMPLATES = {
     systems: ['Epic EHR', 'Cerner', 'Availity', 'Twilio', 'Microsoft 365', 'DocuSign'],
     volumeRange: [20, 100],
     timeRange: [10, 45],
-    laborRange: [80000, 200000],
+    laborRange: [80_000, 200_000],
   },
   legal: {
     companies: ['Law Firm', 'Legal Associates', 'Attorneys at Law', 'Legal Group', 'Law Office'],
@@ -58,7 +58,7 @@ const INDUSTRY_TEMPLATES = {
     systems: ['Clio', 'LawPay', 'DocuSign', 'Microsoft 365', 'Google Workspace', 'Dropbox'],
     volumeRange: [5, 30],
     timeRange: [30, 120],
-    laborRange: [100000, 300000],
+    laborRange: [100_000, 300_000],
   },
   realestate: {
     companies: ['Realty', 'Properties', 'Real Estate Group', 'Property Management', 'Homes'],
@@ -66,7 +66,7 @@ const INDUSTRY_TEMPLATES = {
     systems: ['Zillow API', 'Salesforce', 'DocuSign', 'Calendly', 'Twilio', 'Gmail'],
     volumeRange: [10, 50],
     timeRange: [15, 60],
-    laborRange: [60000, 150000],
+    laborRange: [60_000, 150_000],
   },
   logistics: {
     companies: ['Freight', 'Logistics', 'Transport', 'Shipping', 'Delivery Services'],
@@ -74,7 +74,7 @@ const INDUSTRY_TEMPLATES = {
     systems: ['Samsara', 'DAT', 'Trucker Path', 'QuickBooks', 'Slack', 'Google Maps API'],
     volumeRange: [50, 500],
     timeRange: [5, 30],
-    laborRange: [120000, 400000],
+    laborRange: [120_000, 400_000],
   },
   recruitment: {
     companies: ['Staffing', 'Talent Solutions', 'Recruiting', 'HR Partners', 'Workforce'],
@@ -82,7 +82,7 @@ const INDUSTRY_TEMPLATES = {
     systems: ['LinkedIn Recruiter', 'Greenhouse', 'Lever', 'Calendly', 'DocuSign', 'Slack'],
     volumeRange: [20, 100],
     timeRange: [20, 60],
-    laborRange: [90000, 250000],
+    laborRange: [90_000, 250_000],
   },
   finance: {
     companies: ['Financial Services', 'Capital', 'Investments', 'Advisory', 'Wealth Management'],
@@ -90,7 +90,7 @@ const INDUSTRY_TEMPLATES = {
     systems: ['Plaid', 'Stripe', 'Salesforce', 'DocuSign', 'AWS S3', 'Slack'],
     volumeRange: [30, 200],
     timeRange: [15, 45],
-    laborRange: [150000, 500000],
+    laborRange: [150_000, 500_000],
   },
 };
 
@@ -104,7 +104,7 @@ type IndustryKey = keyof typeof INDUSTRY_TEMPLATES;
  * Create a single generated input with optional overrides
  */
 export function createInput(overrides: InputOverrides = {}): GeneratedInput {
-  const industry = overrides.industry || faker.helpers.arrayElement(Object.keys(INDUSTRY_TEMPLATES)) as IndustryKey;
+  const industry = overrides.industry || faker.helpers.arrayElement(Object.keys(INDUSTRY_TEMPLATES));
   const template = INDUSTRY_TEMPLATES[industry as IndustryKey] || INDUSTRY_TEMPLATES.healthcare;
 
   const companyPrefix = faker.helpers.arrayElement(['Apex', 'Premier', 'Coastal', 'Metro', 'Summit', 'Valley', 'Elite', 'National']);
@@ -178,27 +178,30 @@ export function createIndustryInput(industry: IndustryKey, overrides: InputOverr
  */
 export function createStressInput(type: 'extreme_scale' | 'tiny_scale' | 'zero_values' | 'missing_data'): GeneratedInput {
   switch (type) {
-    case 'extreme_scale':
+    case 'extreme_scale': {
       return createInput({
-        volumePerDay: 50000,
-        annualLaborCost: 10000000,
-        budget: { min: 500000, max: 1000000 },
+        volumePerDay: 50_000,
+        annualLaborCost: 10_000_000,
+        budget: { min: 500_000, max: 1_000_000 },
       });
+    }
 
-    case 'tiny_scale':
+    case 'tiny_scale': {
       return createInput({
         volumePerDay: 2,
-        annualLaborCost: 30000,
-        budget: { min: 5000, max: 10000 },
+        annualLaborCost: 30_000,
+        budget: { min: 5000, max: 10_000 },
       });
+    }
 
-    case 'zero_values':
+    case 'zero_values': {
       return createInput({
         volumePerDay: 0,
         errorRate: 0,
       });
+    }
 
-    case 'missing_data':
+    case 'missing_data': {
       // Create minimal input
       return {
         companyName: faker.company.name(),
@@ -214,6 +217,7 @@ export function createStressInput(type: 'extreme_scale' | 'tiny_scale' | 'zero_v
         timeline: { weeks: 0 },
         rawText: `Company: ${faker.company.name()}\nWe need automation help.`,
       };
+    }
   }
 }
 
@@ -275,7 +279,7 @@ export function validateExtraction(
   }
 
   // Volume (approximate match)
-  const extractedVolume = parseInt(schema.intake?.section_b_volume_timing?.q06_runs_per_period || '0');
+  const extractedVolume = Number.parseInt(schema.intake?.section_b_volume_timing?.q06_runs_per_period || '0', 10);
   if (Math.abs(extractedVolume - factoryInput.volumePerDay) > factoryInput.volumePerDay * 0.2) {
     failures.push(`volume: expected ~${factoryInput.volumePerDay}, got ${extractedVolume}`);
   }

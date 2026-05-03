@@ -184,7 +184,7 @@ describe('Schema Validation (ATDD)', () => {
       });
 
       // THEN: Slug should match expected pattern
-      expect(identity.document_slug).toMatch(/^WRN-AI-[\w-]+-[\w-]+-\d{2}r\d+$/);
+      expect(identity.document_slug).toMatch(/^WRN-AI(?:-[\w-]+){2}-\d{2}r\d+$/);
     });
 
     it('[P1] should include current year in slug', () => {
@@ -222,7 +222,7 @@ describe('Schema Validation (ATDD)', () => {
       expect(bleed.annual_bleed_display).toMatch(/^\$[\d,]+$/);
       
       // AND: Display should match numeric value
-      const monthlyNumeric = parseInt(bleed.monthly_bleed_display.replace(/[$,]/g, ''), 10);
+      const monthlyNumeric = Number.parseInt(bleed.monthly_bleed_display.replaceAll(/[$,]/g, ''), 10);
       expect(monthlyNumeric).toBe(bleed.monthly_bleed);
     });
 
@@ -248,7 +248,7 @@ describe('Schema Validation (ATDD)', () => {
     it('[P1] should calculate payback period in months', () => {
       // GIVEN: Finops with pricing
       const pricing = createPricingStructure(120);
-      pricing.final_price = 10000;
+      pricing.final_price = 10_000;
 
       const bleed = createBleedCalculation({ monthly_bleed: 5000 });
       const finops = createFinOpsCalculation(pricing, bleed);
@@ -291,7 +291,7 @@ describe('Schema Validation (ATDD)', () => {
       const finops = createFinOpsCalculation();
 
       // WHEN: Extracting numeric from display
-      const displayNumeric = parseInt(finops.value_breakdown.total_annual_display.replace(/[$,]/g, ''), 10);
+      const displayNumeric = Number.parseInt(finops.value_breakdown.total_annual_display.replaceAll(/[$,]/g, ''), 10);
 
       // THEN: Values should match
       expect(displayNumeric).toBe(finops.value_breakdown.total_annual_value);
@@ -302,7 +302,7 @@ describe('Schema Validation (ATDD)', () => {
       const pricing = createPricingStructure();
 
       // WHEN: Extracting numeric from display
-      const displayNumeric = parseInt(pricing.final_price_display.replace(/[$,]/g, ''), 10);
+      const displayNumeric = Number.parseInt(pricing.final_price_display.replaceAll(/[$,]/g, ''), 10);
 
       // THEN: Values should match
       expect(displayNumeric).toBe(pricing.final_price);
@@ -313,10 +313,10 @@ describe('Schema Validation (ATDD)', () => {
       const pricing = createPricingStructure();
 
       // THEN: Each milestone display should match amount
-      Object.values(pricing.milestones).forEach(milestone => {
-        const displayNumeric = parseInt(milestone.amount_display.replace(/[$,]/g, ''), 10);
+      for (const milestone of Object.values(pricing.milestones)) {
+        const displayNumeric = Number.parseInt(milestone.amount_display.replaceAll(/[$,]/g, ''), 10);
         expect(displayNumeric).toBe(milestone.amount);
-      });
+      }
     });
   });
 
@@ -414,6 +414,6 @@ describe('Tier Assessment Validation', () => {
     const tier = createTierAssessment();
 
     // THEN: Risk multiplier should be at least 1.0
-    expect(tier.risk_multiplier).toBeGreaterThanOrEqual(1.0);
+    expect(tier.risk_multiplier).toBeGreaterThanOrEqual(1);
   });
 });

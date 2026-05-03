@@ -49,7 +49,7 @@ describe('[P0] enrichBusinessProfile', () => {
     };
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve(mockResponse),
+      json: async () => mockResponse,
     } as any);
 
     const result = await enrichBusinessProfile({ company_url: 'https://example.com' });
@@ -72,7 +72,7 @@ describe('[P0] enrichBusinessProfile', () => {
       .mockRejectedValueOnce(new Error('connection refused'))
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: async () => ({
           name: 'PDL Corp',
           employee_count: 150,
           industry: 'technology',
@@ -97,7 +97,7 @@ describe('[P0] enrichBusinessProfile', () => {
       .mockResolvedValueOnce({ ok: false } as any)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: async () => ({
           company_name: 'Abstract Corp',
           employee_count: '250',
           industry: 'fintech',
@@ -129,7 +129,7 @@ describe('[P0] enrichBusinessProfile', () => {
       .mockResolvedValueOnce({ ok: false } as any)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: async () => ({
           data: {
             name: 'EnrichSo Corp',
             staff: { total: 420 },
@@ -153,7 +153,7 @@ describe('[P0] enrichBusinessProfile', () => {
     vi.stubEnv('ABSTRACT_API_KEY', 'test-key');
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
+      json: async () => ({
         company_name: 'Parsed Corp',
         employee_count: '1500',
         industry: 'tech',
@@ -169,7 +169,7 @@ describe('[P0] enrichBusinessProfile', () => {
     vi.stubEnv('ENRICH_SO_API_KEY', 'test-key');
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
+      json: async () => ({
         name: 'Flat Corp',
         employee_count: 80,
         industry: 'retail',
@@ -186,7 +186,7 @@ describe('[P0] enrichBusinessProfile', () => {
     vi.stubEnv('N8N_ENRICHMENT_WEBHOOK_URL', 'http://localhost:5678/webhook/enrich');
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
+      json: async () => ({
         company_name: 'Enriched Name',
         industry: 'enriched_industry',
         employee_count: 999,
@@ -206,7 +206,7 @@ describe('[P0] enrichBusinessProfile', () => {
     vi.stubEnv('N8N_ENRICHMENT_WEBHOOK_URL', 'http://localhost:5678/webhook/enrich');
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
+      json: async () => ({
         tech_stack: ['Salesforce', 'HubSpot', 'Slack'],
       }),
     } as any);
@@ -233,7 +233,7 @@ describe('[P0] enrichBusinessProfile', () => {
     vi.stubEnv('N8N_ENRICHMENT_WEBHOOK_URL', 'http://localhost:5678/webhook/enrich');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ company_name: 'Cached Corp', employee_count: 50 }),
+      json: async () => ({ company_name: 'Cached Corp', employee_count: 50 }),
     } as any);
 
     await enrichBusinessProfile({ company_url: 'https://example.com' });
@@ -246,7 +246,7 @@ describe('[P0] enrichBusinessProfile', () => {
     vi.stubEnv('ABSTRACT_API_KEY', 'my-secret-key');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ company_name: 'Test' }),
+      json: async () => ({ company_name: 'Test' }),
     } as any);
 
     await enrichBusinessProfile({ company_url: 'https://example.com' });
@@ -261,7 +261,7 @@ describe('[P0] enrichBusinessProfile', () => {
     vi.stubEnv('ENRICH_SO_API_KEY', 'my-bearer-token');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ name: 'Test' }),
+      json: async () => ({ name: 'Test' }),
     } as any);
 
     await enrichBusinessProfile({ company_url: 'https://example.com' });
@@ -282,7 +282,7 @@ describe('[P1] enrichPersonProfile', () => {
     vi.stubEnv('PDL_API_KEY', 'test-key');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
+      json: async () => ({
         full_name: 'Jane Doe',
         job_title: 'VP of Operations',
         job_title_levels: ['vp'],
@@ -308,7 +308,7 @@ describe('[P1] enrichPersonProfile', () => {
     vi.stubEnv('PDL_API_KEY', 'test-key');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
+      json: async () => ({
         full_name: 'John Smith',
         job_title: 'Operations Manager',
         work_email: 'jsmith@example.com',
@@ -340,7 +340,7 @@ describe('[P1] enrichPersonProfile', () => {
     vi.stubEnv('PDL_API_KEY', 'test-key');
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
+      json: async () => ({
         full_name: 'Wrong Name',
         job_title: 'Wrong Title',
       }),
@@ -372,7 +372,7 @@ describe('[P1] enrichPersonProfile', () => {
       clearEnrichmentCache();
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ job_title_levels: levels }),
+        json: async () => ({ job_title_levels: levels }),
       } as any);
 
       const result = await enrichPersonProfile({ contact_email: `test-${expected}@example.com` });
@@ -388,7 +388,7 @@ describe('[P1] enrichPersonProfile', () => {
       .mockRejectedValueOnce(new Error('PDL down'))
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: async () => ({
           data: {
             full_name: 'Enrich Person',
             title: 'Director of Sales',
@@ -409,7 +409,7 @@ describe('[P1] enrichPersonProfile', () => {
     vi.stubEnv('PDL_API_KEY', 'test-key');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ full_name: 'Cached Person' }),
+      json: async () => ({ full_name: 'Cached Person' }),
     } as any);
 
     await enrichPersonProfile({ contact_email: 'cached@example.com' });

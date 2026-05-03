@@ -56,7 +56,7 @@ export function validateBleedInputs(inputs: BleedInputs): BleedInputs {
   }
 
   // Volume sanity check
-  if (volume_per_day !== undefined && volume_per_day > 10000) {
+  if (volume_per_day !== undefined && volume_per_day > 10_000) {
     throw new Error(
       `SANITY CHECK FAILED: volume_per_day=${volume_per_day} exceeds 10,000. ` +
       `This means over 10K tasks per day. Verify this is correct.`
@@ -82,7 +82,7 @@ export function validateBleedInputs(inputs: BleedInputs): BleedInputs {
   if (volume_per_day && days_per_month && minutes_per_item && hourly_rate) {
     const monthlyBleed = volume_per_day * days_per_month * (minutes_per_item / 60) * hourly_rate;
 
-    if (monthlyBleed > 500000) {
+    if (monthlyBleed > 500_000) {
       throw new Error(
         `SANITY CHECK FAILED: Calculated monthly bleed $${monthlyBleed.toLocaleString()} exceeds $500K. ` +
         `This seems unrealistically high. Verify inputs:\n` +
@@ -106,13 +106,13 @@ export function validateBleedInputs(inputs: BleedInputs): BleedInputs {
  */
 export function validateMonetaryAmount(
   amount: number,
-  label: string = 'amount',
+  label = 'amount',
   options: MonetaryAmountOptions = {}
 ): number {
   const {maxAmount = 100_000_000, allowNegative = false} = options;
 
   if (typeof amount !== 'number' || isNaN(amount)) {
-    throw new Error(`SANITY CHECK FAILED: ${label} is not a valid number: ${amount}`);
+    throw new TypeError(`SANITY CHECK FAILED: ${label} is not a valid number: ${amount}`);
   }
 
   if (!allowNegative && amount < 0) {
@@ -138,11 +138,11 @@ export function validateMonetaryAmount(
  */
 export function validatePercentage(
   value: number,
-  label: string = 'percentage',
+  label = 'percentage',
   format: PercentageFormat = 'decimal'
 ): number {
   if (typeof value !== 'number' || isNaN(value)) {
-    throw new Error(`SANITY CHECK FAILED: ${label} is not a valid number: ${value}`);
+    throw new TypeError(`SANITY CHECK FAILED: ${label} is not a valid number: ${value}`);
   }
 
   if (format === 'decimal') {
@@ -155,6 +155,7 @@ export function validatePercentage(
           `Did you mean ${value / 100}?`
         );
       }
+
       throw new Error(`SANITY CHECK FAILED: ${label}=${value} is outside decimal range (0-1).`);
     }
   } else {
@@ -177,7 +178,7 @@ export function validatePercentage(
 export function validateDuration(
   value: number,
   unit: DurationUnit,
-  label: string = 'duration'
+  label = 'duration'
 ): DurationValue {
   const validUnits: DurationUnit[] = ['minutes', 'hours', 'days', 'weeks', 'months', 'years'];
 

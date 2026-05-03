@@ -30,13 +30,13 @@ describe('Autofix', () => {
     it('[P0] identifies price too low', () => {
       const scores = {
         dimensions: [
-          { dimension: 'pricing_reasonableness', score: 0, details: { pipeline: 6500, truth: 45000, direction: 'low' } },
+          { dimension: 'pricing_reasonableness', score: 0, details: { pipeline: 6500, truth: 45_000, direction: 'low' } },
         ],
       };
       const rems = diagnose(scores, {});
       expect(rems).toHaveLength(1);
       expect(rems[0].fix).toBe('adjust_price');
-      expect(rems[0].target).toBe(45000);
+      expect(rems[0].target).toBe(45_000);
     });
 
     it('[P0] identifies timeline optimistic', () => {
@@ -74,7 +74,7 @@ describe('Autofix', () => {
     it('[P1] skips dimensions with score >= 0.8', () => {
       const scores = {
         dimensions: [
-          { dimension: 'tier_match', score: 1.0, details: { pipeline: 'enterprise', truth: 'enterprise' } },
+          { dimension: 'tier_match', score: 1, details: { pipeline: 'enterprise', truth: 'enterprise' } },
           { dimension: 'integration_coverage', score: 0.9, details: { missing: [], extra: [] } },
         ],
       };
@@ -87,7 +87,7 @@ describe('Autofix', () => {
         dimensions: [
           { dimension: 'tier_match', score: 0.5, details: { pipeline: 'starter', truth: 'enterprise', diff: 2 } },
           { dimension: 'integration_coverage', score: 0.5, details: { missing: ['Twilio'], extra: [] } },
-          { dimension: 'pricing_reasonableness', score: 0, details: { pipeline: 5000, truth: 40000, direction: 'low' } },
+          { dimension: 'pricing_reasonableness', score: 0, details: { pipeline: 5000, truth: 40_000, direction: 'low' } },
         ],
       };
       const rems = diagnose(scores, {});
@@ -133,9 +133,9 @@ describe('Autofix', () => {
         pricing: { total_price: 6500, base_price: 5000 },
         estimate: { pricing: { total: 6500 } },
       };
-      const patched = applyFixes(output, [{ fix: 'adjust_price', current: 6500, target: 45000 }]);
-      expect(patched.pricing.total_price).toBeGreaterThan(40000);
-      expect(patched.estimate.pricing.total).toBeGreaterThan(40000);
+      const patched = applyFixes(output, [{ fix: 'adjust_price', current: 6500, target: 45_000 }]);
+      expect(patched.pricing.total_price).toBeGreaterThan(40_000);
+      expect(patched.estimate.pricing.total).toBeGreaterThan(40_000);
     });
 
     it('[P0] adjusts timeline', () => {
@@ -175,7 +175,7 @@ describe('Autofix', () => {
     it('[P0] returns applied=false when no flaws', () => {
       const scores = {
         dimensions: [
-          { dimension: 'tier_match', score: 1.0, details: { pipeline: 'standard', truth: 'standard' } },
+          { dimension: 'tier_match', score: 1, details: { pipeline: 'standard', truth: 'standard' } },
         ],
         aggregate_score: 100,
       };
@@ -195,7 +195,7 @@ describe('Autofix', () => {
       const groundTruth = {
         inferred_tier: 'standard', // same tier to avoid that dimension
         integrations: [],
-        expected_price_range: { min: 0, max: 999999 },
+        expected_price_range: { min: 0, max: 999_999 },
         expected_timeline_weeks: 8,
         agent_type: 'inbound',
         key_features: ['feature a', 'feature b', 'feature c', 'feature d'],

@@ -6,18 +6,17 @@
  * @priority P0 - Critical for evaluation corpus population
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  detectVendor,
+  validateExtraction,
+  suggestImprovements,
+} from '../../../lib/evaluation/harvester.js';
 
 // Mock corpus to avoid DB calls
 vi.mock('../../../lib/evaluation/corpus.js', () => ({
   createCaseStudy: vi.fn(),
   getCaseStudyById: vi.fn(),
 }));
-
-import {
-  detectVendor,
-  validateExtraction,
-  suggestImprovements,
-} from '../../../lib/evaluation/harvester.js';
 
 describe('Harvester', () => {
   describe('detectVendor', () => {

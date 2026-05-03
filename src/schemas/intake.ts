@@ -170,7 +170,7 @@ export function validateIntake(data: unknown): {
     
     // Copy over any valid fields
     for (const [key, value] of Object.entries(obj)) {
-      partial[key as keyof Intake] = value as any;
+      partial[key as keyof Intake] = value;
     }
     
     // Log what failed

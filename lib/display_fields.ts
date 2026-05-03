@@ -113,14 +113,14 @@ export function createNumericDisplay(
 /**
  * Create a currency display (convenience wrapper)
  */
-export function createCurrencyDisplay(amount: number, suffix: string = ''): NumericDisplay {
+export function createCurrencyDisplay(amount: number, suffix = ''): NumericDisplay {
   return createNumericDisplay(amount, { currency: true, suffix });
 }
 
 /**
  * Create a percentage display
  */
-export function createPercentDisplay(ratio: number, showSymbol: boolean = true): NumericDisplay {
+export function createPercentDisplay(ratio: number, showSymbol = true): NumericDisplay {
   const percent = Math.round(ratio * 100);
   return {
     value: ratio,
@@ -139,8 +139,8 @@ export function createPercentDisplay(ratio: number, showSymbol: boolean = true):
  * stay in sync.
  */
 export function regenerateValueBreakdownDisplayFields(
-  valueBreakdown: ValueBreakdown | null | undefined
-): ValueBreakdown | null | undefined {
+  valueBreakdown: ValueBreakdown | undefined  
+): ValueBreakdown | undefined   {
   if (!valueBreakdown) return valueBreakdown;
 
   const result = { ...valueBreakdown };
@@ -151,6 +151,7 @@ export function regenerateValueBreakdownDisplayFields(
     if (typeof hs.monthly === 'number') {
       hs.monthly_display = `$${Math.round(hs.monthly).toLocaleString()}`;
     }
+
     if (typeof hs.annual === 'number') {
       hs.annual_display = `$${Math.round(hs.annual).toLocaleString()}`;
     }
@@ -162,6 +163,7 @@ export function regenerateValueBreakdownDisplayFields(
     if (typeof mo.monthly === 'number') {
       mo.monthly_display = `$${Math.round(mo.monthly).toLocaleString()}`;
     }
+
     if (typeof mo.annual === 'number') {
       mo.annual_display = `$${Math.round(mo.annual).toLocaleString()}`;
     }
@@ -171,6 +173,7 @@ export function regenerateValueBreakdownDisplayFields(
   if (typeof result.total_monthly_value === 'number') {
     result.total_monthly_display = `$${Math.round(result.total_monthly_value).toLocaleString()}`;
   }
+
   if (typeof result.total_annual_value === 'number') {
     result.total_annual_display = `$${Math.round(result.total_annual_value).toLocaleString()}`;
   }
@@ -182,9 +185,9 @@ export function regenerateValueBreakdownDisplayFields(
  * Regenerate display fields in a finops validation object
  */
 export function regenerateValidationDisplayFields(
-  validation: Validation | null | undefined,
+  validation: Validation | undefined  ,
   values: ValidationValues
-): Validation | null | undefined {
+): Validation | undefined   {
   if (!validation) return validation;
 
   const result = { ...validation };
@@ -209,7 +212,7 @@ export function regenerateValidationDisplayFields(
 
     if (paybackMonths < 1) {
       const weeks = Math.ceil(paybackMonths * 4.33);
-      result.payback_check.payback_display = `${weeks} week${weeks !== 1 ? 's' : ''}`;
+      result.payback_check.payback_display = `${weeks} week${weeks === 1 ? '' : 's'}`;
     } else {
       result.payback_check.payback_display = `${Math.round(paybackMonths * 10) / 10} months`;
     }
@@ -224,9 +227,9 @@ export function regenerateValidationDisplayFields(
  * This is the main function to call after synchronizing bleed data from audit.
  */
 export function regenerateFinopsDisplayFields(
-  finops: Finops | null | undefined,
+  finops: Finops | undefined  ,
   totalCost: number
-): Finops | null | undefined {
+): Finops | undefined   {
   if (!finops) return finops;
 
   // Validate totalCost parameter - guard against NaN/undefined

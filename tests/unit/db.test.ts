@@ -8,10 +8,10 @@
  * - Singleton pattern
  * - Transaction handling
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -50,7 +50,7 @@ afterEach(async () => {
   if (testDbPath && fs.existsSync(testDbPath)) {
     try {
       fs.unlinkSync(testDbPath);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }
@@ -346,7 +346,7 @@ describe('[P1] SQLite Adapter - Transactions', () => {
         await tx.run('INSERT INTO test (value) VALUES (?)', [100]);
         throw new Error('Simulated failure');
       });
-    } catch (e) {
+    } catch {
       // Expected
     }
 

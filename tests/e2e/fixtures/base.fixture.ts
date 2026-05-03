@@ -7,9 +7,9 @@
  * - Cleanup utilities
  * - Report page helpers
  */
-import { test as base, expect, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { test as base, expect, type Page } from '@playwright/test';
 
 // Extend test with custom fixtures
 export const test = base.extend<{
@@ -18,7 +18,7 @@ export const test = base.extend<{
   cleanupFiles: string[];
 }>({
   // Report page fixture - navigates to a generated report
-  reportPage: async ({ page }, use) => {
+  async reportPage({ page }, use) {
     // Default to first available report in output directory
     const outputDir = path.join(process.cwd(), 'output');
 
@@ -42,7 +42,7 @@ export const test = base.extend<{
   },
 
   // Test output directory fixture with auto-cleanup
-  testOutputDir: async ({}, use) => {
+  async testOutputDir({}, use) {
     const testDir = path.join(process.cwd(), 'output_test', `test-${Date.now()}`);
     fs.mkdirSync(testDir, { recursive: true });
 
@@ -55,7 +55,7 @@ export const test = base.extend<{
   },
 
   // Track files for cleanup
-  cleanupFiles: async ({}, use) => {
+  async cleanupFiles({}, use) {
     const files: string[] = [];
 
     await use(files);
@@ -70,7 +70,7 @@ export const test = base.extend<{
 });
 
 // Re-export expect for convenience
-export { expect };
+
 
 /**
  * Helper: Wait for all sheets to render
@@ -144,3 +144,5 @@ export async function verifyDisplayFields(page: Page): Promise<boolean> {
 
   return true;
 }
+
+export {expect} from '@playwright/test';

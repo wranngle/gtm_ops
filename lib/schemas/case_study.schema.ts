@@ -287,7 +287,7 @@ export type CaseStudyMeta = z.infer<typeof CaseStudyMetaSchema>;
  */
 export const CaseStudySchema = z.object({
   // Identity
-  id: z.string().regex(/^[a-z0-9-]+$/), // e.g., "vapi-dental-scheduling-001"
+  id: z.string().regex(/^[a-z\d-]+$/), // e.g., "vapi-dental-scheduling-001"
 
   // Source tracking
   source: CaseStudySourceSchema,
@@ -312,7 +312,7 @@ export const CreateCaseStudySchema = CaseStudySchema.omit({
   id: true,
   harvested_at: true,
 }).extend({
-  id: z.string().regex(/^[a-z0-9-]+$/).optional(),
+  id: z.string().regex(/^[a-z\d-]+$/).optional(),
 });
 
 export type CreateCaseStudy = z.infer<typeof CreateCaseStudySchema>;
@@ -360,9 +360,9 @@ export function generateCaseStudyId(
 ): string {
   const sanitizedIndustry = industry
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replaceAll(/[^a-z\d]+/g, '-')
+    .replaceAll(/-+/g, '-')
+    .replaceAll(/^-|-$/g, '')
     .slice(0, 20);
 
   return `${vendor}-${sanitizedIndustry}-${String(index).padStart(3, '0')}`;

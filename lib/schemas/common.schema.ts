@@ -128,10 +128,10 @@ export function validateDisplaySync(
   display: string,
   format: 'currency' | 'percent' | 'number'
 ): boolean {
-  const cleanDisplay = display.replace(/[$,%,]/g, '').trim();
-  const parsedValue = parseFloat(cleanDisplay);
+  const cleanDisplay = display.replaceAll(/[$,%]/g, '').trim();
+  const parsedValue = Number.parseFloat(cleanDisplay);
 
   // Allow for formatting differences (commas, rounding)
   return Math.abs(parsedValue - value) < 0.01 ||
-         Math.abs(parsedValue - Math.round(value)) < 1;
+    Math.abs(parsedValue - Math.round(value)) < 1;
 }

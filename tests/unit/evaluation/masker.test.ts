@@ -108,8 +108,8 @@ describe('Masker', () => {
       // GIVEN: Solution with known price
       const caseStudy = createCaseStudy({
         solution: createSolution({
-          price_min: 15000,
-          price_max: 20000,
+          price_min: 15_000,
+          price_max: 20_000,
         }),
       });
       const badIntake = {

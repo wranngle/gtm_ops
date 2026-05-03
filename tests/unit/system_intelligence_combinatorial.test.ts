@@ -109,9 +109,10 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      await new Promise(r => setTimeout(r, Math.pow(2, i) * 10));
+      await new Promise(r => setTimeout(r, 2**i * 10));
     }
   }
+
   throw lastError;
 }
 
@@ -149,13 +150,13 @@ describe('[P0] Exact ID Matching - Combinatorial', () => {
   it.each(exactIdCases)(
     '[P0] exact ID "$input" should resolve to $expectedId',
     async ({ input, expectedId }) => {
-      const result = await withRetry(() => getSystemIntelligence(input));
+      const result = await withRetry(async () => getSystemIntelligence(input));
 
       assertValidIntelligence(result, { allowNull: true });
       if (result) {
         expect(result.id).toBe(expectedId);
         expect(result.match_type).toBe('exact_id');
-        expect(result.match_confidence).toBe(1.0);
+        expect(result.match_confidence).toBe(1);
       }
     }
   );
@@ -196,7 +197,7 @@ describe('[P0] Alias Resolution - Combinatorial', () => {
   it.each(aliasTestCases)(
     '[P0] alias "$alias" should resolve to $expectedId',
     async ({ alias, expectedId }) => {
-      const result = await withRetry(() => getSystemIntelligence(alias));
+      const result = await withRetry(async () => getSystemIntelligence(alias));
 
       if (result) {
         expect(result.id).toBe(expectedId);
@@ -250,8 +251,7 @@ describe('[P1] Fuzzy Matching - Combinatorial', () => {
     }
 
     // Extra whitespace
-    variations.push({ input: sys.id + '  ', expectedId: sys.id, description: 'trailing space' });
-    variations.push({ input: '  ' + sys.id, expectedId: sys.id, description: 'leading space' });
+    variations.push({ input: sys.id + '  ', expectedId: sys.id, description: 'trailing space' }, { input: '  ' + sys.id, expectedId: sys.id, description: 'leading space' });
     variations.push({ input: sys.id.replace('-', '  '), expectedId: sys.id, description: 'double space' });
 
     return variations;
@@ -285,7 +285,7 @@ describe('[P0] Unknown System Handling', () => {
     '!@#$%^&*()',
     'a'.repeat(100),
     faker.string.uuid(),
-    faker.lorem.words(5).replace(/\s/g, '-'),
+    faker.lorem.words(5).replaceAll(/\s/g, '-'),
     '',
     ' ',
     '\t',
@@ -381,7 +381,7 @@ describe('[P1] Caching Behavior', () => {
 
     // Launch all lookups concurrently
     const promises = systemNames.flatMap(name =>
-      Array(10).fill(null).map(() => getSystemIntelligence(name))
+      Array.from({length: 10}).fill(null).map(async () => getSystemIntelligence(name))
     );
 
     const results = await Promise.all(promises);
@@ -495,14 +495,12 @@ describe('[P0] Catalog + Research Merge', () => {
   it('[P1] merged result may include research fields', async () => {
     const result = await getSystemIntelligence('dentrix-g7', { includeResearch: true });
 
-    if (result && result.source === 'merged') {
-      // Merged results may have research fields
+    if (result?.source === 'merged' && // Merged results may have research fields
       // These are optional depending on research cache availability
-      if (result.complexity_score) {
-        expect(typeof result.complexity_score).toBe('number');
-        expect(result.complexity_score).toBeGreaterThanOrEqual(1);
-        expect(result.complexity_score).toBeLessThanOrEqual(10);
-      }
+      result.complexity_score) {
+      expect(typeof result.complexity_score).toBe('number');
+      expect(result.complexity_score).toBeGreaterThanOrEqual(1);
+      expect(result.complexity_score).toBeLessThanOrEqual(10);
     }
   });
 });
@@ -677,6 +675,7 @@ describe('[P2] Performance', () => {
       const system = systems[i % systems.length];
       await getSystemIntelligence(system);
     }
+
     const duration = Date.now() - start;
 
     expect(duration).toBeLessThan(2000);

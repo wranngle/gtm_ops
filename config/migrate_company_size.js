@@ -1,13 +1,13 @@
-import initSqlJs from 'sql.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import initSqlJs from 'sql.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, 'presales.db');
 
 const companySizeRows = [
-  { category: 'company_size', factor_key: 'smb', factor_label: 'Small Business (<100)', multiplier: 1.0, criteria: '["1-99 employees"]' },
+  { category: 'company_size', factor_key: 'smb', factor_label: 'Small Business (<100)', multiplier: 1, criteria: '["1-99 employees"]' },
   { category: 'company_size', factor_key: 'mid_market', factor_label: 'Mid-Market (100-500)', multiplier: 1.15, criteria: '["100-500 employees"]' },
   { category: 'company_size', factor_key: 'enterprise', factor_label: 'Enterprise (501-2000)', multiplier: 1.3, criteria: '["501-2000 employees"]' },
   { category: 'company_size', factor_key: 'large_enterprise', factor_label: 'Large Enterprise (2000+)', multiplier: 1.5, criteria: '["2000+ employees"]' },

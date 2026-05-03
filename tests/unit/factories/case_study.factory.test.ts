@@ -38,14 +38,14 @@ describe('Case Study Factory', () => {
     it('accepts overrides', () => {
       const solution = createSolution({
         tier: 'enterprise',
-        price_min: 50000,
-        price_max: 75000,
+        price_min: 50_000,
+        price_max: 75_000,
         agent_type: 'outbound',
       });
 
       expect(solution.tier).toBe('enterprise');
-      expect(solution.price_min).toBe(50000);
-      expect(solution.price_max).toBe(75000);
+      expect(solution.price_min).toBe(50_000);
+      expect(solution.price_max).toBe(75_000);
       expect(solution.agent_type).toBe('outbound');
     });
 
@@ -247,10 +247,10 @@ describe('Mock Pipeline Output Factory', () => {
     });
 
     it('uses provided price', () => {
-      const output = createMockPipelineOutput({ price: 25000 });
+      const output = createMockPipelineOutput({ price: 25_000 });
       const pricing = output.pricing as { final_price: number };
 
-      expect(pricing.final_price).toBe(25000);
+      expect(pricing.final_price).toBe(25_000);
     });
 
     it('includes features array', () => {
@@ -269,14 +269,14 @@ describe('Evaluation Test Suite Factory', () => {
       const suite = createEvaluationTestSuite();
 
       expect(suite.length).toBeGreaterThan(0);
-      suite.forEach(testCase => {
+      for (const testCase of suite) {
         expect(testCase.name).toBeDefined();
         expect(testCase.caseStudy).toBeDefined();
         expect(testCase.expectedScores).toBeDefined();
         expect(testCase.expectedScores.tier_match).toBeDefined();
         expect(testCase.expectedScores.integration_coverage).toBeDefined();
         expect(testCase.expectedScores.agent_type_alignment).toBeDefined();
-      });
+      }
     });
 
     it('includes exact match test case', () => {
@@ -284,7 +284,7 @@ describe('Evaluation Test Suite Factory', () => {
       const exactMatch = suite.find(tc => tc.name.includes('Exact'));
 
       expect(exactMatch).toBeDefined();
-      expect(exactMatch!.expectedScores.tier_match).toBe(1.0);
+      expect(exactMatch!.expectedScores.tier_match).toBe(1);
     });
 
     it('includes mismatched test cases', () => {

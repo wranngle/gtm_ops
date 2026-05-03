@@ -1,8 +1,12 @@
-import express from 'express';
 import path from 'path';
 import fsSync from 'fs';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import { EventEmitter } from 'events';
+import { spawn } from 'child_process';
+import express from 'express';
+import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
 import { UnifiedPipeline } from './lib/pipeline.js';
 import { HistoryManager } from './lib/history.js';
 import { healthCheck, serverState, trackRequest } from './lib/health.js';
@@ -23,10 +27,17 @@ import { BrandingManager } from './lib/branding.js';
 import { AdminManager, TimePeriod } from './lib/admin.js';
 import { GdprManager, ConsentType } from './lib/gdpr.js';
 import { Role, Permission, hasPermission, getPermissionSummary, getUserManager, canChangeRole, canRemoveUser } from './lib/rbac.js';
-import dotenv from 'dotenv';
-import { EventEmitter } from 'events';
-import { spawn } from 'child_process';
-import { GoogleGenAI } from '@google/genai';
+
+// =============================================================================
+// Evaluation API endpoints
+// =============================================================================
+
+import {
+  getCorpusStats,
+  listCaseStudies,
+  listEvaluationRuns,
+  getEvaluationRunById,
+} from './lib/evaluation/corpus.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -52,6 +63,7 @@ app.use((req, res, next) => {
   if (serverState.isShuttingDown) {
     return res.status(503).json({ error: 'Server is shutting down' });
   }
+
   const done = trackRequest();
   res.on('finish', done);
   res.on('close', done);
@@ -66,17 +78,17 @@ let adminManager = null;
 let gdprManager = null;
 
 function getBrandingManager() {
-  if (!brandingManager) brandingManager = new BrandingManager();
+  brandingManager ||= new BrandingManager();
   return brandingManager;
 }
 
 function getAdminManager() {
-  if (!adminManager) adminManager = new AdminManager();
+  adminManager ||= new AdminManager();
   return adminManager;
 }
 
 function getGdprManager() {
-  if (!gdprManager) gdprManager = new GdprManager();
+  gdprManager ||= new GdprManager();
   return gdprManager;
 }
 
@@ -85,7 +97,7 @@ app.get('/health', async (req, res) => {
   try {
     const health = await healthCheck(history.db);
     const statusCode = health.status === 'healthy' ? 200 :
-                       health.status === 'degraded' ? 200 : 503;
+      health.status === 'degraded' ? 200 : 503;
     res.status(statusCode).json(health);
   } catch (error) {
     res.status(503).json({
@@ -104,12 +116,14 @@ app.get('/ready', (req, res) => {
       reason: 'Server is shutting down'
     });
   }
+
   if (!serverState.isReady) {
     return res.status(503).json({
       ready: false,
       reason: 'Server is starting up'
     });
   }
+
   res.status(200).json({ ready: true });
 });
 
@@ -139,7 +153,7 @@ app.get('/api/history', historyLimiter, (req, res) => {
         row.timestamp = Number(row.timestamp);
         const artifacts = [];
         if (row.artifact_list) {
-          row.artifact_list.split('|||').forEach(item => {
+          for (const item of row.artifact_list.split('|||')) {
             const [type, ...pathParts] = item.split(':::');
             const fullPath = pathParts.join(':::');
             let webPath = fullPath;
@@ -147,21 +161,23 @@ app.get('/api/history', historyLimiter, (req, res) => {
             for (const marker of markers) {
               const idx = webPath.indexOf(marker);
               if (idx !== -1) {
-                webPath = '/' + webPath.substring(idx).replace(/\\/g, '/');
+                webPath = '/' + webPath.slice(Math.max(0, idx)).replaceAll('\\', '/');
                 break;
               }
             }
+
             artifacts.push({ type, path: fullPath, webPath });
-          });
+          }
         }
+
         return { ...row, artifacts };
       });
       
       res.json(sanitizedRows);
     });
-  } catch (e) {
-    console.error('[HISTORY] API error:', e.message);
-    res.status(500).json({ error: e.message });
+  } catch (error) {
+    console.error('[HISTORY] API error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -188,10 +204,11 @@ app.get('/api/artifacts/:executionId', (req, res) => {
       for (const marker of markers) {
         const idx = webPath.indexOf(marker);
         if (idx !== -1) {
-          webPath = '/' + webPath.substring(idx).replace(/\\/g, '/');
+          webPath = '/' + webPath.slice(Math.max(0, idx)).replaceAll('\\', '/');
           break;
         }
       }
+
       return { ...row, webPath };
     }));
   });
@@ -204,8 +221,8 @@ app.get('/api/usage/summary', generalLimiter, async (req, res) => {
     const options = {};
 
     if (workspace_id) options.workspace_id = workspace_id;
-    if (start_date) options.start_date = parseInt(start_date, 10);
-    if (end_date) options.end_date = parseInt(end_date, 10);
+    if (start_date) options.start_date = Number.parseInt(start_date, 10);
+    if (end_date) options.end_date = Number.parseInt(end_date, 10);
 
     const summary = await getUsageTracker().getUsageSummary(options);
     res.json(summary);
@@ -222,10 +239,10 @@ app.get('/api/usage/detail', generalLimiter, async (req, res) => {
 
     if (workspace_id) options.workspace_id = workspace_id;
     if (event_type) options.event_type = event_type;
-    if (start_date) options.start_date = parseInt(start_date, 10);
-    if (end_date) options.end_date = parseInt(end_date, 10);
-    if (limit) options.limit = Math.min(parseInt(limit, 10), 100); // Cap at 100
-    if (offset) options.offset = parseInt(offset, 10);
+    if (start_date) options.start_date = Number.parseInt(start_date, 10);
+    if (end_date) options.end_date = Number.parseInt(end_date, 10);
+    if (limit) options.limit = Math.min(Number.parseInt(limit, 10), 100); // Cap at 100
+    if (offset) options.offset = Number.parseInt(offset, 10);
 
     const detail = await getUsageTracker().getUsageDetail(options);
     res.json(detail);
@@ -241,8 +258,8 @@ app.get('/api/usage/costs', generalLimiter, async (req, res) => {
     const options = {};
 
     if (workspace_id) options.workspace_id = workspace_id;
-    if (start_date) options.start_date = parseInt(start_date, 10);
-    if (end_date) options.end_date = parseInt(end_date, 10);
+    if (start_date) options.start_date = Number.parseInt(start_date, 10);
+    if (end_date) options.end_date = Number.parseInt(end_date, 10);
 
     const costs = await getUsageTracker().getCostBreakdown(options);
     res.json(costs);
@@ -295,7 +312,7 @@ app.get('/api/webhooks', generalLimiter, async (req, res) => {
 
 app.get('/api/webhooks/:id', generalLimiter, async (req, res) => {
   try {
-    const webhook = await getWebhookManager().getWebhook(parseInt(req.params.id, 10));
+    const webhook = await getWebhookManager().getWebhook(Number.parseInt(req.params.id, 10));
 
     if (!webhook) {
       return res.status(404).json({ error: 'Webhook not found' });
@@ -313,7 +330,7 @@ app.patch('/api/webhooks/:id', generalLimiter, async (req, res) => {
     const { name, url, events, enabled } = req.body;
 
     const webhook = await getWebhookManager().updateWebhook(
-      parseInt(req.params.id, 10),
+      Number.parseInt(req.params.id, 10),
       { name, url, events, enabled }
     );
 
@@ -326,7 +343,7 @@ app.patch('/api/webhooks/:id', generalLimiter, async (req, res) => {
 
 app.delete('/api/webhooks/:id', generalLimiter, async (req, res) => {
   try {
-    const deleted = await getWebhookManager().deleteWebhook(parseInt(req.params.id, 10));
+    const deleted = await getWebhookManager().deleteWebhook(Number.parseInt(req.params.id, 10));
 
     if (!deleted) {
       return res.status(404).json({ error: 'Webhook not found' });
@@ -341,7 +358,7 @@ app.delete('/api/webhooks/:id', generalLimiter, async (req, res) => {
 
 app.post('/api/webhooks/:id/test', generalLimiter, async (req, res) => {
   try {
-    const result = await getWebhookManager().testWebhook(parseInt(req.params.id, 10));
+    const result = await getWebhookManager().testWebhook(Number.parseInt(req.params.id, 10));
     res.json(result);
   } catch (error) {
     console.error('[WEBHOOKS] Test error:', error.message);
@@ -354,11 +371,11 @@ app.get('/api/webhooks/:id/deliveries', generalLimiter, async (req, res) => {
     const { limit, offset } = req.query;
     const options = {};
 
-    if (limit) options.limit = Math.min(parseInt(limit, 10), 100);
-    if (offset) options.offset = parseInt(offset, 10);
+    if (limit) options.limit = Math.min(Number.parseInt(limit, 10), 100);
+    if (offset) options.offset = Number.parseInt(offset, 10);
 
     const history = await getWebhookManager().getDeliveryHistory(
-      parseInt(req.params.id, 10),
+      Number.parseInt(req.params.id, 10),
       options
     );
 
@@ -382,11 +399,11 @@ app.get('/api/documents/:executionId/versions', generalLimiter, async (req, res)
     }
 
     const options = {};
-    if (limit) options.limit = Math.min(parseInt(limit, 10), 50);
+    if (limit) options.limit = Math.min(Number.parseInt(limit, 10), 50);
     if (include_deleted === 'true') options.includeDeleted = true;
 
     const versions = await versionManager.listVersions(
-      parseInt(executionId, 10),
+      Number.parseInt(executionId, 10),
       type,
       options
     );
@@ -408,9 +425,9 @@ app.get('/api/documents/:executionId/versions/:version', generalLimiter, async (
     }
 
     const artifact = await versionManager.getVersion(
-      parseInt(executionId, 10),
+      Number.parseInt(executionId, 10),
       type,
-      parseInt(version, 10)
+      Number.parseInt(version, 10)
     );
 
     if (!artifact) {
@@ -436,9 +453,9 @@ app.post('/api/documents/:executionId/rollback/:version', generalLimiter, async 
     }
 
     const result = await versionManager.rollback(
-      parseInt(executionId, 10),
+      Number.parseInt(executionId, 10),
       type,
-      parseInt(version, 10)
+      Number.parseInt(version, 10)
     );
 
     res.json({
@@ -449,7 +466,7 @@ app.post('/api/documents/:executionId/rollback/:version', generalLimiter, async 
   } catch (error) {
     console.error('[VERSIONS] Rollback error:', error.message);
     const statusCode = error.message.includes('not found') ? 404 :
-                       error.message.includes('deleted') ? 400 : 500;
+      error.message.includes('deleted') ? 400 : 500;
     res.status(statusCode).json({ error: error.message });
   }
 });
@@ -464,10 +481,10 @@ app.get('/api/documents/:executionId/diff/:v1/:v2', generalLimiter, async (req, 
     }
 
     const diff = await versionManager.compareVersions(
-      parseInt(executionId, 10),
+      Number.parseInt(executionId, 10),
       type,
-      parseInt(v1, 10),
-      parseInt(v2, 10)
+      Number.parseInt(v1, 10),
+      Number.parseInt(v2, 10)
     );
 
     res.json(diff);
@@ -490,10 +507,10 @@ app.get('/api/audit-logs', generalLimiter, async (req, res) => {
     if (user_id) filters.user_id = user_id;
     if (action) filters.action = action;
     if (resource_type) filters.resource_type = resource_type;
-    if (start_date) filters.start_date = parseInt(start_date, 10);
-    if (end_date) filters.end_date = parseInt(end_date, 10);
-    if (limit) filters.limit = Math.min(parseInt(limit, 10), 100);
-    if (offset) filters.offset = parseInt(offset, 10);
+    if (start_date) filters.start_date = Number.parseInt(start_date, 10);
+    if (end_date) filters.end_date = Number.parseInt(end_date, 10);
+    if (limit) filters.limit = Math.min(Number.parseInt(limit, 10), 100);
+    if (offset) filters.offset = Number.parseInt(offset, 10);
 
     const result = await getAuditLogger().query(filters);
     res.json(result);
@@ -511,8 +528,8 @@ app.get('/api/audit-logs/export', generalLimiter, async (req, res) => {
     if (workspace_id) filters.workspace_id = workspace_id;
     if (user_id) filters.user_id = user_id;
     if (action) filters.action = action;
-    if (start_date) filters.start_date = parseInt(start_date, 10);
-    if (end_date) filters.end_date = parseInt(end_date, 10);
+    if (start_date) filters.start_date = Number.parseInt(start_date, 10);
+    if (end_date) filters.end_date = Number.parseInt(end_date, 10);
 
     const csv = await getAuditLogger().exportToCsv(filters);
     res.setHeader('Content-Type', 'text/csv');
@@ -526,7 +543,7 @@ app.get('/api/audit-logs/export', generalLimiter, async (req, res) => {
 
 app.get('/api/audit-logs/verify', generalLimiter, async (req, res) => {
   try {
-    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 1000;
+    const limit = req.query.limit ? Number.parseInt(req.query.limit, 10) : 1000;
     const result = await getAuditLogger().verifyIntegrity(limit);
     res.json(result);
   } catch (error) {
@@ -541,6 +558,7 @@ app.get('/api/audit-logs/:logId', generalLimiter, async (req, res) => {
     if (!log) {
       return res.status(404).json({ error: 'Audit log not found' });
     }
+
     res.json(log);
   } catch (error) {
     console.error('[AUDIT] Get error:', error.message);
@@ -615,7 +633,7 @@ app.post('/api/branding/logo', generalLimiter, async (req, res) => {
 
     // Generate unique filename
     const ext = path.extname(filename) || (mimetype === 'image/svg+xml' ? '.svg' : '.png');
-    const safeWorkspace = (workspace_id || 'default').replace(/[^a-z0-9_-]/gi, '_');
+    const safeWorkspace = (workspace_id || 'default').replaceAll(/[^\w-]/gi, '_');
     const logoFilename = `${safeWorkspace}_logo_${Date.now()}${ext}`;
     const logoPath = path.join(logosDir, logoFilename);
 
@@ -643,7 +661,7 @@ app.get('/api/branding/domain/verify', generalLimiter, async (req, res) => {
     // Generate a deterministic verification token based on workspace and domain
     const crypto = await import('crypto');
     const hash = crypto.createHash('sha256').update(`${workspace_id || 'default'}-${domain}`).digest('hex');
-    const verificationToken = `wrn-verify-${hash.substring(0, 12)}`;
+    const verificationToken = `wrn-verify-${hash.slice(0, 12)}`;
 
     // In a real implementation, we would:
     // 1. Check DNS TXT record for the verification token
@@ -720,6 +738,7 @@ app.post('/api/gdpr/consent', generalLimiter, async (req, res) => {
     if (!user_id || !consent_type) {
       return res.status(400).json({ error: 'user_id and consent_type required' });
     }
+
     const context = {
       ip_address: req.ip,
       user_agent: req.headers['user-agent']
@@ -741,8 +760,8 @@ app.post('/api/gdpr/export', generalLimiter, async (req, res) => {
     const job = await gdpr.createExportJob(user_id);
 
     // Process the export job asynchronously
-    gdpr.processExportJob(job.job_id).catch((err) => {
-      console.error('[GDPR] Export processing error:', err.message);
+    gdpr.processExportJob(job.job_id).catch((error) => {
+      console.error('[GDPR] Export processing error:', error.message);
     });
 
     res.json(job);
@@ -770,6 +789,7 @@ app.get('/api/gdpr/export/:jobId/download', generalLimiter, async (req, res) => 
     if (job.status !== 'completed') {
       return res.status(400).json({ error: 'Export not ready', status: job.status });
     }
+
     if (!job.file_path) {
       return res.status(404).json({ error: 'Export file not found' });
     }
@@ -907,7 +927,7 @@ app.get('/api/stream', (req, res) => {
   res.write(`data: ${JSON.stringify({ msg: '✓ Stream connected' })}\n\n`);
   const onLog = (msg) => res.write(`data: ${JSON.stringify({ msg })}\n\n`);
   logEmitter.on('log', onLog);
-  const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 30000);
+  const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 30_000);
   req.on('close', () => { clearInterval(heartbeat); logEmitter.off('log', onLog); });
 });
 
@@ -923,6 +943,7 @@ app.get('/api/sample', generalLimiter, async (req, res) => {
       const text = fsSync.readFileSync(samplePath, 'utf8');
       return { text, note: `Fallback sample: ${randomSample} (${reason})` };
     }
+
     return null;
   };
 
@@ -985,17 +1006,17 @@ Keep it between 150-300 words. Do not use markdown formatting - plain text only.
       if (fallback) return res.json(fallback);
       res.status(500).json({ error: 'Empty response from Gemini and no fallback files' });
     }
-  } catch (e) {
+  } catch (error) {
     // Log full error details
-    console.error('[SAMPLE] Gemini API error:', e.message);
-    if (e.response) console.error('[SAMPLE] Response data:', e.response.data);
-    if (e.stack) console.error('[SAMPLE] Stack:', e.stack);
+    console.error('[SAMPLE] Gemini API error:', error.message);
+    if (error.response) console.error('[SAMPLE] Response data:', error.response.data);
+    if (error.stack) console.error('[SAMPLE] Stack:', error.stack);
     
     // Try file fallback
-    const fallback = loadFileSample(e.message);
+    const fallback = loadFileSample(error.message);
     if (fallback) return res.json(fallback);
     
-    res.status(500).json({ error: `Gemini error: ${e.message}` });
+    res.status(500).json({ error: `Gemini error: ${error.message}` });
   }
 });
 
@@ -1012,11 +1033,11 @@ app.post('/api/restart', (req, res) => {
 });
 
 app.post('/api/generate', generateLimiter, async (req, res) => {
-  let { input, structured, async: asyncMode, business_profile } = req.body;
+  const { input, structured, async: asyncMode, business_profile } = req.body;
   if (!input) return res.status(400).json({ error: 'Input required' });
 
   // Validate business_profile if provided
-  let validatedProfile = undefined;
+  let validatedProfile;
   if (business_profile) {
     const { BusinessProfileSchema } = await import('./lib/schemas/business_profile.schema.js');
     const parsed = BusinessProfileSchema.safeParse(business_profile);
@@ -1026,6 +1047,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         details: parsed.error.issues
       });
     }
+
     validatedProfile = parsed.data;
     
     // Centralized Lead Enrichment Microservice
@@ -1053,8 +1075,8 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             ai_research: enrichedData.ai_research
           };
         }
-      } catch (err) {
-        console.error('Centralized data enrichment failed, continuing with basic data:', err.message);
+      } catch (error) {
+        console.error('Centralized data enrichment failed, continuing with basic data:', error.message);
       }
     }
   }
@@ -1070,12 +1092,13 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     try {
       const pipeline = new UnifiedPipeline({
         logHandler: (msg) => logEmitter.emit('log', msg),
-        structured: structured,
+        structured,
         businessProfile: validatedProfile
       });
       await pipeline.run(tempPath, path.join(__dirname, 'output'));
     } catch (error) { logEmitter.emit('log', `❌ ERROR: ${error.message}`); }
-    finally { try { fsSync.unlinkSync(tempPath); } catch (e) {} }
+    finally { try { fsSync.unlinkSync(tempPath); } catch {} }
+
     return;
   }
 
@@ -1083,7 +1106,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   try {
     const pipeline = new UnifiedPipeline({
       logHandler: (msg) => logEmitter.emit('log', msg),
-      structured: structured,
+      structured,
       businessProfile: business_profile
     });
     const result = await pipeline.run(tempPath, path.join(__dirname, 'output'));
@@ -1118,20 +1141,9 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       error: error.message
     });
   } finally {
-    try { fsSync.unlinkSync(tempPath); } catch (e) {}
+    try { fsSync.unlinkSync(tempPath); } catch {}
   }
 });
-
-// =============================================================================
-// Evaluation API endpoints
-// =============================================================================
-
-import {
-  getCorpusStats,
-  listCaseStudies,
-  listEvaluationRuns,
-  getEvaluationRunById,
-} from './lib/evaluation/corpus.js';
 
 app.get('/api/eval/stats', generalLimiter, async (req, res) => {
   try {
@@ -1169,7 +1181,7 @@ app.get('/api/eval/stats', generalLimiter, async (req, res) => {
 // preserves any external callers still hitting either path.
 async function evalRunsHandler(req, res) {
   try {
-    const limit = parseInt(req.query.limit) || 50;
+    const limit = Number.parseInt(req.query.limit, 10) || 50;
     const runs = await listEvaluationRuns({ limit });
     res.json(runs.map(r => ({
       id: r.id,
@@ -1233,7 +1245,7 @@ const server = app.listen(port, () => {
 });
 
 // Graceful shutdown handling
-const SHUTDOWN_TIMEOUT_MS = 120000; // 2 minutes max wait for in-flight requests
+const SHUTDOWN_TIMEOUT_MS = 120_000; // 2 minutes max wait for in-flight requests
 
 async function gracefulShutdown(signal) {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
@@ -1255,6 +1267,7 @@ async function gracefulShutdown(signal) {
       console.log(`Shutdown timeout reached with ${serverState.activeRequests} active requests`);
       break;
     }
+
     console.log(`Waiting for ${serverState.activeRequests} active request(s) to complete...`);
     await new Promise(resolve => setTimeout(resolve, checkInterval));
   }

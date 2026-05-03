@@ -3,20 +3,20 @@
  * @module lib/utils/validation
  */
 
-import { z, ZodError } from 'zod';
+import { type z, type ZodError } from 'zod';
 import { PipelineError, ErrorCodes } from './errors.js';
 import { logger } from './logger.js';
 
 export type ValidationMode = 'strict' | 'permissive';
 
-export interface ValidationResult<T> {
+export type ValidationResult<T> = {
   success: boolean;
   data?: T;
   errors?: ValidationError[];
   warnings?: string[];
 }
 
-export interface ValidationError {
+export type ValidationError = {
   path: string;
   message: string;
   code: string;
@@ -86,7 +86,7 @@ export function validateAtBoundary<T extends z.ZodTypeAny>(
   });
 
   // Return the original data (unsafe but permissive)
-  return data as z.infer<T>;
+  return data;
 }
 
 /**
@@ -116,7 +116,7 @@ export function validateWithDefaults<T extends z.ZodTypeAny>(
   data: unknown,
   defaults: Partial<z.infer<T>>
 ): z.infer<T> {
-  const merged = { ...defaults, ...(data as object) };
+  const merged = { ...defaults, ...(data as Record<string, unknown>) };
   return schema.parse(merged);
 }
 
@@ -127,18 +127,18 @@ export function batchValidate<T extends z.ZodTypeAny>(
   schema: T,
   items: unknown[],
   options: { stage: string }
-): { valid: z.infer<T>[]; invalid: Array<{ index: number; errors: ValidationError[] }> } {
-  const valid: z.infer<T>[] = [];
+): { valid: Array<z.infer<T>>; invalid: Array<{ index: number; errors: ValidationError[] }> } {
+  const valid: Array<z.infer<T>> = [];
   const invalid: Array<{ index: number; errors: ValidationError[] }> = [];
 
-  items.forEach((item, index) => {
+  for (const [index, item] of items.entries()) {
     const result = schema.safeParse(item);
     if (result.success) {
       valid.push(result.data);
     } else {
       invalid.push({ index, errors: formatZodErrors(result.error) });
     }
-  });
+  }
 
   if (invalid.length > 0) {
     logger.warn(`Batch validation: ${invalid.length}/${items.length} items invalid`, {

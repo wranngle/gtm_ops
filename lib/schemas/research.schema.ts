@@ -177,7 +177,7 @@ export const TierAssessmentSchema = z.object({
   key: ComplexityTierSchema,
   label: z.string(),
   base_hours: z.number().nonnegative(),
-  risk_multiplier: z.number().min(1).max(2).default(1.0),
+  risk_multiplier: z.number().min(1).max(2).default(1),
   rationale: z.string().optional(),
   integration_count: z.number().nonnegative().optional(),
   complexity_score: z.number().min(0).max(10).optional(),

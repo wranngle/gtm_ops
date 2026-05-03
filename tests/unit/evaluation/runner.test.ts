@@ -5,9 +5,26 @@
  *
  * @priority P0 - Critical for evaluation system
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  getCaseStudyById,
+  listCaseStudies,
+  createEvaluationRun,
+  updateEvaluationRun,
+  getCorpusStats,
+} from '../../../lib/evaluation/corpus.js';
+import { toIntake, generateMaskingReport } from '../../../lib/evaluation/masker.js';
+import { compare, detectFlaws } from '../../../lib/evaluation/comparator.js';
+
+// Import after mocks
+import {
+  runEvaluation,
+  runBatchEvaluation,
+  checkReadiness,
+} from '../../../lib/evaluation/runner.js';
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -43,24 +60,6 @@ vi.mock('../../../lib/pipeline.js', () => ({
     schema: { test: 'output' },
   })),
 }));
-
-import { execSync } from 'child_process';
-import {
-  getCaseStudyById,
-  listCaseStudies,
-  createEvaluationRun,
-  updateEvaluationRun,
-  getCorpusStats,
-} from '../../../lib/evaluation/corpus.js';
-import { toIntake, generateMaskingReport } from '../../../lib/evaluation/masker.js';
-import { compare, detectFlaws } from '../../../lib/evaluation/comparator.js';
-
-// Import after mocks
-import {
-  runEvaluation,
-  runBatchEvaluation,
-  checkReadiness,
-} from '../../../lib/evaluation/runner.js';
 
 describe('Runner', () => {
   beforeEach(() => {

@@ -648,7 +648,7 @@ describe('[P1] Permission Summary', () => {
 describe('[P1] UserManager', () => {
   let UserManager: any;
   let userManager: any;
-  const TEST_DB_PATH = `./config/users_test_${Date.now()}_${Math.random().toString(36).substring(7)}.db`;
+  const TEST_DB_PATH = `./config/users_test_${Date.now()}_${Math.random().toString(36).slice(7)}.db`;
 
   beforeEach(async () => {
     const module = await import('../../lib/rbac.js');
@@ -662,6 +662,7 @@ describe('[P1] UserManager', () => {
     if (userManager) {
       userManager.close();
     }
+
     // Clean up test database
     const fs = await import('fs/promises');
     try {

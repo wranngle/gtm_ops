@@ -10,7 +10,7 @@
  * - Math pills: .math-pill
  * - Fix cards: .card in .zone-fixes
  */
-import { Page, Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 
 export class AuditPage {
   readonly page: Page;
@@ -52,7 +52,7 @@ export class AuditPage {
   }
 
   async getScorecardRowCount(): Promise<number> {
-    return await this.scorecardRows.count();
+    return this.scorecardRows.count();
   }
 
   async getBleedTotal(): Promise<string> {
@@ -64,11 +64,11 @@ export class AuditPage {
   }
 
   async getFixCount(): Promise<number> {
-    return await this.fixCards.count();
+    return this.fixCards.count();
   }
 
   async getMathPillCount(): Promise<number> {
-    return await this.mathPills.count();
+    return this.mathPills.count();
   }
 
   async hasIndicators(): Promise<boolean> {
@@ -78,7 +78,7 @@ export class AuditPage {
 
   // Alias for backwards compatibility with spec files
   async hasStatusDots(): Promise<boolean> {
-    return await this.hasIndicators();
+    return this.hasIndicators();
   }
 
   async getIndicatorCounts(): Promise<{ critical: number; warning: number; healthy: number }> {
@@ -91,7 +91,7 @@ export class AuditPage {
 
   // Alias for backwards compatibility with spec files
   async getStatusDotCounts(): Promise<{ critical: number; warning: number; healthy: number }> {
-    return await this.getIndicatorCounts();
+    return this.getIndicatorCounts();
   }
 
   async getCategoryNames(): Promise<string[]> {
@@ -102,13 +102,13 @@ export class AuditPage {
   // Process steps - check for list items or numbered items in workflow sections
   async getProcessStepCount(): Promise<number> {
     const steps = this.page.locator('.process-step, .workflow-step, .scorecard tbody tr, ol li, .card:has(h4)');
-    return await steps.count();
+    return steps.count();
   }
 
   // Pain points - friction items or warning indicators
   async getPainPointCount(): Promise<number> {
     const painPoints = this.page.locator('.pain-point, .friction-item, .indicator--critical, .indicator--warning');
-    return await painPoints.count();
+    return painPoints.count();
   }
 
   // Get scores - look for stat cards with score-related labels

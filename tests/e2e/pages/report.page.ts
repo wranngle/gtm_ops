@@ -12,7 +12,7 @@
  * 6. report-proposal-p1 - Proposal (white)
  * 7. report-commercial-strategy - Commercial Strategy (white)
  */
-import { Page, Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from '@playwright/test';
 
 export class ReportPage {
   readonly page: Page;
@@ -101,7 +101,7 @@ export class ReportPage {
    * Get total sheet count
    */
   async getSheetCount(): Promise<number> {
-    return await this.sheets.count();
+    return this.sheets.count();
   }
 
   /**
@@ -167,6 +167,7 @@ export class ReportPage {
         if (await labelEl.count() > 0) {
           label = (await labelEl.first().textContent()) || label;
         }
+
         if (await valueEl.count() > 0) {
           value = (await valueEl.first().textContent()) || '';
         }
@@ -268,6 +269,6 @@ export class ReportPage {
    * Get math pill count (calculations/formulas displayed)
    */
   async getMathPillCount(): Promise<number> {
-    return await this.mathPills.count();
+    return this.mathPills.count();
   }
 }

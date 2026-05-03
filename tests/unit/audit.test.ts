@@ -8,10 +8,10 @@
  * - Retention cleanup
  * - CSV export
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,7 +41,7 @@ afterEach(async () => {
   if (testDbPath && fs.existsSync(testDbPath)) {
     try {
       fs.unlinkSync(testDbPath);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }
@@ -255,7 +255,7 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
     const result = await logger.query({});
 
     // THEN: Each log should have a hash
-    expect(result.logs.every((l: any) => l.hash && l.hash.length === 64)).toBe(true);
+    expect(result.logs.every((l: any) => l.hash?.length === 64)).toBe(true);
 
     await logger.close();
   });

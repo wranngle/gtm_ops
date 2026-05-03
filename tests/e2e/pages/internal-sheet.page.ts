@@ -15,7 +15,7 @@
  * - Badges: .badge, .badge--code
  * - Zone grid: .zone-grid
  */
-import { Page, Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from '@playwright/test';
 
 export class InternalSheetPage {
   readonly page: Page;
@@ -106,9 +106,7 @@ export class InternalSheetPage {
   async waitForLoad(): Promise<void> {
     await this.page.waitForLoadState('domcontentloaded');
     // Wait for stats or section headers to be visible
-    await this.stats.first().or(this.sectionHeaders.first()).waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-      return this.page.waitForSelector('body', { state: 'visible' });
-    });
+    await this.stats.first().or(this.sectionHeaders.first()).waitFor({ state: 'visible', timeout: 5000 }).catch(async () => this.page.waitForSelector('body', { state: 'visible' }));
   }
 
   /**
@@ -125,6 +123,7 @@ export class InternalSheetPage {
         return text;
       }
     }
+
     return '';
   }
 
@@ -146,6 +145,7 @@ export class InternalSheetPage {
         return 'N/A';
       }
     };
+
     return {
       labor: await getStatValue(this.productionCostStat),
       aiOps: await getStatValue(this.computeEstimateStat),
@@ -170,6 +170,7 @@ export class InternalSheetPage {
         return 'N/A';
       }
     };
+
     return {
       amount: await getStatValue(this.marginAmountStat),
       marginPercent: await getStatValue(this.marginPercentStat),
@@ -232,7 +233,7 @@ export class InternalSheetPage {
   async getScriptSegmentCount(): Promise<number> {
     // Template uses .script-box for script segments and also section headers with "Script"
     const scripts = this.page.locator('.script-box, .script-segment, blockquote, section:has(h2:text-matches("Script", "i"))');
-    return await scripts.count();
+    return scripts.count();
   }
 
   /**
@@ -241,15 +242,15 @@ export class InternalSheetPage {
   async getObjectionCount(): Promise<number> {
     // Template uses .objection-row for individual objections
     const objections = this.page.locator('.objection-row, .objection-card, .objection-item');
-    return await objections.count();
+    return objections.count();
   }
 
   /**
    * Get compliance notes - template uses inline styles, not badge classes
    * Returns empty array if compliance section doesn't exist
    */
-  async getComplianceNotes(): Promise<{ title: string; style: string }[]> {
-    const notes: { title: string; style: string }[] = [];
+  async getComplianceNotes(): Promise<Array<{ title: string; style: string }>> {
+    const notes: Array<{ title: string; style: string }> = [];
     // Find compliance section and its cards - template uses .card.card--sm with inline background colors
     const complianceSection = this.page.locator('section:has(h2:text-matches("Compliance", "i")) .card, .zone-grid-2 .card--sm');
     const count = await complianceSection.count();
@@ -267,8 +268,8 @@ export class InternalSheetPage {
         // Check inline style for color to determine healthy/warning
         const bgColor = await card.evaluate(el => getComputedStyle(el).backgroundColor);
         const style = bgColor.includes('240, 253, 244') || bgColor.includes('220, 252, 231') ? 'healthy'
-                    : bgColor.includes('255, 251, 235') || bgColor.includes('254, 252, 232') ? 'warning'
-                    : 'default';
+          : bgColor.includes('255, 251, 235') || bgColor.includes('254, 252, 232') ? 'warning'
+            : 'default';
         notes.push({ title: title.trim(), style });
       } catch {
         // Skip cards that can't be processed
@@ -310,14 +311,14 @@ export class InternalSheetPage {
    * Get stat count
    */
   async getStatCount(): Promise<number> {
-    return await this.stats.count();
+    return this.stats.count();
   }
 
   /**
    * Get badge count
    */
   async getBadgeCount(): Promise<number> {
-    return await this.badges.count();
+    return this.badges.count();
   }
 
   /**

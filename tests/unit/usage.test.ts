@@ -7,10 +7,10 @@
  * - Cost estimation
  * - Pagination
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_DB_PATH = path.join(__dirname, '..', '..', 'config', 'usage_test.db');
@@ -36,7 +36,7 @@ afterEach(async () => {
   if (fs.existsSync(TEST_DB_PATH)) {
     try {
       fs.unlinkSync(TEST_DB_PATH);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }
@@ -125,7 +125,7 @@ describe('[P0] UsageTracker - Event Tracking', () => {
 
     // WHEN: Tracking PDF generation
     const eventId = await tracker.trackPdfGenerated('exec-123', 4, {
-      file_size: 250000
+      file_size: 250_000
     });
 
     // THEN: Event should be recorded
@@ -186,7 +186,7 @@ describe('[P0] UsageTracker - Usage Summary', () => {
     const tracker = new UsageTracker(TEST_DB_PATH);
 
     // 1M input tokens = $0.075, 1M output tokens = $0.30
-    await tracker.trackApiCall('gemini', 'flash', 1000000, 100000);
+    await tracker.trackApiCall('gemini', 'flash', 1_000_000, 100_000);
     await tracker.trackPdfGenerated('exec-1', 10);
 
     // WHEN: Getting usage summary
@@ -304,15 +304,15 @@ describe('[P1] UsageTracker - Cost Breakdown', () => {
     // GIVEN: Usage events
     const tracker = new UsageTracker(TEST_DB_PATH);
 
-    await tracker.trackApiCall('gemini', 'flash', 100000, 50000);
+    await tracker.trackApiCall('gemini', 'flash', 100_000, 50_000);
     await tracker.trackPdfGenerated('exec-1', 5);
 
     // WHEN: Getting cost breakdown
     const costs = await tracker.getCostBreakdown();
 
     // THEN: Should have detailed breakdown
-    expect(costs.gemini.input_tokens).toBe(100000);
-    expect(costs.gemini.output_tokens).toBe(50000);
+    expect(costs.gemini.input_tokens).toBe(100_000);
+    expect(costs.gemini.output_tokens).toBe(50_000);
     expect(costs.gemini.input_cost).toBeGreaterThan(0);
     expect(costs.gemini.output_cost).toBeGreaterThan(0);
     expect(costs.puppeteer.pdf_pages).toBe(5);
@@ -326,11 +326,11 @@ describe('[P1] UsageTracker - Cost Breakdown', () => {
     const tracker = new UsageTracker(TEST_DB_PATH);
 
     await tracker.trackPipelineStarted('exec-1');
-    await tracker.trackApiCall('gemini', 'flash', 100000, 50000);
+    await tracker.trackApiCall('gemini', 'flash', 100_000, 50_000);
     await tracker.trackPipelineCompleted('exec-1', 5000);
 
     await tracker.trackPipelineStarted('exec-2');
-    await tracker.trackApiCall('gemini', 'flash', 100000, 50000);
+    await tracker.trackApiCall('gemini', 'flash', 100_000, 50_000);
     await tracker.trackPipelineCompleted('exec-2', 3000);
 
     // WHEN: Getting cost breakdown

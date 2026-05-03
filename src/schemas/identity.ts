@@ -16,13 +16,13 @@ import { z } from 'zod';
  * Valid slug pattern: lowercase letters, numbers, hyphens
  * Examples: "acme-corp", "order-fulfillment-2025"
  */
-const SlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
+const SlugPattern = /^[a-z\d][a-z\d-]*[a-z\d]$|^[a-z\d]$/;
 
 /**
  * Document slug pattern: WRN-AI-{client}-{process}-{YY}r{revision}
  * Example: WRN-AI-acme-corp-order-fulfillment-25r1
  */
-const DocumentSlugPattern = /^WRN-AI-[a-z0-9-]+-\d{2}r\d+$/;
+const DocumentSlugPattern = /^WRN-AI-[a-z\d-]+-\d{2}r\d+$/;
 
 // =============================================================================
 // PROJECT IDENTITY
@@ -127,8 +127,8 @@ export type PreparedFor = z.infer<typeof PreparedForSchema>;
 export function slugifyClient(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replaceAll(/[^a-z\d]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '')
     .slice(0, 30);
 }
 
@@ -138,8 +138,8 @@ export function slugifyClient(name: string): string {
 export function slugifyProject(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replaceAll(/[^a-z\d]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '')
     .slice(0, 30);
 }
 
@@ -150,7 +150,7 @@ export function generateDocumentSlug(
   clientSlug: string,
   projectSlug: string,
   year: number,
-  revision: number = 1
+  revision = 1
 ): string {
   const yearSuffix = String(year).slice(-2);
   

@@ -31,8 +31,8 @@ export function slugifyFilename(text: string, maxLength?: number): string;
  * @returns {string} Document slug
  */
 export function generateDocumentSlug(clientName: string, projectName: string, options?: {
-    year: number;
-    revision: number;
+  year: number;
+  revision: number;
 }): string;
 /**
  * Generate timestamp for filenames
@@ -84,12 +84,12 @@ export function formatHours(hours: number): string;
  * @param {number} [options.revision] - Revision number (default: 1)
  * @returns {Object} Unified project_identity object
  */
-export function generateProjectIdentity(intake: Object, options?: {
-    documentType?: string | undefined;
-    friendlyName?: string | undefined;
-    validityDays?: number | undefined;
-    revision?: number | undefined;
-}): Object;
+export function generateProjectIdentity(intake: Record<string, unknown>, options?: {
+  documentType?: string | undefined;
+  friendlyName?: string | undefined;
+  validityDays?: number | undefined;
+  revision?: number | undefined;
+}): Record<string, unknown>;
 /**
  * Generate output file path with consistent naming
  * @param {Object} options - Options
@@ -101,24 +101,24 @@ export function generateProjectIdentity(intake: Object, options?: {
  * @returns {Object} { path, dir, filename }
  */
 export function generateOutputPath(options: {
-    outputDir: string;
-    type: string;
-    clientSlug: string;
-    projectSlug: string;
-    ext: string;
-}): Object;
+  outputDir: string;
+  type: string;
+  clientSlug: string;
+  projectSlug: string;
+  ext: string;
+}): Record<string, unknown>;
 declare namespace _default {
-    export { slugify };
-    export { slugifyFilename };
-    export { generateDocumentSlug };
-    export { generateTimestamp };
-    export { formatDateDisplay };
-    export { formatCurrency };
-    export { formatCurrencyPeriod };
-    export { formatNumber };
-    export { formatHours };
-    export { generateProjectIdentity };
-    export { generateOutputPath };
+  export { slugify };
+  export { slugifyFilename };
+  export { generateDocumentSlug };
+  export { generateTimestamp };
+  export { formatDateDisplay };
+  export { formatCurrency };
+  export { formatCurrencyPeriod };
+  export { formatNumber };
+  export { formatHours };
+  export { generateProjectIdentity };
+  export { generateOutputPath };
 }
 export default _default;
-//# sourceMappingURL=project_identity.d.ts.map
+// # sourceMappingURL=project_identity.d.ts.map

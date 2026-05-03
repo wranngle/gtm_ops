@@ -11,13 +11,13 @@
  *   node cli.js generate <input.txt> <output_dir/>
  */
 
-import { UnifiedPipeline } from './lib/pipeline.js';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import http from 'http';
+import dotenv from 'dotenv';
+import { UnifiedPipeline } from './lib/pipeline.js';
 
 // Load environment variables from script directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -79,7 +79,7 @@ function startServer() {
  */
 function openBrowser(url) {
   // Function preserved but not called automatically per user preference
-  const platform = process.platform;
+  const {platform} = process;
   let cmd;
 
   if (platform === 'win32') {
@@ -89,6 +89,7 @@ function openBrowser(url) {
   } else {
     cmd = spawn('xdg-open', [url], { detached: true, stdio: 'ignore' });
   }
+
   cmd.unref();
 }
 
@@ -99,7 +100,7 @@ async function ensureServerRunning() {
   const running = await isServerRunning();
 
   if (!running) {
-    console.log('\x1b[34mℹ\x1b[0m Starting history server in background...');
+    console.log('\u001B[34mℹ\u001B[0m Starting history server in background...');
     startServer();
     // Wait for server to initialize
     let attempts = 0;
@@ -110,7 +111,7 @@ async function ensureServerRunning() {
     }
   }
 
-  console.log(`\x1b[34mℹ\x1b[0m Dashboard: ${SERVER_URL} (Browser will not open automatically)`);
+  console.log(`\u001B[34mℹ\u001B[0m Dashboard: ${SERVER_URL} (Browser will not open automatically)`);
 }
 
 const USAGE = `
@@ -192,7 +193,7 @@ async function main() {
       if (args[i] === '--title' && args[i + 1]) options.title = args[++i];
       if (args[i] === '--vendor' && args[i + 1]) options.vendor = args[++i];
       if (args[i] === '--output' && args[i + 1]) options.output = args[++i];
-      if (args[i] === '--limit' && args[i + 1]) options.limit = parseInt(args[++i], 10);
+      if (args[i] === '--limit' && args[i + 1]) options.limit = Number.parseInt(args[++i], 10);
     }
 
     await handleEvalCommand(subcommand, evalArgs, options);
@@ -212,9 +213,7 @@ async function main() {
   for (let i = 1; i < args.length; i++) {
     if (args[i] === '--structured') {
       forceStructured = true;
-    } else if (!inputPath) {
-      inputPath = args[i];
-    }
+    } else inputPath ||= args[i];
   }
 
   const outputDir = path.join(__dirname, 'output');
@@ -247,9 +246,9 @@ async function main() {
     try {
       const content = fs.readFileSync(inputPath, 'utf8');
       JSON.parse(content);
-    } catch (e) {
+    } catch (error) {
       console.error(`Error: --structured flag requires valid JSON input`);
-      console.error(`Parse error: ${e.message}`);
+      console.error(`Parse error: ${error.message}`);
       process.exit(1);
     }
   }
@@ -272,8 +271,8 @@ async function main() {
   
   // ANSI color helpers
   const ansi = {
-    reset: '\x1b[0m',
-    dim: '\x1b[2m',
+    reset: '\u001B[0m',
+    dim: '\u001B[2m',
   };
   
   let pipelineComplete = false;
@@ -295,7 +294,7 @@ async function main() {
           pipelineSuccess = false;
         }
       }
-    } catch (e) {
+    } catch {
       // Ignore parse errors
     }
   };

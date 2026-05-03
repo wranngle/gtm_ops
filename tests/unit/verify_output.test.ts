@@ -15,9 +15,7 @@ import { describe, it, expect } from 'vitest';
  * Get nested value from object using dot notation path
  */
 function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => {
-    return current && current[key] !== undefined ? current[key] : undefined;
-  }, obj);
+  return path.split('.').reduce((current, key) => current?.[key] === undefined ? undefined : current[key], obj);
 }
 
 /**
@@ -31,6 +29,7 @@ function checkUndefinedValues(schema: any, path = ''): string[] {
       issues.push(currentPath);
       return;
     }
+
     if (obj === null || typeof obj !== 'object') return;
 
     for (const [key, value] of Object.entries(obj)) {
@@ -99,7 +98,7 @@ describe('[P1] getNestedValue - Dot Notation Path Access', () => {
       estimate: {
         finops: {
           value_breakdown: {
-            total_annual_value: 50000
+            total_annual_value: 50_000
           }
         }
       }
@@ -109,7 +108,7 @@ describe('[P1] getNestedValue - Dot Notation Path Access', () => {
     const result = getNestedValue(obj, 'estimate.finops.value_breakdown.total_annual_value');
 
     // THEN: Should return the value
-    expect(result).toBe(50000);
+    expect(result).toBe(50_000);
   });
 
   it('[P1] should return undefined for missing paths', () => {
@@ -208,7 +207,7 @@ describe('[P0] checkDisplayFields - Display Field Contract', () => {
       estimate: {
         finops: {
           value_breakdown: {
-            total_annual_value: 50000,
+            total_annual_value: 50_000,
             total_annual_display: '$50,000',
             total_monthly_value: 4167,
             total_monthly_display: '$4,167'
@@ -230,7 +229,7 @@ describe('[P0] checkDisplayFields - Display Field Contract', () => {
       estimate: {
         finops: {
           value_breakdown: {
-            total_annual_value: 50000
+            total_annual_value: 50_000
             // total_annual_display is missing
           }
         }
@@ -251,7 +250,7 @@ describe('[P0] checkDisplayFields - Display Field Contract', () => {
       estimate: {
         finops: {
           value_breakdown: {
-            total_annual_value: 50000,
+            total_annual_value: 50_000,
             total_annual_display: '$60,000', // Wrong value!
             total_monthly_value: 4167,
             total_monthly_display: '$4,167'
@@ -307,7 +306,7 @@ describe('[P1] Data Path Validation', () => {
 
     // ROI payback should be calculated
     const paybackMonths = getNestedValue(schema, 'proposal.roi.payback_period_months') ||
-                          getNestedValue(schema, 'proposal.roi.payback_months');
+      getNestedValue(schema, 'proposal.roi.payback_months');
     if (paybackMonths === undefined || paybackMonths === 'N/A') {
       issues.push('ROI payback period is missing or N/A');
     }

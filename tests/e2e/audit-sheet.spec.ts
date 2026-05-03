@@ -41,7 +41,7 @@ test.describe('AI Audit Sheet - Executive Summary', () => {
       getComputedStyle(el).borderLeftColor
     );
     // Orange is rgb(255, 95, 0) or similar
-    expect(borderColor).toMatch(/rgb\(255,\s*9[0-9],\s*0\)|#ff5f00/i);
+    expect(borderColor).toMatch(/rgb\(255,\s*9\d,\s*0\)|#ff5f00/i);
   });
 
   test('[P2][AU-005] executive summary should have proper typography', async ({ page }) => {
@@ -97,6 +97,7 @@ test.describe('AI Audit Sheet - Scorecard', () => {
       const box = await rows.nth(i).boundingBox();
       if (box) heights.push(Math.round(box.height));
     }
+
     const uniqueHeights = [...new Set(heights)];
     expect(uniqueHeights.length).toBeLessThanOrEqual(3);
   });
@@ -212,12 +213,12 @@ test.describe('AI Audit Sheet - Scores', () => {
     await page.goto(`file://${reportPath}`);
     const scores = await audit.getScores();
     const allScores = [scores.opportunity, scores.complexity, scores.readiness];
-    allScores.forEach(score => {
+    for (const score of allScores) {
       if (score !== 'N/A' && score !== undefined) {
         // Accept numeric values, descriptive words, or tier labels like "standard", "complex"
         expect(score).toMatch(/\d|high|medium|low|good|excellent|standard|complex|simple|moderate/i);
       }
-    });
+    }
   });
 
   test('[P2][AU-025] scores should have visual indicators', async ({ page }) => {

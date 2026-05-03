@@ -92,7 +92,7 @@ export const DEFAULT_DEAL_VALUE = 500;
  * Maximum modeled opportunity per month (guardrail).
  * Prevents unrealistic projections in ROI calculations.
  */
-export const MAX_MODELED_OPPORTUNITY_MONTHLY = 50000;
+export const MAX_MODELED_OPPORTUNITY_MONTHLY = 50_000;
 
 /**
  * Cap modeled opportunity at this multiple of hard savings.
@@ -132,7 +132,7 @@ export const OPPORTUNITY_LIFT_PERCENT = 1;
  * Labor savings multiplier for hard savings calculations.
  * 30% of project hours become monthly recurring savings.
  */
-export const LABOR_SAVINGS_MULTIPLIER = 0.30;
+export const LABOR_SAVINGS_MULTIPLIER = 0.3;
 
 /**
  * Internal hourly rate for cost calculations.
@@ -187,7 +187,7 @@ export const MAX_HOURLY_RATE = 500;
  * Maximum monthly bleed before triggering verification.
  * $500K/month is extremely high and warrants human review.
  */
-export const MAX_MONTHLY_BLEED = 500000;
+export const MAX_MONTHLY_BLEED = 500_000;
 
 // =============================================================================
 // TYPE EXPORTS

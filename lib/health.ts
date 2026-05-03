@@ -33,9 +33,7 @@ export type ComponentHealth = {
  */
 export type HealthStatus = {
   status: HealthStatusLevel;
-  components: {
-    [key: string]: ComponentHealth;
-  };
+  components: Record<string, ComponentHealth>;
   timestamp: string;
 };
 
@@ -55,7 +53,7 @@ export type ServerState = {
 /**
  * Check SQLite database health
  */
-export async function checkDatabase(db: Database | null): Promise<ComponentHealth> {
+export async function checkDatabase(db: Database | undefined): Promise<ComponentHealth> {
   const start = Date.now();
 
   return new Promise((resolve) => {
@@ -113,7 +111,7 @@ export async function checkGeminiAPI(): Promise<ComponentHealth> {
     // Lightweight check - just verify API endpoint is reachable
     // Use models list endpoint which is fast and doesn't consume tokens
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => { controller.abort(); }, 5000);
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.slice(0, 10)}...`,
@@ -121,13 +119,13 @@ export async function checkGeminiAPI(): Promise<ComponentHealth> {
         method: 'HEAD',
         signal: controller.signal
       }
-    ).catch(() => {
+    ).catch(async () => 
       // HEAD might not be supported, try a simple GET with the actual key
-      return fetch(
+      fetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
         { signal: controller.signal }
-      );
-    });
+      )
+    );
 
     clearTimeout(timeoutId);
     const latency = Date.now() - start;
@@ -137,25 +135,30 @@ export async function checkGeminiAPI(): Promise<ComponentHealth> {
         status: 'healthy',
         latency_ms: latency
       };
-    } else if (response.status === 401 || response.status === 403) {
+    }
+
+    if (response.status === 401 || response.status === 403) {
       return {
         status: 'unhealthy',
         message: 'Invalid API key',
         latency_ms: latency
       };
-    } else if (response.status === 429) {
+    }
+
+    if (response.status === 429) {
       return {
         status: 'degraded',
         message: 'Rate limited',
         latency_ms: latency
       };
-    } else {
-      return {
-        status: 'degraded',
-        message: `API returned status ${response.status}`,
-        latency_ms: latency
-      };
     }
+ 
+    return {
+      status: 'degraded',
+      message: `API returned status ${response.status}`,
+      latency_ms: latency
+    };
+    
   } catch (error: any) {
     return {
       status: 'unhealthy',
@@ -194,13 +197,14 @@ export async function checkFileSystem(): Promise<ComponentHealth> {
         status: 'healthy',
         latency_ms: latency
       };
-    } else {
-      return {
-        status: 'degraded',
-        message: 'File content mismatch',
-        latency_ms: latency
-      };
     }
+ 
+    return {
+      status: 'degraded',
+      message: 'File content mismatch',
+      latency_ms: latency
+    };
+    
   } catch (error: any) {
     return {
       status: 'unhealthy',
@@ -217,22 +221,24 @@ export async function checkFileSystem(): Promise<ComponentHealth> {
 /**
  * Aggregate component health into overall status
  */
-function aggregateHealth(components: { [key: string]: ComponentHealth }): HealthStatusLevel {
-  const statuses = Object.values(components).map(c => c.status);
+function aggregateHealth(components: Record<string, ComponentHealth>): HealthStatusLevel {
+  const statuses = new Set(Object.values(components).map(c => c.status));
 
-  if (statuses.some(s => s === 'unhealthy')) {
+  if (statuses.has('unhealthy')) {
     return 'unhealthy';
   }
-  if (statuses.some(s => s === 'degraded')) {
+
+  if (statuses.has('degraded')) {
     return 'degraded';
   }
+
   return 'healthy';
 }
 
 /**
  * Perform full health check
  */
-export async function healthCheck(db: Database | null): Promise<HealthStatus> {
+export async function healthCheck(db: Database | undefined): Promise<HealthStatus> {
   const [database, gemini, filesystem] = await Promise.all([
     checkDatabase(db),
     checkGeminiAPI(),

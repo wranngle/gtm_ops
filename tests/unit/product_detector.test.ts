@@ -289,7 +289,7 @@ describe('[P1] detectProductType - Confidence Calculation', () => {
     const result = detectProductType(intake);
 
     // THEN: Confidence should not exceed 1.0
-    expect(result.confidence).toBeLessThanOrEqual(1.0);
+    expect(result.confidence).toBeLessThanOrEqual(1);
   });
 
   it('[P1] should format confidence_display as percentage', async () => {
@@ -312,7 +312,7 @@ describe('[P1] detectProductType - Confidence Calculation', () => {
     const result = detectProductType(intake);
 
     // THEN: Confidence should be raw_score / 30 (capped at 1.0)
-    const expectedConfidence = Math.min(result.raw_score / 30, 1.0);
+    const expectedConfidence = Math.min(result.raw_score / 30, 1);
     expect(result.confidence).toBeCloseTo(expectedConfidence, 2);
   });
 });
@@ -450,7 +450,7 @@ describe('[P1] getKeywordConfig - Configuration Access', () => {
 // =============================================================================
 
 describe('[P0] detectProductType - Parameterized Test Cases', () => {
-  DetectionTestCases.forEach((testCase) => {
+  for (const testCase of DetectionTestCases) {
     it(`[P0] ${testCase.name}: ${testCase.description}`, async () => {
       // WHEN: Detecting product type
       const result = detectProductType(testCase.intake);
@@ -461,5 +461,5 @@ describe('[P0] detectProductType - Parameterized Test Cases', () => {
       expect(result.confidence).toBeGreaterThanOrEqual(testCase.expectedMinConfidence);
       expect(result.confidence).toBeLessThanOrEqual(testCase.expectedMaxConfidence);
     });
-  });
+  }
 });

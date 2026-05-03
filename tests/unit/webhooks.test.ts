@@ -7,11 +7,11 @@
  * - Event filtering
  * - Delivery tracking
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_DB_PATH = path.join(__dirname, '..', '..', 'config', 'webhooks_test.db');
@@ -37,7 +37,7 @@ afterEach(async () => {
   if (fs.existsSync(TEST_DB_PATH)) {
     try {
       fs.unlinkSync(TEST_DB_PATH);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   }
@@ -275,8 +275,8 @@ describe('[P1] WebhookManager - Delivery History', () => {
          (webhook_id, delivery_id, event_type, payload, status, attempts)
          VALUES (?, ?, ?, ?, 'success', 1)`,
         [webhook.id, 'test-delivery-id', 'pipeline.completed', '{}'],
-        (err: Error | null) => {
-          if (err) return reject(err);
+        (err: Error | undefined) => {
+          if (err) { reject(err); return; }
           resolve();
         }
       );
@@ -310,8 +310,8 @@ describe('[P1] WebhookManager - Delivery History', () => {
            (webhook_id, delivery_id, event_type, payload, status, attempts)
            VALUES (?, ?, ?, ?, 'success', 1)`,
           [webhook.id, `delivery-${i}`, 'pipeline.completed', '{}'],
-          (err: Error | null) => {
-            if (err) return reject(err);
+          (err: Error | undefined) => {
+            if (err) { reject(err); return; }
             resolve();
           }
         );

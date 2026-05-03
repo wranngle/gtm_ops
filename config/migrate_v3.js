@@ -8,10 +8,10 @@
  *   - Business rules → business_validation_rules
  */
 
-import initSqlJs from 'sql.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import initSqlJs from 'sql.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, 'settings.db');
@@ -614,10 +614,10 @@ const businessValidationRules = [
 // ============================================================================
 
 const placeholderPatterns = [
-  { pattern_regex: '\\[LLM_PLACEHOLDER[^\\]]*\\]', pattern_description: 'Standard LLM placeholder format', is_blocking: 1, example_match: '[LLM_PLACEHOLDER:summary]' },
-  { pattern_regex: '\\{\\{[A-Z_]+\\}\\}', pattern_description: 'Mustache-style placeholder (uppercase)', is_blocking: 0, example_match: '{{COMPANY_NAME}}' },
-  { pattern_regex: '\\[TODO[^\\]]*\\]', pattern_description: 'TODO markers', is_blocking: 1, example_match: '[TODO: add content]' },
-  { pattern_regex: '\\[PLACEHOLDER[^\\]]*\\]', pattern_description: 'Generic placeholder markers', is_blocking: 1, example_match: '[PLACEHOLDER]' }
+  { pattern_regex: String.raw`\[LLM_PLACEHOLDER[^\]]*\]`, pattern_description: 'Standard LLM placeholder format', is_blocking: 1, example_match: '[LLM_PLACEHOLDER:summary]' },
+  { pattern_regex: String.raw`\{\{[A-Z_]+\}\}`, pattern_description: 'Mustache-style placeholder (uppercase)', is_blocking: 0, example_match: '{{COMPANY_NAME}}' },
+  { pattern_regex: String.raw`\[TODO[^\]]*\]`, pattern_description: 'TODO markers', is_blocking: 1, example_match: '[TODO: add content]' },
+  { pattern_regex: String.raw`\[PLACEHOLDER[^\]]*\]`, pattern_description: 'Generic placeholder markers', is_blocking: 1, example_match: '[PLACEHOLDER]' }
 ];
 
 // ============================================================================
@@ -661,6 +661,7 @@ async function runMigration() {
     ]);
     console.log(`  ✓ ${t.template_key}`);
   }
+
   insertTemplate.free();
 
   // Insert classification taxonomies
@@ -676,6 +677,7 @@ async function runMigration() {
     insertTaxonomy.run([t.taxonomy_key, t.value_code, t.display_label, t.description, t.threshold_criteria, t.sort_order]);
     taxonomyGroups[t.taxonomy_key] = (taxonomyGroups[t.taxonomy_key] || 0) + 1;
   }
+
   insertTaxonomy.free();
   
   for (const [key, count] of Object.entries(taxonomyGroups)) {
@@ -691,7 +693,7 @@ async function runMigration() {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   
-  let redFlags = 0, positiveSignals = 0;
+  let redFlags = 0; let positiveSignals = 0;
   for (const r of riskIndicators) {
     insertRisk.run([
       r.indicator_category, r.indicator_code, r.display_text, r.detection_pattern,
@@ -700,6 +702,7 @@ async function runMigration() {
     if (r.indicator_category === 'red_flag') redFlags++;
     else positiveSignals++;
   }
+
   insertRisk.free();
   console.log(`  ✓ ${redFlags} red flags`);
   console.log(`  ✓ ${positiveSignals} positive signals`);
@@ -720,6 +723,7 @@ async function runMigration() {
     ]);
     console.log(`  ✓ ${s.schema_key}`);
   }
+
   insertSchema.free();
 
   // Insert business validation rules
@@ -738,6 +742,7 @@ async function runMigration() {
     ]);
     console.log(`  ✓ ${r.rule_key}`);
   }
+
   insertRule.free();
 
   // Insert placeholder patterns
@@ -751,6 +756,7 @@ async function runMigration() {
   for (const p of placeholderPatterns) {
     insertPlaceholder.run([p.pattern_regex, p.pattern_description, p.is_blocking, p.example_match]);
   }
+
   insertPlaceholder.free();
   console.log(`  ✓ ${placeholderPatterns.length} patterns`);
 

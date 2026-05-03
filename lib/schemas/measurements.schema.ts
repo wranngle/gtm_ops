@@ -98,7 +98,7 @@ export type BleedTotal = z.infer<typeof BleedTotalSchema>;
 // =============================================================================
 
 export const BleedInputsSchema = z.object({
-  volume_per_day: z.number().min(0).max(100000),
+  volume_per_day: z.number().min(0).max(100_000),
   days_per_month: z.number().min(1).max(31).default(22),
   minutes_per_item: z.number().min(0).max(480), // Max 8 hours per item
   hourly_rate: z.number().min(0).max(1000).default(75),

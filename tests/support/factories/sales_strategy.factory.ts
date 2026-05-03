@@ -6,7 +6,7 @@
  */
 import { faker } from '@faker-js/faker';
 
-export interface MarketContextData {
+export type MarketContextData = {
   core_problem: {
     headline: string;
     description: string;
@@ -31,7 +31,7 @@ export interface MarketContextData {
   value_framing: string;
 }
 
-export interface PricingPackage {
+export type PricingPackage = {
   name: string;
   label: string;
   price: number;
@@ -45,25 +45,25 @@ export interface PricingPackage {
   floor_price?: number;
 }
 
-export interface ScriptSegment {
+export type ScriptSegment = {
   label: string;
   script: string;
 }
 
-export interface Objection {
+export type Objection = {
   trigger: string;
   response: string;
   citation?: string;
 }
 
-export interface ComplianceNote {
+export type ComplianceNote = {
   title: string;
   content: string;
   citation?: string;
   style: 'healthy' | 'warning' | 'critical';
 }
 
-export interface SalesStrategyData {
+export type SalesStrategyData = {
   $schema: string;
   version: string;
   industry: string;
@@ -119,13 +119,13 @@ export function createMarketContext(overrides: Partial<MarketContextData> = {}):
     annual_loss_estimates: [
       {
         segment: 'Small (1–2 trucks)',
-        amount: 62000,
+        amount: 62_000,
         display: '$62,000+',
         assumption: '~6 missed calls/week',
       },
       {
         segment: 'Mid-size (3–5 trucks)',
-        amount: 255000,
+        amount: 255_000,
         display: '$255,000+',
         assumption: '~20 missed calls/week',
       },

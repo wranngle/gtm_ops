@@ -16,6 +16,29 @@
 // Common Types (shared across all schemas)
 // =============================================================================
 
+// =============================================================================
+// Schema Registry Object (ADR-001)
+// =============================================================================
+
+import { type z } from 'zod';
+import { IntakeSchema } from './intake.schema.js';
+import { MeasurementsDataSchema, BleedTotalSchema } from './measurements.schema.js';
+import { ResearchResultSchema, TierAssessmentSchema } from './research.schema.js';
+import { EstimateOutputSchema, MilestoneSchema, FinOpsSchema } from './estimate.schema.js';
+import { TransformContextSchema } from './transform.schema.js';
+import { ConfigSchema } from './config.schema.js';
+import { SalesStrategySchema } from './sales_strategy.schema.js';
+import { QuestionDatabaseSchema, LeadQualificationResultSchema, SystemsCatalogSchema } from './questionnaire.schema.js';
+import { CaseStudySchema } from './case_study.schema.js';
+import { EvaluationRunSchema, FlawPatternSchema, ScoringConfigSchema } from './evaluation.schema.js';
+import { BusinessProfileSchema } from './business_profile.schema.js';
+import { PersonProfileSchema } from './person_profile.schema.js';
+
+// =============================================================================
+// Validation Utilities
+// =============================================================================
+
+
 export {
   // NumericWithDisplay pattern
   NumericWithDisplaySchema,
@@ -440,23 +463,6 @@ export {
   type Seniority,
 } from './person_profile.schema.js';
 
-// =============================================================================
-// Schema Registry Object (ADR-001)
-// =============================================================================
-
-import { IntakeSchema } from './intake.schema.js';
-import { MeasurementsDataSchema, BleedTotalSchema } from './measurements.schema.js';
-import { ResearchResultSchema, TierAssessmentSchema } from './research.schema.js';
-import { EstimateOutputSchema, MilestoneSchema, FinOpsSchema } from './estimate.schema.js';
-import { TransformContextSchema } from './transform.schema.js';
-import { ConfigSchema } from './config.schema.js';
-import { SalesStrategySchema } from './sales_strategy.schema.js';
-import { QuestionDatabaseSchema, LeadQualificationResultSchema, SystemsCatalogSchema } from './questionnaire.schema.js';
-import { CaseStudySchema } from './case_study.schema.js';
-import { EvaluationRunSchema, FlawPatternSchema, ScoringConfigSchema } from './evaluation.schema.js';
-import { BusinessProfileSchema } from './business_profile.schema.js';
-import { PersonProfileSchema } from './person_profile.schema.js';
-
 /**
  * Central registry of all schemas for programmatic access.
  * Use this for dynamic validation or schema iteration.
@@ -498,12 +504,6 @@ export type SchemaRegistry = typeof schemas;
  */
 export type SchemaName = keyof SchemaRegistry;
 
-// =============================================================================
-// Validation Utilities
-// =============================================================================
-
-import { z } from 'zod';
-
 /**
  * Environment-based validation mode
  */
@@ -512,7 +512,7 @@ export type ValidationMode = 'strict' | 'permissive';
 /**
  * Validation result with detailed error info
  */
-export interface ValidationResult<T> {
+export type ValidationResult<T> = {
   success: boolean;
   data?: T;
   errors?: Array<{
@@ -569,6 +569,6 @@ export function validateAtBoundary<T extends z.ZodTypeAny>(
     success: false,
     errors,
     warnings: errors.map((e) => `${e.path}: ${e.message}`),
-    data: data as z.infer<T>, // Unsafe but permissive
+    data, // Unsafe but permissive
   };
 }

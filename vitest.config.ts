@@ -11,7 +11,7 @@ export default defineConfig({
       include: ['lib/**/*.js'],
       exclude: ['node_modules', 'tests']
     },
-    testTimeout: 10000,
-    hookTimeout: 10000
+    testTimeout: 10_000,
+    hookTimeout: 10_000
   }
 });

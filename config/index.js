@@ -11,10 +11,10 @@
  *   const rate = config.laborRates.solutions_architect.unit_rate;
  */
 
-import initSqlJs from 'sql.js';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import initSqlJs from 'sql.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DB_PATH = join(__dirname, 'presales.db');
@@ -40,6 +40,7 @@ async function initializeConfig() {
     while (stmt.step()) {
       rows.push(stmt.getAsObject());
     }
+
     stmt.free();
     return rows;
   };
@@ -100,6 +101,7 @@ async function initializeConfig() {
     if (!config.adjustmentFactors[row.category]) {
       config.adjustmentFactors[row.category] = {};
     }
+
     config.adjustmentFactors[row.category][row.factor_key] = {
       factor_label: row.factor_label,
       multiplier: row.multiplier,
@@ -124,6 +126,7 @@ async function initializeConfig() {
     if (!config.technologyProfiles[row.domain]) {
       config.technologyProfiles[row.domain] = {};
     }
+
     config.technologyProfiles[row.domain][row.tech_key] = {
       risk_tier: row.risk_tier,
       notes: row.notes,
@@ -136,6 +139,7 @@ async function initializeConfig() {
     if (!config.discountPolicies[row.policy_type]) {
       config.discountPolicies[row.policy_type] = {};
     }
+
     config.discountPolicies[row.policy_type][row.policy_key] = {
       policy_label: row.policy_label,
       threshold_floor: row.threshold_floor,
@@ -151,6 +155,7 @@ async function initializeConfig() {
     if (!config.paymentPolicies[row.channel]) {
       config.paymentPolicies[row.channel] = {};
     }
+
     config.paymentPolicies[row.channel][row.policy_key] = {
       mechanism: row.mechanism,
       net_days: row.net_days,
@@ -167,11 +172,19 @@ async function initializeConfig() {
   for (const row of operationalParams) {
     let value = row.param_value;
     switch (row.value_type) {
-      case 'integer': value = parseInt(value, 10); break;
-      case 'real': value = parseFloat(value); break;
-      case 'boolean': value = value === 'true'; break;
-      case 'json': value = JSON.parse(value); break;
+      case 'integer': { value = Number.parseInt(value, 10); break;
+      }
+
+      case 'real': { value = Number.parseFloat(value); break;
+      }
+
+      case 'boolean': { value = value === 'true'; break;
+      }
+
+      case 'json': { value = JSON.parse(value); break;
+      }
     }
+
     config.params[row.param_key] = value;
   }
 
@@ -183,9 +196,7 @@ async function initializeConfig() {
  */
 export async function ensureLoaded() {
   if (_config) return;
-  if (!_initPromise) {
-    _initPromise = initializeConfig().then(c => { _config = c; });
-  }
+  _initPromise ||= initializeConfig().then(c => { _config = c; });
   await _initPromise;
 }
 
@@ -196,6 +207,7 @@ export function getConfig() {
   if (!_config) {
     throw new Error('Config not loaded. Call await ensureLoaded() first.');
   }
+
   return _config;
 }
 
@@ -490,6 +502,7 @@ export async function getGenerationTemplates() {
       constraints: row.constraints ? row.constraints.split('|||') : [],
     };
   }
+
   stmt.free();
   return templates;
 }
@@ -523,6 +536,7 @@ export async function getForbiddenExpressions(scope = 'global') {
   while (stmt.step()) {
     expressions.push(stmt.getAsObject());
   }
+
   stmt.free();
   return expressions;
 }
@@ -550,6 +564,7 @@ export async function getQualityGates() {
       blocking: row.is_blocking === 1,
     });
   }
+
   stmt.free();
   return gates;
 }
@@ -576,6 +591,7 @@ export async function getGenerationPrinciples() {
       priority: row.priority_rank,
     });
   }
+
   stmt.free();
   return principles;
 }
@@ -599,6 +615,7 @@ export async function getEngagementPhases() {
   while (phaseStmt.step()) {
     phases.push(phaseStmt.getAsObject());
   }
+
   phaseStmt.free();
   
   // Get milestones for each phase
@@ -632,10 +649,12 @@ export async function getEngagementPhases() {
           ? JSON.parse(del.acceptance_criteria) : [];
         milestone.deliverables.push(del);
       }
+
       delStmt.free();
       
       phase.milestones.push(milestone);
     }
+
     mileStmt.free();
   }
   
@@ -659,12 +678,14 @@ export async function getBrandAssets() {
     if (!assets[row.asset_category]) {
       assets[row.asset_category] = {};
     }
+
     assets[row.asset_category][row.asset_key] = {
       value: row.asset_value,
       context: row.context,
       fallback: row.fallback_value,
     };
   }
+
   stmt.free();
   return assets;
 }
@@ -691,6 +712,7 @@ export async function getDocumentTypes() {
       cssVariant: row.css_variant,
     };
   }
+
   stmt.free();
   return types;
 }
@@ -712,13 +734,22 @@ export async function getExecutionParams() {
     const row = stmt.getAsObject();
     let value = row.param_value;
     switch (row.value_type) {
-      case 'integer': value = parseInt(value, 10); break;
-      case 'real': value = parseFloat(value); break;
-      case 'boolean': value = value === 'true'; break;
-      case 'json': value = JSON.parse(value); break;
+      case 'integer': { value = Number.parseInt(value, 10); break;
+      }
+
+      case 'real': { value = Number.parseFloat(value); break;
+      }
+
+      case 'boolean': { value = value === 'true'; break;
+      }
+
+      case 'json': { value = JSON.parse(value); break;
+      }
     }
+
     params[row.param_key] = value;
   }
+
   stmt.free();
   return params;
 }
@@ -871,6 +902,7 @@ export async function getExtractionTemplates(templateKey = null) {
       version: row.version_number,
     };
   }
+
   stmt.free();
   
   return templateKey ? templates[templateKey] : templates;
@@ -904,6 +936,7 @@ export async function getClassificationTaxonomies(taxonomyKey = null) {
     if (!taxonomies[row.taxonomy_key]) {
       taxonomies[row.taxonomy_key] = [];
     }
+
     taxonomies[row.taxonomy_key].push({
       code: row.value_code,
       label: row.display_label,
@@ -911,6 +944,7 @@ export async function getClassificationTaxonomies(taxonomyKey = null) {
       criteria: row.threshold_criteria,
     });
   }
+
   stmt.free();
   
   return taxonomyKey ? taxonomies[taxonomyKey] : taxonomies;
@@ -950,6 +984,7 @@ export async function getRiskIndicators(category = null) {
       templates: JSON.parse(row.applies_to_templates || '[]'),
     });
   }
+
   stmt.free();
   
   return category ? indicators[category] : indicators;
@@ -988,6 +1023,7 @@ export async function getValidationSchemas(schemaKey = null) {
       errorPrefix: row.error_message_prefix,
     };
   }
+
   stmt.free();
   
   return schemaKey ? schemas[schemaKey] : schemas;
@@ -1029,6 +1065,7 @@ export async function getBusinessValidationRules(schemaKey = null) {
       severity: row.severity,
     });
   }
+
   stmt.free();
   
   return rules;
@@ -1063,6 +1100,7 @@ export async function getPlaceholderPatterns(blockingOnly = false) {
       example: row.example_match,
     });
   }
+
   stmt.free();
   
   return patterns;
