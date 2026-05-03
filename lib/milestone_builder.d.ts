@@ -40,7 +40,7 @@ export function buildPhase1Audit(auditData: any): {
 /**
  * Build Phase 2: Stabilize (current proposal)
  */
-export function buildPhase2Stabilize(auditData: any, pricing: any, options?: {}): {
+export function buildPhase2Stabilize(auditData: any, pricing: any, options?: Record<string, unknown>): {
   phase_id: string;
   phase_number: number;
   phase_name: string;
@@ -70,7 +70,7 @@ export function buildPhase2Stabilize(auditData: any, pricing: any, options?: {})
  * Build Phase 3: Scale (future, optional)
  * This phase is intentionally marked as optional for upselling purposes
  */
-export function buildPhase3Scale(auditData: any, options?: {}): {
+export function buildPhase3Scale(auditData: any, options?: Record<string, unknown>): {
   phase_id: string;
   phase_number: number;
   phase_name: string;
@@ -93,7 +93,7 @@ export function buildPhase3Scale(auditData: any, options?: {}): {
 /**
  * Estimate milestone durations based on price
  */
-export function estimateDurations(totalPrice: any, options?: {}): {
+export function estimateDurations(totalPrice: any, options?: Record<string, unknown>): {
   total: {
     value: any;
     unit: any;
