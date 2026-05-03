@@ -1,6 +1,6 @@
 # ops-console
 
-Internal operator UI for the Wranngle GTM engine. Built in Streamlit per `ARCHITECTURE.md`'s "prefer Streamlit unless FastAPI+Jinja2 is clearly more appropriate" rule.
+Internal operator UI for GTM Ops. Built in Streamlit per `ARCHITECTURE.md`'s "prefer Streamlit unless FastAPI+Jinja2 is clearly more appropriate" rule.
 
 This is the first runnable surface inside the harness. It reads evaluation results produced by `packages/agent-evals` and presents them to a human operator. It also includes a compact observability page for the local VictoriaLogs, VictoriaMetrics, and VictoriaTraces stack.
 

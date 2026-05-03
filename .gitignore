@@ -1,4 +1,4 @@
-# wranngle-gtm-engine .gitignore — keep transient agent / build / log artifacts out of git.
+# gtm_ops .gitignore — keep transient agent / build / log artifacts out of git.
 
 # Secrets and OS noise
 .env

@@ -61,7 +61,7 @@ readonly TEAM_ID="708a094d-8a79-4f59-b19c-bc54f12d44fa"
 readonly STATE_TODO="5aa782d7-2b10-4e62-863c-eb63e0be4eff"
 readonly STATE_DONE="508031a7-afdb-4b76-bc00-b2e7efb97e0e"
 readonly LINEAR_ENDPOINT="https://api.linear.app/graphql"
-readonly GH_REPO_URL="https://github.com/wranngle/wranngle-gtm-engine"
+readonly GH_REPO_URL="https://github.com/wranngle/gtm_ops"
 
 linear() {
   curl -sS -X POST "$LINEAR_ENDPOINT" \

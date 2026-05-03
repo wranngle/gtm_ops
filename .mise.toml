@@ -1,4 +1,4 @@
-# Tool versions for the wranngle-gtm-engine stack.
+# Tool versions for the gtm_ops stack.
 # Pinned so local devboxes and CI both use the same toolchain.
 # Update intentionally; let dependabot or a deliberate PR move these.
 

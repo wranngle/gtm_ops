@@ -37,10 +37,10 @@ harness with a Symphony orchestration layer.
 
 Stack-level files must not contain:
 
-- `wranngle-gtm-engine`-specific paths or identifiers (the repo name is fine
+- `gtm_ops`-specific paths or identifiers (the repo name is fine
   in URLs and config; it's not fine baked into validator regex or script
   defaults beyond what `git remote get-url origin` would yield)
-- `ElevenLabs`, `Wranngle GTM Engine`, or any ElevenLabs-domain identifiers
+- `ElevenLabs`, `GTM Ops`, or any ElevenLabs-domain identifiers
 - Project-only fixtures or test data
 
 The validator (`scripts/validate-knowledge-base.sh`) is allowed to know that

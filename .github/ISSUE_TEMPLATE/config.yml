@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: "🔒 Security vulnerability"
-    url: "https://github.com/wranngle/wranngle-gtm-engine/security/advisories/new"
+    url: "https://github.com/wranngle/gtm_ops/security/advisories/new"
     about: "Privately report a security vulnerability."
   - name: "💬 Question or discussion"
-    url: "https://github.com/wranngle/wranngle-gtm-engine/issues/new/choose"
+    url: "https://github.com/wranngle/gtm_ops/issues/new/choose"
     about: "Choose the closest public issue template. Do not include sensitive operational details."

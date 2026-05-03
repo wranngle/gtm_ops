@@ -259,7 +259,7 @@ stack_neutral_scan_targets=(
 )
 
 stack_neutral_scan_tmp="$(mktemp)"
-stack_neutral_pattern='wranngle-gtm''-engine|Eleven''Labs|Wranngle GTM ''Engine'
+stack_neutral_pattern='gtm''_ops|Eleven''Labs|GTM ''Ops'
 if find "${stack_neutral_scan_targets[@]}" \
   \( -path '*/_build/*' -o -path '*/deps/*' -o -path '*/node_modules/*' -o -path '*/.git/*' -o -path '*/__pycache__/*' -o -path '*/.pytest_cache/*' \) -prune \
   -o -type f \
