@@ -1163,7 +1163,11 @@ app.get('/api/eval/stats', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/eval/runs', generalLimiter, async (req, res) => {
+// Shared handler so the canonical `/api/eval/runs` and the legacy
+// `/api/eval-runs` alias (used by apps/ops-console/eval-runs/index.html)
+// stay in lockstep. Adding the alias is safer than renaming because it
+// preserves any external callers still hitting either path.
+async function evalRunsHandler(req, res) {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const runs = await listEvaluationRuns({ limit });
@@ -1189,7 +1193,10 @@ app.get('/api/eval/runs', generalLimiter, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-});
+}
+
+app.get('/api/eval/runs', generalLimiter, evalRunsHandler);
+app.get('/api/eval-runs', generalLimiter, evalRunsHandler);
 
 app.get('/api/eval/runs/:id', generalLimiter, async (req, res) => {
   try {

@@ -38,6 +38,6 @@ bun test
 - [`apps/ops-console/`](apps/ops-console/) — operator UI (static + live modes)
 - [`lib/`](lib/) — intake, enrichment, post-call, extraction, pdf, branding, audit, evaluation
 - [`server.js`](server.js), [`cli.js`](cli.js) — runtime entrypoints
-- [`workflows/`](workflows/) — sanitized n8n samples; full library at `wranngle/n8n`
+- n8n workflow library — canonical location is the `wranngle/n8n` repo; this repo no longer carries a top-level `workflows/` directory
 - [`docs/references/`](docs/references/) — stack contracts encoded for agents
 - [`scripts/`](scripts/) — lint and validation tooling

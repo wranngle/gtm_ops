@@ -35,14 +35,15 @@ afterEach(() => {
 
 describe('[P0] maskApiKey - API Key Masking', () => {
   it('[P0] should mask API key showing only last 4 chars', () => {
-    // GIVEN: A full API key
+    // GIVEN: A full API key (placeholder fixture; real keys never enter tests)
     const apiKey = process.env.TEST_API_KEY || "test-fixture-placeholder";
 
     // WHEN: Masking the key
     const masked = maskApiKey(apiKey);
 
-    // THEN: Should show only last 4 chars
-    expect(masked).toBe('...hijk');
+    // THEN: Should show only last 4 chars of the placeholder ('...lder')
+    // and never leak any prefix that looks like a real Gemini key.
+    expect(masked).toBe('...lder');
     expect(masked).not.toContain('AIza');
   });
 
