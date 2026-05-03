@@ -330,7 +330,7 @@
 
         .main-panel {
             grid-row: 2; grid-column: 2; display: grid;
-            grid-template-rows: 350px 1fr;
+            grid-template-rows: 1fr 350px;
             gap: 24px; min-height: 0;
         }
 
@@ -1041,7 +1041,7 @@
             .logo-img { height: 30px; }
             .header-controls { gap: 8px; flex-wrap: wrap; }
             .console-panel { height: 280px; }
-            .main-panel { grid-template-rows: 280px 1fr; }
+            .main-panel { grid-template-rows: 1fr 280px; }
             #demo-mode-banner { font-size: 11px; padding: 10px 12px; flex-wrap: wrap; }
             .modal-card { width: 100% !important; max-width: 100% !important; height: 100% !important; max-height: 100vh !important; border-radius: 0; padding: 16px; }
         }
@@ -1107,6 +1107,10 @@
         </div>
 
         <div class="main-panel">
+            <div class="card history-panel">
+                <div id="grid-wrapper"></div>
+            </div>
+
             <div class="card console-panel" id="console-panel">
                 <div class="card-content">
                     <div class="card-title" style="color: #fff; margin-bottom: 8px;">
@@ -1128,12 +1132,8 @@
                             <span id="progress-percent">0%</span>
                         </div>
                     </div>
-                    <div id="console-output">Select a job from the registry below or start a new sequence.</div>
+                    <div id="console-output">Select a job from the registry above or start a new sequence.</div>
                 </div>
-            </div>
-
-            <div class="card history-panel">
-                <div id="grid-wrapper"></div>
             </div>
         </div>
     </div>
