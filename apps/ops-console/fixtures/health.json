@@ -1,0 +1,7 @@
+{
+  "status": "ok",
+  "timestamp": "2026-05-03T00:00:00.000Z",
+  "version": "1.0.0",
+  "demo_mode": true,
+  "_note": "Static fixture served by Cloudflare Pages _redirects (/api/health -> /fixtures/health.json) when DEMO_MODE has no live server. Mirrors the live /api/health JSON shape."
+}
