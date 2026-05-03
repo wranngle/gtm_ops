@@ -92,10 +92,10 @@ export function createRatio(numerator: number, denominator: number): NumericWith
 export function batchCreateCurrency<T extends Record<string, number>>(
   obj: T
 ): Record<keyof T, NumericWithDisplay> {
-  const result = {} as Record<keyof T, NumericWithDisplay>;
+  const result: Partial<Record<keyof T, NumericWithDisplay>> = {};
   for (const key of Object.keys(obj) as Array<keyof T>) {
     result[key] = createCurrency(obj[key]);
   }
 
-  return result;
+  return result as Record<keyof T, NumericWithDisplay>;
 }

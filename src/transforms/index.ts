@@ -771,7 +771,7 @@ export function transform(
   measurements: MeasurementsData,
   userConfig: Partial<AuditConfig> = {}
 ): Record<string, unknown> {
-  const config = { ...DEFAULT_AUDIT_CONFIG, ...userConfig } as AuditConfig;
+  const config: AuditConfig = { ...DEFAULT_AUDIT_CONFIG, ...userConfig };
   const now = new Date().toISOString();
   const sectionA = intake.section_a_workflow_definition as Record<string, unknown> | undefined;
   const workflowName = (sectionA?.q01_workflow_name as string) || "Unnamed Workflow";
@@ -1219,7 +1219,7 @@ export async function buildProposal(
   extracted: Record<string, unknown>,
   options: { platform?: string; valid_days?: number; config?: Partial<ProposalConfig>; pricing_options?: Record<string, unknown> } = {}
 ): Promise<Record<string, unknown>> {
-  const config = { ...DEFAULT_PROPOSAL_CONFIG, ...options.config } as ProposalConfig;
+  const config: ProposalConfig = { ...DEFAULT_PROPOSAL_CONFIG, ...options.config };
   const platform = options.platform || config.defaults.platform;
   const validDays = options.valid_days || config.defaults.valid_days;
 

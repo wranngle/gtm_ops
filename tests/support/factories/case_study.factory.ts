@@ -415,7 +415,7 @@ export function createMaskedIntakeSync(
   const {problem} = cs;
 
   // Manual masking without async dependency
-  return {
+  const masked: IntakeData = {
     prepared_for: {
       account_id: `eval-${cs.id}`,
       account_name: `[Evaluation] ${problem.prepared_for?.account_name || 'Test Company'}`,
@@ -429,7 +429,8 @@ export function createMaskedIntakeSync(
       project_type: 'voice_agent',
       item_type: 'calls',
     },
-  } as IntakeData;
+  };
+  return masked;
 }
 
 /**

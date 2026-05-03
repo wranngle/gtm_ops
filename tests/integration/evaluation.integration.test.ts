@@ -338,11 +338,12 @@ describe('Evaluation Integration Tests', () => {
       }
 
       // Build report structure
+      const flawFrequency: Record<string, number> = {};
       const report = {
         generated_at: new Date().toISOString(),
         evaluation_count: results.length,
         mean_score: results.reduce((a, r) => a + r.score, 0) / results.length,
-        flaw_frequency: {} as Record<string, number>,
+        flaw_frequency: flawFrequency,
       };
 
       // Count flaw frequency
