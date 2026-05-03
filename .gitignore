@@ -19,6 +19,7 @@ build/
 # Project-local runtime
 .assessment.cache
 logs/
+!apps/ops-console/fixtures/logs/
 old/
 temp/
 

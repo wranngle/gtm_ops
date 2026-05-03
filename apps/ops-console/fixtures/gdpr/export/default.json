@@ -1,0 +1,11 @@
+{
+  "job_id": "demo-export-job",
+  "status": "completed",
+  "user_id": "current_user",
+  "created_at": 1715238000000,
+  "completed_at": 1715241600000,
+  "expires_at": 1715846400000,
+  "file_path": "/exports/demo-export-job.zip",
+  "file_size": 184320,
+  "_demo_note": "Synthetic DEMO_MODE export job — file_path is decorative."
+}

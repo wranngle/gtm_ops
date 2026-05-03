@@ -1,11 +1,14 @@
 {
   "period": "this_month",
-  "executions_total": 47,
-  "tokens_total": 1284500,
+  "documents_created": 47,
+  "api_calls": 1284,
+  "total_tokens": 1284500,
   "tokens_input": 318200,
   "tokens_output": 966300,
   "pdf_generations": 32,
   "voice_minutes": 412,
+  "executions_total": 47,
+  "tokens_total": 1284500,
   "by_day": [
     { "date": "2026-04-15", "executions": 4, "tokens": 98400 },
     { "date": "2026-04-16", "executions": 6, "tokens": 142200 },
@@ -15,5 +18,6 @@
     { "date": "2026-04-20", "executions": 4, "tokens": 102100 },
     { "date": "2026-04-21", "executions": 6, "tokens": 148700 },
     { "date": "2026-04-22", "executions": 12, "tokens": 327400 }
-  ]
+  ],
+  "_demo_note": "Synthetic DEMO_MODE usage telemetry."
 }

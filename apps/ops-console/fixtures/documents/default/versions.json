@@ -1,0 +1,5 @@
+[
+  { "version": 3, "type": "json", "created_at": 1714723200000, "author": "demo-operator", "size_bytes": 18420, "note": "Polished narrative + risk model" },
+  { "version": 2, "type": "json", "created_at": 1714636800000, "author": "demo-operator", "size_bytes": 17980, "note": "Adjusted scope to include barge-in recovery" },
+  { "version": 1, "type": "json", "created_at": 1714550400000, "author": "demo-operator", "size_bytes": 16240, "note": "Initial draft from intake" }
+]

@@ -1,6 +1,11 @@
 {
   "period": "this_month",
   "workspace_id": "default",
+  "documents": {
+    "created": 47,
+    "viewed": 318,
+    "downloaded": 92
+  },
   "summary": {
     "executions": 47,
     "active_users": 3,
@@ -12,9 +17,19 @@
     { "client_slug": "blueline-logistics", "executions": 7, "last_run": 1714982400000 },
     { "client_slug": "evergreen-clinics", "executions": 5, "last_run": 1714896000000 }
   ],
+  "recent_activity": [
+    { "created_at": 1715241600000, "activity_type": "proposal.generated", "description": "Proposal r2 generated for redwood-tax-services" },
+    { "created_at": 1715238000000, "activity_type": "proposal.exported", "description": "PDF exported for redwood-tax-services" },
+    { "created_at": 1715155200000, "activity_type": "branding.updated", "description": "Workspace branding primary_color updated" },
+    { "created_at": 1715068800000, "activity_type": "user.invited", "description": "Invitation sent to reviewer@example.demo (viewer)" },
+    { "created_at": 1714982400000, "activity_type": "webhook.delivered", "description": "Slack webhook delivered: pipeline.completed (HTTP 200, 240ms)" },
+    { "created_at": 1714896000000, "activity_type": "proposal.generated", "description": "Proposal r2 generated for northwind-services" },
+    { "created_at": 1714809600000, "activity_type": "lead.imported", "description": "Lead imported from web_form: Acme HVAC Services" }
+  ],
   "health": {
     "uptime_pct": 99.94,
     "errors_24h": 2,
     "latency_p95_ms": 1180
-  }
+  },
+  "_demo_note": "Synthetic DEMO_MODE admin dashboard."
 }

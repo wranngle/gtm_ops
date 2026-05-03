@@ -1,0 +1,10 @@
+{
+  "deliveries": [
+    { "id": 4711, "event": "pipeline.completed", "delivered_at": 1715241600000, "status_code": 200, "response_time_ms": 240, "success": true,  "payload_bytes": 1842 },
+    { "id": 4710, "event": "proposal.created",  "delivered_at": 1715238000000, "status_code": 200, "response_time_ms": 198, "success": true,  "payload_bytes": 2104 },
+    { "id": 4709, "event": "lead.qualified",    "delivered_at": 1715155200000, "status_code": 200, "response_time_ms": 312, "success": true,  "payload_bytes": 612  },
+    { "id": 4708, "event": "pipeline.failed",   "delivered_at": 1715068800000, "status_code": 500, "response_time_ms": 1240, "success": false, "payload_bytes": 482, "error": "destination 5xx — retried 3x" },
+    { "id": 4707, "event": "pipeline.completed",   "delivered_at": 1714982400000, "status_code": 200, "response_time_ms": 215, "success": true,  "payload_bytes": 1798 }
+  ],
+  "total": 47
+}

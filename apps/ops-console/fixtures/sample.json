@@ -1,8 +1,6 @@
 {
-  "client_brief": "Acme HVAC Services is a regional HVAC contractor (~30 employees) handling residential and light commercial. Pain: 22% of after-hours calls go to voicemail and 40% of those callers do not call back the next day. They want a voice agent that answers after-hours, gathers caller details, and routes urgency-tagged dispatches to the on-call tech via SMS. Existing stack: HouseCallPro for dispatch, Twilio for inbound SMS, no current AI. Budget signal: comparable peers spending $1.5-2.5k/mo on dispatch tooling.",
-  "intake_metadata": {
-    "received_at": "2026-04-22T14:08:11Z",
-    "source": "web_form",
-    "operator": "demo-operator"
-  }
+  "text": "CLIENT: Acme HVAC Services\n\nCONTEXT: Regional HVAC contractor (~30 employees, residential + light commercial). 22% of after-hours calls go to voicemail; 40% of those callers do not call back the next day.\n\nGOAL: Voice agent that answers after-hours, gathers caller details (name, address, urgency, problem class), and SMS-routes urgency-tagged dispatches to the on-call tech.\n\nSTACK: HouseCallPro for dispatch, Twilio for inbound SMS, Outlook 365 calendars. No current AI surface.\n\nBUDGET SIGNAL: Comparable peers spending $1.5–2.5k/mo on dispatch tooling. Owner has approved 1 quarter pilot if ROI math holds (target payback < 6 months).\n\nCOMPLIANCE: No PHI. Standard call-recording disclosure required (TX two-party).\n\nDEMO ASK: Generate proposal + SOW + AI risk report.",
+  "note": "Loaded synthetic demo brief — Acme HVAC pilot (DEMO_MODE)",
+  "source": "fixtures/sample.json",
+  "demo": true
 }

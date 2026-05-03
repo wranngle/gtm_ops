@@ -1,6 +1,7 @@
 [
   {
     "id": "exec_demo_001",
+    "slug": "acme-hvac-r3",
     "timestamp": 1714723200000,
     "client_slug": "acme-hvac",
     "project_name": "Voice Agent Pilot",
@@ -8,12 +9,19 @@
     "status": "completed",
     "total_price": 18500,
     "total_hours": 124,
-    "risk_score": 0.18,
-    "audit_score": 0.92,
-    "artifacts": ["proposal.pdf", "sow.pdf", "ai-report.pdf"]
+    "risk_score": 2,
+    "audit_score": 92,
+    "monthly_bleed": 4200,
+    "metadata": "{\"client_name\":\"Acme HVAC Services\",\"process_name\":\"After-hours Dispatch Voice Agent\",\"document_slug\":\"acme-hvac-r3\"}",
+    "artifacts": [
+      { "type": "json",     "path": "output/acme-hvac/r3/schema.json",          "webPath": "./fixtures/transcripts/sample-call-acme-hvac.json" },
+      { "type": "pdf",      "path": "output/acme-hvac/r3/proposal.pdf",         "webPath": "#" },
+      { "type": "pdf_internal","path": "output/acme-hvac/r3/audit-report.pdf",  "webPath": "#" }
+    ]
   },
   {
     "id": "exec_demo_002",
+    "slug": "northwind-r2",
     "timestamp": 1714809600000,
     "client_slug": "northwind-services",
     "project_name": "After-Hours Voicemail Replacement",
@@ -21,12 +29,18 @@
     "status": "completed",
     "total_price": 12000,
     "total_hours": 80,
-    "risk_score": 0.22,
-    "audit_score": 0.88,
-    "artifacts": ["proposal.pdf", "sow.pdf"]
+    "risk_score": 2,
+    "audit_score": 88,
+    "monthly_bleed": 2800,
+    "metadata": "{\"client_name\":\"Northwind Property Services\",\"process_name\":\"Voicemail Triage Bot\",\"document_slug\":\"northwind-r2\"}",
+    "artifacts": [
+      { "type": "json", "path": "output/northwind/r2/schema.json", "webPath": "./fixtures/transcripts/sample-call-acme-hvac.json" },
+      { "type": "pdf",  "path": "output/northwind/r2/proposal.pdf", "webPath": "#" }
+    ]
   },
   {
     "id": "exec_demo_003",
+    "slug": "evergreen-r1",
     "timestamp": 1714896000000,
     "client_slug": "evergreen-clinics",
     "project_name": "Appointment Reminder Loop",
@@ -34,12 +48,19 @@
     "status": "completed",
     "total_price": 22500,
     "total_hours": 152,
-    "risk_score": 0.31,
-    "audit_score": 0.79,
-    "artifacts": ["proposal.pdf", "ai-report.pdf"]
+    "risk_score": 3,
+    "audit_score": 79,
+    "monthly_bleed": 6100,
+    "metadata": "{\"client_name\":\"Evergreen Family Clinics\",\"process_name\":\"Appointment Reminder Loop\",\"document_slug\":\"evergreen-r1\"}",
+    "artifacts": [
+      { "type": "json", "path": "output/evergreen/r1/schema.json", "webPath": "./fixtures/transcripts/sample-call-evergreen-clinic.json" },
+      { "type": "pdf",  "path": "output/evergreen/r1/proposal.pdf", "webPath": "#" },
+      { "type": "pdf_internal", "path": "output/evergreen/r1/audit-report.pdf", "webPath": "#" }
+    ]
   },
   {
     "id": "exec_demo_004",
+    "slug": "blueline-r4",
     "timestamp": 1714982400000,
     "client_slug": "blueline-logistics",
     "project_name": "Driver Check-In Voice Bot",
@@ -47,12 +68,19 @@
     "status": "completed",
     "total_price": 31000,
     "total_hours": 208,
-    "risk_score": 0.27,
-    "audit_score": 0.94,
-    "artifacts": ["proposal.pdf", "sow.pdf", "ai-report.pdf", "diagram.svg"]
+    "risk_score": 3,
+    "audit_score": 94,
+    "monthly_bleed": 8400,
+    "metadata": "{\"client_name\":\"Blueline Regional Logistics\",\"process_name\":\"Driver Check-In Voice Bot\",\"document_slug\":\"blueline-r4\"}",
+    "artifacts": [
+      { "type": "json", "path": "output/blueline/r4/schema.json", "webPath": "./fixtures/transcripts/sample-call-acme-hvac.json" },
+      { "type": "pdf",  "path": "output/blueline/r4/proposal.pdf", "webPath": "#" },
+      { "type": "pdf_internal", "path": "output/blueline/r4/audit-report.pdf", "webPath": "#" }
+    ]
   },
   {
     "id": "exec_demo_005",
+    "slug": "harbor-r1",
     "timestamp": 1715068800000,
     "client_slug": "harbor-property-mgmt",
     "project_name": "Tenant Triage Hotline",
@@ -62,10 +90,13 @@
     "total_hours": 0,
     "risk_score": 0,
     "audit_score": 0,
+    "monthly_bleed": 3500,
+    "metadata": "{}",
     "artifacts": []
   },
   {
     "id": "exec_demo_006",
+    "slug": "redwood-r2",
     "timestamp": 1715155200000,
     "client_slug": "redwood-tax-services",
     "project_name": "Seasonal Intake Bot",
@@ -73,12 +104,18 @@
     "status": "completed",
     "total_price": 9750,
     "total_hours": 64,
-    "risk_score": 0.15,
-    "audit_score": 0.91,
-    "artifacts": ["proposal.pdf"]
+    "risk_score": 1,
+    "audit_score": 91,
+    "monthly_bleed": 1900,
+    "metadata": "{\"client_name\":\"Redwood Tax Services\",\"process_name\":\"Seasonal Intake Bot\",\"document_slug\":\"redwood-r2\"}",
+    "artifacts": [
+      { "type": "json", "path": "output/redwood/r2/schema.json", "webPath": "./fixtures/transcripts/sample-proposal.json" },
+      { "type": "pdf",  "path": "output/redwood/r2/proposal.pdf", "webPath": "#" }
+    ]
   },
   {
     "id": "exec_demo_007",
+    "slug": "summit-r1",
     "timestamp": 1715241600000,
     "client_slug": "summit-dental-group",
     "project_name": "Multi-Location Routing",
@@ -86,12 +123,15 @@
     "status": "failed",
     "total_price": 0,
     "total_hours": 0,
-    "risk_score": 0.55,
-    "audit_score": 0.42,
+    "risk_score": 6,
+    "audit_score": 42,
+    "monthly_bleed": 0,
+    "metadata": "{}",
     "artifacts": []
   },
   {
     "id": "exec_demo_008",
+    "slug": "lakeside-r2",
     "timestamp": 1715328000000,
     "client_slug": "lakeside-auto-repair",
     "project_name": "Service Booking Voice Agent",
@@ -99,8 +139,13 @@
     "status": "completed",
     "total_price": 14250,
     "total_hours": 96,
-    "risk_score": 0.19,
-    "audit_score": 0.86,
-    "artifacts": ["proposal.pdf", "sow.pdf"]
+    "risk_score": 2,
+    "audit_score": 86,
+    "monthly_bleed": 3200,
+    "metadata": "{\"client_name\":\"Lakeside Auto Repair\",\"process_name\":\"Service Booking Voice Agent\",\"document_slug\":\"lakeside-r2\"}",
+    "artifacts": [
+      { "type": "json", "path": "output/lakeside/r2/schema.json", "webPath": "./fixtures/transcripts/sample-proposal.json" },
+      { "type": "pdf",  "path": "output/lakeside/r2/proposal.pdf", "webPath": "#" }
+    ]
   }
 ]

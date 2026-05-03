@@ -1,5 +1,10 @@
 {
   "period": "this_month",
+  "total_cost": 18.42,
+  "llm_cost": 12.84,
+  "pdf_cost": 0.42,
+  "storage_cost": 1.04,
+  "voice_cost": 4.12,
   "total_usd": 18.42,
   "breakdown": {
     "llm_input": 3.18,
@@ -17,5 +22,6 @@
     { "date": "2026-04-20", "usd": 1.06 },
     { "date": "2026-04-21", "usd": 1.55 },
     { "date": "2026-04-22", "usd": 3.41 }
-  ]
+  ],
+  "_demo_note": "Synthetic DEMO_MODE cost breakdown."
 }

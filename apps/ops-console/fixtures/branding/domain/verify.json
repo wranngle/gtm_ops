@@ -1,0 +1,11 @@
+{
+  "domain": "proposals.example.demo",
+  "verified": false,
+  "status": "pending_dns",
+  "checks": {
+    "cname": { "expected": "proxy.wranngle.app", "actual": null, "ok": false },
+    "txt":   { "expected_prefix": "wrn-verify-", "actual": null, "ok": false }
+  },
+  "checked_at": 1715241600000,
+  "_demo_note": "Synthetic DEMO_MODE domain verification — always returns pending_dns."
+}
