@@ -13,17 +13,17 @@ harness with a Symphony orchestration layer.
   `docs/QUALITY_SCORE.md`, `docs/RELIABILITY.md`, `docs/SECURITY.md`
 - `docs/design-docs/`, `docs/exec-plans/`, `docs/product-specs/`,
   `docs/references/`, `docs/generated/`
-- `docs/ORCHESTRATION.md`, `docs/references/symphony-*.md`,
+- `docs/ORCHESTRATION.md`, `~/.dotfiles/lib/symphony-elixir/docs/references/symphony-*.md`,
   `docs/references/harness-engineering.md`,
   `docs/references/dotfiles-hydration.md`,
   `docs/references/layered-domain-architecture.md`,
   `docs/references/doc-gardener.md`, `docs/references/canonical-stack.md`
 - `scripts/symphony.sh` — Bash one-shot adapter (legacy parity with
-  `tools/symphony-elixir`)
+  `~/.dotfiles/lib/symphony-elixir/` (via `bin/symphony` shim))
 - `scripts/bin/llm.sh` — provider fallback chain
 - `scripts/lint-layered-architecture.sh`, `scripts/gardener.sh`,
   `scripts/hero.sh`, `scripts/validate-knowledge-base.sh`
-- `tools/symphony-elixir/` — spec-faithful daemon
+- `~/.dotfiles/lib/symphony-elixir/` (via `bin/symphony` shim) — spec-faithful daemon
 - `tools/edge-mcp/` — Edge DevTools MCP launcher + shortcut installer
 - `tools/observability/` — Vector + Victoria stack
 - `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md`,

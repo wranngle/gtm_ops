@@ -37,8 +37,8 @@ The dotfiles baseline owns repository hygiene. The Harness Engineering layer own
 - `demo/cassette.tape` demonstrates the real local validation loop (`scripts/validate-knowledge-base.sh`, `scripts/symphony.sh once --dry-run --limit 1`, `scripts/symphony.sh list`); it must stay concrete.
 - `scripts/validate-knowledge-base.sh` checks that both layers remain present.
 - `scripts/symphony.sh` uses `scripts/bin/llm.sh` as its default codex-independent `agent.command`. The Symphony spec defines `codex.command` (default `codex app-server`); this repo aliases both to the multi-provider chain until a real Codex app-server adapter lands.
-- The `.github/ISSUE_TEMPLATE/*.yml` forms apply `symphony:todo` plus `priority:N` labels so the github_issues adapter (`docs/references/symphony-github-issues-adapter.md`) can pick up issues filed by humans, Codex, Gemini, or Claude with no extra triage step.
-- Dependabot watches every ecosystem in this repo: github-actions, npm (`packages/agent-evals`), pip (`apps/ops-console`), mix (`tools/symphony-elixir`), docker (`tools/observability`).
+- The `.github/ISSUE_TEMPLATE/*.yml` forms apply `symphony:todo` plus `priority:N` labels so the github_issues adapter (`~/.dotfiles/lib/symphony-elixir/docs/references/symphony-github-issues-adapter.md`) can pick up issues filed by humans, Codex, Gemini, or Claude with no extra triage step.
+- Dependabot watches every ecosystem in this repo: github-actions, npm (`packages/agent-evals`), pip (`apps/ops-console`), mix (symphony lives in `~/.dotfiles/lib/symphony-elixir/` now; this repo consumes via `bin/symphony` shim), docker (`tools/observability`).
 - CI (`.github/workflows/knowledge-base.yml`) runs the validators plus per-language test jobs (`bun test`, `pytest`, `mix test`); Edge MCP smoke tests stay local because GitHub runners cannot drive a desktop browser.
 
 ## LLM Fallback Chain

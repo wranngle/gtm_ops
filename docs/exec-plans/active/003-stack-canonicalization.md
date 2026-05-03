@@ -12,7 +12,7 @@ Move the dotfiles + harness + symphony stack from "demonstrated in this repo" to
 
 ## In-Scope
 
-1. **Symphony Elixir daemon** (TD-007 final). Build the spec-faithful long-running service: poll loop, state machine (Unclaimed → Claimed → Running/RetryQueued → Released), reconciliation, retry queue, hooks, Liquid templates, token accounting, snapshot interface, Codex app-server JSON-RPC client. Lives at `tools/symphony-elixir/` for now; portable WORKFLOW.md is the only repo-specific surface it consumes.
+1. **Symphony Elixir daemon** (TD-007 final). Build the spec-faithful long-running service: poll loop, state machine (Unclaimed → Claimed → Running/RetryQueued → Released), reconciliation, retry queue, hooks, Liquid templates, token accounting, snapshot interface, Codex app-server JSON-RPC client. Lives at `~/.dotfiles/lib/symphony-elixir/` (via `bin/symphony` shim) for now; portable WORKFLOW.md is the only repo-specific surface it consumes.
    - **Slice progress**: T-1 ✓ install via mise; T-2 ✓ scaffold; T-3 ✓ typed config; T-4 ✓ orchestrator + Tracker behaviour + Noop; T-5 ✓ workspace manager + safety invariants; T-6 ✓ AgentRunner + LocalShell + PromptRenderer; T-7 ✓ LocalMarkdown + GitHubIssues; T-8 ✓ ECS-jsonl Logging + Sink, RetryQueue with exponential backoff, reconcile pass, snapshot enrichment. **51 ExUnit tests passing, stable across 10 consecutive runs.**
    - **Pending**: real Task-supervised worker spawn (replaces log-only dispatch), stall-timeout enforcement (depends on real workers), Codex app-server JSON-RPC adapter (separate later slice — follows after Task supervision).
 2. **Edge DevTools MCP wiring** (TD-005). Per directive: Edge (not Chrome), reuse existing session OR launch fresh, modify user-profile shortcuts to include the right `--remote-debugging-port` flag so a single click auto-launches with debugging on. Force-kill/restart whenever needed. Open outside the active window (no focus steal). Wire an MCP server (research candidates: official `playwright-mcp`, community `chrome-devtools-mcp`) into Claude Code's MCP config so any agent in this repo can drive Edge.
@@ -41,7 +41,7 @@ Move the dotfiles + harness + symphony stack from "demonstrated in this repo" to
 
 ## Acceptance Criteria
 
-- `tools/symphony-elixir/` runs as a daemon: `mix run --no-halt` boots the supervision tree, polls a configured tracker, dispatches per-issue agent runs into per-issue workspaces, retries with exponential backoff, reconciles every tick, exposes a snapshot API.
+- `~/.dotfiles/lib/symphony-elixir/` (via `bin/symphony` shim) runs as a daemon: `mix run --no-halt` boots the supervision tree, polls a configured tracker, dispatches per-issue agent runs into per-issue workspaces, retries with exponential backoff, reconciles every tick, exposes a snapshot API.
 - `tools/edge-mcp/edge-debug-launch.sh` (or equivalent) starts Edge with `--remote-debugging-port=<n>` outside the active window and writes a desktop shortcut into the user's Windows profile.
 - An MCP server is registered in `~/.claude/settings.json` (or project-local) that connects to that debug port; a sample agent run proves a screenshot can be captured.
 - `tools/observability/docker-compose.yml` brings up Vector + Victoria stack; `apps/ops-console` and `packages/agent-evals` emit to it; example LogQL/PromQL/TraceQL queries documented.
