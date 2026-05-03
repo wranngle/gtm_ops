@@ -18,10 +18,10 @@ function findSchemas(dir) {
       } else if (entry.name.includes('_schema_') && entry.name.endsWith('.json')) {
         try {
           schemas.push({ file: fullPath, schema: JSON.parse(fs.readFileSync(fullPath, 'utf8')) });
-        } catch (e) {}
+        } catch {}
       }
     }
-  } catch (e) {}
+  } catch {}
   return schemas;
 }
 

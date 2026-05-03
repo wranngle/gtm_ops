@@ -24,13 +24,13 @@ function findBrokenSchemas(dir) {
           if (isBroken) {
             schemas.push({ file: fullPath, parent: path.dirname(fullPath) });
           }
-        } catch (e) {
+        } catch {
           // Invalid JSON is also broken
           schemas.push({ file: fullPath, parent: path.dirname(fullPath) });
         }
       }
     }
-  } catch (e) {
+  } catch {
     // Skip inaccessible directories
   }
   return schemas;
