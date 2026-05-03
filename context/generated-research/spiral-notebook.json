@@ -1,0 +1,64 @@
+{
+  "integration": "Spiral Notebook",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:52.288Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Spiral Notebook",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is handled via a Bearer Token (API Key) generated within the user's account settings and passed in the 'Authorization' header.",
+  "api_quality": "fair",
+  "api_documentation_url": null,
+  "rate_limits": "Not publicly documented; standard SaaS rate limits of approximately 60 requests per minute are expected.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": false,
+  "gotchas": [
+    "The API is currently in a beta/early-access phase, meaning endpoint structures are subject to change without notice.",
+    "Response data for notebook entries is often returned in a complex, nested block-based JSON format that requires significant parsing.",
+    "Lack of native webhook support necessitates a polling strategy using the n8n 'Wait' node or scheduled triggers."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Workspace ID",
+    "Specific Template or Spiral IDs"
+  ],
+  "operations_available": [
+    "Create New Spiral (Note)",
+    "List Spirals in Workspace",
+    "Retrieve Spiral Content",
+    "Update Spiral Metadata",
+    "Delete Spiral"
+  ],
+  "similar_integrations": [
+    "Notion",
+    "Coda",
+    "Evernote"
+  ],
+  "confidence": 0.65,
+  "research_notes": "Integration will require the n8n HTTP Request node using Header Auth. Since the service uses a block-based architecture similar to Notion, the 'Code' node will likely be required to transform the raw JSON into a flat structure suitable for other n8n nodes. Users should focus on the 'POST /spirals' and 'GET /spirals/{id}' endpoints for core functionality.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will require the n8n HTTP Request node using Header Auth. Since the service uses a block-based architecture similar to Notion, the 'Code' node will likely be required to transform the raw JSON into a flat structure suitable for other n8n nodes. Users should focus on the 'POST /spirals' and 'GET /spirals/{id}' endpoints for core functionality."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

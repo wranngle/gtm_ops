@@ -1,0 +1,65 @@
+{
+  "integration": "CDK Global",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:33:59.479Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "CDK Global",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 / API Key (Fortellis)",
+  "auth_complexity": "complex",
+  "auth_notes": "CDK Global APIs are primarily exposed through the Fortellis Automotive Commerce Exchange. Authentication requires OAuth 2.0 (Client Credentials or Authorization Code) plus a 'Subscription-Id' (API Key) passed in the header for every request.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://fortellis.io/developer-network/api-directory",
+  "rate_limits": "Varies by specific API subscription and tier on the Fortellis platform; typically enforced at the gateway level.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Dealerships must explicitly authorize your application via the Fortellis marketplace before data can be accessed.",
+    "The data models are highly specific to the automotive industry (DMS logic) and can be deeply nested and difficult to map.",
+    "Legacy CDK systems may require additional VPN or local agent setups (CDK Drive) depending on the specific dealership configuration."
+  ],
+  "client_must_provide": [
+    "Fortellis Developer Account credentials",
+    "API Subscription ID",
+    "Client ID and Client Secret",
+    "Dealership ID (Enterprise ID/IDIR)"
+  ],
+  "operations_available": [
+    "Retrieve Vehicle Inventory",
+    "Create/Update Repair Orders",
+    "Get Customer Records",
+    "Manage Service Appointments",
+    "Parts Inventory Lookup"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "HubSpot",
+    "Microsoft Dynamics 365"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires using the n8n HTTP Request node. You must first register an app on Fortellis.io, subscribe to the specific CDK APIs needed, and then use the Fortellis OAuth2 token endpoint. Note that the 'Subscription-Id' header is mandatory for routing requests correctly through the Fortellis gateway to the CDK backend.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration requires using the n8n HTTP Request node. You must first register an app on Fortellis.io, subscribe to the specific CDK APIs needed, and then use the Fortellis OAuth2 token endpoint. Note that the 'Subscription-Id' header is mandatory for routing requests correctly through the Fortellis gateway to the CDK backend."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

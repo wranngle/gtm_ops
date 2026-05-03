@@ -1,0 +1,64 @@
+{
+  "integration": "Reviews",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:28.809Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Reviews.io",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is handled by passing an 'apikey' parameter in the query string or as a header. Some endpoints also require a Store ID.",
+  "api_quality": "good",
+  "api_documentation_url": "https://api.reviews.io/docs/",
+  "rate_limits": "Typically 60 to 100 requests per minute depending on the account tier.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": true,
+  "gotchas": [
+    "Pagination uses an offset/limit system which requires manual loop logic in n8n",
+    "Date filtering requires specific ISO 8601 formatting",
+    "Webhook payloads may vary significantly between Merchant and Product review types"
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Store ID",
+    "API Secret (for webhook verification)"
+  ],
+  "operations_available": [
+    "Get Merchant Reviews",
+    "Create Review Invitation",
+    "Get Product Reviews",
+    "Reply to Review",
+    "Get Store Statistics"
+  ],
+  "similar_integrations": [
+    "Trustpilot",
+    "Google My Business",
+    "Yotpo"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Since no native node exists, the HTTP Request node must be used. Authentication is straightforward via headers. Webhooks are supported and can be pointed to an n8n Webhook node, but signature validation must be handled manually using a Crypto node if security is a priority.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "Since no native node exists, the HTTP Request node must be used. Authentication is straightforward via headers. Webhooks are supported and can be pointed to an n8n Webhook node, but signature validation must be handled manually using a Crypto node if security is a priority."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

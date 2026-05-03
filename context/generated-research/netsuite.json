@@ -1,0 +1,64 @@
+{
+  "integration": "NetSuite",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:33.181Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "NetSuite",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 1.0 (Token-Based Authentication) or OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Token-Based Authentication (TBA) using OAuth 1.0 which involves a Consumer Key, Consumer Secret, Token ID, and Token Secret. Generating the signature manually for the HTTP Request node is difficult. Alternatively, OAuth 2.0 Client Credentials can be used but requires certificate-based authentication.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_1540391670.html",
+  "rate_limits": "Based on 'Concurrency Governance' which limits the number of simultaneous requests (typically 5-10) rather than a fixed per-minute rate.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "OAuth 1.0 signatures require specific HMAC-SHA256 hashing that usually necessitates a 'Code' node before the HTTP Request node.",
+    "The standard REST API does not support all record types; many integrations require writing custom SuiteScript RESTlets.",
+    "NetSuite Account IDs are case-sensitive and often require a suffix (e.g., _SB1) for sandboxes."
+  ],
+  "client_must_provide": [
+    "NetSuite Account ID",
+    "Consumer Key & Secret",
+    "Token ID & Secret",
+    "Role ID with 'REST Web Services' and 'User Access Tokens' permissions"
+  ],
+  "operations_available": [
+    "CRUD operations on Records (Invoices, Customers, Sales Orders)",
+    "SuiteQL Query Execution",
+    "RESTlet Execution",
+    "File Cabinet Upload/Download"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "Microsoft Dynamics 365 Business Central",
+    "HubSpot"
+  ],
+  "confidence": 0.95,
+  "research_notes": "The most reliable approach in n8n is using the HTTP Request node to call custom RESTlets (SuiteScript). This bypasses the limitations of the standard REST API. For authentication, users often need a Code node to generate the OAuth 1.0 header using the crypto-js library, as n8n's built-in OAuth 1.0 generic auth can be temperamental with NetSuite's specific requirements.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "The most reliable approach in n8n is using the HTTP Request node to call custom RESTlets (SuiteScript). This bypasses the limitations of the standard REST API. For authentication, users often need a Code node to generate the OAuth 1.0 header using the crypto-js library, as n8n's built-in OAuth 1.0 generic auth can be temperamental with NetSuite's specific requirements."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,64 @@
+{
+  "integration": "Fraud Detection",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:03.661Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Fraud Detection",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Most major fraud detection providers (such as SEON, Sift, or MaxMind) utilize a standard API Key passed via custom headers (e.g., 'X-API-KEY') or Basic Auth.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://docs.seon.io/api-reference/",
+  "rate_limits": "Varies by provider; typically 2 requests per second on free tiers and up to 50+ on enterprise plans.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict data type enforcement: APIs often reject requests if numbers (like transaction amounts) are passed as strings.",
+    "High latency: Fraud scoring involves complex cross-referencing which can take 500ms-2s per request, potentially timing out standard HTTP nodes.",
+    "Nested response structures: Fraud signals are often deeply nested, requiring complex JSON path expressions or Code nodes to extract actionable data."
+  ],
+  "client_must_provide": [
+    "API Key or Secret Key",
+    "API Endpoint URL (Sandbox vs Production)",
+    "Sample transaction/user JSON payload for mapping"
+  ],
+  "operations_available": [
+    "Fraud Score Calculation",
+    "Email Intelligence/Verification",
+    "IP Address Analysis",
+    "Transaction Monitoring",
+    "Device Fingerprinting"
+  ],
+  "similar_integrations": [
+    "Clearbit",
+    "Hunter",
+    "FullContact"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation requires the HTTP Request node. The workflow must manually construct a POST body containing user metadata (IP, User-Agent, Email). For real-time blocking, the node must be placed in-line with the transaction flow, whereas for 'Review' flags, it can be handled asynchronously via n8n's error triggers or webhooks.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "Implementation requires the HTTP Request node. The workflow must manually construct a POST body containing user metadata (IP, User-Agent, Email). For real-time blocking, the node must be placed in-line with the transaction flow, whereas for 'Review' flags, it can be handled asynchronously via n8n's error triggers or webhooks."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

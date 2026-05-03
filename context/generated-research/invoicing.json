@@ -1,0 +1,64 @@
+{
+  "integration": "Invoicing",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:51.000Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Invoiced",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key (Basic Auth)",
+  "auth_complexity": "simple",
+  "auth_notes": "Uses Basic Authentication where the API key is provided as the username and the password field is left blank.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://www.invoiced.com/docs/api/",
+  "rate_limits": "100 requests per minute per account.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Payloads for creating invoices require deeply nested JSON for line items which can be difficult to map in n8n expressions",
+    "The API uses idempotency keys which should be implemented in the HTTP Request node headers to prevent duplicate charges",
+    "Date fields must be provided in Unix timestamps (seconds), requiring conversion from n8n's standard ISO dates"
+  ],
+  "client_must_provide": [
+    "Production API Key",
+    "Sandbox API Key (for testing)",
+    "Webhook Secret (for verifying incoming events)"
+  ],
+  "operations_available": [
+    "Create/Update Invoice",
+    "Retrieve/List Customers",
+    "Record Payment",
+    "Create Credit Note",
+    "Manage Subscriptions"
+  ],
+  "similar_integrations": [
+    "Invoice Ninja",
+    "QuickBooks Online",
+    "Xero"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation will require the HTTP Request node. Authentication should be set up using 'Header Auth' or 'Basic Auth' credentials. For complex operations like 'Create Invoice', the 'Body Parameters' should be set to 'JSON' to allow for the construction of the 'items' array. Webhooks must be manually registered in the Invoiced dashboard pointing to the n8n Webhook node URL.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation will require the HTTP Request node. Authentication should be set up using 'Header Auth' or 'Basic Auth' credentials. For complex operations like 'Create Invoice', the 'Body Parameters' should be set to 'JSON' to allow for the construction of the 'items' array. Webhooks must be manually registered in the Invoiced dashboard pointing to the n8n Webhook node URL."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

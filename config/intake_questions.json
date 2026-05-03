@@ -1,0 +1,650 @@
+{
+  "$schema": "../lib/schemas/questionnaire.schema.ts",
+  "version": "1.0.0",
+  "sections": [
+    {
+      "id": "A",
+      "title": "Client & Workflow Identity",
+      "description": "Basic information about your company and the process you want to automate",
+      "icon": "building",
+      "order": 0
+    },
+    {
+      "id": "B",
+      "title": "Volume & Timing",
+      "description": "How often does this process run and how long does it take?",
+      "icon": "clock",
+      "order": 1
+    },
+    {
+      "id": "C",
+      "title": "Systems & Integration",
+      "description": "What software and tools are involved in this process?",
+      "icon": "server",
+      "order": 2
+    },
+    {
+      "id": "D",
+      "title": "Pain Points & Cost",
+      "description": "What problems occur and what do they cost?",
+      "icon": "alert-triangle",
+      "order": 3
+    },
+    {
+      "id": "E",
+      "title": "Priority & Timeline",
+      "description": "Your priorities, budget, and timeline expectations",
+      "icon": "target",
+      "order": 4
+    },
+    {
+      "id": "F",
+      "title": "Lead Qualification",
+      "description": "Help us understand your situation better",
+      "icon": "user-check",
+      "order": 5,
+      "collapsible": true
+    }
+  ],
+  "questions": [
+    {
+      "id": "client_name",
+      "section": "A",
+      "order": 1,
+      "field_type": "text",
+      "schema_path": "prepared_for.account_name",
+      "label": "Company/Client Name",
+      "help_text": "The legal name of your company or organization",
+      "placeholder": "Acme Corporation",
+      "required": true,
+      "validation": [
+        { "type": "required", "message": "Company name is required" },
+        { "type": "minLength", "value": 2, "message": "Company name must be at least 2 characters" }
+      ],
+      "qualification_weight": 0
+    },
+    {
+      "id": "contact_name",
+      "section": "A",
+      "order": 2,
+      "field_type": "text",
+      "schema_path": "prepared_for.contact_name",
+      "label": "Primary Contact Name",
+      "help_text": "Who should we contact about this project?",
+      "placeholder": "John Smith",
+      "required": false
+    },
+    {
+      "id": "contact_title",
+      "section": "A",
+      "order": 3,
+      "field_type": "text",
+      "schema_path": "prepared_for.contact_title",
+      "label": "Contact Title/Role",
+      "help_text": "Your job title or role in the organization",
+      "placeholder": "Operations Manager",
+      "required": false
+    },
+    {
+      "id": "contact_email",
+      "section": "A",
+      "order": 4,
+      "field_type": "email",
+      "schema_path": "prepared_for.contact_email",
+      "label": "Contact Email",
+      "placeholder": "john@example.com",
+      "required": false,
+      "validation": [
+        { "type": "pattern", "value": "^[^@]+@[^@]+\\.[^@]+$", "message": "Please enter a valid email address" }
+      ]
+    },
+    {
+      "id": "industry",
+      "section": "A",
+      "order": 5,
+      "field_type": "select",
+      "label": "Industry",
+      "help_text": "Select the industry that best describes your business",
+      "required": false,
+      "options": [
+        { "value": "healthcare", "label": "Healthcare / Medical" },
+        { "value": "dental", "label": "Dental Practice" },
+        { "value": "legal", "label": "Legal Services" },
+        { "value": "real_estate", "label": "Real Estate" },
+        { "value": "insurance", "label": "Insurance" },
+        { "value": "financial", "label": "Financial Services" },
+        { "value": "manufacturing", "label": "Manufacturing" },
+        { "value": "logistics", "label": "Logistics / Transportation" },
+        { "value": "hospitality", "label": "Hospitality / Restaurant" },
+        { "value": "retail", "label": "Retail / E-commerce" },
+        { "value": "construction", "label": "Construction" },
+        { "value": "professional_services", "label": "Professional Services" },
+        { "value": "other", "label": "Other" }
+      ],
+      "qualification_weight": 2
+    },
+    {
+      "id": "q01_workflow_name",
+      "section": "A",
+      "order": 6,
+      "field_type": "text",
+      "schema_path": "section_a_workflow_definition.q01_workflow_name",
+      "label": "Business Process Name",
+      "help_text": "What is this process called? Be specific.",
+      "placeholder": "Patient Scheduling and Treatment Coordination",
+      "examples": ["Lead Intake and Qualification", "Order Fulfillment", "Claims Processing", "Appointment Booking"],
+      "required": true,
+      "validation": [
+        { "type": "required", "message": "Process name is required" },
+        { "type": "minLength", "value": 5, "message": "Please provide a more descriptive name" }
+      ]
+    },
+    {
+      "id": "q02_trigger_event",
+      "section": "A",
+      "order": 7,
+      "field_type": "textarea",
+      "schema_path": "section_a_workflow_definition.q02_trigger_event",
+      "label": "What starts this process?",
+      "help_text": "Describe the event or action that triggers this workflow",
+      "placeholder": "A new patient calls to schedule an appointment, or submits a request through our website...",
+      "examples": ["Phone call received", "Form submitted", "Email arrives", "Order placed"],
+      "required": true,
+      "validation": [
+        { "type": "required", "message": "Please describe what starts this process" }
+      ]
+    },
+    {
+      "id": "q03_business_objective",
+      "section": "A",
+      "order": 8,
+      "field_type": "textarea",
+      "schema_path": "section_a_workflow_definition.q03_business_objective",
+      "label": "What is the goal of this process?",
+      "help_text": "What outcome are you trying to achieve?",
+      "placeholder": "Successfully schedule the patient, verify insurance, and prepare all documentation before their visit...",
+      "required": true,
+      "validation": [
+        { "type": "required", "message": "Please describe the goal of this process" }
+      ]
+    },
+    {
+      "id": "q04_end_condition",
+      "section": "A",
+      "order": 9,
+      "field_type": "textarea",
+      "schema_path": "section_a_workflow_definition.q04_end_condition",
+      "label": "How do you know when it's complete?",
+      "help_text": "What indicates this process has finished successfully?",
+      "placeholder": "The appointment is confirmed, reminders are scheduled, and the patient record is updated...",
+      "required": false
+    },
+    {
+      "id": "q05_outcome_owner",
+      "section": "A",
+      "order": 10,
+      "field_type": "text",
+      "schema_path": "section_a_workflow_definition.q05_outcome_owner",
+      "label": "Who is responsible for this process?",
+      "help_text": "Which role or team owns this workflow?",
+      "placeholder": "Front Office Manager",
+      "required": false
+    },
+    {
+      "id": "q06_runs_per_period",
+      "section": "B",
+      "order": 1,
+      "field_type": "number",
+      "schema_path": "section_b_volume_timing.q06_runs_per_period",
+      "label": "How many times does this process run?",
+      "help_text": "Enter the typical volume (e.g., 50 calls per day, 200 orders per week)",
+      "placeholder": "100",
+      "required": true,
+      "min": 1,
+      "max": 100000,
+      "validation": [
+        { "type": "required", "message": "Volume is required for calculating ROI" },
+        { "type": "min", "value": 1, "message": "Volume must be at least 1" },
+        { "type": "max", "value": 100000, "message": "Please verify this volume - it seems unusually high" }
+      ],
+      "qualification_weight": 8,
+      "scoring_rules": [
+        { "condition": { "field": "q06_runs_per_period", "operator": ">=", "value": 100 }, "points": 100 },
+        { "condition": { "field": "q06_runs_per_period", "operator": ">=", "value": 50 }, "points": 75 },
+        { "condition": { "field": "q06_runs_per_period", "operator": ">=", "value": 20 }, "points": 50 },
+        { "condition": { "field": "q06_runs_per_period", "operator": "<", "value": 20 }, "points": 25 }
+      ]
+    },
+    {
+      "id": "q06_period_unit",
+      "section": "B",
+      "order": 2,
+      "field_type": "select",
+      "schema_path": "section_b_volume_timing.q06_period_unit",
+      "label": "Per what time period?",
+      "required": true,
+      "options": [
+        { "value": "day", "label": "Per Day", "is_default": true },
+        { "value": "week", "label": "Per Week" },
+        { "value": "month", "label": "Per Month" }
+      ],
+      "validation": [
+        { "type": "required", "message": "Please select a time period" }
+      ]
+    },
+    {
+      "id": "q07_avg_trigger_to_end",
+      "section": "B",
+      "order": 3,
+      "field_type": "number",
+      "schema_path": "section_b_volume_timing.q07_avg_trigger_to_end",
+      "label": "How long does each instance take?",
+      "help_text": "Average time from start to finish for one item (e.g., 15 minutes per call)",
+      "placeholder": "15",
+      "required": true,
+      "min": 1,
+      "max": 480,
+      "validation": [
+        { "type": "required", "message": "Time per item is required for calculating labor cost" },
+        { "type": "min", "value": 1, "message": "Time must be at least 1" },
+        { "type": "max", "value": 480, "message": "Time per item cannot exceed 8 hours (480 minutes)" }
+      ],
+      "qualification_weight": 5,
+      "scoring_rules": [
+        { "condition": { "field": "q07_avg_trigger_to_end", "operator": ">=", "value": 30 }, "points": 100 },
+        { "condition": { "field": "q07_avg_trigger_to_end", "operator": ">=", "value": 15 }, "points": 75 },
+        { "condition": { "field": "q07_avg_trigger_to_end", "operator": ">=", "value": 5 }, "points": 50 },
+        { "condition": { "field": "q07_avg_trigger_to_end", "operator": "<", "value": 5 }, "points": 25 }
+      ]
+    },
+    {
+      "id": "q07_time_unit",
+      "section": "B",
+      "order": 4,
+      "field_type": "select",
+      "schema_path": "section_b_volume_timing.q07_time_unit",
+      "label": "Time unit",
+      "required": true,
+      "options": [
+        { "value": "minutes", "label": "Minutes", "is_default": true },
+        { "value": "hours", "label": "Hours" }
+      ],
+      "validation": [
+        { "type": "required", "message": "Please select a time unit" }
+      ]
+    },
+    {
+      "id": "q08_worst_case_delay",
+      "section": "B",
+      "order": 5,
+      "field_type": "number",
+      "schema_path": "section_b_volume_timing.q08_worst_case_delay",
+      "label": "Worst case delay?",
+      "help_text": "When things go wrong, how long can this process be delayed?",
+      "placeholder": "24",
+      "required": false,
+      "min": 0
+    },
+    {
+      "id": "q08_delay_unit",
+      "section": "B",
+      "order": 6,
+      "field_type": "select",
+      "schema_path": "section_b_volume_timing.q08_delay_unit",
+      "label": "Delay time unit",
+      "required": false,
+      "options": [
+        { "value": "hours", "label": "Hours", "is_default": true },
+        { "value": "days", "label": "Days" }
+      ],
+      "conditional": {
+        "show_when": {
+          "field": "q08_worst_case_delay",
+          "operator": "not_empty"
+        }
+      }
+    },
+    {
+      "id": "q09_business_hours",
+      "section": "B",
+      "order": 7,
+      "field_type": "select",
+      "schema_path": "section_b_volume_timing.q09_business_hours_expected",
+      "label": "When does this process run?",
+      "help_text": "Is this a business hours process or 24/7?",
+      "required": false,
+      "options": [
+        { "value": "business_hours", "label": "Business Hours Only (e.g., 8am-5pm)" },
+        { "value": "extended", "label": "Extended Hours (e.g., 7am-9pm)" },
+        { "value": "24_7", "label": "24/7 - Around the Clock" }
+      ],
+      "qualification_weight": 3,
+      "scoring_rules": [
+        { "condition": { "field": "q09_business_hours", "operator": "==", "value": "24_7" }, "points": 100 },
+        { "condition": { "field": "q09_business_hours", "operator": "==", "value": "extended" }, "points": 75 },
+        { "condition": { "field": "q09_business_hours", "operator": "==", "value": "business_hours" }, "points": 50 }
+      ]
+    },
+    {
+      "id": "current_solution",
+      "section": "B",
+      "order": 8,
+      "field_type": "select",
+      "schema_path": "section_b_volume_timing.current_solution",
+      "label": "What happens when calls come in after hours?",
+      "help_text": "How do you currently handle calls outside business hours?",
+      "required": false,
+      "options": [
+        { "value": "personal_cell", "label": "Rings to my cell / personal phone" },
+        { "value": "answering_service", "label": "Goes to an answering service" },
+        { "value": "voicemail", "label": "Goes to voicemail" },
+        { "value": "staff_rotation", "label": "Staff rotation / on-call schedule" },
+        { "value": "not_applicable", "label": "N/A - business hours only" }
+      ],
+      "conditional": {
+        "show_when": {
+          "field": "q09_business_hours",
+          "operator": "in",
+          "value": ["extended", "24_7"]
+        }
+      },
+      "qualification_weight": 6,
+      "scoring_rules": [
+        { "condition": { "field": "current_solution", "operator": "==", "value": "personal_cell" }, "points": 100 },
+        { "condition": { "field": "current_solution", "operator": "==", "value": "voicemail" }, "points": 90 },
+        { "condition": { "field": "current_solution", "operator": "==", "value": "answering_service" }, "points": 70 },
+        { "condition": { "field": "current_solution", "operator": "==", "value": "staff_rotation" }, "points": 50 },
+        { "condition": { "field": "current_solution", "operator": "==", "value": "not_applicable" }, "points": 30 }
+      ]
+    },
+    {
+      "id": "q10_systems_involved",
+      "section": "C",
+      "order": 1,
+      "field_type": "multiselect",
+      "schema_path": "section_c_systems_handoffs.q10_systems_involved",
+      "label": "What systems are involved in this process?",
+      "help_text": "Select all software, tools, and platforms used",
+      "required": true,
+      "options_from": "systems_catalog",
+      "validation": [
+        { "type": "required", "message": "Please select at least one system" }
+      ],
+      "qualification_weight": 7,
+      "scoring_rules": [
+        { "condition": { "field": "q10_systems_count", "operator": ">=", "value": 5 }, "points": 100 },
+        { "condition": { "field": "q10_systems_count", "operator": ">=", "value": 3 }, "points": 75 },
+        { "condition": { "field": "q10_systems_count", "operator": ">=", "value": 2 }, "points": 50 },
+        { "condition": { "field": "q10_systems_count", "operator": "<", "value": 2 }, "points": 25 }
+      ]
+    },
+    {
+      "id": "q10_systems_other",
+      "section": "C",
+      "order": 2,
+      "field_type": "text",
+      "label": "Other systems not listed above",
+      "help_text": "Enter any additional systems separated by commas",
+      "placeholder": "Custom CRM, Internal Portal, Legacy Database",
+      "required": false
+    },
+    {
+      "id": "q11_manual_transfers",
+      "section": "C",
+      "order": 3,
+      "field_type": "textarea",
+      "schema_path": "section_c_systems_handoffs.q11_manual_data_transfers",
+      "label": "Describe any manual data entry between systems",
+      "help_text": "Where do people copy/paste data or re-enter information?",
+      "placeholder": "Staff manually copies patient information from the phone system into our practice management software, then re-enters it into the billing system...",
+      "required": false
+    },
+    {
+      "id": "q12_human_decisions",
+      "section": "C",
+      "order": 4,
+      "field_type": "textarea",
+      "schema_path": "section_c_systems_handoffs.q12_human_decision_gates",
+      "label": "What decisions require human judgment?",
+      "help_text": "Which steps need a person to make a decision?",
+      "placeholder": "Manager approval for discounts over 20%, insurance verification for high-value procedures...",
+      "required": false
+    },
+    {
+      "id": "q13_common_failures",
+      "section": "D",
+      "order": 1,
+      "field_type": "textarea",
+      "schema_path": "section_d_failure_cost.q13_common_failures",
+      "label": "What goes wrong most often?",
+      "help_text": "Describe common errors, delays, or failures",
+      "placeholder": "Missed follow-ups, double-bookings, incorrect data entry, delayed responses...",
+      "required": false,
+      "qualification_weight": 5,
+      "scoring_rules": [
+        { "condition": { "field": "q13_common_failures", "operator": "not_empty" }, "points": 75 }
+      ]
+    },
+    {
+      "id": "q14_failure_cost",
+      "section": "D",
+      "order": 2,
+      "field_type": "textarea",
+      "schema_path": "section_d_failure_cost.q14_cost_if_slow_or_failed",
+      "label": "What does a failure cost?",
+      "help_text": "Estimate the financial or business impact when things go wrong",
+      "placeholder": "Lost patient revenue of $500-2000 per missed appointment, staff overtime to fix errors...",
+      "required": false
+    },
+    {
+      "id": "hourly_rate",
+      "section": "D",
+      "order": 3,
+      "field_type": "currency",
+      "measurement_path": "bleed_assumptions.hourly_rate",
+      "label": "Fully loaded staff hourly rate",
+      "help_text": "Include salary, benefits, overhead. Default is $75/hr if unsure.",
+      "placeholder": "75",
+      "required": true,
+      "min": 15,
+      "max": 500,
+      "currency": "USD",
+      "validation": [
+        { "type": "required", "message": "Hourly rate is required for cost calculations" },
+        { "type": "min", "value": 15, "message": "Hourly rate must be at least $15" },
+        { "type": "max", "value": 500, "message": "Please verify this rate - it seems unusually high" }
+      ],
+      "qualification_weight": 3,
+      "scoring_rules": [
+        { "condition": { "field": "hourly_rate", "operator": ">=", "value": 100 }, "points": 100 },
+        { "condition": { "field": "hourly_rate", "operator": ">=", "value": 75 }, "points": 75 },
+        { "condition": { "field": "hourly_rate", "operator": ">=", "value": 50 }, "points": 50 }
+      ]
+    },
+    {
+      "id": "q15_priority",
+      "section": "E",
+      "order": 1,
+      "field_type": "textarea",
+      "schema_path": "section_e_priority.q15_one_thing_to_fix",
+      "label": "If you could fix ONE thing, what would it be?",
+      "help_text": "What's the most important problem to solve?",
+      "placeholder": "Reduce the time it takes to respond to new patient inquiries from hours to minutes...",
+      "required": true,
+      "validation": [
+        { "type": "required", "message": "Please describe your top priority" }
+      ],
+      "qualification_weight": 4
+    },
+    {
+      "id": "budget_range",
+      "section": "E",
+      "order": 2,
+      "field_type": "select",
+      "label": "Project budget range",
+      "help_text": "What investment level are you considering?",
+      "required": false,
+      "options": [
+        { "value": "under_10k", "label": "Under $10,000" },
+        { "value": "10k_25k", "label": "$10,000 - $25,000" },
+        { "value": "25k_50k", "label": "$25,000 - $50,000" },
+        { "value": "50k_100k", "label": "$50,000 - $100,000" },
+        { "value": "over_100k", "label": "Over $100,000" },
+        { "value": "not_sure", "label": "Not sure yet" }
+      ],
+      "qualification_weight": 10,
+      "scoring_rules": [
+        { "condition": { "field": "budget_range", "operator": "==", "value": "over_100k" }, "points": 100 },
+        { "condition": { "field": "budget_range", "operator": "==", "value": "50k_100k" }, "points": 90 },
+        { "condition": { "field": "budget_range", "operator": "==", "value": "25k_50k" }, "points": 80 },
+        { "condition": { "field": "budget_range", "operator": "==", "value": "10k_25k" }, "points": 60 },
+        { "condition": { "field": "budget_range", "operator": "==", "value": "under_10k" }, "points": 30 },
+        { "condition": { "field": "budget_range", "operator": "==", "value": "not_sure" }, "points": 40 }
+      ]
+    },
+    {
+      "id": "timeline_weeks",
+      "section": "E",
+      "order": 3,
+      "field_type": "select",
+      "label": "Desired timeline",
+      "help_text": "When do you need this operational?",
+      "required": false,
+      "options": [
+        { "value": "asap", "label": "ASAP - Within 2 weeks" },
+        { "value": "1_month", "label": "Within 1 month" },
+        { "value": "2_3_months", "label": "2-3 months" },
+        { "value": "quarter", "label": "This quarter" },
+        { "value": "flexible", "label": "Flexible / Exploring" }
+      ],
+      "qualification_weight": 6,
+      "scoring_rules": [
+        { "condition": { "field": "timeline_weeks", "operator": "==", "value": "asap" }, "points": 100 },
+        { "condition": { "field": "timeline_weeks", "operator": "==", "value": "1_month" }, "points": 85 },
+        { "condition": { "field": "timeline_weeks", "operator": "==", "value": "2_3_months" }, "points": 70 },
+        { "condition": { "field": "timeline_weeks", "operator": "==", "value": "quarter" }, "points": 50 },
+        { "condition": { "field": "timeline_weeks", "operator": "==", "value": "flexible" }, "points": 30 }
+      ]
+    },
+    {
+      "id": "decision_maker",
+      "section": "E",
+      "order": 4,
+      "field_type": "select",
+      "label": "Are you the decision maker for this project?",
+      "required": true,
+      "options": [
+        { "value": "yes", "label": "Yes - I can approve this project" },
+        { "value": "influencer", "label": "No - But I influence the decision" },
+        { "value": "evaluator", "label": "No - I'm evaluating options for someone else" }
+      ],
+      "validation": [
+        { "type": "required", "message": "Please indicate your role in the decision" }
+      ],
+      "qualification_weight": 8,
+      "scoring_rules": [
+        { "condition": { "field": "decision_maker", "operator": "==", "value": "yes" }, "points": 100 },
+        { "condition": { "field": "decision_maker", "operator": "==", "value": "influencer" }, "points": 70 },
+        { "condition": { "field": "decision_maker", "operator": "==", "value": "evaluator" }, "points": 40 }
+      ]
+    },
+    {
+      "id": "lead_source",
+      "section": "F",
+      "order": 1,
+      "field_type": "select",
+      "label": "How did you find us?",
+      "required": false,
+      "options": [
+        { "value": "website", "label": "Website / Search" },
+        { "value": "referral", "label": "Referral from someone" },
+        { "value": "linkedin", "label": "LinkedIn" },
+        { "value": "event", "label": "Conference / Event" },
+        { "value": "content", "label": "Blog / Content" },
+        { "value": "other", "label": "Other" }
+      ],
+      "qualification_weight": 2,
+      "scoring_rules": [
+        { "condition": { "field": "lead_source", "operator": "==", "value": "referral" }, "points": 100 },
+        { "condition": { "field": "lead_source", "operator": "==", "value": "website" }, "points": 70 },
+        { "condition": { "field": "lead_source", "operator": "==", "value": "linkedin" }, "points": 60 }
+      ]
+    },
+    {
+      "id": "urgency",
+      "section": "F",
+      "order": 2,
+      "field_type": "select",
+      "label": "How urgent is this project?",
+      "required": false,
+      "options": [
+        { "value": "critical", "label": "Critical - Blocking other initiatives" },
+        { "value": "high", "label": "High - Need to start soon" },
+        { "value": "medium", "label": "Medium - Planning for this quarter" },
+        { "value": "exploring", "label": "Exploring - Just gathering information" }
+      ],
+      "qualification_weight": 5,
+      "scoring_rules": [
+        { "condition": { "field": "urgency", "operator": "==", "value": "critical" }, "points": 100 },
+        { "condition": { "field": "urgency", "operator": "==", "value": "high" }, "points": 80 },
+        { "condition": { "field": "urgency", "operator": "==", "value": "medium" }, "points": 50 },
+        { "condition": { "field": "urgency", "operator": "==", "value": "exploring" }, "points": 20 }
+      ]
+    },
+    {
+      "id": "competitors",
+      "section": "F",
+      "order": 3,
+      "field_type": "select",
+      "label": "Are you evaluating other solutions?",
+      "required": false,
+      "options": [
+        { "value": "yes_active", "label": "Yes - Actively comparing options" },
+        { "value": "yes_casual", "label": "Yes - Casually looking" },
+        { "value": "no", "label": "No - You're our first choice" }
+      ],
+      "qualification_weight": 3,
+      "scoring_rules": [
+        { "condition": { "field": "competitors", "operator": "==", "value": "no" }, "points": 100 },
+        { "condition": { "field": "competitors", "operator": "==", "value": "yes_casual" }, "points": 70 },
+        { "condition": { "field": "competitors", "operator": "==", "value": "yes_active" }, "points": 50 }
+      ]
+    },
+    {
+      "id": "previous_automation",
+      "section": "F",
+      "order": 4,
+      "field_type": "select",
+      "label": "Previous automation experience?",
+      "help_text": "Have you implemented automation projects before?",
+      "required": false,
+      "options": [
+        { "value": "yes_success", "label": "Yes - Successfully" },
+        { "value": "yes_failed", "label": "Yes - But it didn't work out" },
+        { "value": "no", "label": "No - This would be our first" }
+      ],
+      "qualification_weight": 2,
+      "scoring_rules": [
+        { "condition": { "field": "previous_automation", "operator": "==", "value": "yes_success" }, "points": 100 },
+        { "condition": { "field": "previous_automation", "operator": "==", "value": "no" }, "points": 70 },
+        { "condition": { "field": "previous_automation", "operator": "==", "value": "yes_failed" }, "points": 50 }
+      ]
+    }
+  ],
+  "qualification_config": {
+    "max_score": 100,
+    "thresholds": {
+      "hot": 75,
+      "warm": 50
+    },
+    "weights": {
+      "budget_alignment": 20,
+      "integration_complexity": 15,
+      "volume_potential": 15,
+      "timeline_urgency": 10,
+      "decision_maker_access": 15,
+      "pain_severity": 15,
+      "api_readiness": 10
+    }
+  }
+}

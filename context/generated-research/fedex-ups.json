@@ -1,0 +1,65 @@
+{
+  "integration": "FedEx/UPS",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:50.184Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "FedEx/UPS",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Both carriers have transitioned to OAuth 2.0. UPS recently deprecated legacy Access Keys. Requires Client ID, Client Secret, and a Shipping Account Number. FedEx requires a specific token exchange flow and often a 'Meter Number' for legacy accounts.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://developer.fedex.com/api/en-us/catalog.html",
+  "rate_limits": "FedEx: Varies by endpoint, typically 1,000 to 3,000 requests per hour. UPS: Varies based on account tier and specific API endpoint.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "UPS recently migrated to a new developer portal; old 'Access Key' tutorials are now obsolete.",
+    "Label generation returns Base64 encoded strings or binary buffers (ZPL/PDF) that require n8n binary property handling.",
+    "Address validation rules are extremely strict and often require specific formatting (e.g., uppercase) to avoid errors."
+  ],
+  "client_must_provide": [
+    "Carrier Developer Portal credentials",
+    "Production Client ID and Secret",
+    "Active Shipping Account Number",
+    "Sample shipping/origin addresses for testing"
+  ],
+  "operations_available": [
+    "Track Shipment",
+    "Create Shipment Label",
+    "Calculate Shipping Rates",
+    "Address Validation",
+    "Schedule Pickup"
+  ],
+  "similar_integrations": [
+    "Shippo",
+    "ShipStation",
+    "EasyPost"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration requires using the HTTP Request node. For OAuth 2.0, you must set up a 'Generic Auth' credential in n8n or manually handle the token refresh logic using a separate workflow. UPS and FedEx APIs are notoriously verbose; expect large JSON payloads. Using a middleware like Shippo (which has an n8n node) is highly recommended over direct carrier integration unless specific carrier features are required.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration requires using the HTTP Request node. For OAuth 2.0, you must set up a 'Generic Auth' credential in n8n or manually handle the token refresh logic using a separate workflow. UPS and FedEx APIs are notoriously verbose; expect large JSON payloads. Using a middleware like Shippo (which has an n8n node) is highly recommended over direct carrier integration unless specific carrier features are required."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

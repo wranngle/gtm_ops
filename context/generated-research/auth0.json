@@ -1,0 +1,65 @@
+{
+  "integration": "Auth0",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:48.835Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Auth0",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 (Client Credentials Flow)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating a 'Machine to Machine' application in the Auth0 dashboard, authorizing it for the Management API, and selecting specific scopes. Authentication involves a POST request to /oauth/token to retrieve a JWT bearer token.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://auth0.com/docs/api/management/v2",
+  "rate_limits": "Varies by tenant tier; typically 2 requests per second for Free tenants and up to 100 requests per second for Enterprise tenants on the Management API.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "The Management API has strict rate limits that can be easily hit during bulk user operations.",
+    "Access tokens for the Management API are short-lived; workflows must include logic to request a new token or use n8n's OAuth2 credentials feature carefully.",
+    "Scopes must be manually assigned to the M2M application for every specific entity (users, roles, logs) you intend to manage."
+  ],
+  "client_must_provide": [
+    "Auth0 Domain (e.g., tenant.us.auth0.com)",
+    "Client ID",
+    "Client Secret",
+    "Management API Audience URL"
+  ],
+  "operations_available": [
+    "Create/Update/Delete Users",
+    "Search Users by Email or Metadata",
+    "Assign Roles and Permissions",
+    "Retrieve System Logs",
+    "Trigger Password Reset Emails"
+  ],
+  "similar_integrations": [
+    "Okta",
+    "Firebase",
+    "AWS Cognito"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Implementation requires an HTTP Request node to fetch the JWT token followed by subsequent HTTP Request nodes using 'Bearer Token' header. It is recommended to use a 'Wait' node or 'Split In Batches' when performing bulk user updates to respect rate limits. Webhooks can be implemented using Auth0 'Actions' or 'Log Streams' pointing to an n8n Webhook node.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation requires an HTTP Request node to fetch the JWT token followed by subsequent HTTP Request nodes using 'Bearer Token' header. It is recommended to use a 'Wait' node or 'Split In Batches' when performing bulk user updates to respect rate limits. Webhooks can be implemented using Auth0 'Actions' or 'Log Streams' pointing to an n8n Webhook node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

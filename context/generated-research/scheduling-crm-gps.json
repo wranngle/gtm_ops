@@ -1,0 +1,65 @@
+{
+  "integration": "Scheduling/CRM/GPS",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:05.036Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Scheduling/CRM/GPS",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.hubspot",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires a HubSpot Developer Account to create a Private App or a public OAuth app. Scopes must be precisely configured for the specific CRM objects (contacts, deals, companies) being accessed.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.hubspot.com/docs/api/overview",
+  "rate_limits": "100 requests per 10 seconds for Free/Starter accounts; 150 requests per 10 seconds for Professional/Enterprise. Daily limits range from 250,000 to 1,000,000+ calls.",
+  "complexity_score": 3,
+  "complexity_tier": "moderate",
+  "estimated_hours": 8,
+  "webhook_support": true,
+  "gotchas": [
+    "Property Internal Names: You must use the internal API name of a property (e.g., 'firstname') rather than the UI label ('First Name').",
+    "Association Logic: Linking records (e.g., a Contact to a Deal) requires specific Association API calls which can be complex in n8n.",
+    "Scope Management: If you add a new custom property or object, you often need to update the OAuth scopes and re-authenticate the node."
+  ],
+  "client_must_provide": [
+    "HubSpot Portal ID (HubID)",
+    "OAuth Client ID and Client Secret (if using custom app)",
+    "List of custom properties/fields required for the workflow",
+    "Super Admin access to approve app installation"
+  ],
+  "operations_available": [
+    "Create/Update Contact",
+    "Search CRM Objects (Contacts, Companies, Deals)",
+    "Get/List Engagements (Meetings/Calls)",
+    "Create/Update Deal",
+    "Manage Associations"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "Pipedrive",
+    "Zoho CRM"
+  ],
+  "confidence": 0.95,
+  "research_notes": "HubSpot is the primary provider for this category in n8n. While the category mentions GPS, this is typically handled via custom location properties within the CRM or by integrating a secondary GPS-specific node like Geotab alongside the CRM node.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 3,
+    "tier": "moderate",
+    "estimated_hours": 8
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 8,
+    "rationale": "HubSpot is the primary provider for this category in n8n. While the category mentions GPS, this is typically handled via custom location properties within the CRM or by integrating a secondary GPS-specific node like Geotab alongside the CRM node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "hubspot",
+  "_is_category": true
+}

@@ -1,0 +1,65 @@
+{
+  "integration": "VoIP",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:15.308Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "VoIP",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.twilio",
+  "auth_type": "api_key",
+  "auth_complexity": "simple",
+  "auth_notes": "Twilio requires an Account SID and an Auth Token, both found in the Twilio Console dashboard. For higher security, API Keys (Secret/SID) can also be used.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://www.twilio.com/docs/usage/api",
+  "rate_limits": "Twilio uses a concurrency-based limit (default 100 concurrent requests) and rate limits per phone number for SMS (e.g., 1 MPS for long codes, higher for short codes and toll-free).",
+  "complexity_score": 3,
+  "complexity_tier": "moderate",
+  "estimated_hours": 8,
+  "webhook_support": true,
+  "gotchas": [
+    "A2P 10DLC registration is mandatory for US/Canada SMS to avoid heavy carrier filtering and fees.",
+    "Trial accounts can only send messages/calls to 'Verified Caller IDs' pre-registered in the console.",
+    "Webhooks require a publicly accessible URL; n8n must be configured with a proper production URL (not localhost) for Twilio to reach it."
+  ],
+  "client_must_provide": [
+    "Twilio Account SID",
+    "Auth Token",
+    "Purchased Twilio Phone Number",
+    "A2P 10DLC Campaign approval status"
+  ],
+  "operations_available": [
+    "Send SMS",
+    "Make Phone Call",
+    "Send WhatsApp Message",
+    "List Messages",
+    "Get Call Logs"
+  ],
+  "similar_integrations": [
+    "Vonage",
+    "RingCentral",
+    "MessageBird"
+  ],
+  "confidence": 0.95,
+  "research_notes": "While VoIP is a broad category, n8n's primary native support is for Twilio. For other providers like RingCentral or Vonage, users must use the HTTP Request node or search for specific community nodes. Twilio is the industry standard for n8n VoIP workflows.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 3,
+    "tier": "moderate",
+    "estimated_hours": 8
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 8,
+    "rationale": "While VoIP is a broad category, n8n's primary native support is for Twilio. For other providers like RingCentral or Vonage, users must use the HTTP Request node or search for specific community nodes. Twilio is the industry standard for n8n VoIP workflows."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "twilio",
+  "_is_category": true
+}

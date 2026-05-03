@@ -1,0 +1,65 @@
+{
+  "integration": "DRB Patheon",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:25.282Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "DRB Patheon",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires an API Key and often a Site ID or Merchant ID passed in the request headers. Access usually must be provisioned through the DRB Developer Portal or via a request to DRB support for specific site locations.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.drbsystems.com/",
+  "rate_limits": "Varies by subscription tier and site configuration; typically enforced at the site-gateway level.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Data is often siloed by physical site location, requiring specific Site IDs for every request.",
+    "The API documentation is frequently behind a partner login, making initial discovery difficult without client credentials.",
+    "Transaction payloads are highly structured and may require significant data transformation in n8n using the Code node."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Site ID(s)",
+    "Developer Portal Access",
+    "Production API Endpoint URL"
+  ],
+  "operations_available": [
+    "Retrieve Transaction History",
+    "Manage Customer Loyalty Profiles",
+    "Check Site/Tunnel Status",
+    "Update Membership Information",
+    "Process Gift Card Inquiries"
+  ],
+  "similar_integrations": [
+    "Square",
+    "Stripe",
+    "Toast"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration will require the HTTP Request node using 'Header Auth' for the API Key. Because Patheon is an enterprise POS for car washes, the workflow will likely need to handle site-specific routing. Webhooks are available but may require manual registration via the API or support ticket rather than a self-service UI.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will require the HTTP Request node using 'Header Auth' for the API Key. Because Patheon is an enterprise POS for car washes, the workflow will likely need to handle site-specific routing. Webhooks are available but may require manual registration via the API or support ticket rather than a self-service UI."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

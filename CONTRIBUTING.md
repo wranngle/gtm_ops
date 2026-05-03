@@ -1,9 +1,9 @@
 # Contributing
 
-This repo is a public-safe, agent-first flagship monorepo. Contributions should preserve both layers of the setup:
+This repo is the unified runtime for a voice-AI-led GTM motion. Contributions should preserve:
 
-1. The primitive dotfiles hydration baseline: repository hygiene, issue templates, PR template, security policy, demo cassette, scripts, and Dependabot.
-2. The Harness Engineering layer: short `AGENTS.md`, repo-local docs as the source of truth, execution plans, validation loops, and mechanical checks.
+1. The product surface: `lib/`, `server.js`, `cli.js`, `apps/ops-console/`, `templates/`, `prompts/`.
+2. The agent-legibility layer: short `AGENTS.md`, repo-local docs as the source of truth, mechanical lint checks, knowledge-base validation.
 
 ## Local Setup
 
@@ -39,10 +39,9 @@ Keep the repo legible to future agents:
 ## Filing a Pull Request
 
 1. Create a branch from `main`.
-2. If the change is multi-file or architectural, create or update an execution plan under `docs/exec-plans/`.
-3. Make the change.
-4. Run validation.
-5. Fill out the PR template with summary, change type, test notes, and related issue or plan.
+2. Make the change.
+3. Run validation.
+4. Fill out the PR template with summary, change type, test notes, and related issue or plan.
 
 ## Asking Questions
 

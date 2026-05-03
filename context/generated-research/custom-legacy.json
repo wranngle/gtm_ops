@@ -1,0 +1,64 @@
+{
+  "integration": "Custom Legacy",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:10.785Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Custom Legacy",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key or Basic Auth",
+  "auth_complexity": "moderate",
+  "auth_notes": "Legacy systems typically utilize static API keys in headers, Basic Authentication, or IP-based whitelisting. They rarely support modern OAuth2 flows.",
+  "api_quality": "poor",
+  "api_documentation_url": null,
+  "rate_limits": "Usually undocumented; often constrained by underlying server resources rather than a formal rate-limiting layer.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "Non-standard response formats (e.g., returning 200 OK for errors with a message in the body).",
+    "Lack of pagination standards, requiring custom loop logic in n8n.",
+    "Potential requirement for VPN or SSH tunneling if the system is hosted on-premise."
+  ],
+  "client_must_provide": [
+    "Internal API endpoint documentation",
+    "Sample JSON/XML request and response payloads",
+    "Authentication credentials (API Key/Service Account)",
+    "Network access/Firewall rules for n8n IP addresses"
+  ],
+  "operations_available": [
+    "Retrieve Record (GET)",
+    "Update Record (POST/PUT)",
+    "Search/Filter Records",
+    "Bulk Export (CSV/JSON)"
+  ],
+  "similar_integrations": [
+    "MySQL",
+    "PostgreSQL",
+    "FTP/SFTP"
+  ],
+  "confidence": 0.7,
+  "research_notes": "The integration will rely heavily on the n8n HTTP Request node. Because legacy systems often use XML or non-standard JSON, the developer will likely need to use 'Function' or 'Code' nodes to transform data before and after requests. Manual error handling is required as the system may not follow RESTful HTTP status code conventions.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "The integration will rely heavily on the n8n HTTP Request node. Because legacy systems often use XML or non-standard JSON, the developer will likely need to use 'Function' or 'Code' nodes to transform data before and after requests. Manual error handling is required as the system may not follow RESTful HTTP status code conventions."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

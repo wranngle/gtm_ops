@@ -1,0 +1,64 @@
+{
+  "integration": "Fee schedules and tracking",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T05:12:28.203Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Fee schedules and tracking (CMS Physician Fee Schedule)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires account creation on the CMS Data portal (data.cms.gov) or QPP Developer portal. Authentication is typically handled via an 'X-API-KEY' header or Bearer token depending on the specific dataset version.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://data.cms.gov/provider-data/api-docs",
+  "rate_limits": "Generally 1,000 requests per minute, but varies by specific dataset and endpoint.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": false,
+  "gotchas": [
+    "Data structures are highly nested and often require significant JSON transformation using the Item Lists node.",
+    "Fee schedules are updated annually/quarterly; logic must account for 'Year' parameters to avoid stale data.",
+    "HCPCS/CPT codes must be validated before submission to avoid 404 errors on specific line items."
+  ],
+  "client_must_provide": [
+    "CMS Data Portal API Key",
+    "Target HCPCS/CPT code list",
+    "Locality/GPCI (Geographic Practice Cost Index) identifiers"
+  ],
+  "operations_available": [
+    "Search Fee Schedules by HCPCS code",
+    "Retrieve National Payment Amounts",
+    "Filter by Locality/MAC",
+    "Download full dataset metadata",
+    "Query RVU (Relative Value Unit) components"
+  ],
+  "similar_integrations": [
+    "Stripe",
+    "QuickBooks Online",
+    "FreshBooks"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration must be built using the HTTP Request node. Since the API does not support webhooks, a 'Schedule' trigger is required to poll for updates. Users will need to use the 'Split Out' node to handle the large JSON arrays returned by the CMS datasets.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration must be built using the HTTP Request node. Since the API does not support webhooks, a 'Schedule' trigger is required to poll for updates. Users will need to use the 'Split Out' node to handle the large JSON arrays returned by the CMS datasets."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

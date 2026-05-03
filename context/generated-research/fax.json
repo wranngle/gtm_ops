@@ -1,0 +1,65 @@
+{
+  "integration": "Fax",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:41:02.257Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Fax (via Phaxio)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key and Secret (Basic Auth)",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is typically handled via Basic Auth using the API Key as the username and API Secret as the password within the HTTP Request node.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.phaxio.com/docs/v2/",
+  "rate_limits": "10 requests per second with bursts up to 20 requests.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Sending faxes requires handling binary files (PDF/TIFF) which must be passed as multipart/form-data in the HTTP Request node.",
+    "Fax delivery is asynchronous; the API returns a success response when queued, not when delivered, necessitating webhook implementation for status tracking.",
+    "International dialing formats must be strictly followed (E.164) to avoid routing failures."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "API Secret",
+    "Dedicated Fax Number (for receiving)",
+    "Source document in supported format (PDF, DOCX, JPG)"
+  ],
+  "operations_available": [
+    "Send Fax",
+    "List Faxes",
+    "Get Fax Status",
+    "Download Received Fax (PDF)",
+    "Cancel Queued Fax"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "MessageBird",
+    "Vonage"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation requires the HTTP Request node. To send a fax, the 'Send Binary Data' option must be enabled in n8n to upload the file to the provider's endpoint. For receiving faxes, a Webhook node must be configured to listen for Phaxio's POST callbacks.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Implementation requires the HTTP Request node. To send a fax, the 'Send Binary Data' option must be enabled in n8n to upload the file to the provider's endpoint. For receiving faxes, a Webhook node must be configured to listen for Phaxio's POST callbacks."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

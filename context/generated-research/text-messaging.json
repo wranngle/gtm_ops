@@ -1,0 +1,64 @@
+{
+  "integration": "Text Messaging",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:24.222Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Text Messaging",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.slack",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating a Slack App via the Slack API dashboard to obtain a Client ID and Client Secret. Redirect URLs must be configured to match the n8n instance. Specific scopes (chat:write, channels:read, etc.) must be manually selected based on desired operations.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://api.slack.com/methods",
+  "rate_limits": "Tiered rate limiting: Tier 3 (e.g., chat.postMessage) allows ~50 requests per minute; Tier 4 allows ~100 requests per minute. Limits are applied per-workspace.",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "The Slack Bot must be explicitly invited to private channels or group DMs before it can interact with them.",
+    "Granular Bot Token Scopes are required; forgetting a specific scope like 'files:write' will cause silent failures or 403 errors even if the app is installed.",
+    "Rate limits are burstable but sustained high-frequency messaging will trigger 429 'too_many_requests' errors."
+  ],
+  "client_must_provide": [
+    "Slack Workspace Admin access",
+    "App Client ID and Client Secret",
+    "List of target Channel IDs or User IDs"
+  ],
+  "operations_available": [
+    "Send Message",
+    "Upload File",
+    "Add Reaction",
+    "Get Channel History",
+    "Update Message"
+  ],
+  "similar_integrations": [
+    "Microsoft Teams",
+    "Discord",
+    "Telegram"
+  ],
+  "confidence": 0.95,
+  "research_notes": "The baseline identifies Slack as the primary provider for the 'Text Messaging' category. While SMS providers like Twilio exist, this analysis follows the provided node info for Slack. Webhook support is available via the Slack Events API.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "The baseline identifies Slack as the primary provider for the 'Text Messaging' category. While SMS providers like Twilio exist, this analysis follows the provided node info for Slack. Webhook support is available via the Slack Events API."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "slack",
+  "_is_category": true
+}

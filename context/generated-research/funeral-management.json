@@ -1,0 +1,65 @@
+{
+  "integration": "Funeral Management",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:33:59.809Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Funeral Management (SRS Computing)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Authentication typically requires a static API Key or a Bearer Token generated within the SRS Computing administrative portal. Some endpoints may also require a specific Site ID or Tenant ID passed in the request headers.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://srscomputing.com/api-documentation/",
+  "rate_limits": "Standard rate limits are typically 60-100 requests per minute, though this varies based on the specific client license and server load.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": false,
+  "gotchas": [
+    "Documentation is often restricted to active clients and not publicly indexed.",
+    "Data schemas use industry-specific terminology (e.g., 'At-Need', 'Pre-Need', 'First Call') which requires domain knowledge for mapping.",
+    "Lack of native webhook support necessitates a polling strategy for data synchronization."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Base API URL",
+    "Site ID / Location ID",
+    "Sample JSON payload for a Deceased record"
+  ],
+  "operations_available": [
+    "Create Deceased Record",
+    "Get Service Details",
+    "Update Contract Status",
+    "List Staff Members",
+    "Retrieve Inventory Items"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "HubSpot",
+    "Microsoft Dynamics 365"
+  ],
+  "confidence": 0.75,
+  "research_notes": "The integration must be built using the HTTP Request node. Since webhooks are generally unavailable in this niche ERP, a 'Scheduled Trigger' node combined with a 'Wait' node or a timestamp-based filtering logic will be required to poll for new records or status changes.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "The integration must be built using the HTTP Request node. Since webhooks are generally unavailable in this niche ERP, a 'Scheduled Trigger' node combined with a 'Wait' node or a timestamp-based filtering logic will be required to poll for new records or status changes."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

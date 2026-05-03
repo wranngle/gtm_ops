@@ -1,0 +1,65 @@
+{
+  "integration": "Epic",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:59:56.838Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Epic",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (SMART on FHIR) with JWT",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires OAuth 2.0 using the SMART on FHIR profile. Backend services typically use the Client Credentials flow with a JWT signed by a private key (RS256). Registration via Epic's App Market/Showroom is mandatory.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://fhir.epic.com/",
+  "rate_limits": "Varies by specific Epic instance and endpoint; typically enforced via 'Burst' and 'Sustained' tiers defined in the developer portal.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Data must be handled in compliance with HIPAA regulations, requiring encrypted storage and transit.",
+    "FHIR resource versions (R4 vs STU3) vary significantly between different Epic versions and healthcare organizations.",
+    "Sandbox testing requires specific test patient IDs that do not always map 1:1 to production scenarios."
+  ],
+  "client_must_provide": [
+    "Production Client ID",
+    "Private RSA Key for JWT signing",
+    "Epic FHIR Base URL (specific to the healthcare provider)",
+    "Approved scopes for the application"
+  ],
+  "operations_available": [
+    "Patient.Read / Patient.Search",
+    "Appointment.Create / Appointment.Search",
+    "Observation.Read (Lab Results)",
+    "DocumentReference.Create (Clinical Notes)",
+    "MedicationRequest.Read"
+  ],
+  "similar_integrations": [
+    "Salesforce Health Cloud",
+    "Google Cloud Healthcare API",
+    "Airtable"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will require the HTTP Request node. The most difficult part is the initial authentication handshake, which involves generating a signed JWT to exchange for a bearer token. Users should use a 'Crypto' node or a 'Code' node to sign the JWT before the token request. All data structures follow the HL7 FHIR standard.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration will require the HTTP Request node. The most difficult part is the initial authentication handshake, which involves generating a signed JWT to exchange for a bearer token. Users should use a 'Crypto' node or a 'Code' node to sign the JWT before the token request. All data structures follow the HL7 FHIR standard."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

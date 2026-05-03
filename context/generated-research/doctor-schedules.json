@@ -1,0 +1,64 @@
+{
+  "integration": "Doctor Schedules",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:06:43.324Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Doctor Schedules",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires an API Key generated from the administrative dashboard. Most requests require a 'Practice-ID' header in addition to the authorization token.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://doctorschedules.com/api/v1/docs",
+  "rate_limits": "Typically 60 requests per minute per practice ID.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict HIPAA compliance requirements mean data logging in n8n should be disabled for sensitive fields.",
+    "Timezone offsets are often returned as strings rather than ISO-8601, requiring manual parsing in a Function node.",
+    "Webhooks must be manually registered via an API call as there is no UI for webhook management."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Practice ID",
+    "Environment URL (Production vs Sandbox)"
+  ],
+  "operations_available": [
+    "Get Appointments",
+    "Create Appointment",
+    "List Doctors/Providers",
+    "Check Slot Availability",
+    "Update Patient Information"
+  ],
+  "similar_integrations": [
+    "Acuity Scheduling",
+    "Calendly",
+    "Google Calendar"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Integration must be built using the HTTP Request node. Because the API returns nested JSON for doctor availability, a 'Split Out' node or 'Item Lists' node will be necessary to process individual time slots. Webhook implementation requires a manual POST request to their /subscriptions endpoint to point to the n8n Webhook URL.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration must be built using the HTTP Request node. Because the API returns nested JSON for doctor availability, a 'Split Out' node or 'Item Lists' node will be necessary to process individual time slots. Webhook implementation requires a manual POST request to their /subscriptions endpoint to point to the n8n Webhook URL."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

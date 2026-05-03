@@ -1,0 +1,64 @@
+{
+  "integration": "Microsoft Access",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:41:01.192Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Microsoft Access",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key or OAuth2 via Middleware",
+  "auth_complexity": "complex",
+  "auth_notes": "Microsoft Access is a file-based desktop database and does not have a native REST API. Authentication depends on the bridge used (e.g., a custom Python/Node.js wrapper, a Power Automate flow, or a third-party gateway like CData or Skyvia).",
+  "api_quality": "poor",
+  "api_documentation_url": "https://learn.microsoft.com/en-us/office/client-developer/access/desktop-database-reference/",
+  "rate_limits": "N/A - Limited by the hosting server or the middleware bridge performance.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "Access is not cloud-native; it requires a persistent connection to the .accdb file which is difficult over standard HTTP.",
+    "File locking and concurrency issues often occur when multiple processes (like an API bridge) attempt to write to the database.",
+    "No native Microsoft Graph API support for querying .accdb file contents directly."
+  ],
+  "client_must_provide": [
+    "The .accdb database file",
+    "Hosting environment for an ODBC/JDBC bridge or custom API wrapper",
+    "Network permissions to allow n8n to communicate with the bridge"
+  ],
+  "operations_available": [
+    "Execute SQL Queries (via bridge)",
+    "Read Table Records",
+    "Insert New Rows",
+    "Update Existing Rows"
+  ],
+  "similar_integrations": [
+    "Microsoft SQL Server",
+    "Airtable",
+    "MySQL",
+    "PostgreSQL"
+  ],
+  "confidence": 0.95,
+  "research_notes": "To integrate with n8n, you must build or deploy a REST API wrapper that uses an ODBC driver to interact with the Access file. The n8n HTTP Request node will then call this custom API. Alternatively, migrating the data to Microsoft SQL Server or SharePoint Lists is recommended for better n8n compatibility.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "To integrate with n8n, you must build or deploy a REST API wrapper that uses an ODBC driver to interact with the Access file. The n8n HTTP Request node will then call this custom API. Alternatively, migrating the data to Microsoft SQL Server or SharePoint Lists is recommended for better n8n compatibility."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

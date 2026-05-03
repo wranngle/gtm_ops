@@ -1,0 +1,106 @@
+{
+  "name": "Clay Enrichment Webhook (for Presales Pipeline)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enrich-company",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook: Receive Domain",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "enrich-company-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.clay.com/YOUR_CLAY_TABLE_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ domain: $json.body.domain }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "clay-1",
+      "name": "Send to Clay Table",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "wait-1",
+      "name": "Wait for Clay Enrichment",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://hooks.clay.com/YOUR_CLAY_TABLE_READ_URL?domain={{ $json.body.domain }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "clay-read-1",
+      "name": "Read Clay Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "company_name", "value": "={{ $json.data?.name || $json.name || '' }}" },
+            { "name": "industry", "value": "={{ $json.data?.industry || $json.industry || '' }}" },
+            { "name": "revenue_estimate", "value": "={{ $json.data?.revenue || $json.estimated_revenue || '' }}" },
+            { "name": "funding_stage", "value": "={{ $json.data?.funding_stage || '' }}" }
+          ],
+          "number": [
+            { "name": "employee_count", "value": "={{ $json.data?.employee_count || $json.employees || 0 }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-1",
+      "name": "Map to BusinessProfile",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ company_name: $json.company_name, employee_count: $json.employee_count, industry: $json.industry, tech_stack: $json.tech_stack || [], revenue_estimate: $json.revenue_estimate, funding_stage: $json.funding_stage }) }}"
+      },
+      "id": "respond-1",
+      "name": "Respond to Pipeline",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Receive Domain": {
+      "main": [[ { "node": "Send to Clay Table", "type": "main", "index": 0 } ]]
+    },
+    "Send to Clay Table": {
+      "main": [[ { "node": "Wait for Clay Enrichment", "type": "main", "index": 0 } ]]
+    },
+    "Wait for Clay Enrichment": {
+      "main": [[ { "node": "Read Clay Results", "type": "main", "index": 0 } ]]
+    },
+    "Read Clay Results": {
+      "main": [[ { "node": "Map to BusinessProfile", "type": "main", "index": 0 } ]]
+    },
+    "Map to BusinessProfile": {
+      "main": [[ { "node": "Respond to Pipeline", "type": "main", "index": 0 } ]]
+    }
+  }
+}

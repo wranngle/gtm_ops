@@ -1,0 +1,64 @@
+{
+  "integration": "Payment",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:52.269Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Payment",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.stripe",
+  "auth_type": "api_key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires a Secret Key (sk_...) from the Stripe Dashboard. Restricted keys are recommended for n8n to limit access to specific resources.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://stripe.com/docs/api",
+  "rate_limits": "100 read requests per second and 100 write requests per second in live mode; 25 requests per second in test mode.",
+  "complexity_score": 3,
+  "complexity_tier": "moderate",
+  "estimated_hours": 8,
+  "webhook_support": true,
+  "gotchas": [
+    "Test mode and Live mode use completely separate API keys and data; objects created in one cannot be accessed in the other.",
+    "Webhook signing secrets must be correctly configured in n8n to verify authenticity and prevent spoofing.",
+    "API versioning is tied to the Stripe account settings; upgrading the API version in Stripe can occasionally break existing node mappings if fields are deprecated."
+  ],
+  "client_must_provide": [
+    "Stripe Secret API Key",
+    "Webhook Signing Secret (for production triggers)",
+    "Confirmation of specific provider (Stripe, PayPal, or Square)"
+  ],
+  "operations_available": [
+    "Create/Update Customer",
+    "Create Payment Intent",
+    "List/Refund Charges",
+    "Manage Subscriptions",
+    "Create Invoice Items"
+  ],
+  "similar_integrations": [
+    "PayPal",
+    "Square",
+    "Paddle"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Stripe is the primary provider for this category in n8n. While PayPal and Square nodes exist, Stripe offers the most comprehensive coverage of the Payment category. Users must ensure they are using 'Secret Keys' and not 'Publishable Keys' within n8n.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 3,
+    "tier": "moderate",
+    "estimated_hours": 8
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 8,
+    "rationale": "Stripe is the primary provider for this category in n8n. While PayPal and Square nodes exist, Stripe offers the most comprehensive coverage of the Payment category. Users must ensure they are using 'Secret Keys' and not 'Publishable Keys' within n8n."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "stripe",
+  "_is_category": true
+}

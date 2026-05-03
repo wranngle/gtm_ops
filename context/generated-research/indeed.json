@@ -1,0 +1,66 @@
+{
+  "integration": "Indeed",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:04.805Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Indeed",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires an Indeed Developer account and application approval. Uses OAuth 2.0 Authorization Code Grant with specific scopes for Employer or Publisher APIs.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.indeed.com/docs",
+  "rate_limits": "Varies by endpoint; typically 100 requests per minute for standard access, but highly dependent on the specific API product and agreement.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "API access is not self-service; users must apply for access and wait for manual approval from Indeed's partner team.",
+    "Indeed has strict 'Attribution' and 'Look and Feel' requirements for displaying job data.",
+    "The API is fragmented into different products (Job Search, Employer, Sponsored Jobs) each with different access levels."
+  ],
+  "client_must_provide": [
+    "Approved Indeed Developer Account",
+    "Client ID",
+    "Client Secret",
+    "Approved Redirect URI",
+    "Specific API Scopes (e.g., 'employer.jobs.read')"
+  ],
+  "operations_available": [
+    "Search Jobs",
+    "Retrieve Job Applications",
+    "Create/Update Job Postings",
+    "Get Job Performance Analytics",
+    "Manage Sponsored Job Campaigns"
+  ],
+  "similar_integrations": [
+    "Greenhouse",
+    "Lever",
+    "Workable"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Development must use the HTTP Request node. n8n's 'Generic OAuth2 API' credential type should be used. The Authorization URL is https://secure.indeed.com/oauth/v2/authorize and the Access Token URL is https://lp.indeed.com/oauth/v2/tokens. Note that some older Indeed APIs use a simple API Key (Publisher ID), but modern integrations require OAuth.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Development must use the HTTP Request node. n8n's 'Generic OAuth2 API' credential type should be used. The Authorization URL is https://secure.indeed.com/oauth/v2/authorize and the Access Token URL is https://lp.indeed.com/oauth/v2/tokens. Note that some older Indeed APIs use a simple API Key (Publisher ID), but modern integrations require OAuth."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,66 @@
+{
+  "integration": "DocuSign",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T00:04:34.180Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "DocuSign",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (JWT Grant or Authorization Code Grant)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires an Integration Key (Client ID), User ID (GUID), and an RSA Private Key for JWT Grant. JWT is preferred for service-to-service but requires a one-time manual URL consent step from an administrator.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.docusign.com/docs/esign-rest-api/",
+  "rate_limits": "3,000 requests per hour per account for the eSignature REST API.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "The API Base URL is account-specific and must be retrieved via the /oauth/userinfo endpoint after authentication.",
+    "DocuSign Connect (webhooks) requires a listener that can handle HMAC validation for security.",
+    "Sandbox (Demo) and Production environments use entirely different credentials and base URLs."
+  ],
+  "client_must_provide": [
+    "Integration Key (Client ID)",
+    "RSA Private Key",
+    "User ID (GUID)",
+    "API Account ID",
+    "DocuSign Environment (Demo vs Production)"
+  ],
+  "operations_available": [
+    "Create and Send Envelope from Template",
+    "Get Envelope Status and Metadata",
+    "Download Signed PDF Documents",
+    "List Envelope Recipients",
+    "Void/Cancel Envelope"
+  ],
+  "similar_integrations": [
+    "Dropbox Sign",
+    "PandaDoc",
+    "SignNow"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Implementation via HTTP Request node requires a two-step process: first, an authentication request to DocuSign's identity server to exchange a JWT assertion for an access token, followed by the actual API calls using that token. The 'Account ID' must be dynamically injected into the URL path for all eSignature endpoints.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Implementation via HTTP Request node requires a two-step process: first, an authentication request to DocuSign's identity server to exchange a JWT assertion for an access token, followed by the actual API calls using that token. The 'Account ID' must be dynamically injected into the URL path for all eSignature endpoints."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,64 @@
+{
+  "integration": "Spot market",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:42:17.654Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Spot market",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "HMAC SHA256 API Key/Secret",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires an API Key and Secret Key. Most Spot Market APIs (like Binance or KuCoin) require every private request to be signed with an HMAC SHA256 signature generated from the query string and a timestamp.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://binance-docs.github.io/apidocs/spot/en/",
+  "rate_limits": "1200 request weight per minute per IP",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Signature mismatch errors are common if the query string order is not identical to the signed string",
+    "The 'recvWindow' parameter must be tuned to prevent 'Timestamp for this request is outside of the recvWindow' errors",
+    "IP whitelisting is usually required for API keys with trading permissions"
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Secret Key",
+    "IP addresses of the n8n instance for whitelisting"
+  ],
+  "operations_available": [
+    "Create Limit/Market Order",
+    "Cancel Active Order",
+    "Get Account Trade Balance",
+    "Get Symbol Ticker Price",
+    "Fetch Order Book Depth"
+  ],
+  "similar_integrations": [
+    "Binance",
+    "Coinbase",
+    "Kraken"
+  ],
+  "confidence": 0.9,
+  "research_notes": "To implement this in n8n, you cannot use the HTTP Request node alone for private endpoints. You must use a 'Code' node immediately preceding the HTTP Request node to generate the HMAC signature using the Secret Key and current timestamp. This signature must then be passed as a query parameter or header in the subsequent HTTP Request.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "To implement this in n8n, you cannot use the HTTP Request node alone for private endpoints. You must use a 'Code' node immediately preceding the HTTP Request node to generate the HMAC signature using the Secret Key and current timestamp. This signature must then be passed as a query parameter or header in the subsequent HTTP Request."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

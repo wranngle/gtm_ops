@@ -1,0 +1,62 @@
+{
+  "integration": "Sourcing",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:57:47.814Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Sourcing.io",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Basic Auth",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is typically handled via Basic Auth where the API key is provided as the username (with a blank password) or via a custom header.",
+  "api_quality": "good",
+  "api_documentation_url": "https://sourcing.io/api",
+  "rate_limits": "Typically 60-100 requests per minute depending on the subscription tier; exceeding this results in 429 Too Many Requests errors.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": false,
+  "gotchas": [
+    "API access is often restricted to specific enterprise or recruiter-level plans.",
+    "Search results are heavily paginated and require manual loop implementation in n8n.",
+    "Data freshness varies, and some profile attributes may be null if not recently crawled."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Account Access Level"
+  ],
+  "operations_available": [
+    "Search Candidates",
+    "Get Candidate by ID",
+    "Filter by Skills/Location",
+    "List Team Members"
+  ],
+  "similar_integrations": [
+    "Hunter.io",
+    "Apollo",
+    "Clearbit"
+  ],
+  "confidence": 0.85,
+  "research_notes": "The integration requires the HTTP Request node. Users must configure Basic Auth in n8n credentials using the Sourcing.io API key. Because there is no native webhook support, any 'triggering' based on new candidates would require a polling mechanism using a Cron/Schedule node and a 'Last Checked' timestamp stored in a database or n8n static storage.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "The integration requires the HTTP Request node. Users must configure Basic Auth in n8n credentials using the Sourcing.io API key. Because there is no native webhook support, any 'triggering' based on new candidates would require a polling mechanism using a Cron/Schedule node and a 'Last Checked' timestamp stored in a database or n8n static storage."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

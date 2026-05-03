@@ -1,0 +1,65 @@
+{
+  "integration": "AI Voice Agent",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T01:31:22.800Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "AI Voice Agent",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key (Bearer Token)",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires a standard Authorization: Bearer <token> header for REST API calls. Some providers also require an Organization ID or Project ID in the header.",
+  "api_quality": "good",
+  "api_documentation_url": "https://docs.vapi.ai/",
+  "rate_limits": "Typically 60-100 requests per minute for management API; concurrent call limits vary by subscription tier (usually 2-50+).",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhooks are asynchronous; n8n must be configured to handle 'call.ended' events to retrieve transcripts.",
+    "Tool/Function calling requires strict JSON schema definitions within the HTTP request body.",
+    "High-latency n8n processing can cause delays if the agent is waiting for a 'Server Tool' response during a live call."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Agent ID",
+    "Webhook Secret (for signature verification)",
+    "Twilio/Vonage credentials (if using own carrier)"
+  ],
+  "operations_available": [
+    "Create Outbound Call",
+    "Update Agent Configuration",
+    "Retrieve Call Transcript",
+    "List Call Logs",
+    "Execute Server-side Tool/Function"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Vonage",
+    "ElevenLabs"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration relies heavily on the HTTP Request node to trigger calls. A separate 'Webhook' trigger node is mandatory to receive post-call data like transcripts and cost metrics. If using 'Server Tools' (where the AI agent asks n8n to look up data mid-call), the n8n workflow must respond within 1-2 seconds to avoid awkward silences.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "The integration relies heavily on the HTTP Request node to trigger calls. A separate 'Webhook' trigger node is mandatory to receive post-call data like transcripts and cost metrics. If using 'Server Tools' (where the AI agent asks n8n to look up data mid-call), the n8n workflow must respond within 1-2 seconds to avoid awkward silences."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

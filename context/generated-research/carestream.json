@@ -1,0 +1,65 @@
+{
+  "integration": "Carestream",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:06:07.387Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Carestream",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 or API Key (Partner-based)",
+  "auth_complexity": "complex",
+  "auth_notes": "Access requires enrollment in the Carestream Dental Developer Program. Authentication typically involves OAuth2 for cloud-based products (Sensei Cloud) or proprietary API keys for legacy systems. On-premise versions often require a local bridge or gateway.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://developer.carestreamdental.com/",
+  "rate_limits": "Subject to partner agreement; typically throttled per practice location to prevent server load on legacy databases.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "Legacy on-premise versions (WinOMS, SoftDent) may require a middleware agent to expose data to n8n.",
+    "Strict HIPAA compliance requirements mean data must be encrypted in transit and at rest within the n8n environment.",
+    "API documentation is often gated behind a partner approval process and non-disclosure agreements."
+  ],
+  "client_must_provide": [
+    "Developer Portal Client ID and Client Secret",
+    "Practice/Location UUIDs",
+    "Signed Business Associate Agreement (BAA)",
+    "VPN or Gateway access for on-premise installations"
+  ],
+  "operations_available": [
+    "Retrieve Patient Demographics",
+    "Fetch Appointment Schedules",
+    "Create New Patient Records",
+    "Update Appointment Status",
+    "Query Clinical Notes"
+  ],
+  "similar_integrations": [
+    "DrChrono",
+    "Athenahealth",
+    "PracticeSuite"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Integration will rely heavily on the HTTP Request node. The primary challenge is the fragmentation between Carestream's cloud offerings (Sensei) and their legacy on-premise software. For on-premise, the workflow may need to interface with a local SQL database or a proprietary Carestream SDK bridge rather than a direct REST API.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration will rely heavily on the HTTP Request node. The primary challenge is the fragmentation between Carestream's cloud offerings (Sensei) and their legacy on-premise software. For on-premise, the workflow may need to interface with a local SQL database or a proprietary Carestream SDK bridge rather than a direct REST API."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

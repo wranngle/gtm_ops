@@ -1,0 +1,37 @@
+{
+  "proposal_id": "prop_demo_001",
+  "client_slug": "acme-hvac",
+  "title": "Acme HVAC — Voice Agent Pilot Proposal",
+  "revision": 3,
+  "generated_at": "2026-04-22T15:32:11Z",
+  "sections": {
+    "executive_summary": "Acme HVAC currently misses 22% of after-hours calls, with 40% of those callers not returning the next day. We propose a 90-day pilot of a Sarah-class voice agent that answers after-hours, gathers caller details, classifies urgency, and pages the on-call technician. Expected outcome: recover 60% of missed calls and reduce voicemail backlog to under 10 per week.",
+    "scope": [
+      "After-hours voice agent provisioning on existing Twilio number",
+      "Integration with HouseCallPro for dispatch context",
+      "On-call SMS routing with urgency tagging",
+      "Operator dashboard for review of all overnight calls",
+      "30-day post-launch tuning and weekly eval reports"
+    ],
+    "deliverables": [
+      "Voice agent (Sarah profile)",
+      "Eval harness baseline (8 scenarios)",
+      "Operator dashboard access",
+      "Two-week tuning window with daily eval reports",
+      "Final handoff documentation"
+    ],
+    "pricing": {
+      "implementation": 12500,
+      "first_90_days_managed": 6000,
+      "total": 18500,
+      "currency": "USD"
+    },
+    "timeline": {
+      "weeks_1_2": "Discovery, eval scenario authoring, agent configuration",
+      "week_3": "Sandbox launch with operator review",
+      "week_4": "Production launch with 24/7 monitoring",
+      "weeks_5_12": "Tuning + weekly eval reports"
+    }
+  },
+  "_demo_note": "Synthetic proposal output — fictional client, fictional pricing."
+}

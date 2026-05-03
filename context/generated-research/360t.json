@@ -1,0 +1,65 @@
+{
+  "integration": "360T",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:23.655Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "360T",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 with Mutual TLS (mTLS)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires client certificates (mTLS) for handshake, followed by OAuth2 token exchange. Institutional security often mandates IP whitelisting.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.360t.com/support/developer-portal/",
+  "rate_limits": "Tiered based on contract; typically restricted to 10-20 requests per second for RESTful post-trade services.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Documentation is behind a client login/NDA and not publicly indexed.",
+    "Primary trading execution uses FIX protocol, which is not natively supported by n8n HTTP nodes without a middleware bridge.",
+    "Strict IP whitelisting requires n8n to have a static outbound IP address."
+  ],
+  "client_must_provide": [
+    "API Client ID and Secret",
+    "X.509 Certificates for mTLS",
+    "Whitelisted Static IP of the n8n instance",
+    "Access to the 360T UAT/Production environment"
+  ],
+  "operations_available": [
+    "Retrieve Post-Trade Data (STP)",
+    "Fetch Market Data Snapshots",
+    "Trade Confirmation Retrieval",
+    "User Activity Audit Logs",
+    "Settlement Instruction Management"
+  ],
+  "similar_integrations": [
+    "Oanda",
+    "Interactive Brokers",
+    "Bloomberg Terminal (via API)"
+  ],
+  "confidence": 0.8,
+  "research_notes": "The integration must use the HTTP Request node. Because 360T is an institutional FX platform, the main challenge is the mTLS requirement, which may require n8n to be hosted in an environment where certificates can be passed via the underlying Node.js agent or handled via a proxy like NGINX.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "The integration must use the HTTP Request node. Because 360T is an institutional FX platform, the main challenge is the mTLS requirement, which may require n8n to be hosted in an environment where certificates can be passed via the underlying Node.js agent or handled via a proxy like NGINX."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

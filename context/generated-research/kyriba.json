@@ -1,0 +1,65 @@
+{
+  "integration": "Kyriba",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:59.833Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Kyriba",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials) and API Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a multi-step process: an API Key (Ocp-Apim-Subscription-Key) must be passed in the header along with a Bearer token obtained via an OAuth 2.0 Client Credentials flow. Some environments also enforce IP whitelisting.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.kyriba.com/",
+  "rate_limits": "Standard limits are typically 10 requests per second, but specific quotas are tied to the client's subscription tier and instance configuration.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Kyriba APIs often return large, complex ISO 20022 XML or deeply nested JSON structures that require significant parsing in n8n.",
+    "API access is usually a licensed feature that must be explicitly enabled by Kyriba support for the client instance.",
+    "The sandbox environment often has different endpoint URLs and stricter validation rules than production."
+  ],
+  "client_must_provide": [
+    "Client ID and Client Secret",
+    "Subscription Key (API Key)",
+    "Instance-specific Base URL",
+    "Whitelisting of n8n static IP addresses"
+  ],
+  "operations_available": [
+    "Retrieve Bank Statements",
+    "Initiate Payment Instructions",
+    "Import/Export Cash Flows",
+    "Fetch FX Rates",
+    "Manage Bank Account Balances"
+  ],
+  "similar_integrations": [
+    "SAP",
+    "NetSuite",
+    "Microsoft Dynamics 365 Business Central"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration must be built using the HTTP Request node. It is recommended to create a sub-workflow for authentication to handle the OAuth 2.0 token generation and caching, as the token must be refreshed periodically. Users will likely need to use the 'XML' node or 'Code' node to transform financial data formats like MT940 or CAMT.053 if the API returns raw bank file formats.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration must be built using the HTTP Request node. It is recommended to create a sub-workflow for authentication to handle the OAuth 2.0 token generation and caching, as the token must be refreshed periodically. Users will likely need to use the 'XML' node or 'Code' node to transform financial data formats like MT940 or CAMT.053 if the API returns raw bank file formats."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

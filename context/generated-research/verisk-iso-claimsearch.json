@@ -1,0 +1,65 @@
+{
+  "integration": "Verisk/ISO ClaimSearch",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:13.246Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Verisk/ISO ClaimSearch",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 / mTLS",
+  "auth_complexity": "complex",
+  "auth_notes": "Authentication typically requires the Verisk API Gateway using OAuth 2.0 Client Credentials. Many endpoints also mandate Mutual TLS (mTLS) with client certificates and strict IP whitelisting.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://www.verisk.com/insurance/products/iso-claimsearch/",
+  "rate_limits": "Contract-specific; typically governed by individual Service Level Agreements (SLAs) and tier-based throttling.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "Documentation is gated behind a customer portal and not publicly accessible for open research.",
+    "Strict security requirements (IP whitelisting) may require a static IP or VPN for the n8n host.",
+    "Heavy reliance on legacy XML/SOAP formats for certain backend claim reporting functions despite RESTful wrappers."
+  ],
+  "client_must_provide": [
+    "Verisk API Gateway Credentials (Client ID/Secret)",
+    "Client-side SSL/TLS Certificates for mTLS",
+    "Whitelisted Static IP address of the n8n instance",
+    "ISO Company Code and User Credentials"
+  ],
+  "operations_available": [
+    "Claim Search/Inquiry",
+    "Claim Submission/Reporting",
+    "Retrieve Detailed Claim History",
+    "VIN and Vehicle Validation",
+    "Identity and Address Verification"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "ServiceNow",
+    "Microsoft Dynamics 365"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation will require the n8n HTTP Request node. Developers must handle complex header configurations for OAuth and potentially use a custom-built Docker image or proxy if specific mTLS certificate handling is required beyond standard Node.js capabilities. Data transformation (XML to JSON) via the 'XML' node will likely be necessary.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Implementation will require the n8n HTTP Request node. Developers must handle complex header configurations for OAuth and potentially use a custom-built Docker image or proxy if specific mTLS certificate handling is required beyond standard Node.js capabilities. Data transformation (XML to JSON) via the 'XML' node will likely be necessary."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

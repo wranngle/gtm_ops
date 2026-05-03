@@ -1,0 +1,65 @@
+{
+  "integration": "Phone/Text",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T05:34:09.460Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Phone/Text",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "simple",
+  "auth_notes": "Most SMS/Voice gateways (like Telnyx or Plivo) require a static API Key or Auth Token passed in the 'Authorization' header as a Bearer token or via Basic Auth.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.telnyx.com/docs/api/v2/overview",
+  "rate_limits": "Varies by provider; typically 10-50 requests per second (RPS) for messaging and lower for voice calls.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "A2P 10DLC registration is mandatory for sending SMS to US numbers, which can take weeks to approve.",
+    "Message concatenation: Messages over 160 characters are split and billed as multiple segments.",
+    "Strict E.164 phone number formatting is usually required for the 'to' and 'from' fields."
+  ],
+  "client_must_provide": [
+    "API Key or Auth Token",
+    "Account SID or Profile ID",
+    "Verified Phone Number or Short Code",
+    "A2P 10DLC Campaign approval (for US/Canada)"
+  ],
+  "operations_available": [
+    "Send SMS",
+    "Send MMS",
+    "Initiate Outbound Call",
+    "Check Message Delivery Status",
+    "List Available Phone Numbers"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Vonage",
+    "MessageBird"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation requires the n8n HTTP Request node. Users must manually map JSON bodies to the provider's specific schema (e.g., 'text' vs 'body'). Webhooks for incoming messages or delivery receipts must be configured in the provider's dashboard to point to an n8n Webhook trigger node.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Implementation requires the n8n HTTP Request node. Users must manually map JSON bodies to the provider's specific schema (e.g., 'text' vs 'body'). Webhooks for incoming messages or delivery receipts must be configured in the provider's dashboard to point to an n8n Webhook trigger node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

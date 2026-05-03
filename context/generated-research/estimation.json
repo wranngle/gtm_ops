@@ -1,0 +1,64 @@
+{
+  "integration": "Estimation",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:27.305Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Estimation",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key generated from the account settings, typically passed as a 'Bearer' token or 'X-API-Key' in the HTTP header.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://api.estimation.io/docs",
+  "rate_limits": "60 requests per minute per API key",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": false,
+  "gotchas": [
+    "Nested JSON structures for line items require complex expressions in n8n",
+    "Lack of native webhook support necessitates polling for status changes",
+    "Rate limits are strictly enforced and can lead to 429 errors during bulk updates"
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Workspace ID",
+    "Base API URL"
+  ],
+  "operations_available": [
+    "Create Estimate",
+    "Get Estimate Details",
+    "Update Estimate Status",
+    "List Projects",
+    "Add Line Items"
+  ],
+  "similar_integrations": [
+    "Harvest",
+    "FreshBooks",
+    "Scoro"
+  ],
+  "confidence": 0.75,
+  "research_notes": "As there is no native node, the integration must be built using the HTTP Request node. Authentication should be configured using 'Header Auth' in n8n credentials. Data transformation using the 'Set' or 'Code' node will be necessary to format line items into the required JSON array format.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "As there is no native node, the integration must be built using the HTTP Request node. Authentication should be configured using 'Header Auth' in n8n credentials. Data transformation using the 'Set' or 'Code' node will be necessary to format line items into the required JSON array format."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,64 @@
+{
+  "integration": "Operations",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:44.194Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Microsoft Dynamics 365 Finance and Operations",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 (Azure Active Directory)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Azure App Registration with 'Dynamics ERP' permissions. Must configure Client ID, Client Secret, Tenant ID, and the specific Environment URL as the 'Resource' parameter in the OAuth2 flow.",
+  "api_quality": "good",
+  "api_documentation_url": "https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/data-entities/odata",
+  "rate_limits": "Service protection limits apply based on concurrent requests and API throughput per user session; varies by tenant capacity.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "OData filtering requires specific URL-encoded syntax (e.g., $filter=Field eq 'Value')",
+    "Webhooks are implemented via 'Business Events' which must be manually configured and activated within the Dynamics UI",
+    "Standard n8n OAuth2 credentials may require manual header management if the 'Resource' parameter is not correctly handled by the generic provider"
+  ],
+  "client_must_provide": [
+    "Azure Tenant ID",
+    "Client ID",
+    "Client Secret",
+    "Environment URL (e.g., https://your-org.operations.dynamics.com)"
+  ],
+  "operations_available": [
+    "GET /data/DataEntity (List Records)",
+    "POST /data/DataEntity (Create Record)",
+    "PATCH /data/DataEntity(Key) (Update Record)",
+    "POST /api/services/ServiceName/ActionName (Execute Action)"
+  ],
+  "similar_integrations": [
+    "Microsoft Dynamics 365 CRM",
+    "SAP",
+    "Oracle NetSuite"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires using the HTTP Request node targeting OData v4 endpoints. Authentication is best handled via OAuth2 Client Credentials. For real-time triggers, use the Dynamics 'Business Events' framework to send POST requests to an n8n Webhook node.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration requires using the HTTP Request node targeting OData v4 endpoints. Authentication is best handled via OAuth2 Client Credentials. For real-time triggers, use the Dynamics 'Business Events' framework to send POST requests to an n8n Webhook node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

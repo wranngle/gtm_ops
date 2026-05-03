@@ -1,0 +1,67 @@
+{
+  "integration": "NetDocuments",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:40:46.271Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "NetDocuments",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires OAuth 2.0 Authorization Code flow for user-level access or Client Credentials for service-level access. Developers must register an application in the NetDocuments Developer Console to obtain a Client ID and Client Secret. Regional API endpoints (US, EU, AU, DE) require specific authorization and token URLs.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.netdocuments.com/",
+  "rate_limits": "Generally 10 requests per second per user, though specific limits vary by endpoint and subscription tier.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Regional data residency requires using the correct base URL (e.g., api.netdocuments.com vs eu.netdocuments.com) or calls will fail.",
+    "The API uses specific custom headers for many operations, such as 'Accept: application/vnd.netdocuments.v1+json'.",
+    "Handling large file uploads (>10MB) often requires specific multipart/form-data formatting that can be tricky in the standard HTTP Request node."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "NetDocuments Region/Data Center",
+    "Cabinet ID",
+    "Developer Console access for Redirect URI configuration"
+  ],
+  "operations_available": [
+    "Search Documents (REST API)",
+    "Upload Document",
+    "Download Document",
+    "Get Folder Contents",
+    "Update Document Metadata/Attributes"
+  ],
+  "similar_integrations": [
+    "Google Drive",
+    "OneDrive",
+    "Box",
+    "Dropbox"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration must be built using the HTTP Request node. Use n8n's 'OAuth2 API' credential type to manage token refreshing automatically. You will need to manually define the Authorization URL and Access Token URL based on the client's specific NetDocuments region. Webhooks can be configured via the 'Event Subscriptions' API but require a public-facing n8n webhook URL for the handshake.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "The integration must be built using the HTTP Request node. Use n8n's 'OAuth2 API' credential type to manage token refreshing automatically. You will need to manually define the Authorization URL and Access Token URL based on the client's specific NetDocuments region. Webhooks can be configured via the 'Event Subscriptions' API but require a public-facing n8n webhook URL for the handshake."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

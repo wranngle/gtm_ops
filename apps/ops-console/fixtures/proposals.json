@@ -1,0 +1,41 @@
+[
+  {
+    "id": "prop_demo_001",
+    "execution_id": "exec_demo_001",
+    "client_slug": "acme-hvac",
+    "title": "Acme HVAC — Voice Agent Pilot Proposal",
+    "revision": 3,
+    "total_price": 18500,
+    "total_hours": 124,
+    "status": "sent",
+    "generated_at": 1714723200000,
+    "pdf_url": "./fixtures/transcripts/sample-proposal.json",
+    "tier": "starter"
+  },
+  {
+    "id": "prop_demo_002",
+    "execution_id": "exec_demo_002",
+    "client_slug": "northwind-services",
+    "title": "Northwind — After-Hours Voicemail Replacement",
+    "revision": 2,
+    "total_price": 12000,
+    "total_hours": 80,
+    "status": "won",
+    "generated_at": 1714809600000,
+    "pdf_url": "./fixtures/transcripts/sample-proposal.json",
+    "tier": "starter"
+  },
+  {
+    "id": "prop_demo_003",
+    "execution_id": "exec_demo_004",
+    "client_slug": "blueline-logistics",
+    "title": "Blueline — Driver Check-In Voice Bot",
+    "revision": 4,
+    "total_price": 31000,
+    "total_hours": 208,
+    "status": "won",
+    "generated_at": 1714982400000,
+    "pdf_url": "./fixtures/transcripts/sample-proposal.json",
+    "tier": "growth"
+  }
+]

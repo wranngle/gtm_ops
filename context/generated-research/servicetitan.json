@@ -1,0 +1,65 @@
+{
+  "integration": "ServiceTitan",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T01:31:58.404Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "ServiceTitan",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials Flow) + Application Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a Client ID and Client Secret to exchange for a JWT access token via their identity server. Additionally, every request requires an 'ST-App-Key' header and a Tenant ID, which is usually part of the URL path.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.servicetitan.io/apis/",
+  "rate_limits": "Typically 100 requests per minute per tenant, though specific endpoints may have lower burst limits.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 18,
+  "webhook_support": true,
+  "gotchas": [
+    "The 'ST-App-Key' is a static header required in addition to the dynamic OAuth token.",
+    "ServiceTitan uses a specific Identity Server URL (auth.servicetitan.io) separate from the API Gateway.",
+    "Pagination follows a specific 'page' and 'pageSize' pattern that requires manual loop handling in n8n."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "Application Key",
+    "Tenant ID"
+  ],
+  "operations_available": [
+    "Get Jobs",
+    "Create Customers",
+    "Update Appointments",
+    "Retrieve Invoices",
+    "List Technicians"
+  ],
+  "similar_integrations": [
+    "Jobber",
+    "Housecall Pro",
+    "HubSpot"
+  ],
+  "confidence": 0.95,
+  "research_notes": "The integration must be built using the HTTP Request node. A prerequisite node is needed to POST to the auth endpoint to retrieve a Bearer token. This token should be stored in a workflow variable or passed via JSON. All subsequent API calls must include the Authorization header and the ST-App-Key header.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 18
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 18,
+    "rationale": "The integration must be built using the HTTP Request node. A prerequisite node is needed to POST to the auth endpoint to retrieve a Bearer token. This token should be stored in a workflow variable or passed via JSON. All subsequent API calls must include the Authorization header and the ST-App-Key header."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

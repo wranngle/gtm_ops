@@ -1,0 +1,65 @@
+{
+  "integration": "Google Workspace",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:25.835Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Google Workspace",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 with Domain-Wide Delegation",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Google Cloud Console project setup, enabling the Admin SDK API, and configuring a Service Account with Domain-Wide Delegation to impersonate an administrator.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.google.com/admin-sdk",
+  "rate_limits": "1,500,000 requests per day per project for the Directory API; specific limits apply per user/resource.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Domain-wide delegation must be manually authorized in the Google Workspace Admin Console (Security > API Controls).",
+    "Changes to user permissions or group memberships can have propagation delays of up to 24 hours (though usually faster).",
+    "The 'Google API' credential type in n8n may require specific scopes that must match the GCP project configuration exactly."
+  ],
+  "client_must_provide": [
+    "Google Cloud Project access",
+    "Service Account JSON Key file",
+    "Admin email address for impersonation",
+    "List of required API Scopes"
+  ],
+  "operations_available": [
+    "User provisioning and management",
+    "Group membership management",
+    "Organizational Unit (OU) updates",
+    "License assignment",
+    "Audit and Activity reporting"
+  ],
+  "similar_integrations": [
+    "Microsoft Entra ID",
+    "Okta",
+    "Slack (Admin)"
+  ],
+  "confidence": 0.95,
+  "research_notes": "While n8n has nodes for Drive and Gmail, administrative tasks (Admin SDK) require the HTTP Request node. The most robust approach is using a Service Account with the 'Google API' credential type in n8n, ensuring the 'Impersonate User' field is filled with a Workspace Admin's email.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "While n8n has nodes for Drive and Gmail, administrative tasks (Admin SDK) require the HTTP Request node. The most robust approach is using a Service Account with the 'Google API' credential type in n8n, ensuring the 'Impersonate User' field is filled with a Workspace Admin's email."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,66 @@
+{
+  "integration": "LexisNexis",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:41:36.148Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "LexisNexis",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials) or API Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Most modern LexisNexis APIs (Metabase, Nexis Solutions) require OAuth 2.0 Client Credentials flow. Older or specific risk APIs may use API Keys with mandatory IP whitelisting.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.lexisnexis.com/",
+  "rate_limits": "Contract-dependent; typically enforced via monthly/annual quotas rather than standard burst limits.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "Strict IP whitelisting is often required, which can be difficult for n8n Cloud users without a static IP.",
+    "Documentation is frequently gated behind a customer login, making pre-sales technical scoping difficult.",
+    "Response payloads are often extremely large and deeply nested, requiring significant data transformation."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "API Key",
+    "Target API Endpoint URL",
+    "Whitelisted IP address of the n8n runner"
+  ],
+  "operations_available": [
+    "Search News and Business Articles",
+    "Retrieve Company Profiles",
+    "Sanctions and Watchlist Screening (Bridger Insight)",
+    "Legal Case Law Retrieval",
+    "Biographical Data Search"
+  ],
+  "similar_integrations": [
+    "Clearbit",
+    "Crunchbase",
+    "FullContact"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration will require a multi-step HTTP Request approach: first, a POST request to the token endpoint to retrieve a Bearer token, followed by the actual data request. Due to the lack of webhooks, n8n workflows must use 'Wait' nodes or scheduled polling for long-running search jobs.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration will require a multi-step HTTP Request approach: first, a POST request to the token endpoint to retrieve a Bearer token, followed by the actual data request. Due to the lack of webhooks, n8n workflows must use 'Wait' nodes or scheduled polling for long-running search jobs."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,80 @@
+{
+  "id": "synthflow-smartcat-001",
+  "source": {
+    "vendor": "synthflow",
+    "url": "https://synthflow.ai/success-stories/sales-qualification",
+    "title": "Smartcat: 70% Reduction in Demo Booking Cost"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "technology",
+    "company_size": "200+ employees",
+    "company_type": "AI translation platform (B2B SaaS)",
+    "pain_points": [
+      "Traditional human caller approach had plateaued in performance",
+      "Early-stage lead qualification was time-consuming and repetitive",
+      "Need to increase product demo bookings while improving cost efficiency",
+      "Sales team spending time on low-value qualification calls"
+    ],
+    "volume_metrics": {
+      "calls_per_month": null,
+      "calls_per_day": null,
+      "avg_call_duration_minutes": null,
+      "staff_hours_per_month": null,
+      "raw_description": "Outbound SDR campaigns at scale serving 1,000+ global companies"
+    },
+    "systems_involved": [
+      "CRM system",
+      "Demo scheduling system",
+      "Human SDR team"
+    ],
+    "goals": [
+      "Increase product demo bookings",
+      "Improve cost efficiency of lead generation",
+      "Redirect sales team toward high-value conversations",
+      "Scale early-stage lead qualification"
+    ]
+  },
+  "solution": {
+    "agent_type": "outbound",
+    "voice_provider": "Synthflow",
+    "integrations": [
+      { "system_name": "CRM", "integration_type": "api", "purpose": "lead data and tracking" },
+      { "system_name": "Calendar", "integration_type": "api", "purpose": "demo scheduling" }
+    ],
+    "pricing_model": {
+      "model_type": "unknown",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null
+    },
+    "timeline_weeks": null,
+    "roi_achieved": {
+      "hours_saved_per_month": null,
+      "calls_automated_percent": null,
+      "monthly_savings": null,
+      "annual_savings": null,
+      "booking_cost_reduction_percent": 70,
+      "answered_calls_increase_percent": 24,
+      "contacts_dialed_increase_percent": 31,
+      "lead_reactivation_increase_percent": 15,
+      "additional_closed_deals": 15,
+      "raw_description": "70% reduction in booking cost, 24% more answered calls, 31% more contacts dialed, 15 additional closed deals"
+    },
+    "key_features": [
+      "Automated call initiation",
+      "Persistent follow-ups",
+      "Lead engagement at scale",
+      "Demo scheduling automation",
+      "Hybrid model with human sales handoff"
+    ],
+    "inferred_tier": "standard"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Good ROI metrics for outbound use case. Missing call volume and timeline details.",
+    "domain_tags": ["technology", "saas", "outbound", "lead-qualification", "demo-booking", "sales-automation"],
+    "holdout": false,
+    "harvested_by": "web-extraction"
+  }
+}

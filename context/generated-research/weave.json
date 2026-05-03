@@ -1,0 +1,65 @@
+{
+  "integration": "Weave",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:05:01.268Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Weave",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 or API Key (Bearer Token)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires Client ID and Client Secret for OAuth 2.0 flow. Some legacy or specific integrations may use a static API Key. Access is typically restricted to approved developer partners.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.getweave.com/",
+  "rate_limits": "Typically 10 requests per second, though specific limits vary by endpoint and account tier.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "API access is often gated and requires manual approval from the Weave partnership team.",
+    "Data consistency depends on the sync frequency between Weave and the underlying Practice Management System (PMS).",
+    "Webhook registration may require manual setup within the Weave Developer Portal rather than via API."
+  ],
+  "client_must_provide": [
+    "Weave Developer Account access",
+    "Client ID and Client Secret",
+    "Practice ID (Organization ID)",
+    "Scopes required for the specific workflow"
+  ],
+  "operations_available": [
+    "Send SMS/MMS messages",
+    "Retrieve patient contact details",
+    "Fetch appointment schedules",
+    "Access call history logs",
+    "Create and manage tasks"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Salesforce",
+    "HubSpot"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the n8n HTTP Request node. OAuth 2.0 credentials should be configured within n8n to handle token refresh automatically. Webhooks will require a dedicated Webhook node and the resulting URL must be whitelisted in the Weave developer console.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration requires the n8n HTTP Request node. OAuth 2.0 credentials should be configured within n8n to handle token refresh automatically. Webhooks will require a dedicated Webhook node and the resulting URL must be whitelisted in the Weave developer console."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,26 @@
+{
+  "transcript_id": "tr_demo_acme_001",
+  "scenario": "after-hours dispatch greeting",
+  "duration_seconds": 142,
+  "started_at": "2026-04-20T22:14:08Z",
+  "ended_at": "2026-04-20T22:16:30Z",
+  "agent_id": "agent_xxxx_demo",
+  "caller_phone": "+15550100",
+  "turns": [
+    { "ts": 0.0, "role": "agent", "text": "Hi, this is Sarah from Acme HVAC. We're closed for the night, but I can take down what's going on and route to the on-call tech if it's urgent. Who am I speaking with?" },
+    { "ts": 6.4, "role": "caller", "text": "Yeah, hi — this is John, my furnace just stopped working." },
+    { "ts": 9.1, "role": "agent", "tool_call": { "name": "lookup_record", "arguments": { "phone": "+15550100" } } },
+    { "ts": 9.5, "role": "tool_response", "result": { "matches": [{ "name": "John Doe", "address": "1024 Pine St", "tier": "gold" }] } },
+    { "ts": 10.2, "role": "agent", "text": "Got it John — I see you're at 1024 Pine. Is the furnace fully dead, or just blowing cold?" },
+    { "ts": 14.0, "role": "caller", "text": "Cold air. Thermostat's calling for heat but nothing." },
+    { "ts": 18.1, "role": "agent", "text": "Okay — I'm marking that as a no-heat call, which our techs treat as priority overnight. I'll page Mike, our on-call. Expect a call back within 30 minutes. Anything else they should know?" },
+    { "ts": 24.7, "role": "caller", "text": "Nope, that's it." },
+    { "ts": 25.5, "role": "agent", "text": "All set. Stay warm — Mike will be in touch shortly." }
+  ],
+  "metadata": {
+    "transcribed_by": "deepgram-nova-3",
+    "ttfb_ms": 612,
+    "end_to_first_audio_ms": 1180
+  },
+  "_demo_note": "Synthetic transcript — fictional caller, fictional company, no PII."
+}

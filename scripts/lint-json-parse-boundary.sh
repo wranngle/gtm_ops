@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lint-json-parse-boundary.sh — keep JSON.parse() at the data boundary. STACK-044.
 #
-# Per the Harness Engineering boundary-parsing principle, untyped data must
+# Boundary-parsing rule: untyped data must
 # be parsed at the layer that brought it in — `repo/` (filesystem / DB) or
 # `config/` (env / settings) — so the rest of the codebase consumes typed
 # values. Allowing JSON.parse anywhere lets agents build on guessed shapes

@@ -1,0 +1,65 @@
+{
+  "integration": "Availity",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T00:04:19.519Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Availity",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires Client ID and Client Secret to obtain a Bearer token via the /token endpoint. Some endpoints also require an X-Availity-Customer-ID header.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.availity.com/availity/api-directory",
+  "rate_limits": "Varies by API and subscription tier; typically enforced per second and per month based on the specific API product.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict HIPAA compliance requirements mean data must be handled securely within the n8n environment.",
+    "The API uses complex healthcare-specific data structures (JSON representations of X12 EDI) which can be difficult to map.",
+    "Access to specific payers or features often requires additional manual approval within the Availity portal."
+  ],
+  "client_must_provide": [
+    "Availity Developer Portal Credentials",
+    "Client ID",
+    "Client Secret",
+    "Customer ID (Org ID)"
+  ],
+  "operations_available": [
+    "Eligibility and Benefits Inquiry",
+    "Claim Status Inquiry",
+    "Prior Authorization Request",
+    "Patient Discovery",
+    "Remittance Advice"
+  ],
+  "similar_integrations": [
+    "DrChrono",
+    "Athenahealth",
+    "Airtable"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will require a two-step HTTP Request process: first to the OAuth2 token endpoint to retrieve an access token, followed by the actual API call using that token in the Authorization header. Use n8n's 'OAuth2' credential type or a 'Wait' node/sub-workflow to manage token expiration if high volume is expected.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Integration will require a two-step HTTP Request process: first to the OAuth2 token endpoint to retrieve an access token, followed by the actual API call using that token in the Authorization header. Use n8n's 'OAuth2' credential type or a 'Wait' node/sub-workflow to manage token expiration if high volume is expected."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

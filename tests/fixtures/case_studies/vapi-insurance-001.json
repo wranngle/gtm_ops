@@ -1,0 +1,79 @@
+{
+  "id": "vapi-insurance-001",
+  "source": {
+    "vendor": "vapi",
+    "url": "https://vapi.ai/case-studies/guardian-insurance-group",
+    "title": "How Guardian Insurance Increased Lead Conversion by 45% with AI Outbound Calls"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "insurance",
+    "company_size": "120 agents across 8 regional offices",
+    "company_type": "multi-line insurance agency",
+    "pain_points": [
+      "Agents spend 3+ hours daily on manual outbound calls for policy renewals",
+      "35% of leads go cold due to delayed follow-up",
+      "Quote requests after hours have 50% lower conversion",
+      "Manual policy lookup takes 5+ minutes per call",
+      "High agent turnover due to repetitive call tasks"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 15000,
+      "calls_per_day": 500,
+      "avg_call_duration_minutes": 8,
+      "staff_hours_per_month": 2000
+    },
+    "systems_involved": [
+      "Salesforce",
+      "Applied Epic",
+      "DocuSign",
+      "RingCentral"
+    ],
+    "goals": [
+      "Automate outbound renewal reminder calls",
+      "Instant quote delivery via voice",
+      "24/7 lead qualification",
+      "Reduce agent call time by 50%",
+      "Integrate with existing CRM and policy management"
+    ]
+  },
+  "solution": {
+    "agent_type": "outbound",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Salesforce", "integration_type": "api", "purpose": "lead management and call logging" },
+      { "system_name": "Applied Epic", "integration_type": "api", "purpose": "policy lookup and renewal data" },
+      { "system_name": "DocuSign", "integration_type": "webhook", "purpose": "automated document sending" },
+      { "system_name": "Twilio", "integration_type": "api", "purpose": "outbound calling and SMS" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "total_cost": 45000,
+      "monthly_cost": 2200,
+      "setup_cost": 18000
+    },
+    "timeline_weeks": 10,
+    "roi_achieved": {
+      "hours_saved_per_month": 800,
+      "calls_automated_percent": 65,
+      "monthly_savings": 24000,
+      "annual_savings": 288000,
+      "payback_period_months": 3
+    },
+    "key_features": [
+      "Automated renewal reminder campaigns",
+      "Dynamic quote generation",
+      "Lead scoring and prioritization",
+      "Policy lookup and status updates",
+      "Warm transfer to live agents"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Comprehensive enterprise case with clear ROI metrics and complex integrations",
+    "domain_tags": ["insurance", "outbound", "lead-qualification", "crm-integration", "document-automation"],
+    "holdout": false,
+    "harvested_by": "manual-entry"
+  }
+}

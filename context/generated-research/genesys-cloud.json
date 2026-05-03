@@ -1,0 +1,65 @@
+{
+  "integration": "Genesys Cloud",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:20.443Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Genesys Cloud",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 (Client Credentials or Authorization Code)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating an OAuth Client in the Genesys Cloud Admin UI. Must specify the correct regional host (e.g., mypurecloud.com, mypurecloud.ie, etc.) as the base URL for both auth and API calls.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developer.genesys.cloud/api/rest/v2/",
+  "rate_limits": "Varies by endpoint; typically 300 requests per minute per OAuth client, using a leaky bucket algorithm.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "API endpoints are region-specific; using the wrong regional URL will result in 404 or auth failures.",
+    "Analytics queries often require an asynchronous pattern (POST to create job, then poll for results).",
+    "Token expiration must be handled if not using n8n's built-in OAuth2 credential manager."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "Genesys Cloud Region (e.g., us-east-1, eu-west-1)",
+    "Required Scopes (e.g., 'analytics', 'users:readonly')"
+  ],
+  "operations_available": [
+    "Query Conversation/Interaction History",
+    "Manage User Status and Routing",
+    "Create/Update External Contacts",
+    "Trigger Outbound Dialing/SMS",
+    "Retrieve Real-time Queue Statistics"
+  ],
+  "similar_integrations": [
+    "Zendesk",
+    "Salesforce",
+    "Twilio"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Implementation requires the HTTP Request node. It is highly recommended to use n8n's 'OAuth2' credential type for automatic token refreshing. Users must map the specific regional API host (e.g., api.mypurecloud.com) manually in the node URL field.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Implementation requires the HTTP Request node. It is highly recommended to use n8n's 'OAuth2' credential type for automatic token refreshing. Users must map the specific regional API host (e.g., api.mypurecloud.com) manually in the node URL field."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

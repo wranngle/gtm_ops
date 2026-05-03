@@ -1,0 +1,64 @@
+{
+  "integration": "RxBenefits",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:26.276Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "RxBenefits",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 / API Key / SFTP",
+  "auth_complexity": "complex",
+  "auth_notes": "RxBenefits typically uses secure B2B integration methods. This often involves OAuth2 Client Credentials for REST APIs or SSH Key-based authentication for SFTP file transfers of EDI data.",
+  "api_quality": "unknown",
+  "api_documentation_url": null,
+  "rate_limits": "Unknown - typically defined in partner-specific Service Level Agreements (SLAs).",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "Strict HIPAA compliance requirements for handling Protected Health Information (PHI) within n8n workflows.",
+    "Documentation is not public and requires a signed BAA (Business Associate Agreement) and partner login.",
+    "Data exchange often relies on legacy EDI formats (like 834 enrollment files) rather than modern JSON REST responses."
+  ],
+  "client_must_provide": [
+    "API Client ID and Secret",
+    "Technical Implementation Guide/Specification PDF",
+    "SFTP Credentials and SSH Keys",
+    "Sandbox environment access"
+  ],
+  "operations_available": [
+    "Member Eligibility Verification",
+    "Enrollment Data Sync",
+    "Pharmacy Claims Retrieval",
+    "Benefit Plan Inquiry"
+  ],
+  "similar_integrations": [
+    "CVS Caremark",
+    "Express Scripts",
+    "OptumRx"
+  ],
+  "confidence": 0.7,
+  "research_notes": "Integration will likely require the HTTP Request node for RESTful interactions or the FTP node for batch file processing. Because this is a Pharmacy Benefit Optimizer, the developer must ensure the n8n instance is hosted in a HIPAA-compliant environment. Most data flow is asynchronous via file drops.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration will likely require the HTTP Request node for RESTful interactions or the FTP node for batch file processing. Because this is a Pharmacy Benefit Optimizer, the developer must ensure the n8n instance is hosted in a HIPAA-compliant environment. Most data flow is asynchronous via file drops."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

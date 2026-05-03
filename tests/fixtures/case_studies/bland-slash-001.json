@@ -1,0 +1,85 @@
+{
+  "id": "bland-slash-001",
+  "source": {
+    "vendor": "bland",
+    "url": "https://www.bland.ai/case-studies/slash",
+    "title": "Slash: 60,000 Annual Conversions with Omnichannel AI"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "financial-services",
+    "company_size": "Growing rapidly",
+    "company_type": "Modern banking platform / fintech",
+    "pain_points": [
+      "Customer support operations overwhelmed by rapid growth",
+      "Onboarding processes slowed due to capacity constraints",
+      "Routine support requests accumulated with delayed responses",
+      "Long-tail customers left waiting for assistance",
+      "Risk of impersonal interactions in competitive market",
+      "Support teams stretched thin"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 5000,
+      "calls_per_day": 167,
+      "items_processed_per_year": 60000,
+      "avg_call_duration_minutes": null,
+      "staff_hours_per_month": null,
+      "raw_description": "5,000+ conversations monthly, 60,000 conversions annually"
+    },
+    "systems_involved": [
+      "Banking platform",
+      "Customer support system",
+      "SMS system"
+    ],
+    "goals": [
+      "Handle customer growth without proportional headcount increase",
+      "Reduce onboarding time",
+      "Improve customer engagement",
+      "Increase customer satisfaction scores"
+    ]
+  },
+  "solution": {
+    "agent_type": "hybrid",
+    "voice_provider": "Bland",
+    "integrations": [
+      { "system_name": "Banking Platform", "integration_type": "api", "purpose": "customer data and context" },
+      { "system_name": "SMS System", "integration_type": "api", "purpose": "follow-up confirmations and reminders" },
+      { "system_name": "Human Support", "integration_type": "api", "purpose": "warm transfers with context" }
+    ],
+    "pricing_model": {
+      "model_type": "unknown",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null
+    },
+    "timeline_weeks": null,
+    "roi_achieved": {
+      "hours_saved_per_month": null,
+      "calls_automated_percent": null,
+      "monthly_savings": null,
+      "annual_savings": null,
+      "conversions_per_year": 60000,
+      "onboarding_time_reduction_percent": 3,
+      "engagement_increase_percent": 7,
+      "csat_improvement_points": 13,
+      "raw_description": "60,000 annual conversions, 3% faster onboarding, 7% higher engagement, 13-point CSAT increase"
+    },
+    "key_features": [
+      "Personalized greetings by name",
+      "Context retention across interactions",
+      "Omnichannel support (voice + SMS)",
+      "SMS follow-ups for confirmations and reminders",
+      "Warm transfers with full context",
+      "Compliance guardrails",
+      "Brand voice customization"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Good customer experience metrics. Missing pricing, timeline, and specific volume details.",
+    "domain_tags": ["financial-services", "fintech", "banking", "onboarding", "customer-support", "omnichannel", "sms-integration"],
+    "holdout": false,
+    "harvested_by": "web-extraction"
+  }
+}

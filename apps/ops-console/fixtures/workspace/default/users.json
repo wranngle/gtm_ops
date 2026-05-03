@@ -1,0 +1,20 @@
+[
+  {
+    "user_id": "user_demo_owner",
+    "email": "operator@example.demo",
+    "role": "owner",
+    "joined_at": 1712880000000
+  },
+  {
+    "user_id": "user_demo_admin",
+    "email": "admin@example.demo",
+    "role": "admin",
+    "joined_at": 1713312000000
+  },
+  {
+    "user_id": "user_demo_viewer",
+    "email": "reviewer@example.demo",
+    "role": "viewer",
+    "joined_at": 1714464000000
+  }
+]

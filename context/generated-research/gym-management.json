@@ -1,0 +1,64 @@
+{
+  "integration": "Gym Management",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:33:50.162Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Gym Management (GymMaster)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key and Gym ID",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires an X-API-Key and a specific Gym-Id passed in the HTTP headers. API keys must be generated within the GymMaster administrative portal under the integration settings.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.gymmaster.com/api-docs/",
+  "rate_limits": "100 requests per minute per API key.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Membership data is returned in deeply nested JSON objects requiring significant data mapping",
+    "Webhook events are limited to specific triggers like 'Member Created' and 'Check-in'",
+    "The API uses custom status codes that may require manual handling in n8n error nodes"
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Gym ID",
+    "Administrative access to configure Webhook URLs"
+  ],
+  "operations_available": [
+    "Get Member Details",
+    "Create/Update Member Record",
+    "Book Class or Personal Training",
+    "Process Member Check-in",
+    "Retrieve Membership Status and Expiry"
+  ],
+  "similar_integrations": [
+    "Acuity Scheduling",
+    "Calendly",
+    "Mindbody"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the HTTP Request node for all operations. Authentication is handled via header parameters. Webhooks must be manually registered in the GymMaster dashboard to point to the n8n Webhook node URL. Use of the 'Set' or 'Code' node is highly recommended to flatten the complex member response objects for downstream use.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration requires the HTTP Request node for all operations. Authentication is handled via header parameters. Webhooks must be manually registered in the GymMaster dashboard to point to the n8n Webhook node URL. Use of the 'Set' or 'Code' node is highly recommended to flatten the complex member response objects for downstream use."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

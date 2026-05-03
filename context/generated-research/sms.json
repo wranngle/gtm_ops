@@ -1,0 +1,64 @@
+{
+  "integration": "SMS",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:47.013Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "SMS",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "simple",
+  "auth_notes": "Most SMS gateways (e.g., SMS.to, TextMagic, ClickSend) require an API Key passed in the 'Authorization' header as a Bearer token or via a custom header like 'X-API-Key'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://sms.to/docs",
+  "rate_limits": "Varies by provider; typically 5-20 requests per second for standard REST API endpoints.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Character encoding: Standard GSM-7 allows 160 characters, but using emojis or special characters switches to UCS-2, reducing the limit to 70 characters per segment.",
+    "Sender ID regulations: Many countries require pre-registration of 'Alpha Sender IDs' or require a dedicated long-code/short-code.",
+    "E.164 formatting: Phone numbers must strictly follow the +[country code][number] format to avoid delivery failure."
+  ],
+  "client_must_provide": [
+    "API Key or Secret Token",
+    "Registered Sender ID or Virtual Number",
+    "Destination phone number in E.164 format"
+  ],
+  "operations_available": [
+    "Send Single SMS",
+    "Send Bulk SMS",
+    "Check Message Delivery Status",
+    "Retrieve Account Balance",
+    "Validate Phone Number (HLR Lookup)"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Vonage",
+    "AWS SNS"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Since no native node exists for generic SMS providers like SMS.to or ClickSend, the HTTP Request node is required. The developer must configure a POST request to the provider's API endpoint (e.g., /sms/send) with a JSON body. To track delivery, a Webhook node must be configured in n8n and the resulting URL must be saved in the SMS provider's dashboard as the 'Status Callback URL'.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Since no native node exists for generic SMS providers like SMS.to or ClickSend, the HTTP Request node is required. The developer must configure a POST request to the provider's API endpoint (e.g., /sms/send) with a JSON body. To track delivery, a Webhook node must be configured in n8n and the resulting URL must be saved in the SMS provider's dashboard as the 'Status Callback URL'."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

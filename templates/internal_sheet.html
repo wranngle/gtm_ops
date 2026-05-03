@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INTERNAL: Cost & Negotiation Sheet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * WRANNGLE INTERNAL SHEET STYLES
+ * Isolated template - NEVER sent to clients
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --violet-500: #cf3c69;
+  --violet-700: #972144;
+  --sunset-500: #ff5f00;
+  --sunset-300: #ff9e33;
+  --sand-50: #fcfaf5;
+  --sand-100: #f6f1e7;
+  --sand-300: #dac39f;
+  --night-950: #12111a;
+  --night-500: #6a6380;
+  --night-800: #393444;
+  --color-critical: var(--violet-500);
+  --color-warning: var(--sunset-300);
+  --color-healthy: #5D8C61;
+  --critical: var(--color-critical);
+  --warning: var(--color-warning);
+  --healthy: var(--color-healthy);
+  --bleed: var(--violet-700);
+  --ink-primary: var(--night-950);
+  --ink-micro: var(--night-500);
+  --surface: #ffffff;
+  --cta-bg: var(--sunset-500);
+  --border-light: var(--sand-300);
+  --row-alt: var(--sand-100);
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --radius-lasso: 24px 4px 24px 4px;
+  --shadow-md: 0 6px 16px rgba(18, 17, 26, 0.08), 0 2px 6px rgba(18, 17, 26, 0.05);
+}
+
+body {
+  font-family: var(--font-body);
+  background: #e0d8cc;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.sheet {
+  width: 8.5in;
+  min-height: 11in;
+  padding: 0.35in 0.4in;
+  background-image: repeating-linear-gradient(45deg, #fcfaf5, #fcfaf5 10px, #fff0f0 10px, #fff0f0 20px);
+  border: 3px solid var(--critical);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.internal-banner {
+  background: var(--critical);
+  color: white;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  padding: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: -0.35in -0.4in 1rem -0.4in;
+  font-size: 0.875rem;
+}
+
+/* Header */
+.wrn-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+.wrn-header-left { display: flex; flex-direction: column; gap: 0.125rem; }
+.wrn-header-client { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; color: var(--ink-primary); }
+.wrn-header-process { font-size: 0.75rem; color: var(--ink-micro); }
+.wrn-header-friendly { font-size: 0.75rem; font-style: italic; color: var(--sunset-500); }
+.wrn-header-right { text-align: right; }
+.wrn-header-logo { height: 36px; margin-bottom: 0.25rem; }
+.wrn-header-doc-title { font-family: var(--font-display); font-size: 0.875rem; font-weight: 700; color: var(--critical); }
+.wrn-header-slug { font-family: monospace; font-size: 0.5625rem; color: var(--ink-micro); background: var(--row-alt); padding: 0.125rem 0.375rem; border-radius: 4px; display: inline-block; margin-top: 0.25rem; }
+.wrn-header-meta { font-size: 0.5625rem; color: var(--ink-micro); margin-top: 0.125rem; }
+.wrn-header-separator { height: 3px; background: var(--critical); margin-bottom: 0.75rem; }
+
+/* Sections */
+.section { margin-bottom: 0.75rem; }
+.section-header { font-family: var(--font-display); font-size: 0.875rem; font-weight: 700; color: var(--ink-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+.section-header.number { background: var(--critical); color: white; width: 1.25rem; height: 1.25rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.625rem; }
+
+/* Grid */
+.zone-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.zone-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+
+/* Stats - Enhanced with gradient backgrounds */
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"),
+    linear-gradient(165deg, var(--surface) 0%, var(--sand-100) 100%);
+  background-blend-mode: overlay;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lasso);
+  text-align: center;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.stat--bordered { border-left: 4px solid var(--sunset-500); }
+.stat .value, .stat__value { font-family: var(--font-display); font-size: 1.125rem; font-weight: 800; color: var(--ink-primary); line-height: 1.1; }
+.stat .label, .stat__label { font-size: 0.5625rem; font-weight: 600; color: var(--ink-micro); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.125rem; }
+.stat__value--critical { background: linear-gradient(135deg, var(--violet-500) 0%, var(--violet-700) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.stat__value--healthy { background: linear-gradient(135deg, var(--healthy) 0%, #3d6b40 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.stat__value--accent { background: linear-gradient(135deg, var(--sunset-500) 0%, #e04f00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.stat__math { font-size: 0.5625rem; color: var(--ink-micro); margin-top: 0.25rem; }
+.cost-value { color: var(--ink-primary); }
+.price-value { color: var(--healthy); }
+.micro-text { font-size: 0.5625rem; color: var(--ink-micro); }
+
+/* Math Pill - Calculation Badges */
+.math-pill {
+  display: inline-block;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  background: #f5f0e6;
+  color: #6b5b7d;
+  border: 1px dotted var(--border-light);
+  border-left: 2px solid var(--night-500);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.math-pill--warning {
+  background: #fff7ed;
+  color: #9a3412;
+  border-left-color: var(--sunset-500);
+}
+.math-pill--success {
+  background: rgba(93, 140, 97, 0.15);
+  color: #166534;
+  border-left-color: var(--healthy);
+}
+.math-pill--critical {
+  background: #fef2f2;
+  color: #991b1b;
+  border-left-color: var(--critical);
+}
+
+/* Badge */
+.badge { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 4px; font-size: 0.5625rem; font-weight: 600; }
+.badge--code { font-family: monospace; background: #f5f0e6; color: #6b5b7d; }
+.badge--warning { background: #fef3c7; color: #92400e; }
+.badge--critical { background: #fee2e2; color: #991b1b; }
+.badge--healthy { background: #d1fae5; color: #065f46; }
+.badge--info { background: #e0f2fe; color: #0369a1; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-lasso); padding: 0.5rem 0.75rem; }
+.card--sm { padding: 0.25rem 0.5rem; border-radius: 6px; }
+.card--highlight { border: 1px solid var(--sunset-500); background: #fffaf5; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 0.6875rem; }
+th, td { padding: 0.375rem 0.5rem; text-align: left; border-bottom: 1px solid var(--row-alt); }
+th { font-family: var(--font-display); font-weight: 600; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-micro); background: var(--row-alt); }
+
+/* Scripts specific */
+.script-box { background: #f8fafc; border-left: 3px solid var(--night-500); padding: 0.5rem; margin-bottom: 0.5rem; font-family: 'Inter', sans-serif; font-size: 0.65rem; line-height: 1.4; color: var(--ink-primary); }
+.script-label { font-weight: 700; color: var(--night-500); text-transform: uppercase; font-size: 0.5625rem; margin-bottom: 0.25rem; display: block;}
+.objection-row { display: flex; gap: 0.5rem; border-bottom: 1px solid var(--row-alt); padding: 0.375rem 0; }
+.objection-trigger { flex: 1; font-weight: 600; color: var(--critical); font-size: 0.625rem; }
+.objection-response { flex: 2; font-size: 0.625rem; color: var(--ink-primary); }
+
+/* Body text */
+.body-text { font-size: 0.6875rem; line-height: 1.5; color: var(--ink-primary); }
+.mb-sm { margin-bottom: 0.5rem; }
+
+/* Footer */
+.page-footer { margin-top: auto; background: var(--night-950); border-radius: 8px; padding: 0.5rem 0.75rem; color: white; }
+.footer-content { display: flex; justify-content: space-between; align-items: center; }
+.footer-page { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; color: var(--sunset-300); }
+.footer-note { font-size: 0.5625rem; color: rgba(255,255,255,0.6); }
+
+@media print {
+  @page { size: 8.5in 11in; margin: 0; }
+  body { background: white; padding: 0; display: block; }
+ .sheet { box-shadow: none; border-width: 2px; margin: 0; page-break-after: always; width: 100%; height: 100%; }
+ .sheet:last-child { page-break-after: auto; }
+}
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 0: COMPANY PROFILE & LEAD QUALIFICATION
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sheet" id="report-internal-profile">
+      <div class="internal-banner">COMPANY PROFILE & LEAD QUALIFICATION</div>
+
+      <header class="wrn-header">
+        <div class="wrn-header-left">
+          <div class="wrn-header-client">{{company_profile.account_name}}</div>
+          <div class="wrn-header-process">{{company_profile.workflow_name}}</div>
+          {{#company_profile.industry}}<div class="wrn-header-friendly">{{company_profile.industry}}</div>{{/company_profile.industry}}
+        </div>
+        <div class="wrn-header-right">
+          <img src="{{{document.brand.logo_uri}}}" alt="Wranngle Systems LLC" class="wrn-header-logo">
+          <div class="wrn-header-doc-title">INTERNAL: Lead Profile</div>
+          <div class="wrn-header-slug">{{project_identity.document_slug}}</div>
+          <div class="wrn-header-meta">{{project_identity.process_date_display}}</div>
+        </div>
+      </header>
+      <div class="wrn-header-separator"></div>
+
+      <!-- Lead Score Indicator -->
+      {{#lead_qualification}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">00</span>Lead Qualification Score</h2>
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+          <div class="stat stat--bordered" style="flex: 0 0 120px; text-align: center; border-left-color: {{#_is_hot}}var(--healthy){{/_is_hot}}{{#_is_warm}}var(--warning){{/_is_warm}}{{#_is_cold}}var(--critical){{/_is_cold}};">
+            <div class="value" style="font-size: 2rem; color: {{#_is_hot}}var(--healthy){{/_is_hot}}{{#_is_warm}}var(--warning){{/_is_warm}}{{#_is_cold}}var(--critical){{/_is_cold}};">{{score}}</div>
+            <div class="label">out of 100</div>
+          </div>
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+              <span class="badge {{#_is_hot}}badge--healthy{{/_is_hot}}{{#_is_warm}}badge--warning{{/_is_warm}}{{#_is_cold}}badge--critical{{/_is_cold}}" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">{{status_label}}</span>
+              <span class="micro-text">Captured: {{captured_at}}</span>
+            </div>
+            <!-- Progress Bar -->
+            <div style="background: var(--row-alt); height: 12px; border-radius: 6px; overflow: hidden;">
+              <div style="background: {{#_is_hot}}var(--healthy){{/_is_hot}}{{#_is_warm}}var(--warning){{/_is_warm}}{{#_is_cold}}var(--critical){{/_is_cold}}; height: 100%; width: {{score}}%; transition: width 0.3s;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.25rem;">
+              <span class="micro-text">Cold (0-49)</span>
+              <span class="micro-text">Warm (50-74)</span>
+              <span class="micro-text">Hot (75+)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Component Breakdown -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+          {{#components}}
+          <div class="card card--sm" style="padding: 0.375rem 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <span style="font-size: 0.625rem; font-weight: 600; color: var(--ink-primary);">{{label}}</span>
+              <span class="badge {{#_status_healthy}}badge--healthy{{/_status_healthy}}{{#_status_warning}}badge--warning{{/_status_warning}}{{#_status_critical}}badge--critical{{/_status_critical}}">{{weighted_score}}/{{weight}}</span>
+            </div>
+            <div style="background: var(--row-alt); height: 6px; border-radius: 3px; overflow: hidden;">
+              <div style="background: {{#_status_healthy}}var(--healthy){{/_status_healthy}}{{#_status_warning}}var(--warning){{/_status_warning}}{{#_status_critical}}var(--critical){{/_status_critical}}; height: 100%; width: {{raw_score}}%;"></div>
+            </div>
+          </div>
+          {{/components}}
+        </div>
+      </section>
+      {{/lead_qualification}}
+
+      <!-- Key Metrics Dashboard -->
+      {{#key_metrics}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">01</span>Key Metrics Dashboard</h2>
+        <div class="zone-grid">
+          <div class="stat stat--bordered">
+            <div class="value">{{systems_count_display}}</div>
+            <div class="label">Systems Involved</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: {{#_risk_high}}var(--critical){{/_risk_high}}{{#_risk_medium}}var(--warning){{/_risk_medium}}{{#_risk_low}}var(--healthy){{/_risk_low}};">
+            <div class="value" style="color: {{#_risk_high}}var(--critical){{/_risk_high}}{{#_risk_medium}}var(--warning){{/_risk_medium}}{{#_risk_low}}var(--healthy){{/_risk_low}};">{{complexity_display}}</div>
+            <div class="label">Complexity Score</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: {{#_risk_high}}var(--critical){{/_risk_high}}{{#_risk_medium}}var(--warning){{/_risk_medium}}{{#_risk_low}}var(--healthy){{/_risk_low}};">
+            <div class="value" style="color: {{#_risk_high}}var(--critical){{/_risk_high}}{{#_risk_medium}}var(--warning){{/_risk_medium}}{{#_risk_low}}var(--healthy){{/_risk_low}};">{{risk_display}}</div>
+            <div class="label">Risk Level</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: {{#_roi_high}}var(--healthy){{/_roi_high}}{{#_roi_medium}}var(--warning){{/_roi_medium}}{{#_roi_low}}var(--critical){{/_roi_low}};">
+            <div class="value" style="color: {{#_roi_high}}var(--healthy){{/_roi_high}}{{#_roi_medium}}var(--warning){{/_roi_medium}}{{#_roi_low}}var(--critical){{/_roi_low}};">{{roi_display}}</div>
+            <div class="label">ROI Potential</div>
+          </div>
+        </div>
+      </section>
+      {{/key_metrics}}
+
+      <!-- Company Profile -->
+      {{#company_profile}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">02</span>Company Profile</h2>
+        <div class="zone-grid-2">
+          <div class="card">
+            <div class="stat__label" style="margin-bottom: 0.375rem;">Contact Information</div>
+            <table style="font-size: 0.6875rem;">
+              {{#contact_name}}<tr><td style="color: var(--ink-micro); width: 80px;">Name:</td><td><strong>{{contact_name}}</strong></td></tr>{{/contact_name}}
+              {{#contact_title}}<tr><td style="color: var(--ink-micro);">Title:</td><td>{{contact_title}}</td></tr>{{/contact_title}}
+              {{#contact_email}}<tr><td style="color: var(--ink-micro);">Email:</td><td><a href="mailto:{{contact_email}}">{{contact_email}}</a></td></tr>{{/contact_email}}
+              {{#contact_phone}}<tr><td style="color: var(--ink-micro);">Phone:</td><td>{{contact_phone}}</td></tr>{{/contact_phone}}
+            </table>
+          </div>
+          <div class="card">
+            <div class="stat__label" style="margin-bottom: 0.375rem;">Workflow Details</div>
+            <table style="font-size: 0.6875rem;">
+              <tr><td style="color: var(--ink-micro); width: 80px;">Workflow:</td><td><strong>{{workflow_name}}</strong></td></tr>
+              {{#volume_display}}<tr><td style="color: var(--ink-micro);">Volume:</td><td>{{volume_display}}</td></tr>{{/volume_display}}
+              {{#time_per_item_display}}<tr><td style="color: var(--ink-micro);">Time/Item:</td><td>{{time_per_item_display}}</td></tr>{{/time_per_item_display}}
+              {{#industry}}<tr><td style="color: var(--ink-micro);">Industry:</td><td>{{industry}}</td></tr>{{/industry}}
+            </table>
+          </div>
+        </div>
+      </section>
+      {{/company_profile}}
+
+      <!-- Systems Inventory -->
+      {{#systems_inventory.length}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">03</span>Systems Inventory (Unified Intelligence)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 25%;">System</th>
+              <th style="width: 15%;">Category</th>
+              <th style="width: 12%;">API</th>
+              <th style="width: 12%;">n8n Node</th>
+              <th style="width: 15%;">Complexity</th>
+              <th style="width: 12%;">Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#systems_inventory}}
+            <tr>
+              <td><strong>{{name}}</strong></td>
+              <td class="micro-text">{{category}}</td>
+              <td style="text-align: center;">{{#has_api}}<span class="badge badge--healthy">Yes</span>{{/has_api}}{{^has_api}}<span class="badge badge--warning">No</span>{{/has_api}}</td>
+              <td style="text-align: center;">{{#_has_native}}<span class="badge badge--healthy">Yes</span>{{/_has_native}}{{^_has_native}}<span class="badge badge--warning">No</span>{{/_has_native}}</td>
+              <td style="text-align: center;"><span class="badge {{#_is_complex}}badge--critical{{/_is_complex}}{{#_is_simple}}badge--healthy{{/_is_simple}}{{^_is_complex}}{{^_is_simple}}badge--info{{/_is_simple}}{{/_is_complex}}">{{complexity_display}}</span></td>
+              <td class="micro-text">{{source}}</td>
+            </tr>
+            {{/systems_inventory}}
+          </tbody>
+        </table>
+        <div class="micro-text" style="margin-top: 0.5rem; font-style: italic;">
+          Source Legend: <strong>catalog</strong> = Systems Catalog only, <strong>research</strong> = Technical Research only, <strong>merged</strong> = Both sources combined
+        </div>
+      </section>
+      {{/systems_inventory.length}}
+
+      <!-- Sales Notes -->
+      <section class="section">
+        <h2 class="section-header"><span class="number">04</span>Sales Notes</h2>
+        <div class="card" style="min-height: 100px; background: #fffdf7;">
+          <p class="micro-text" style="color: var(--ink-micro); font-style: italic;">
+            Use this space for discovery notes, objections encountered, next steps, and follow-up reminders.
+          </p>
+        </div>
+      </section>
+
+      <div class="page-footer">
+        <div class="footer-content">
+          <span class="footer-page">Page 1 of 5</span>
+          <span class="footer-note">Confidential — Lead Qualification & Company Profile</span>
+        </div>
+      </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 1: PRICING & PROFITABILITY
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sheet" id="report-internal-strategy">
+      <div class="internal-banner">INTERNAL USE ONLY — DO NOT SHARE WITH CLIENT</div>
+
+      <header class="wrn-header">
+        <div class="wrn-header-left">
+          <div class="wrn-header-client">{{project_identity.client_name}}</div>
+          <div class="wrn-header-process">{{project_identity.process_name}}</div>
+          <div class="wrn-header-friendly">{{project_identity.friendly_name}}</div>
+        </div>
+        <div class="wrn-header-right">
+          <img src="{{{document.brand.logo_uri}}}" alt="Wranngle Systems LLC" class="wrn-header-logo">
+          <div class="wrn-header-doc-title">INTERNAL: Cost & Negotiation</div>
+          <div class="wrn-header-slug">{{project_identity.document_slug}}</div>
+          <div class="wrn-header-meta">{{project_identity.process_date_display}}</div>
+        </div>
+      </header>
+      <div class="wrn-header-separator"></div>
+
+      <!-- PRODUCT PRICING (AI Voice Agent) -->
+      {{#product_pricing}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">01</span>Product Pricing Breakdown</h2>
+        <div class="zone-grid">
+          <div class="stat stat--bordered" style="border-left-color: var(--sunset-500);">
+            <div class="value cost-value">{{setup_fee.display}}</div>
+            <div class="label">Setup Fee (One-Time)</div>
+            <div class="math-pill" style="margin-top: 0.25rem;">{{setup_fee.formula}}</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: var(--healthy);">
+            <div class="value price-value">{{monthly.display}}</div>
+            <div class="label">Monthly Recurring</div>
+            <div class="micro-text" style="margin-top: 0.25rem;">{{tier.name}}</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: var(--healthy);">
+            <div class="value price-value">{{first_year.display}}</div>
+            <div class="label">First Year Total</div>
+            <div class="math-pill math-pill--success" style="margin-top: 0.25rem;">Setup + 12×Monthly</div>
+          </div>
+        </div>
+
+        <!-- Product ROI Analysis -->
+        <div style="margin-top: 0.75rem;">
+          <h3 style="font-family: var(--font-display); font-size: 0.75rem; font-weight: 600; color: var(--ink-primary); margin-bottom: 0.5rem;">ROI Analysis</h3>
+          <div class="zone-grid">
+            <div class="stat stat--bordered" style="border-left-color: var(--critical);">
+              <div class="value" style="color: var(--critical);">{{roi.monthly_bleed_display}}</div>
+              <div class="label">Monthly Bleed</div>
+              <div class="micro-text" style="margin-top: 0.25rem;">Current loss from missed calls</div>
+            </div>
+            <div class="stat stat--bordered" style="border-left-color: var(--healthy);">
+              <div class="value" style="color: var(--healthy);">{{roi.net_monthly_display}}</div>
+              <div class="label">Net Monthly Savings</div>
+              <div class="math-pill math-pill--success" style="margin-top: 0.25rem;">Bleed − Monthly Cost</div>
+            </div>
+            <div class="stat stat--bordered" style="border-left-color: var(--healthy);">
+              <div class="value" style="color: var(--healthy);">{{roi.payback_display}}</div>
+              <div class="label">Payback Period</div>
+              <div class="micro-text" style="margin-top: 0.25rem;">Setup fee recovery</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setup Fee Breakdown -->
+        {{#setup_fee.breakdown.length}}
+        <div style="margin-top: 0.75rem;">
+          <h3 style="font-family: var(--font-display); font-size: 0.75rem; font-weight: 600; color: var(--ink-primary); margin-bottom: 0.5rem;">Setup Fee Breakdown</h3>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 70%;">Item</th>
+                <th style="width: 30%; text-align: right;">Hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#setup_fee.breakdown}}
+              <tr>
+                <td>{{item}}</td>
+                <td style="text-align: right;"><span class="badge badge--code">{{hours}}h</span></td>
+              </tr>
+              {{/setup_fee.breakdown}}
+            </tbody>
+          </table>
+          <div style="margin-top: 0.375rem; text-align: right;">
+            <span class="math-pill">Total: {{setup_fee.hours}}h × ${{setup_fee.hourly_rate}}/hr = {{setup_fee.display}}</span>
+          </div>
+        </div>
+        {{/setup_fee.breakdown.length}}
+
+        <!-- Tier Details -->
+        <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--surface); border: 1px solid var(--border-light); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.375rem;">
+            <span style="font-size: 0.75rem; font-weight: 700;">{{tier.name}}</span>
+            <span class="badge badge--{{tier.badge_class}}">{{tier.badge}}</span>
+          </div>
+          <p class="micro-text" style="line-height: 1.4;">{{tier.includes}}</p>
+          {{#upgrade_option}}
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-light);">
+            <strong class="micro-text" style="color: var(--sunset-500);">Upgrade Option:</strong>
+            <p class="micro-text">{{pitch}}</p>
+          </div>
+          {{/upgrade_option}}
+        </div>
+      </section>
+      {{/product_pricing}}
+
+      <!-- PROJECT PRICING (Custom Projects) -->
+      {{^product_pricing}}
+      {{#finops}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">01</span>Profitability Breakdown</h2>
+        <div class="zone-grid">
+          <div class="stat stat--bordered">
+            <div class="value cost-value">${{raw_production_cost}}</div>
+            <div class="label">Production Cost</div>
+            <div class="math-pill" style="margin-top: 0.25rem;">{{estimate.hours.total}}h × ${{estimate.cost.hourly_rate}}/hr</div>
+          </div>
+          <div class="stat stat--bordered">
+            <div class="value cost-value">${{compute_estimate}}</div>
+            <div class="label">Compute/API Est.</div>
+            <div class="micro-text" style="margin-top: 0.25rem;">Estimated AI token and API costs.</div>
+          </div>
+          <div class="stat stat--bordered">
+            <div class="value cost-value">${{total_internal_cost}}</div>
+            <div class="label">Total Internal</div>
+            <div class="math-pill" style="margin-top: 0.25rem;">Labor + Compute</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: var(--healthy);">
+            <div class="value price-value">${{target_price}}</div>
+            <div class="label">Client Price{{#price_adjusted}} (Adj){{/price_adjusted}}</div>
+            <div class="math-pill math-pill--success" style="margin-top: 0.25rem;">{{#price_adjusted}}Floor Applied{{/price_adjusted}}{{^price_adjusted}}Final Price{{/price_adjusted}}</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: var(--healthy);">
+            <div class="value price-value">${{margin_amount}}</div>
+            <div class="label">Margin Amount</div>
+            <div class="math-pill math-pill--success" style="margin-top: 0.25rem;">Price − Cost</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: var(--healthy);">
+            <div class="value price-value">{{margin_percent_display}}%</div>
+            <div class="label">Margin %</div>
+            <div class="math-pill math-pill--success" style="margin-top: 0.25rem;">Margin ÷ Price</div>
+          </div>
+        </div>
+        {{#validation.profit_floor}}
+        <div style="margin-top: 0.5rem; padding: 0.5rem; background: {{#passes}}#d1fae5{{/passes}}{{^passes}}#fee2e2{{/passes}}; border-radius: 6px; text-align: center;">
+          <span style="color: {{#passes}}#065f46{{/passes}}{{^passes}}#991b1b{{/passes}}; font-weight: 600; font-size: 0.75rem;">{{#passes}}✓{{/passes}}{{^passes}}✗{{/passes}} Profit Floor: {{margin_percent}}% margin (min 50% required)</span>
+        </div>
+        {{/validation.profit_floor}}
+      </section>
+      <section class="section">
+        <h2 class="section-header"><span class="number">02</span>Built-In Buffers</h2>
+        <div class="zone-grid">
+          <div class="stat stat--bordered" style="border-left-color: var(--warning);">
+            <div class="value price-value">${{contingency}}</div>
+            <div class="label">Contingency Reserve</div>
+            <div class="math-pill math-pill--warning" style="margin-top: 0.25rem;">Scope Buffer</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: var(--warning);">
+            <div class="value">{{contingency_percent}}%</div>
+            <div class="label">Contingency Rate</div>
+            <div class="math-pill math-pill--warning" style="margin-top: 0.25rem;">Risk Factor</div>
+          </div>
+          <div class="stat stat--bordered" style="border-left-color: var(--warning);">
+            <div class="value price-value">${{total_with_contingency}}</div>
+            <div class="label">Total with Contingency</div>
+            <div class="math-pill math-pill--warning" style="margin-top: 0.25rem;">Price × 1.{{contingency_percent}}</div>
+          </div>
+        </div>
+        <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%); border: 1px solid var(--warning); border-radius: 8px;">
+          <p style="font-size: 0.6875rem; color: var(--ink-primary); margin: 0; line-height: 1.4;">
+            <strong style="color: #92400e;">When to use this buffer:</strong> Scope clarification, integration surprises, or additional revision rounds. If unused, it becomes profit. Do not mention contingency to the client.
+          </p>
+        </div>
+        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-light);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.625rem; margin-bottom: 0.25rem;">
+            <span style="color: var(--ink-micro);">Base Labor Est:</span>
+            <span style="font-family: monospace;">{{estimate.hours.total}} Hours</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.625rem; margin-bottom: 0.25rem;">
+            <span style="color: var(--warning); font-weight: 700;">Contingency Buffer:</span>
+            <span style="font-family: monospace; color: var(--warning);">+{{estimate.cost.contingency_percent_display}}%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.625rem; font-weight: 700;">
+            <span style="color: var(--ink-header);">Billed Hours:</span>
+            <span style="font-family: monospace;">{{estimate.hours.with_contingency}} Hours</span>
+          </div>
+          <div class="badge badge--code" style="margin-top: 0.25rem; font-size: 0.5rem;">= {{estimate.hours.total}} × 1.{{estimate.cost.contingency_percent_display}}</div>
+        </div>
+      </section>
+      {{/finops}}
+      {{/product_pricing}}
+
+      {{#technical_approach}}
+      {{#labor_factors.length}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">03</span>Labor Justification</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40%;">Factor</th>
+              <th style="width: 15%;">Impact</th>
+              <th style="width: 45%;">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#labor_factors}}
+            <tr>
+              <td>{{factor}}</td>
+              <td style="text-align: center;"><span class="badge badge--{{impact_class}}">{{impact}}</span></td>
+              <td class="micro-text">{{notes}}</td>
+            </tr>
+            {{/labor_factors}}
+          </tbody>
+        </table>
+        {{#integrations.length}}
+        <div style="margin-top: 0.75rem; margin-bottom: 0.25rem; font-size: 0.625rem; font-weight: 700; color: var(--ink-micro); text-transform: uppercase;">Integration Scoring (Internal)</div>
+        {{#specificity.has_generic}}
+        <div style="margin-bottom: 0.375rem; padding: 0.25rem 0.5rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; font-size: 0.5625rem; color: #92400e;">
+          <strong>Note: {{specificity.generic_count}} GENERIC</strong> — Discovery task required before finalizing integration approach
+        </div>
+        {{/specificity.has_generic}}
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.25rem;">
+          {{#integrations}}
+          {{#complexity_internal.score}}
+          <div class="card card--sm" style="font-size: 0.625rem; background: {{#is_generic}}#fef3c7{{/is_generic}}{{^is_generic}}var(--sand-100){{/is_generic}}; color: var(--ink-micro);">{{#is_generic}}* {{/is_generic}}{{system_name}}: <strong style="color: var(--ink-primary);">{{complexity_internal.display}}</strong> ({{complexity_internal.dev_level}})</div>
+          {{/complexity_internal.score}}
+          {{^complexity_internal.score}}
+          {{#is_generic}}
+          <div class="card card--sm" style="font-size: 0.625rem; background: #fef3c7; color: #92400e;">* {{system_name}}: <strong>TBD</strong> (Discovery Required)</div>
+          {{/is_generic}}
+          {{/complexity_internal.score}}
+          {{/integrations}}
+        </div>
+        {{/integrations.length}}
+      </section>
+      {{/labor_factors.length}}
+      {{/technical_approach}}
+
+      <!-- PRODUCT PRICING: Sales Tips -->
+      {{#product_pricing}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">04</span>Product Sales Tips</h2>
+        <div class="card" style="background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-color: var(--healthy);">
+          <p style="font-size: 0.75rem; font-weight: 700; color: var(--healthy); margin-bottom: 0.375rem;">Fixed Monthly Pricing - No Negotiation Needed</p>
+          <p class="body-text" style="margin-bottom: 0.5rem;">The $250/mo Core Protection and $500/mo Growth Bundle are standard product rates. Focus on value, not price negotiation.</p>
+
+          <div style="border-top: 1px dashed var(--border-light); padding-top: 0.5rem; margin-top: 0.5rem;">
+            <p style="font-size: 0.6875rem; font-weight: 600; color: var(--ink-primary); margin-bottom: 0.375rem;">Key Selling Points:</p>
+            <ul style="margin: 0; padding-left: 1rem; font-size: 0.6875rem; line-height: 1.6;">
+              <li><strong>24/7 Coverage:</strong> Never miss a call, even at 2am</li>
+              <li><strong>Instant ROI:</strong> {{roi.payback_display}} payback on setup fee</li>
+              <li><strong>Net Savings:</strong> {{roi.net_monthly_display}}/mo after product cost</li>
+              <li><strong>No Hiring:</strong> Replace $3-5K/mo receptionist cost</li>
+              <li><strong>Scalable:</strong> Handles unlimited concurrent calls</li>
+            </ul>
+          </div>
+
+          {{#upgrade_option}}
+          <div style="border-top: 1px dashed var(--border-light); padding-top: 0.5rem; margin-top: 0.5rem;">
+            <p style="font-size: 0.6875rem; font-weight: 600; color: var(--sunset-500); margin-bottom: 0.25rem;">Upsell Opportunity:</p>
+            <p class="body-text">{{pitch}}</p>
+          </div>
+          {{/upgrade_option}}
+        </div>
+
+        <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--sand-100); border-radius: 8px;">
+          <p style="font-size: 0.6875rem; color: var(--ink-primary); margin: 0;"><strong>Setup Fee Flexibility:</strong> The {{setup_fee.display}} setup fee is the only negotiable component. Can waive up to 25% for multi-location deals or immediate sign-ups.</p>
+        </div>
+      </section>
+      {{/product_pricing}}
+
+      <!-- PROJECT PRICING: Negotiation Limits -->
+      {{^product_pricing}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">04</span>Negotiation Limits</h2>
+        <div class="stat stat--bordered" style="text-align: center; padding: 0.5rem 0.75rem; border-left-color: var(--critical);">
+          <div class="label" style="font-size: 0.625rem;">Walk-Away Price</div>
+          <div class="value" style="color: var(--critical); font-size: 1.5rem;">${{finops.walk_away_price}}</div>
+          <div class="math-pill math-pill--critical" style="margin-top: 0.25rem;">Cost × 1.2 min margin</div>
+        </div>
+        <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--surface); border: 1px solid var(--border-light); border-radius: 8px;">
+          <p style="font-size: 0.6875rem; color: var(--ink-primary); margin: 0 0 0.375rem 0;"><strong>Discount Approval Levels:</strong></p>
+          <ul style="margin: 0; padding-left: 1rem; font-size: 0.6875rem; line-height: 1.5;">
+            <li><strong>Up to 10%:</strong> You can approve on your own</li>
+            <li><strong>10–20%:</strong> Requires manager sign-off before committing</li>
+            <li><strong>Over 20%:</strong> Requires founder approval + written justification</li>
+          </ul>
+
+          {{#sales_strategy.pricing_strategy.discount_offer}}
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-light);">
+             <strong style="font-size: 0.6875rem; color: var(--healthy);">Authorized Negotiation Lever:</strong>
+             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
+                <span style="font-size: 0.75rem; font-weight: 700;">{{display}}</span>
+                <span class="badge badge--healthy">-{{percent}}% Discount</span>
+             </div>
+             <p class="micro-text" style="margin-top: 0.25rem;">Saves client ${{annual_savings}}/year. Improves retention.</p>
+          </div>
+          {{/sales_strategy.pricing_strategy.discount_offer}}
+        </div>
+      </section>
+      {{/product_pricing}}
+
+      <div class="page-footer">
+        <div class="footer-content">
+          <span class="footer-page">Page 2 of 5</span>
+          <span class="footer-note">Confidential — Pricing & Profitability</span>
+        </div>
+      </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 2: MARKET CONTEXT & PRICING STRATEGY
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sheet" id="report-internal-research-1">
+      <div class="internal-banner">MARKET CONTEXT & PRICING STRATEGY</div>
+
+      <header class="wrn-header">
+        <div class="wrn-header-left">
+          <div class="wrn-header-client">{{sales_strategy.industry_label}}</div>
+          <div class="wrn-header-process">Why This Product Sells</div>
+        </div>
+        <div class="wrn-header-right">
+          <div class="wrn-header-doc-title">Internal Reference</div>
+          <div class="wrn-header-meta">{{sales_strategy.sources.label}} {{sales_strategy.sources.citations}}</div>
+        </div>
+      </header>
+      <div class="wrn-header-separator"></div>
+
+      {{#sales_strategy.market_context}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">05</span>{{core_problem.headline}}</h2>
+        <p class="body-text mb-sm">{{core_problem.description}}</p>
+
+        <div class="zone-grid-2">
+          <div class="card">
+            <div class="stat__label" style="text-align:left; color:var(--critical);">Average Value per Missed Call</div>
+            <div class="value" style="color:var(--critical); font-size: 1.5rem;">{{missed_call_value.display}}</div>
+            <p class="micro-text" style="margin-top:0.25rem">Revenue lost for every unanswered call.</p>
+          </div>
+          <div class="card">
+            <div class="stat__label" style="text-align:left;">Voicemail Abandonment</div>
+            <div class="value">{{voicemail_abandonment.display}}</div>
+            <p class="micro-text" style="margin-top:0.25rem">Percentage of callers who hang up.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 0.5rem;" class="zone-grid-2">
+          {{#speed_to_lead}}
+          <div class="card card--sm" style="border-left: 3px solid var(--sunset-500);">
+            <div class="stat__label" style="text-align:left;">Speed-to-Lead Window</div>
+            <div class="value" style="color:var(--sunset-500);">{{display}}</div>
+            <p class="micro-text">Conversion drop-off after 5 minutes.</p>
+          </div>
+          {{/speed_to_lead}}
+          {{#competitor_pivot}}
+          <div class="card card--sm" style="border-left: 3px solid var(--critical);">
+            <div class="stat__label" style="text-align:left; color:var(--critical);">Competitor Pivot Rate</div>
+            <div class="value" style="color:var(--critical);">{{display}}</div>
+            <p class="micro-text">Callers calling the next business.</p>
+          </div>
+          {{/competitor_pivot}}
+        </div>
+
+        <div style="margin-top: 0.5rem;" class="card card--highlight">
+          <table style="background:transparent;">
+            <thead>
+              <tr>
+                <th>Business Size</th>
+                <th>Estimated Annual Loss</th>
+                <th>Assumption</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#annual_loss_estimates}}
+              <tr>
+                <td><strong>{{segment}}</strong></td>
+                <td style="color:var(--critical); font-weight:700;">{{display}}</td>
+                <td class="micro-text">{{assumption}} {{citation}}</td>
+              </tr>
+              {{/annual_loss_estimates}}
+            </tbody>
+          </table>
+          <p class="micro-text" style="margin-top:0.5rem; font-style:italic;">{{value_framing}}</p>
+        </div>
+      </section>
+
+      {{#competitive_landscape.length}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">05b</span>Competitive Landscape</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:25%;">Option</th>
+              <th style="width:20%;">Cost</th>
+              <th style="width:55%;">Limitations</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#competitive_landscape}}
+            <tr>
+              <td><strong>{{option}}</strong></td>
+              <td>{{cost}}</td>
+              <td class="micro-text">{{limitations}}</td>
+            </tr>
+            {{/competitive_landscape}}
+          </tbody>
+        </table>
+      </section>
+      {{/competitive_landscape.length}}
+
+      {{#web_chat_economics}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">05c</span>Web Chat Economics</h2>
+        <div class="zone-grid-2">
+          <div class="card card--sm">
+            <div class="stat__label">Text Preference</div>
+            <div class="value" style="color:var(--healthy);">{{display}}</div>
+            <p class="micro-text">Preference for SMS over voice.</p>
+          </div>
+          <div class="card card--sm" style="background:#fffbeb; border-color:#fde68a;">
+            <div class="stat__label" style="color:#92400e;">Zero-Click Lead Problem</div>
+            <p class="micro-text" style="color:#92400e;">{{zero_click_lead}}</p>
+          </div>
+        </div>
+      </section>
+      {{/web_chat_economics}}
+      {{/sales_strategy.market_context}}
+
+      {{#sales_strategy.pricing_strategy}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">06</span>Pricing Strategy</h2>
+        <p class="body-text mb-sm">{{approach}}</p>
+
+        <div class="zone-grid">
+          {{#packages}}
+          <div class="stat stat--bordered">
+            <div class="label">{{label}}</div>
+            <div class="value" {{#is_target}}style="color:var(--healthy)"{{/is_target}}>{{display}}{{#period}}<span style="font-size:0.8rem">/{{period}}</span>{{/period}}</div>
+            <div class="micro-text">{{includes}}</div>
+            <span class="badge badge--{{badge_class}}" style="margin-top:0.25rem">{{badge}}</span>
+          </div>
+          {{/packages}}
+        </div>
+      </section>
+      {{/sales_strategy.pricing_strategy}}
+
+      <div class="page-footer">
+        <div class="footer-content">
+          <span class="footer-page">Page 3 of 5</span>
+          <span class="footer-note">Confidential — Market Context & Pricing Strategy</span>
+        </div>
+      </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 3: SALES AGENT COMPENSATION ANALYSIS
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sheet" id="report-internal-compensation">
+      <div class="internal-banner">INTERNAL USE ONLY — DO NOT SHARE WITH CLIENT</div>
+
+      <header class="wrn-header">
+        <div class="wrn-header-left">
+          <div class="wrn-header-client">Sales Compensation</div>
+          <div class="wrn-header-process">Partner Analysis</div>
+        </div>
+        <div class="wrn-header-right">
+          <div class="wrn-header-doc-title">Internal Reference</div>
+        </div>
+      </header>
+      <div class="wrn-header-separator"></div>
+
+      {{#sales_strategy.compensation}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">07</span>Sales Agent Compensation Analysis</h2>
+        
+        <div class="zone-grid">
+           <!-- Monthly Income -->
+           <div class="stat stat--bordered">
+             <div class="value" style="color:var(--healthy);">{{sales_strategy.compensation_analysis.monthly.display}}</div>
+             <div class="label">Est. Monthly Commission</div>
+             <div class="micro-text">Recurring income from active clients.</div>
+           </div>
+           
+           <!-- Annual Income -->
+           <div class="stat stat--bordered">
+             <div class="value" style="color:var(--healthy);">{{sales_strategy.compensation_analysis.annual.display}}</div>
+             <div class="label">Est. Annual Value</div>
+             <div class="micro-text">Projected yearly earnings per client.</div>
+           </div>
+
+           <!-- LTV Income -->
+           <div class="stat stat--bordered" style="border-left-color: var(--violet-500);">
+             <div class="value" style="color:var(--violet-500);">{{sales_strategy.compensation_analysis.ltv.display}}</div>
+             <div class="label">Est. Lifetime Commission</div>
+             <div class="micro-text">{{sales_strategy.compensation_analysis.details.formula}}</div>
+           </div>
+        </div>
+
+        <div class="card" style="margin-top: 1rem;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--row-alt); padding-bottom:0.25rem; margin-bottom:0.25rem;">
+            <span class="stat__label">Compensation Model</span>
+            <span class="badge badge--code">{{role_type}}</span>
+          </div>
+          <table style="margin-top:0.5rem;">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Structure</th>
+                <th>Why It Works This Way</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#components}}
+              <tr>
+                <td><strong>{{name}}</strong></td>
+                <td>{{structure}}</td>
+                <td class="micro-text">{{rationale}}</td>
+              </tr>
+              {{/components}}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {{/sales_strategy.compensation}}
+
+      <div class="page-footer">
+        <div class="footer-content">
+          <span class="footer-page">Page 4 of 5</span>
+          <span class="footer-note">Confidential — Compensation Analysis</span>
+        </div>
+      </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 4: CALL SCRIPTS & OBJECTION HANDLING
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sheet" id="report-internal-research-2">
+      <div class="internal-banner">CALL SCRIPTS & OBJECTION HANDLING</div>
+
+      <header class="wrn-header">
+        <div class="wrn-header-left">
+          <div class="wrn-header-client">Sales Execution Guide</div>
+          <div class="wrn-header-process">What to Say on Calls</div>
+        </div>
+      </header>
+      <div class="wrn-header-separator"></div>
+
+      {{#sales_strategy.scripts.cold_call}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">08</span>Cold Call Script (Primary)</h2>
+        <p class="body-text mb-sm"><strong>Goal:</strong> {{goal}}</p>
+
+        {{#segments}}
+        <div class="script-box">
+          <span class="script-label">{{label}}</span>
+          "{{script}}"
+        </div>
+        {{/segments}}
+      </section>
+      {{/sales_strategy.scripts.cold_call}}
+
+      {{#sales_strategy.scripts.plumbers_nightmare}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">08b</span>Plumber's Nightmare Script</h2>
+        <p class="body-text mb-sm"><strong>Goal:</strong> {{goal}}</p>
+        {{#segments}}
+        <div class="script-box" style="border-left-color:var(--sunset-500);">
+          <span class="script-label">{{label}}</span>
+          "{{script}}"
+        </div>
+        {{/segments}}
+        <p class="micro-text" style="margin-top:0.25rem; font-style:italic;"><strong>Why it works:</strong> {{why_it_works}}</p>
+      </section>
+      {{/sales_strategy.scripts.plumbers_nightmare}}
+
+      {{#sales_strategy.scripts.reciprocity_negotiation}}
+      <section class="section">
+        <h2 class="section-header"><span class="number">08c</span>Reciprocity Negotiation Script</h2>
+        <p class="body-text mb-sm"><strong>Goal:</strong> {{goal}}</p>
+        {{#segments}}
+        <div class="script-box" style="border-left-color:var(--healthy);">
+          <span class="script-label">{{label}}</span>
+          "{{script}}"
+        </div>
+        {{/segments}}
+        <p class="micro-text" style="margin-top:0.25rem; font-style:italic;"><strong>Why it works:</strong> {{why_it_works}}</p>
+      </section>
+      {{/sales_strategy.scripts.reciprocity_negotiation}}
+
+      <section class="section">
+        <h2 class="section-header"><span class="number">09</span>Common Objections</h2>
+        
+        <div class="card">
+          {{#sales_strategy.objections}}
+          <div class="objection-row"{{#_last}} style="border-bottom:none;"{{/_last}}>
+            <div class="objection-trigger">"{{trigger}}"</div>
+            <div class="objection-response">{{{response}}} {{citation}}</div>
+          </div>
+          {{/sales_strategy.objections}}
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-header"><span class="number">10</span>Compliance Notes</h2>
+        <div class="zone-grid-2">
+          {{#sales_strategy.compliance}}
+          <div class="card card--sm" style="background: {{#style_healthy}}#f0fdf4{{/style_healthy}}{{#style_warning}}#fffbeb{{/style_warning}}{{^style_healthy}}{{^style_warning}}#f8fafc{{/style_warning}}{{/style_healthy}}; border-color: {{#style_healthy}}#bbf7d0{{/style_healthy}}{{#style_warning}}#fde68a{{/style_warning}}{{^style_healthy}}{{^style_warning}}var(--border-light){{/style_warning}}{{/style_healthy}};">
+            <strong style="color:{{#style_healthy}}#166534{{/style_healthy}}{{#style_warning}}#92400e{{/style_warning}}{{^style_healthy}}{{^style_warning}}var(--ink-micro){{/style_warning}}{{/style_healthy}}; font-size:0.625rem;">{{title}}</strong>
+            <p class="micro-text" style="color:{{#style_healthy}}#14532d{{/style_healthy}}{{#style_warning}}#92400e{{/style_warning}}{{^style_healthy}}{{^style_warning}}var(--ink-micro){{/style_warning}}{{/style_healthy}};">{{content}} {{citation}}</p>
+          </div>
+          {{/sales_strategy.compliance}}
+        </div>
+      </section>
+
+      <div class="page-footer">
+        <div class="footer-content">
+          <span class="footer-page">Page 5 of 5</span>
+          <span class="footer-note">{{project_identity.document_slug}} · Wranngle Systems LLC © {{project_identity.year}}</span>
+        </div>
+      </div>
+  </div>
+
+</body>
+</html>

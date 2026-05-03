@@ -1,0 +1,79 @@
+{
+  "id": "retell-gifthealth-001",
+  "source": {
+    "vendor": "retell",
+    "url": "https://retellai.com/case-study/how-gifthealth-achieved-4x-operational-efficiency-with-retell-ai",
+    "title": "GiftHealth: 4x Operational Efficiency"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "healthcare",
+    "company_size": "51-200 employees",
+    "company_type": "specialty prescription care platform",
+    "pain_points": [
+      "Managing high call volumes to prescriber offices for routine patient inquiries",
+      "Pre-procedure questions (especially colonoscopies) overwhelming staff",
+      "Ensuring accuracy of medical information provided to patients",
+      "Identifying and escalating critical patient issues appropriately",
+      "Projected need to expand to 2,000 representatives within two years"
+    ],
+    "volume_metrics": {
+      "calls_per_month": null,
+      "calls_per_day": null,
+      "avg_call_duration_minutes": null,
+      "staff_hours_per_month": null,
+      "raw_description": "High call volumes requiring projected 2,000 reps in 2 years"
+    },
+    "systems_involved": [
+      "Patient onboarding system",
+      "Knowledge base",
+      "Doctor-approved FAQ system"
+    ],
+    "goals": [
+      "Shield doctor offices from routine phone calls",
+      "Achieve cost-efficient scaling",
+      "Maintain accuracy of medical information",
+      "Enable proper escalation to human PCRs or pharmacists"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "Retell",
+    "integrations": [
+      { "system_name": "Knowledge Base", "integration_type": "api", "purpose": "FAQ responses and medical information" },
+      { "system_name": "Patient Onboarding", "integration_type": "api", "purpose": "workflow integration" },
+      { "system_name": "Escalation System", "integration_type": "api", "purpose": "handoff to PCRs and pharmacists" }
+    ],
+    "pricing_model": {
+      "model_type": "unknown",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null
+    },
+    "timeline_weeks": 8,
+    "roi_achieved": {
+      "hours_saved_per_month": null,
+      "calls_automated_percent": 50,
+      "monthly_savings": null,
+      "annual_savings": null,
+      "staff_reduction_percent": 50,
+      "efficiency_multiplier": 4,
+      "raw_description": "4x operational efficiency, 45-50% calls resolved without human, supporting 200% user base with 50% staff"
+    },
+    "key_features": [
+      "AI voice agents with knowledge base integration",
+      "Call triage and escalation",
+      "Doctor-approved FAQ-based responses",
+      "Patient onboarding workflow integration",
+      "Critical issue identification"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Good operational metrics and timeline. Missing call volume and pricing details.",
+    "domain_tags": ["healthcare", "medical", "patient-support", "knowledge-base", "escalation", "compliance"],
+    "holdout": false,
+    "harvested_by": "web-extraction"
+  }
+}

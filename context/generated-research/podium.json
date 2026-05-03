@@ -1,0 +1,66 @@
+{
+  "integration": "Podium",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:32.801Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Podium",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires OAuth 2.0 flow. Developers must create an application in the Podium Developer Portal to obtain a Client ID and Client Secret. n8n's built-in OAuth2 credential type can be used to manage token refreshes.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.podium.com/reference",
+  "rate_limits": "Standard limits are 10 requests per second (RPS) per location, with some endpoints having specific burst limits.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Most API calls require a specific 'locationId' header or path parameter, which must be retrieved via a separate 'List Locations' call first.",
+    "Webhooks must be registered programmatically via the Subscriptions API; there is no manual webhook management UI for all event types.",
+    "The API uses specific UID formats for contacts and messages that must be mapped correctly from external systems."
+  ],
+  "client_must_provide": [
+    "Podium Developer Account access",
+    "Client ID",
+    "Client Secret",
+    "Location ID(s)",
+    "Required Scopes (e.g., messages.read, messages.write, contacts.write)"
+  ],
+  "operations_available": [
+    "Send Message",
+    "Create or Update Contact",
+    "Send Review Invitation",
+    "List Locations",
+    "Retrieve Conversation History"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Intercom",
+    "Bird"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will rely on the HTTP Request node. Users should configure n8n's 'OAuth2 API' credentials using Podium's authorization URL (https://api.podium.com/oauth/authorize) and token URL (https://api.podium.com/oauth/token). Webhook triggers will require a 'Webhook' node combined with an initial 'HTTP Request' to register the subscription URL with Podium.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will rely on the HTTP Request node. Users should configure n8n's 'OAuth2 API' credentials using Podium's authorization URL (https://api.podium.com/oauth/authorize) and token URL (https://api.podium.com/oauth/token). Webhook triggers will require a 'Webhook' node combined with an initial 'HTTP Request' to register the subscription URL with Podium."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

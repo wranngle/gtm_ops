@@ -1,0 +1,64 @@
+{
+  "integration": "Passare",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:06.729Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Passare",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires an API Key and Secret provided by Passare. Authentication is usually passed via the Authorization header as a Bearer token or custom header depending on the specific API version.",
+  "api_quality": "good",
+  "api_documentation_url": "https://api.passare.com/docs",
+  "rate_limits": "Typically 100 requests per minute, though specific limits are subject to the individual API agreement and partner tier.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "The data schema for 'Cases' is highly nested and requires significant mapping in n8n.",
+    "API access is not enabled by default and must be requested through Passare support.",
+    "Date-time formats may require transformation to ISO-8601 for n8n compatibility."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Client Secret",
+    "Environment (Production vs Sandbox) URL"
+  ],
+  "operations_available": [
+    "Get Case Details",
+    "Create New Case",
+    "Update Case Status",
+    "List Contacts",
+    "Upload Case Documents"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "HubSpot",
+    "Microsoft Dynamics 365"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration will rely heavily on the HTTP Request node. Since Passare is a niche funeral home management platform, the JSON payloads for cases are extensive. Developers should use n8n's 'Set' node or 'Code' node to handle the complex object transformations required for case creation.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will rely heavily on the HTTP Request node. Since Passare is a niche funeral home management platform, the JSON payloads for cases are extensive. Developers should use n8n's 'Set' node or 'Code' node to handle the complex object transformations required for case creation."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

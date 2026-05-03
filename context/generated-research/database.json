@@ -1,0 +1,67 @@
+{
+  "integration": "Database",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:16.116Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Database",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.postgres",
+  "auth_type": "basic",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires standard database credentials: Host, Port, Database Name, User, and Password. SSL/TLS settings are critical for cloud-hosted instances.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://docs.n8n.io/integrations/builtin/nodes/n8n-nodes-base.postgres/",
+  "rate_limits": "No fixed API rate limits; performance is bound by database server resources (CPU/RAM) and maximum concurrent connection limits.",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": false,
+  "gotchas": [
+    "SSL connection requirements: Cloud providers like AWS RDS or DigitalOcean often require specific SSL modes (e.g., 'require' or 'no-verify') to establish a connection.",
+    "Firewall/IP Whitelisting: The n8n instance IP (especially for n8n Cloud) must be explicitly whitelisted in the database's security groups.",
+    "Data Type Handling: Specialized PostgreSQL types like JSONB or custom ENUMs may require explicit casting within the 'Execute Query' operation to avoid serialization errors."
+  ],
+  "client_must_provide": [
+    "Database Host/IP Address",
+    "Port (default 5432)",
+    "Database Name",
+    "Username",
+    "Password",
+    "SSL Mode preference"
+  ],
+  "operations_available": [
+    "Insert",
+    "Update",
+    "Upsert",
+    "Delete",
+    "Execute Query"
+  ],
+  "similar_integrations": [
+    "MySQL",
+    "MongoDB",
+    "Microsoft SQL Server"
+  ],
+  "confidence": 0.95,
+  "research_notes": "PostgreSQL is the primary native database node for n8n. While the category is 'Database', users must specify if they are using MySQL or MongoDB as those require different native nodes. Performance is highly dependent on database indexing.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "PostgreSQL is the primary native database node for n8n. While the category is 'Database', users must specify if they are using MySQL or MongoDB as those require different native nodes. Performance is highly dependent on database indexing."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "postgres",
+  "_is_category": true
+}

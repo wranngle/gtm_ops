@@ -1,0 +1,65 @@
+{
+  "integration": "Grasshopper",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:26.263Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Grasshopper",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires registration via the GoTo Developer Center (Grasshopper is owned by GoTo). You must create an application to obtain a Client ID and Client Secret, then use OAuth2 flow for token exchange.",
+  "api_quality": "poor",
+  "api_documentation_url": "https://developer.goto.com/",
+  "rate_limits": "Varies by GoTo account tier; typically 2-5 requests per second for legacy endpoints.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "The Grasshopper API is considered legacy and is poorly documented compared to modern GoTo Connect APIs.",
+    "Lack of native webhook support necessitates a polling strategy (e.g., checking for new messages every 5 minutes).",
+    "API access is often restricted and may require specific account permissions from GoTo support."
+  ],
+  "client_must_provide": [
+    "GoTo Developer Portal credentials",
+    "Client ID",
+    "Client Secret",
+    "Grasshopper account administrator access"
+  ],
+  "operations_available": [
+    "List Call History",
+    "Retrieve Voicemails",
+    "Read SMS Messages",
+    "List Extensions",
+    "Download Call Recordings"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "RingCentral",
+    "Vonage"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration must be built using the HTTP Request node. Because Grasshopper lacks webhooks, the workflow will require a 'Schedule' trigger to poll for new calls or messages. Authentication should be configured using n8n's OAuth2 credentials type, pointing to GoTo's authorization and token URLs.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration must be built using the HTTP Request node. Because Grasshopper lacks webhooks, the workflow will require a 'Schedule' trigger to poll for new calls or messages. Authentication should be configured using n8n's OAuth2 credentials type, pointing to GoTo's authorization and token URLs."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

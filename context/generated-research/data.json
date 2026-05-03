@@ -1,0 +1,67 @@
+{
+  "integration": "Data",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:11.694Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Data (PostgreSQL)",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.postgres",
+  "auth_type": "basic",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires Host, Database Name, User, Password, and Port (default 5432). Supports SSL/TLS and SSH Tunneling for secure connections.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://docs.n8n.io/integrations/builtin/nodes/n8n-nodes-base.postgres/",
+  "rate_limits": "No fixed API rate limits; limited by database server hardware resources, concurrent connection limits (max_connections), and network bandwidth.",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": false,
+  "gotchas": [
+    "Connection timeouts often occur if the database is behind a firewall; n8n may require an SSH tunnel or IP whitelisting.",
+    "Data type mismatches, particularly with JSONB fields or specific Postgres date/time formats, can cause node execution errors.",
+    "Large bulk operations can lead to memory exhaustion in the n8n instance if the 'Batch Size' is not configured correctly."
+  ],
+  "client_must_provide": [
+    "Database Host/IP Address",
+    "Database Name",
+    "Username and Password",
+    "Port Number",
+    "SSL requirement status",
+    "SSH Tunnel credentials (if applicable)"
+  ],
+  "operations_available": [
+    "Execute Query (Custom SQL)",
+    "Insert",
+    "Update",
+    "Upsert",
+    "Delete"
+  ],
+  "similar_integrations": [
+    "MySQL",
+    "MongoDB",
+    "Microsoft SQL Server"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Postgres is the primary n8n data node. While it lacks a native 'Trigger' node for real-time changes, users typically use polling or external CDC (Change Data Capture) tools to initiate workflows.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "Postgres is the primary n8n data node. While it lacks a native 'Trigger' node for real-time changes, users typically use polling or external CDC (Change Data Capture) tools to initiate workflows."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "postgres",
+  "_is_category": true
+}

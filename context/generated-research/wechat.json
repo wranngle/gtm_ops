@@ -1,0 +1,65 @@
+{
+  "integration": "WeChat",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:02:53.685Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "WeChat",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.slack",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "WeChat Work (WeCom) uses CorpID and Secret for API access. Standard WeChat Official Accounts require AppID and AppSecret. If utilizing the Slack bridge as indicated in baseline, standard Slack OAuth2 flow applies.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://work.weixin.qq.com/api/doc/90000/90135/90664",
+  "rate_limits": "WeCom: 10,000 requests per minute per CorpID. Official Accounts: 500,000 calls per day for most messaging endpoints.",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "Mandatory IP whitelisting: The n8n instance IP must be explicitly added to the WeChat/WeCom developer console.",
+    "Access tokens expire every 7200 seconds and require a robust refresh mechanism if not using a native provider.",
+    "Webhooks require a specific validation response (Echostr) and often involve AES decryption/XML parsing."
+  ],
+  "client_must_provide": [
+    "CorpID or AppID",
+    "App Secret",
+    "AgentID (for WeChat Work)",
+    "Whitelisted Static IP Address"
+  ],
+  "operations_available": [
+    "Send Text/Markdown Message",
+    "Upload Media Material",
+    "Get User/Member Info",
+    "Create/Update Department",
+    "Send Template Message"
+  ],
+  "similar_integrations": [
+    "Slack",
+    "Microsoft Teams",
+    "Discord"
+  ],
+  "confidence": 0.75,
+  "research_notes": "The baseline maps WeChat to the Slack node, which suggests a bridge or gateway usage. However, direct WeChat integration (WeCom) is highly regulated and requires strict IP whitelisting and signature verification not standard in the Slack node.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "The baseline maps WeChat to the Slack node, which suggests a bridge or gateway usage. However, direct WeChat integration (WeCom) is highly regulated and requires strict IP whitelisting and signature verification not standard in the Slack node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "slack",
+  "_is_category": true
+}

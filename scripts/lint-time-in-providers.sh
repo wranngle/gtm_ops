@@ -2,7 +2,7 @@
 # lint-time-in-providers.sh — keep wall-clock time + non-determinism inside
 # packages/*/src/providers/. STACK-043.
 #
-# Per the Harness Engineering layered-domain principle, the Providers layer
+# Per the layered-domain rule, the Providers layer
 # is the single explicit cross-cutting boundary for runtime concerns
 # (clocks, random, telemetry, feature flags). Layers above MUST receive a
 # provider abstraction (e.g., `Clock` with `nowIso()`) and call through it

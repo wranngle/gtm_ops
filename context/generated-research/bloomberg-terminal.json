@@ -1,0 +1,65 @@
+{
+  "integration": "Bloomberg Terminal",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:41.610Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Bloomberg Terminal",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "mTLS / Client Certificates / API Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Bloomberg Enterprise Web Services (BEWS) for REST access. Authentication typically involves Mutual TLS (mTLS) requiring client certificates and private keys, combined with IP whitelisting.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://www.bloomberg.com/wcp/api-documentation/",
+  "rate_limits": "Strictly governed by the specific Data License agreement; usually limited by 'hits' or 'data points' per month/day.",
+  "complexity_score": 9,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "Standard n8n HTTP node requires manual certificate management for mTLS which is difficult to configure in some environments",
+    "Bloomberg data is strictly licensed and often tied to specific hardware or IP addresses",
+    "The API is not the same as the Terminal software; it requires a separate Enterprise Data subscription"
+  ],
+  "client_must_provide": [
+    "Bloomberg Enterprise Web Services (BEWS) credentials",
+    "Client SSL Certificates (.pem or .pfx)",
+    "Whitelisted Static IP of the n8n instance",
+    "Data License Account Number"
+  ],
+  "operations_available": [
+    "ReferenceDataRequest (Static data)",
+    "HistoricalDataRequest (Time-series)",
+    "IntradayBarRequest (Market bars)",
+    "InstrumentSearch (Ticker lookup)",
+    "PortfolioDataRequest"
+  ],
+  "similar_integrations": [
+    "Alpha Vantage",
+    "Finnhub",
+    "Tiingo"
+  ],
+  "confidence": 0.9,
+  "research_notes": "To integrate with n8n, you must use the Bloomberg Enterprise Web Services (REST API). The standard BLPAPI (Desktop API) is not compatible with cloud-based n8n as it requires a local Bloomberg process. You will likely need a custom proxy or a specialized Node.js service to handle the mTLS handshake if the n8n environment's HTTP node is restricted.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 9,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "To integrate with n8n, you must use the Bloomberg Enterprise Web Services (REST API). The standard BLPAPI (Desktop API) is not compatible with cloud-based n8n as it requires a local Bloomberg process. You will likely need a custom proxy or a specialized Node.js service to handle the mTLS handshake if the n8n environment's HTTP node is restricted."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

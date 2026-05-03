@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lint-file-size.sh — enforce a per-file line cap under packages/*/src/. STACK-042.
 #
-# Per the Harness Engineering custom-lint principle, file-size caps are a
+# Custom-lint rule: file-size caps are a
 # cheap legibility multiplier: large modules force the agent to summarize
 # what it's reading instead of holding the whole thing in working memory.
 # A hard cap also discourages the "one-giant-service-file" anti-pattern.

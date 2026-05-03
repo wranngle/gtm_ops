@@ -1,0 +1,66 @@
+{
+  "integration": "iManage",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:41:20.359Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "iManage",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires application registration in the iManage Control Center to obtain a Client ID and Client Secret. Often requires an 'API Key' (App Key) passed in headers (X-App-Key). Supports both Authorization Code flow for user-level access and Client Credentials for service-level access.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.imanage.com/static/index.html",
+  "rate_limits": "Varies by cloud environment; typically throttled at 1,000 requests per minute per user, but subject to specific tenant policies.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "File uploads require multipart/form-data where metadata must be provided as a specific JSON string part named 'profile'.",
+    "API access must be explicitly whitelisted/enabled for the specific application within the iManage Control Center by a system administrator.",
+    "Document locking and checkout logic must be handled manually via API calls to prevent edit conflicts."
+  ],
+  "client_must_provide": [
+    "iManage Instance URL (e.g., https://cloud.imanage.com)",
+    "Client ID",
+    "Client Secret",
+    "API Key (App Key)",
+    "Target Library/Database name"
+  ],
+  "operations_available": [
+    "Search Documents and Folders",
+    "Download Document Content",
+    "Upload New Document or Version",
+    "Update Metadata/Profile Fields",
+    "Get Workspace and Folder structures"
+  ],
+  "similar_integrations": [
+    "Google Drive",
+    "OneDrive",
+    "Box"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration will rely heavily on the HTTP Request node. For OAuth 2.0, n8n's built-in OAuth2 credentials can be used, but the 'X-App-Key' must be manually added to the headers of every request. Handling file buffers (binary data) for uploads and downloads is the most time-consuming part of the implementation.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "The integration will rely heavily on the HTTP Request node. For OAuth 2.0, n8n's built-in OAuth2 credentials can be used, but the 'X-App-Key' must be manually added to the headers of every request. Handling file buffers (binary data) for uploads and downloads is the most time-consuming part of the implementation."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

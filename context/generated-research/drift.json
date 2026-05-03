@@ -1,0 +1,65 @@
+{
+  "integration": "Drift",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:34.729Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Drift",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 or Personal Access Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating a Drift App in the Drift Developer Platform. You can use a Personal Access Token for internal use or full OAuth 2.0 for third-party access. Authentication is passed via Bearer token in the Authorization header.",
+  "api_quality": "good",
+  "api_documentation_url": "https://devdocs.drift.com/docs",
+  "rate_limits": "10 requests per second (RPS) per access token.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhook payloads must be verified using the 'X-Drift-Signature' header to ensure authenticity.",
+    "The API is strictly rate-limited; high-volume conversation syncing may require implementing a queue or wait logic in n8n.",
+    "Scopes are granular; if a specific field isn't returning, it's often a missing scope in the App settings rather than an API error."
+  ],
+  "client_must_provide": [
+    "Drift Developer Account access",
+    "Client ID and Client Secret (for OAuth)",
+    "Personal Access Token (for simple integrations)",
+    "List of required scopes (e.g., contact_read, conversation_read)"
+  ],
+  "operations_available": [
+    "Create/Update Contacts",
+    "Retrieve Conversation Details",
+    "Send Chat Messages",
+    "List Users/Agents",
+    "Identify End Users"
+  ],
+  "similar_integrations": [
+    "Intercom",
+    "HubSpot",
+    "Zendesk"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Integration requires manual setup using the HTTP Request node. For webhooks, the user must manually create a 'Webhook' in the Drift App dashboard and point it to the n8n Webhook URL. Authentication should be handled via n8n's 'Header Auth' or 'OAuth2' credentials depending on the token type used.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration requires manual setup using the HTTP Request node. For webhooks, the user must manually create a 'Webhook' in the Drift App dashboard and point it to the n8n Webhook URL. Authentication should be handled via n8n's 'Header Auth' or 'OAuth2' credentials depending on the token type used."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

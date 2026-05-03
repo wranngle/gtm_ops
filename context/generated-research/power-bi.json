@@ -1,0 +1,66 @@
+{
+  "integration": "Power BI",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T13:00:28.302Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Power BI",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Azure AD / Microsoft Entra ID)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires creating an App Registration in the Azure Portal, configuring Power BI Service API permissions, and potentially enabling 'Allow service principals to use Power BI APIs' in the Power BI Admin Portal.",
+  "api_quality": "good",
+  "api_documentation_url": "https://learn.microsoft.com/en-us/rest/api/power-bi/",
+  "rate_limits": "200 requests per minute per user; Dataset refreshes are limited to 8 per day for Pro and 48 per day for Premium capacities.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": false,
+  "gotchas": [
+    "Service Principal access is disabled by default in the Power BI Admin tenant settings.",
+    "The 'Export to File' API requires specific Premium or Fabric capacities and has high resource consumption.",
+    "OAuth2 scopes must be specifically configured for 'https://analysis.windows.net/powerbi/api/.default'."
+  ],
+  "client_must_provide": [
+    "Azure Client ID",
+    "Azure Client Secret",
+    "Azure Tenant ID",
+    "Power BI Workspace ID",
+    "Admin-level consent for Azure App permissions"
+  ],
+  "operations_available": [
+    "Refresh Dataset",
+    "Add Rows to Push Dataset",
+    "Get Reports in Workspace",
+    "Update Dataset Parameters",
+    "Export Report to PDF/PNG"
+  ],
+  "similar_integrations": [
+    "Microsoft Excel Online",
+    "Google Sheets",
+    "Airtable"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Implementation requires the n8n HTTP Request node. Authentication should be configured using n8n's OAuth2 credential type, pointing to the Microsoft Entra ID authorization and token endpoints. Users must manually handle the JSON body for dataset row insertion.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Implementation requires the n8n HTTP Request node. Authentication should be configured using n8n's OAuth2 credential type, pointing to the Microsoft Entra ID authorization and token endpoints. Users must manually handle the JSON body for dataset row insertion."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

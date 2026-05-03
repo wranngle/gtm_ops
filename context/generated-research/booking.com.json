@@ -1,0 +1,66 @@
+{
+  "integration": "Booking.com",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-07T19:21:38.774Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Booking.com",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Basic Auth or OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Access requires a registered Partner account (Affiliate or Connectivity). Demand API usually uses Basic Auth via a machine account, while Connectivity APIs use OAuth 2.0. Access is not self-service and requires manual approval.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.booking.com/",
+  "rate_limits": "Tier-based and defined in the partner agreement; typically restricted to specific requests per minute (RPM) based on volume.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict IP whitelisting is often required for API access, which is difficult with cloud-hosted n8n instances.",
+    "The API is highly restricted; developers cannot get credentials without a formal business partnership or affiliate status.",
+    "Heavy use of XML in older versions of the API, though JSON is supported in newer endpoints."
+  ],
+  "client_must_provide": [
+    "Partner ID",
+    "Machine Account Username",
+    "Machine Account Password",
+    "Client ID and Secret (for OAuth flows)",
+    "Whitelisted IP address of the n8n server"
+  ],
+  "operations_available": [
+    "Search properties and availability",
+    "Retrieve booking/reservation details",
+    "Update room inventory and pricing",
+    "Confirm or cancel reservations",
+    "Retrieve property static content (photos, descriptions)"
+  ],
+  "similar_integrations": [
+    "Airbnb (Unofficial/Community)",
+    "Expedia",
+    "Hotelbeds"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will require the HTTP Request node. Developers must determine if they are using the Demand API (for bookings) or Connectivity API (for property management). Data mapping will be intensive due to the complex nested structures of travel data. Webhooks (Push API) are available for Connectivity partners but require a publicly accessible endpoint and specific handshake protocols.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration will require the HTTP Request node. Developers must determine if they are using the Demand API (for bookings) or Connectivity API (for property management). Data mapping will be intensive due to the complex nested structures of travel data. Webhooks (Push API) are available for Connectivity partners but require a publicly accessible endpoint and specific handshake protocols."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

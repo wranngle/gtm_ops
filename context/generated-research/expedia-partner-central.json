@@ -1,0 +1,66 @@
+{
+  "integration": "Expedia Partner Central",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:42:29.742Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Expedia Partner Central",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires Client ID and Client Secret obtained from the Expedia Group Developer Portal. Some legacy Connectivity APIs still utilize Basic Auth or custom API Key headers with signature hashing.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.expediagroup.com/docs",
+  "rate_limits": "Varies by endpoint; typically 10 requests per second (RPS) for standard partner tiers.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Many legacy Partner Central endpoints return XML (OTA standard), requiring extensive use of n8n's XML-to-JSON conversion nodes.",
+    "Strict IP whitelisting is often required in the developer portal before requests will be accepted.",
+    "The 'Booking Notification' webhook requires a specific acknowledgment response within seconds to prevent retries."
+  ],
+  "client_must_provide": [
+    "Expedia Group Developer Account access",
+    "Client ID",
+    "Client Secret",
+    "Property ID (Hotel ID)",
+    "Whitelisted IP address of the n8n instance"
+  ],
+  "operations_available": [
+    "Retrieve Booking Details",
+    "Update Inventory/Availability",
+    "Update Rates",
+    "Retrieve Property Content",
+    "Confirm Booking (Acknowledgment)"
+  ],
+  "similar_integrations": [
+    "Amadeus",
+    "Duffel",
+    "Airbnb (via unofficial/community nodes)"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration must be built using the HTTP Request node. For modern Expedia Group APIs, use OAuth2 credentials in n8n. For legacy XML-based Connectivity APIs, the developer must manually construct XML payloads in the HTTP Request node and parse the response using the 'XML' node. A dedicated sub-workflow for token management is recommended if not using n8n's built-in OAuth2 mechanism.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration must be built using the HTTP Request node. For modern Expedia Group APIs, use OAuth2 credentials in n8n. For legacy XML-based Connectivity APIs, the developer must manually construct XML payloads in the HTTP Request node and parse the response using the 'XML' node. A dedicated sub-workflow for token management is recommended if not using n8n's built-in OAuth2 mechanism."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

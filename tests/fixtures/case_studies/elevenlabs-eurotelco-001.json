@@ -1,0 +1,80 @@
+{
+  "id": "elevenlabs-eurotelco-001",
+  "source": {
+    "vendor": "elevenlabs",
+    "url": "https://elevenlabs.io/agents/enterprise-conversational-ai",
+    "title": "ElevenLabs Brings AI Voice Agents to Europe's Largest Telco"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "telecommunications",
+    "company_size": "100,000+ employees, multinational",
+    "company_type": "major European telecommunications provider",
+    "pain_points": [
+      "Call center handling millions of customer calls annually",
+      "High agent turnover leading to inconsistent service quality",
+      "Long wait times during peak periods causing customer churn",
+      "Multilingual support requirements across European markets",
+      "Legacy IVR systems frustrating customers with rigid menus"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 500000,
+      "calls_per_day": 16667,
+      "avg_call_duration_minutes": 6,
+      "staff_hours_per_month": 50000
+    },
+    "systems_involved": [
+      "Salesforce Service Cloud",
+      "Genesys Cloud",
+      "SAP CRM",
+      "Oracle Billing"
+    ],
+    "goals": [
+      "Reduce call center operational costs by 30%",
+      "Achieve 24/7 support coverage without additional headcount",
+      "Support 12+ European languages natively",
+      "Improve customer satisfaction scores (CSAT)",
+      "Handle routine inquiries without human intervention"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Salesforce Service Cloud", "integration_type": "api", "purpose": "customer lookup and case management" },
+      { "system_name": "Genesys Cloud", "integration_type": "native", "purpose": "contact center orchestration" },
+      { "system_name": "SAP CRM", "integration_type": "api", "purpose": "customer data and billing inquiries" },
+      { "system_name": "Oracle Billing", "integration_type": "api", "purpose": "billing and payment status" }
+    ],
+    "pricing_model": {
+      "model_type": "enterprise",
+      "total_cost": 450000,
+      "monthly_cost": 28000,
+      "setup_cost": 114000
+    },
+    "timeline_weeks": 20,
+    "roi_achieved": {
+      "hours_saved_per_month": 15000,
+      "calls_automated_percent": 45,
+      "monthly_savings": 420000,
+      "annual_savings": 5040000,
+      "payback_period_months": 1
+    },
+    "key_features": [
+      "Multi-language support (12+ European languages)",
+      "Natural conversational AI replacing rigid IVR",
+      "Real-time billing and account inquiries",
+      "Intelligent escalation to human agents",
+      "App-based and phone-based AI assistant",
+      "Sentiment-aware conversation handling"
+    ],
+    "inferred_tier": "flagship"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Enterprise-scale telco deployment with massive volume and multi-language requirements",
+    "domain_tags": ["telecommunications", "customer-service", "enterprise", "multilingual", "contact-center"],
+    "holdout": true,
+    "harvested_by": "web-search-extraction"
+  }
+}

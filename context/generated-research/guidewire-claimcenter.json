@@ -1,0 +1,66 @@
+{
+  "integration": "Guidewire ClaimCenter",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:57:27.818Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Guidewire ClaimCenter",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials or Authorization Code)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires integration with Guidewire Hub (Identity Provider). Authentication involves obtaining a JWT from the IdP using Client ID and Secret, often requiring specific scopes like 'claims.manage' or 'claims.read'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://docs.guidewire.com/",
+  "rate_limits": "Varies by tenant configuration; typically enforced via Guidewire Cloud Gateway with specific concurrency and request-per-second limits.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Older on-premise versions rely on SOAP APIs (Gosu), whereas Cloud versions use the REST-based Cloud API.",
+    "Data models are highly extensible, meaning standard endpoints may contain custom fields unique to the client's implementation.",
+    "Large payload sizes for claim objects can lead to memory issues in n8n if not handled with care."
+  ],
+  "client_must_provide": [
+    "Guidewire Hub (IdP) URL",
+    "Client ID and Client Secret",
+    "API Base URL (Tenant-specific)",
+    "Application Code/Tenant ID",
+    "API Version (e.g., v1)"
+  ],
+  "operations_available": [
+    "Create Claim",
+    "Get Claim Details",
+    "Add Activity to Claim",
+    "Update Exposure",
+    "Upload Document Metadata"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "ServiceNow",
+    "Zendesk"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration must be performed using the HTTP Request node. Users should configure the 'OAuth2' credential type in n8n. Because Guidewire uses complex, nested JSON for claims, a 'Code' node is highly recommended for mapping n8n data to the Guidewire schema before the final API call.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration must be performed using the HTTP Request node. Users should configure the 'OAuth2' credential type in n8n. Because Guidewire uses complex, nested JSON for claims, a 'Code' node is highly recommended for mapping n8n data to the Guidewire schema before the final API call."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

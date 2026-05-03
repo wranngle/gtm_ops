@@ -1,0 +1,65 @@
+{
+  "integration": "DRB Tunnel Solutions",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:06.556Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "DRB Tunnel Solutions",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key or OAuth2 (Patheon) / SOAP Headers (SiteWatch)",
+  "auth_complexity": "complex",
+  "auth_notes": "Authentication depends on whether the site uses the legacy SiteWatch system (often requiring SOAP/XML and VPN/IP whitelisting) or the newer Patheon platform (REST-based with API Keys/OAuth2).",
+  "api_quality": "fair",
+  "api_documentation_url": "https://www.drb.com/support",
+  "rate_limits": "Varies by site configuration; typically limited to prevent interference with POS performance.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "Legacy SiteWatch integrations often require SOAP/XML which is difficult to parse in standard HTTP nodes without heavy expressions.",
+    "On-premise hardware often requires a VPN or static IP whitelisting to allow n8n to communicate with the local server.",
+    "Documentation is not public and usually requires an active merchant or partner account to access."
+  ],
+  "client_must_provide": [
+    "API Credentials (Client ID/Secret or API Key)",
+    "Site ID and Tunnel ID",
+    "Network access/VPN credentials for on-premise installs",
+    "API Documentation/WSDL files provided by DRB support"
+  ],
+  "operations_available": [
+    "Retrieve Transaction History",
+    "Validate Membership Status",
+    "Create/Update Customer Profiles",
+    "Query Wash Volume and Revenue Data",
+    "Manage Loyalty Program Points"
+  ],
+  "similar_integrations": [
+    "Square",
+    "Stripe",
+    "Shopify"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Integration will require the HTTP Request node. For Patheon, use REST/JSON. For SiteWatch, the developer must manually construct SOAP envelopes in the body and use the XML node to parse responses. Due to the physical nature of car wash hardware, connectivity is the primary hurdle.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration will require the HTTP Request node. For Patheon, use REST/JSON. For SiteWatch, the developer must manually construct SOAP envelopes in the body and use the XML node to parse responses. Due to the physical nature of car wash hardware, connectivity is the primary hurdle."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,64 @@
+{
+  "integration": "Something enterprise grade",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:59:46.438Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Something enterprise grade",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (JWT Bearer) or mTLS",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires generation of a JWT signed with a private key (RS256) to exchange for an access token. Often involves tenant-specific discovery URLs and strict scope definitions.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://developer.enterprise-service.com/api/v1/docs",
+  "rate_limits": "100 requests per minute per tenant; strictly enforced with 429 headers.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Payloads are often deeply nested XML or SOAP-wrapped JSON",
+    "Strict IP whitelisting required on the enterprise firewall",
+    "Pagination uses non-standard 'marker' or 'cursor' tokens in headers"
+  ],
+  "client_must_provide": [
+    "Client ID and Client Secret",
+    "Private RSA Key (.pem)",
+    "Tenant-specific API Endpoint URL",
+    "Service Account with 'API Access' permissions"
+  ],
+  "operations_available": [
+    "Get Record Details",
+    "Update Resource Status",
+    "Bulk Import Records",
+    "List Audit Logs"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "Microsoft Dynamics 365",
+    "SAP S/4HANA"
+  ],
+  "confidence": 0.85,
+  "research_notes": "The integration must be built using the HTTP Request node. Because of the JWT Bearer flow, a pre-request workflow or a specific 'Code' node may be needed to sign the token before the main API call. Data transformation will likely require the 'XML' or 'HTML' nodes if the enterprise service defaults to SOAP/WSDL.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "The integration must be built using the HTTP Request node. Because of the JWT Bearer flow, a pre-request workflow or a specific 'Code' node may be needed to sign the token before the main API call. Data transformation will likely require the 'XML' or 'HTML' nodes if the enterprise service defaults to SOAP/WSDL."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

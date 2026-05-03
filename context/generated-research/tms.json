@@ -1,0 +1,65 @@
+{
+  "integration": "TMS",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:39:43.439Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "TMS (Transportation Management System)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key or OAuth2 (Provider Dependent)",
+  "auth_complexity": "complex",
+  "auth_notes": "Most enterprise TMS platforms (like MercuryGate, Trimble, or BlueYonder) require a combination of an API Key, Client Secret, and a Tenant/Customer ID. Many legacy systems still utilize SOAP/XML authentication requiring specific header structures.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://mercurygate.com/resources/api-integration/",
+  "rate_limits": "Varies by contract; typically 100 requests per minute with strict burst limits.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Heavy reliance on XML/SOAP payloads in legacy versions requiring complex mapping",
+    "Strict IP whitelisting is often required for production API access",
+    "Asynchronous processing: API may return a 202 Accepted, requiring a polling mechanism for final status"
+  ],
+  "client_must_provide": [
+    "API Endpoint URL",
+    "Client Credentials (ID/Secret)",
+    "Tenant or Customer ID",
+    "Static IP of the n8n instance for whitelisting"
+  ],
+  "operations_available": [
+    "Create Shipment/Load",
+    "Get Tracking Status",
+    "Fetch Rate Quotes",
+    "Update Load Status",
+    "Retrieve Bill of Lading (BOL)"
+  ],
+  "similar_integrations": [
+    "ShipStation",
+    "Shippo",
+    "AfterShip"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Integration will require the HTTP Request node. Since many TMS providers use XML, the 'XML to JSON' and 'JSON to XML' nodes will be essential. Developers should implement a robust error-handling branch as TMS APIs often return 200 OK even when the business logic fails (errors contained within the body).",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration will require the HTTP Request node. Since many TMS providers use XML, the 'XML to JSON' and 'JSON to XML' nodes will be essential. Developers should implement a robust error-handling branch as TMS APIs often return 200 OK even when the business logic fails (errors contained within the body)."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

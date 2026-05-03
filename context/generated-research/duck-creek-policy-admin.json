@@ -1,0 +1,65 @@
+{
+  "integration": "Duck Creek Policy Admin",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:57:44.332Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Duck Creek Policy Admin",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires OAuth 2.0 (Client Credentials or Authorization Code flow) typically integrated with an Identity Provider like Azure AD or Okta. Tenant-specific discovery URLs and scopes are mandatory.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.duckcreek.com/product/policy/",
+  "rate_limits": "Dependent on the specific Duck Creek On-Demand (SaaS) tier or on-premise API Gateway configuration; typically 100-500 requests per minute.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Data models are highly customized per Line of Business (LOB), meaning standard payloads vary significantly between implementations.",
+    "API documentation is behind a gated partner/customer portal (Duck Creek Support), making public research difficult.",
+    "Heavy reliance on large, deeply nested JSON/XML structures for policy state management."
+  ],
+  "client_must_provide": [
+    "API Gateway Base URL",
+    "OAuth 2.0 Client ID and Client Secret",
+    "Tenant ID and Scope definitions",
+    "LOB-specific Data Schema (JSON/XML samples)"
+  ],
+  "operations_available": [
+    "Create Quote",
+    "Issue Policy",
+    "Retrieve Policy Summary",
+    "Process Endorsement",
+    "Cancel/Reinstate Policy"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "Microsoft Dynamics 365",
+    "ServiceNow"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration must be performed via the HTTP Request node. It is recommended to use the 'Anywhere API' (REST) rather than legacy SOAP services. Users will need to manually map complex insurance objects and likely use the 'Split In Batches' node for large policy data sets.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration must be performed via the HTTP Request node. It is recommended to use the 'Anywhere API' (REST) rather than legacy SOAP services. Users will need to manually map complex insurance objects and likely use the 'Split In Batches' node for large policy data sets."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

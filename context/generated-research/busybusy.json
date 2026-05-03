@@ -1,0 +1,64 @@
+{
+  "integration": "Busybusy",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:55.339Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Busybusy",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key (Bearer Token)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires generating an API Key from the Busybusy settings/developer dashboard. The key is passed in the HTTP header as 'Authorization: Bearer [YOUR_TOKEN]'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.busybusy.com/",
+  "rate_limits": "Standard rate limiting applies, typically around 100 requests per minute, though specific limits are often account-tier dependent.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Pagination uses a limit/offset structure that requires manual loop configuration in n8n.",
+    "Timezone handling is critical as the API expects and returns UTC, requiring conversion for local reporting.",
+    "Filtering time entries requires precise ISO 8601 date strings."
+  ],
+  "client_must_provide": [
+    "API Key / Bearer Token",
+    "Company ID",
+    "Admin access to the Busybusy dashboard to configure Webhook URLs"
+  ],
+  "operations_available": [
+    "List Employees",
+    "Get Projects and Sub-projects",
+    "Create/Update Time Entries",
+    "Fetch Equipment Lists",
+    "Retrieve Cost Codes"
+  ],
+  "similar_integrations": [
+    "Clockify",
+    "Toggl",
+    "Harvest"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will rely heavily on the HTTP Request node. Since there is no native node, a 'Header Auth' credential should be created in n8n. Webhooks are supported for real-time clock-in/out events but must be pointed to an n8n Webhook node URL manually.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will rely heavily on the HTTP Request node. Since there is no native node, a 'Header Auth' credential should be created in n8n. Webhooks are supported for real-time clock-in/out events but must be pointed to an n8n Webhook node URL manually."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

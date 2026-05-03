@@ -1,0 +1,66 @@
+{
+  "integration": "QuickBooks",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:43.377Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "QuickBooks",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires an Intuit Developer account to create an app, obtain Client ID and Client Secret, and configure specific Redirect URIs. n8n's HTTP Request node must be configured with 'OAuth2' credentials using Intuit's authorization and token endpoints.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/account",
+  "rate_limits": "500 requests per minute per realm (company ID); 40 concurrent requests per realm.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "The 'minorversion' query parameter is required to access newer API features and fields; omitting it defaults to the oldest version.",
+    "Sandbox and Production environments use entirely different Base URLs and credential sets.",
+    "Tokens must be refreshed frequently, and the Intuit Developer Portal has strict requirements for app assessment before moving to production."
+  ],
+  "client_must_provide": [
+    "Intuit Developer Portal login",
+    "Client ID",
+    "Client Secret",
+    "Realm ID (Company ID)",
+    "Required Scopes (e.g., com.intuit.quickbooks.accounting)"
+  ],
+  "operations_available": [
+    "Create/Update Invoice",
+    "Query Customers",
+    "Create Payment",
+    "List Accounts",
+    "Get Company Information"
+  ],
+  "similar_integrations": [
+    "Xero",
+    "FreshBooks",
+    "Zoho Books"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Implementation requires using the HTTP Request node with OAuth2 credentials. The developer must manually map JSON bodies for POST/PUT requests. Ensure the 'Accept' header is set to 'application/json' to avoid XML responses, which are the legacy default for some endpoints.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Implementation requires using the HTTP Request node with OAuth2 credentials. The developer must manually map JSON bodies for POST/PUT requests. Ensure the 'Accept' header is set to 'application/json' to avoid XML responses, which are the legacy default for some endpoints."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

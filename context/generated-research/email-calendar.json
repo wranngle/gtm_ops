@@ -1,0 +1,65 @@
+{
+  "integration": "Email/Calendar",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:47.379Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Email/Calendar",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.googleCalendar",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires a Google Cloud Console project with the Google Calendar API enabled. Users must configure an OAuth consent screen and generate a Client ID and Client Secret. The redirect URI from n8n must be added to the authorized list in Google Cloud.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.google.com/calendar/api/v3/reference",
+  "rate_limits": "1,000,000 requests per day per project; 10 queries per second (QPS) per user.",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "Timezone mismatches: If the n8n environment and Google Calendar settings differ, event times may shift unexpectedly.",
+    "Token Expiration: OAuth refresh tokens expire every 7 days if the Google Cloud project is set to 'Testing' mode instead of 'Production'.",
+    "Recursive Loops: Workflows triggered by 'Event Updated' that also perform an 'Update' action on the same event can cause infinite execution loops."
+  ],
+  "client_must_provide": [
+    "Google Cloud Project access",
+    "OAuth2 Client ID",
+    "OAuth2 Client Secret",
+    "Specific Calendar ID (usually the primary email address)"
+  ],
+  "operations_available": [
+    "Create Event",
+    "Update Event",
+    "Delete Event",
+    "Get Event",
+    "List Events"
+  ],
+  "similar_integrations": [
+    "Microsoft Outlook Calendar",
+    "iCloud Calendar",
+    "Calendly"
+  ],
+  "confidence": 0.95,
+  "research_notes": "While the category is Email/Calendar, this analysis focuses on Google Calendar as the primary n8n node. Microsoft Outlook is the secondary alternative and requires Azure AD configuration which has higher auth complexity.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "While the category is Email/Calendar, this analysis focuses on Google Calendar as the primary n8n node. Microsoft Outlook is the secondary alternative and requires Azure AD configuration which has higher auth complexity."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "google calendar",
+  "_is_category": true
+}

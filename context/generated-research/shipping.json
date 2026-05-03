@@ -1,0 +1,64 @@
+{
+  "integration": "Shipping",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:09.981Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Shipping",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key & API Secret (HMAC SHA256)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires generating an HMAC SHA256 signature of the request body, HTTP method, and timestamp using the API Secret. This signature must be passed in the 'api_signature' header.",
+  "api_quality": "good",
+  "api_documentation_url": "https://shippingeasy.readme.io/docs",
+  "rate_limits": "1,500 requests per rolling hour per account.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 18,
+  "webhook_support": true,
+  "gotchas": [
+    "HMAC signature calculation is extremely sensitive to JSON whitespace and key ordering in the request body.",
+    "The API Secret is only displayed once upon generation in the dashboard.",
+    "Most POST operations require a specific 'Store API Key' which is distinct from the account-level API Key."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "API Secret",
+    "Store API Key"
+  ],
+  "operations_available": [
+    "Create Order",
+    "List Shipments",
+    "Get Rates",
+    "Cancel Shipment",
+    "Create Label"
+  ],
+  "similar_integrations": [
+    "ShipStation",
+    "Shippo",
+    "AfterShip"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation requires a 'Code' node preceding the 'HTTP Request' node to import the 'crypto' module and generate the required HMAC signature. The HTTP Request node must then be configured to use 'Header Auth' for the API Key and a custom header for the generated signature.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 18
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 18,
+    "rationale": "Implementation requires a 'Code' node preceding the 'HTTP Request' node to import the 'crypto' module and generate the required HMAC signature. The HTTP Request node must then be configured to use 'Header Auth' for the API Key and a custom header for the generated signature."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

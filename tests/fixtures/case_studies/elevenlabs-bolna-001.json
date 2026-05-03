@@ -1,0 +1,80 @@
+{
+  "id": "elevenlabs-bolna-001",
+  "source": {
+    "vendor": "elevenlabs",
+    "url": "https://elevenlabs.io/blog/bolna-powers-recruitment-voice-agents",
+    "title": "Bolna Powers Recruitment Voice Agents with ElevenLabs"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "hr-tech",
+    "company_size": "50 employees, B2B SaaS",
+    "company_type": "recruitment automation platform",
+    "pain_points": [
+      "Recruiters spending 60% of time on initial candidate screening calls",
+      "Inconsistent candidate experience across different recruiters",
+      "High cost per hire due to manual screening process",
+      "Limited capacity to handle high-volume hiring campaigns",
+      "Difficulty maintaining 24/7 candidate engagement across time zones"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 8000,
+      "calls_per_day": 267,
+      "avg_call_duration_minutes": 12,
+      "staff_hours_per_month": 1600
+    },
+    "systems_involved": [
+      "Greenhouse",
+      "Lever",
+      "Workday",
+      "Slack"
+    ],
+    "goals": [
+      "Automate initial candidate screening interviews",
+      "Reduce time-to-hire by 50%",
+      "Provide consistent candidate experience",
+      "Enable high-volume hiring campaigns",
+      "Support multiple languages for global recruitment"
+    ]
+  },
+  "solution": {
+    "agent_type": "outbound",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Greenhouse", "integration_type": "api", "purpose": "ATS integration and candidate data" },
+      { "system_name": "Lever", "integration_type": "api", "purpose": "alternative ATS support" },
+      { "system_name": "Calendly", "integration_type": "webhook", "purpose": "interview scheduling" },
+      { "system_name": "Slack", "integration_type": "webhook", "purpose": "recruiter notifications" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "total_cost": 42000,
+      "monthly_cost": 2800,
+      "setup_cost": 8400
+    },
+    "timeline_weeks": 8,
+    "roi_achieved": {
+      "hours_saved_per_month": 640,
+      "calls_automated_percent": 70,
+      "monthly_savings": 18000,
+      "annual_savings": 216000,
+      "payback_period_months": 2
+    },
+    "key_features": [
+      "Automated candidate screening calls",
+      "Skills assessment through conversation",
+      "Multi-language support via ElevenLabs Voice Library",
+      "Real-time transcription and scoring",
+      "ATS integration for seamless workflow",
+      "Customizable interview scripts"
+    ],
+    "inferred_tier": "standard"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Well-documented integration case with clear ROI metrics and multi-ATS support",
+    "domain_tags": ["recruitment", "hr-tech", "outbound-calling", "ats-integration", "candidate-screening"],
+    "holdout": false,
+    "harvested_by": "web-search-extraction"
+  }
+}

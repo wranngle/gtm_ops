@@ -1,0 +1,82 @@
+{
+  "id": "vapi-financial-001",
+  "source": {
+    "vendor": "vapi",
+    "url": "https://vapi.ai/case-studies/summit-wealth-advisors",
+    "title": "Summit Wealth: AI Assistant Doubles Advisor Productivity"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "financial-services",
+    "company_size": "35 advisors, $2B AUM",
+    "company_type": "registered investment advisor (RIA)",
+    "pain_points": [
+      "Advisors spend 40% of time on administrative tasks",
+      "Client onboarding takes 2-3 weeks",
+      "Quarterly review scheduling requires 20+ back-and-forth emails",
+      "Compliance documentation is manual and error-prone",
+      "After-hours client inquiries go unanswered"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 4500,
+      "calls_per_day": 150,
+      "avg_call_duration_minutes": 12,
+      "staff_hours_per_month": 900
+    },
+    "systems_involved": [
+      "Orion",
+      "Redtail CRM",
+      "DocuSign",
+      "Calendly",
+      "Microsoft Teams"
+    ],
+    "goals": [
+      "Automated meeting scheduling with advisors",
+      "Client onboarding workflow automation",
+      "Portfolio performance inquiries via voice",
+      "Compliance-ready call documentation",
+      "After-hours client support"
+    ]
+  },
+  "solution": {
+    "agent_type": "hybrid",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Orion", "integration_type": "api", "purpose": "portfolio data and performance" },
+      { "system_name": "Redtail CRM", "integration_type": "api", "purpose": "client profiles and activity logging" },
+      { "system_name": "DocuSign", "integration_type": "webhook", "purpose": "document signing workflows" },
+      { "system_name": "Calendly", "integration_type": "api", "purpose": "advisor scheduling" },
+      { "system_name": "Twilio", "integration_type": "api", "purpose": "voice calls and secure messaging" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "total_cost": 75000,
+      "monthly_cost": 3500,
+      "setup_cost": 32000
+    },
+    "timeline_weeks": 14,
+    "roi_achieved": {
+      "hours_saved_per_month": 600,
+      "calls_automated_percent": 55,
+      "monthly_savings": 35000,
+      "annual_savings": 420000,
+      "payback_period_months": 3
+    },
+    "key_features": [
+      "Meeting scheduling",
+      "Portfolio performance updates",
+      "Secure client verification",
+      "Compliance call logging",
+      "Document request tracking",
+      "After-hours inquiry handling"
+    ],
+    "inferred_tier": "flagship"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Flagship financial services deployment with complex compliance and integration requirements",
+    "domain_tags": ["financial-services", "wealth-management", "scheduling", "compliance", "hybrid"],
+    "holdout": true,
+    "harvested_by": "manual-entry"
+  }
+}

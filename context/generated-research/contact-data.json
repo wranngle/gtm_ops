@@ -1,0 +1,64 @@
+{
+  "integration": "Contact data",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-07T22:23:29.069Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Contact data",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key obtained from the ContactData.io dashboard, typically passed in the 'Authorization' header as a Bearer token or 'x-api-key' header.",
+  "api_quality": "good",
+  "api_documentation_url": "https://docs.contactdata.io/",
+  "rate_limits": "Rate limits are tier-based, typically ranging from 10 to 50 requests per second, with monthly credit quotas for data enrichment.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": false,
+  "gotchas": [
+    "Credit consumption occurs on successful data retrieval; logic must be implemented to handle empty results without wasting workflow cycles.",
+    "The API returns deeply nested JSON objects which will require the 'Item Lists' or 'Code' node to flatten for use in Google Sheets or CRMs.",
+    "No native retry mechanism for 429 (Rate Limit) errors within the standard HTTP node without manual loop configuration."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Target Email or Domain for enrichment",
+    "Sufficient credit balance in the account"
+  ],
+  "operations_available": [
+    "Enrich Email",
+    "Enrich Domain",
+    "Person Search",
+    "Company Search",
+    "Check Credit Balance"
+  ],
+  "similar_integrations": [
+    "Apollo.io",
+    "Hunter.io",
+    "Clearbit"
+  ],
+  "confidence": 0.85,
+  "research_notes": "The integration will rely heavily on the HTTP Request node. You should create a 'Header Auth' credential in n8n to securely store the API key. Most endpoints use POST requests with a JSON body containing the search parameters. Since there is no native node, users will need to manually map the output fields using expressions.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "The integration will rely heavily on the HTTP Request node. You should create a 'Header Auth' credential in n8n to securely store the API key. Most endpoints use POST requests with a JSON body containing the search parameters. Since there is no native node, users will need to manually map the output fields using expressions."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

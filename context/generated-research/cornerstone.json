@@ -1,0 +1,65 @@
+{
+  "integration": "Cornerstone",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:33:46.163Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Cornerstone",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a two-step process: first, calling the Security Token Service (STS) endpoint with a Client ID and Client Secret to obtain an access token, which is then used as a Bearer token in subsequent REST API calls. Some legacy endpoints may still require session-based authentication.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://developer.csod.com/api-catalog",
+  "rate_limits": "Generally 100 requests per minute per client, though specific limits vary by API endpoint and environment tier.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Heavy fragmentation between legacy SOAP services and modern RESTful APIs leads to inconsistent data structures.",
+    "Strict throttling and rate limiting require the implementation of robust retry logic and error handling in n8n.",
+    "Custom fields are highly prevalent in Cornerstone environments, requiring manual mapping and discovery of internal field IDs."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "Environment Base URL (e.g., https://[corp].csod.com)",
+    "API User account with appropriate security role permissions"
+  ],
+  "operations_available": [
+    "Get User/Employee Details",
+    "Retrieve Learning Transcripts",
+    "Search Course Catalog",
+    "Update User Records",
+    "Manage Certifications and Training"
+  ],
+  "similar_integrations": [
+    "Workday",
+    "BambooHR",
+    "SAP SuccessFactors"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration must be built using the HTTP Request node. The workflow should start with a node to fetch the OAuth token from the STS endpoint. This token should be stored in a variable or passed to subsequent nodes. Manual pagination logic is required as Cornerstone uses 'pageNumber' and 'pageSize' parameters rather than link headers.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "The integration must be built using the HTTP Request node. The workflow should start with a node to fetch the OAuth token from the STS endpoint. This token should be stored in a variable or passed to subsequent nodes. Manual pagination logic is required as Cornerstone uses 'pageNumber' and 'pageSize' parameters rather than link headers."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,65 @@
+{
+  "integration": "Surescripts",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:43.757Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Surescripts",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "mTLS (Mutual TLS) and OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Mutual TLS (mTLS) with X.509 certificates for the transport layer. Newer FHIR-based APIs use OAuth 2.0 on top of mTLS. n8n must be configured to provide client certificates in the HTTP Request node.",
+  "api_quality": "good",
+  "api_documentation_url": "https://surescripts.com/developer-portal/",
+  "rate_limits": "Tiered based on service level agreement; typically high-volume but strictly enforced per endpoint.",
+  "complexity_score": 9,
+  "complexity_tier": "complex",
+  "estimated_hours": 40,
+  "webhook_support": true,
+  "gotchas": [
+    "Requires a rigorous formal certification and onboarding process before production access is granted.",
+    "Data formats are often legacy NCPDP SCRIPT (XML) or HL7 FHIR, requiring significant transformation logic.",
+    "mTLS implementation in n8n requires the environment to have access to the private key and certificate files."
+  ],
+  "client_must_provide": [
+    "Surescripts Partner/Vendor ID",
+    "X.509 Client Certificates and Private Keys",
+    "OAuth 2.0 Client Credentials",
+    "Whitelisted Static IP addresses for the n8n instance"
+  ],
+  "operations_available": [
+    "Medication History Retrieval",
+    "E-Prescribing (NewRx/CancelRx)",
+    "Eligibility Verification",
+    "Clinical Messaging (Direct)",
+    "Patient Discovery"
+  ],
+  "similar_integrations": [
+    "DrChrono",
+    "HealthGorilla",
+    "Awell"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will rely heavily on the HTTP Request node. Because Surescripts is a healthcare network, it does not offer a standard 'Public API' for self-service. The developer must handle complex XML/NCPDP parsing or FHIR JSON structures. The mTLS requirement is the primary technical hurdle for n8n, often requiring the certificates to be mounted in the n8n Docker container or handled via a proxy.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 9,
+    "tier": "complex",
+    "estimated_hours": 40
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 40,
+    "rationale": "Integration will rely heavily on the HTTP Request node. Because Surescripts is a healthcare network, it does not offer a standard 'Public API' for self-service. The developer must handle complex XML/NCPDP parsing or FHIR JSON structures. The mTLS requirement is the primary technical hurdle for n8n, often requiring the certificates to be mounted in the n8n Docker container or handled via a proxy."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

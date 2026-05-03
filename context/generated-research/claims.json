@@ -1,0 +1,65 @@
+{
+  "integration": "Claims",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:05:27.115Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Claims (Insurance Management)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 with Client Credentials",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires Client ID and Client Secret to obtain a Bearer token. Some legacy systems may use static API Keys or SOAP-based WS-Security.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.claimsforce.com/",
+  "rate_limits": "100 requests per minute per organization",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Complex nested JSON objects for loss details and claimant information",
+    "Strict state machine transitions (e.g., cannot move from 'Closed' to 'In Progress' without specific permissions)",
+    "Binary data handling for claim photos and PDF reports requires multi-part form data"
+  ],
+  "client_must_provide": [
+    "API Base URL (Environment specific)",
+    "Client ID",
+    "Client Secret",
+    "Scope permissions for claims:read and claims:write"
+  ],
+  "operations_available": [
+    "Create New Claim",
+    "Update Claim Status",
+    "Add Note to Claim",
+    "Upload Evidence/Attachments",
+    "Retrieve Claimant History"
+  ],
+  "similar_integrations": [
+    "ServiceNow",
+    "Jira Service Management",
+    "Salesforce"
+  ],
+  "confidence": 0.8,
+  "research_notes": "Integration will rely heavily on the HTTP Request node. Developers will need to manually define the JSON body for claim creation as schemas are often industry-specific (ACORD standards). Webhook registration is typically handled via API (POST /webhooks) rather than a UI, requiring a one-time setup workflow.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will rely heavily on the HTTP Request node. Developers will need to manually define the JSON body for claim creation as schemas are often industry-specific (ACORD standards). Webhook registration is typically handled via API (POST /webhooks) rather than a UI, requiring a one-time setup workflow."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

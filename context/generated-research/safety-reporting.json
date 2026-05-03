@@ -1,0 +1,64 @@
+{
+  "integration": "Safety Reporting",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:56.244Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Safety Reporting (SafetyReports.com)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is typically handled via a custom header (e.g., X-API-KEY) or a Bearer token generated within the SafetyReports administrative dashboard.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://api.safetyreports.com/help",
+  "rate_limits": "Typically limited to 60 requests per minute, though specific limits depend on the subscription tier and endpoint.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Documentation is often restricted to active customers and may require a login to view the full Swagger/OpenAPI spec.",
+    "The API returns deeply nested JSON for inspection data which requires significant use of the 'Item Lists' or 'Code' node in n8n for flattening.",
+    "PDF generation for reports is often an asynchronous process, requiring a polling logic to check if the file is ready for download."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Company ID",
+    "API Endpoint URL (Production vs Sandbox environment)"
+  ],
+  "operations_available": [
+    "Get Inspection Reports",
+    "Submit New Observation",
+    "List Employees/Users",
+    "Download Inspection PDF",
+    "Retrieve Checklist Templates"
+  ],
+  "similar_integrations": [
+    "SafetyCulture (iAuditor)",
+    "MaintainX",
+    "SiteDocs"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation will rely heavily on the HTTP Request node. Because the data structure for safety inspections is highly variable based on custom forms, the developer will need to perform manual mapping of JSON fields. Webhooks can be configured to trigger n8n workflows when a new report is submitted, but these may need to be registered via an API call if not available in the UI.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation will rely heavily on the HTTP Request node. Because the data structure for safety inspections is highly variable based on custom forms, the developer will need to perform manual mapping of JSON fields. Webhooks can be configured to trigger n8n workflows when a new report is submitted, but these may need to be registered via an API call if not available in the UI."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

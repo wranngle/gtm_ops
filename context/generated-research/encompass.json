@@ -1,0 +1,65 @@
+{
+  "integration": "Encompass",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:06.547Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Encompass",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials or Resource Owner Password Credentials)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a Client ID and Client Secret from the ICE Mortgage Technology Developer Portal. Authentication involves a POST request to the /oauth2/v1/token endpoint to retrieve a Bearer token, which must be manually refreshed or handled via a sub-workflow in n8n.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.icemortgagetechnology.com/docs",
+  "rate_limits": "Typically 10-20 requests per second depending on the specific API endpoint and the organization's tier.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Loan objects are extremely large and deeply nested; fetching full loan data can lead to memory issues in n8n if not filtered.",
+    "The API requires an 'Encompass-Instance-ID' header in addition to the Bearer token for all requests.",
+    "Webhooks must be registered via API and require a valid HTTPS endpoint with specific handshake responses."
+  ],
+  "client_must_provide": [
+    "API Client ID",
+    "API Client Secret",
+    "Encompass Instance ID",
+    "API User Credentials (Username/Password)"
+  ],
+  "operations_available": [
+    "Get Loan Details",
+    "Update Loan Data",
+    "Create New Loan",
+    "Retrieve Pipeline View",
+    "Manage Webhook Subscriptions"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "Microsoft Dynamics 365",
+    "HubSpot"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration requires using the HTTP Request node for all operations. A dedicated 'Auth' sub-workflow is recommended to handle token generation and caching. Users should utilize the 'Field Filters' query parameter in the Encompass API to limit the size of the JSON response to only necessary loan fields.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration requires using the HTTP Request node for all operations. A dedicated 'Auth' sub-workflow is recommended to handle token generation and caching. Users should utilize the 'Field Filters' query parameter in the Encompass API to limit the size of the JSON response to only necessary loan fields."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

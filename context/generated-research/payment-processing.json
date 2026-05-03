@@ -1,0 +1,65 @@
+{
+  "integration": "Payment processing",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T05:11:17.745Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Payment processing",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key (X-API-Key)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires generating a Web Service (WS) user and an associated API Key within the merchant's management dashboard (e.g., Adyen Customer Area). The key must be passed in the 'X-API-Key' header for all requests.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://docs.adyen.com/api-explorer/",
+  "rate_limits": "Varies by merchant tier; typically 10-50 requests per second (RPS) for standard accounts.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhook security requires manual HMAC SHA256 signature verification in a Code node to ensure payload integrity.",
+    "Live API calls require a unique, account-specific URL prefix (e.g., [random-string]-[merchant-account-name]) which differs from the test environment.",
+    "Idempotency keys (Idempotency-Key header) are critical to prevent duplicate transactions during network retries."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Merchant Account Name",
+    "Live Endpoint Prefix",
+    "Webhook HMAC Key"
+  ],
+  "operations_available": [
+    "Create Payment (/payments)",
+    "Refund Payment (/payments/{pspReference}/refunds)",
+    "Capture Authorization (/payments/{pspReference}/captures)",
+    "List Payment Methods (/paymentMethods)",
+    "Cancel Payment (/payments/{pspReference}/cancels)"
+  ],
+  "similar_integrations": [
+    "Stripe",
+    "PayPal",
+    "Square"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Since no native node exists, the integration must be built using the HTTP Request node. Adyen was used as the reference model for this analysis. The most complex part of the integration is the webhook listener, which requires a 'Code' node to validate the HMAC signature against the raw body before processing payment notifications.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Since no native node exists, the integration must be built using the HTTP Request node. Adyen was used as the reference model for this analysis. The most complex part of the integration is the webhook listener, which requires a 'Code' node to validate the HMAC signature against the raw body before processing payment notifications."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

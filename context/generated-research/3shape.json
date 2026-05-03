@@ -1,0 +1,65 @@
+{
+  "integration": "3Shape",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:06:23.742Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "3Shape",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (OpenID Connect)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires registration in the 3Shape Developer Portal to obtain Client ID and Secret. Uses OpenID Connect flow with specific scopes for clinical or lab data access.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.3shape.com/",
+  "rate_limits": "Rate limits are tier-based and defined in partner agreements; typically 1,000 to 5,000 requests per hour depending on the specific API (Communicate vs. Unite).",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Handling large binary 3D scan files (STL/DCM) can exceed n8n memory limits if not streamed or handled via external storage.",
+    "Access to production environments often requires a formal partnership review and security certification.",
+    "Data privacy compliance (HIPAA/GDPR) is strictly enforced, requiring careful handling of PII in workflow logs."
+  ],
+  "client_must_provide": [
+    "3Shape Developer Portal credentials",
+    "Client ID and Client Secret",
+    "Approved Redirect URIs",
+    "Production API Key/Subscription Key"
+  ],
+  "operations_available": [
+    "Retrieve case metadata and status",
+    "Download 3D scan files (STL, PLY, DCM)",
+    "Upload CAD/CAM design files",
+    "List patient records",
+    "Subscribe to case status change webhooks"
+  ],
+  "similar_integrations": [
+    "Box",
+    "Amazon S3",
+    "Google Drive"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the HTTP Request node configured for OAuth2. Since 3Shape deals with large 3D files, the workflow should ideally use the 'Always Output Data' or 'Stream' options if available, or move files directly to cloud storage (S3/Azure) rather than processing them in-memory. Webhooks are configured via the Developer Portal and require a public-facing n8n URL.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration requires the HTTP Request node configured for OAuth2. Since 3Shape deals with large 3D files, the workflow should ideally use the 'Always Output Data' or 'Stream' options if available, or move files directly to cloud storage (S3/Azure) rather than processing them in-memory. Webhooks are configured via the Developer Portal and require a public-facing n8n URL."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

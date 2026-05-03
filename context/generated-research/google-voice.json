@@ -1,0 +1,63 @@
+{
+  "integration": "Google Voice",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:24.895Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Google Voice",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Google Cloud Console project setup with the Google Voice API enabled. Authentication is only available for Google Workspace accounts; consumer (@gmail.com) accounts have no official API access.",
+  "api_quality": "poor",
+  "api_documentation_url": "https://developers.google.com/admin-sdk/voice",
+  "rate_limits": "Standard Google API quotas apply, typically 1,500 requests per 100 seconds per project.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "The API is strictly for administrative management (provisioning numbers, users, and sites) and does not support sending/receiving SMS or making calls programmatically.",
+    "No official API exists for personal/consumer Google Voice accounts.",
+    "Lack of webhook support means incoming messages or calls cannot be easily triggered in n8n."
+  ],
+  "client_must_provide": [
+    "Google Workspace Admin credentials",
+    "Google Cloud Project Client ID and Secret",
+    "OAuth2 Scopes for Voice Admin API"
+  ],
+  "operations_available": [
+    "List and assign phone numbers",
+    "Manage user locations and sites",
+    "Configure desk phone profiles",
+    "Batch assign numbers to users"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Vonage",
+    "Telnyx"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Integration via HTTP Request node is only feasible for Workspace administrative tasks. Since there is no programmatic messaging API, users looking for SMS/Call automation should be redirected to Twilio or similar services which have native n8n nodes and robust APIs.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration via HTTP Request node is only feasible for Workspace administrative tasks. Since there is no programmatic messaging API, users looking for SMS/Call automation should be redirected to Twilio or similar services which have native n8n nodes and robust APIs."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

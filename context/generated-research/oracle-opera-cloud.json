@@ -1,0 +1,66 @@
+{
+  "integration": "Oracle Opera Cloud",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:42:07.875Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Oracle Opera Cloud",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 with Application Key (OHIP)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Oracle Hospitality Integration Platform (OHIP) credentials. Authentication involves a multi-step process: obtaining an OAuth 2.0 Bearer token using Client ID/Secret, which must then be sent alongside a mandatory 'x-app-key' header in all REST requests.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.oracle.com/hospitality/",
+  "rate_limits": "Rate limits are enforced by the Oracle Hospitality Integration Platform (OHIP) and vary based on the specific API tier and the hotel's subscription level.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "The API uses the OpenTravel Alliance (OTA) standard, which results in extremely verbose and deeply nested JSON structures.",
+    "Access requires an active OHIP subscription and developer portal approval, which can take time to provision.",
+    "Webhooks (Business Events) are managed via a Streaming API that may require separate configuration in the Oracle Cloud console."
+  ],
+  "client_must_provide": [
+    "OHIP Developer Portal Access",
+    "Client ID and Client Secret",
+    "Application Key (x-app-key)",
+    "Opera Cloud Environment Base URL",
+    "Property ID (Hotel Code)"
+  ],
+  "operations_available": [
+    "Fetch Reservations (GET /res/v1/reservations)",
+    "Create Guest Profile (POST /crm/v1/profiles)",
+    "Post Room Charges (POST /fof/v1/hotels/{id}/charges)",
+    "Check Room Status (GET /hsk/v1/hotels/{id}/rooms)",
+    "Update Housekeeping (PUT /hsk/v1/hotels/{id}/rooms/status)"
+  ],
+  "similar_integrations": [
+    "Mews",
+    "Cloudbeds",
+    "Guesty"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration must be built using the HTTP Request node. A dedicated workflow or 'Execute Workflow' node is recommended to handle the OAuth 2.0 token refresh logic, as the token must be paired with the static x-app-key. Data transformation will be heavy due to the OTA-compliant XML-to-JSON conversion used by Oracle.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration must be built using the HTTP Request node. A dedicated workflow or 'Execute Workflow' node is recommended to handle the OAuth 2.0 token refresh logic, as the token must be paired with the static x-app-key. Data transformation will be heavy due to the OTA-compliant XML-to-JSON conversion used by Oracle."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

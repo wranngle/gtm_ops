@@ -1,0 +1,63 @@
+{
+  "integration": "Yelp",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:35.936Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Yelp",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key (Bearer Token)",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is handled via a single API Key passed in the HTTP Header as 'Authorization: Bearer <API_KEY>'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.yelp.com/developers/documentation/v3",
+  "rate_limits": "5,000 requests per 24-hour period for the standard Fusion API tier.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": false,
+  "gotchas": [
+    "The Reviews endpoint only returns the 3 most recent review snippets, not the full review history.",
+    "Search results are capped at a maximum of 1,000 total businesses per query using the offset parameter.",
+    "Strict Terms of Use regarding data caching; data must be refreshed frequently and cannot be stored permanently."
+  ],
+  "client_must_provide": [
+    "Yelp Fusion API Key",
+    "App Client ID"
+  ],
+  "operations_available": [
+    "Business Search",
+    "Business Details",
+    "Business Reviews",
+    "Business Match",
+    "Phone Search"
+  ],
+  "similar_integrations": [
+    "Google Maps",
+    "Foursquare",
+    "Hunter"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Implementation requires the HTTP Request node. Users must create a 'Header Auth' credential in n8n with the name 'Authorization' and value 'Bearer YOUR_API_KEY'. Most endpoints use GET requests with query parameters for filtering by location, category, or price.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Implementation requires the HTTP Request node. Users must create a 'Header Auth' credential in n8n with the name 'Authorization' and value 'Bearer YOUR_API_KEY'. Most endpoints use GET requests with query parameters for filtering by location, category, or price."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

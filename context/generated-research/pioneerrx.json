@@ -1,0 +1,65 @@
+{
+  "integration": "PioneerRx",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:33:52.624Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "PioneerRx",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Authentication typically requires a partner-level API key or OAuth 2.0 credentials. Access is highly restricted and usually requires a Business Associate Agreement (BAA) and specific pharmacy-level authorization.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://www.pioneerrx.com/web/api-integration/",
+  "rate_limits": "Not publicly disclosed; typically governed by partner agreements and specific pharmacy server capacity.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict HIPAA compliance requirements mean data cannot be processed on n8n Cloud without specific legal agreements; self-hosting is recommended.",
+    "Documentation is gated and requires an active partnership or developer account to access full schemas.",
+    "IP whitelisting is frequently required to communicate with the pharmacy's local or cloud-hosted database."
+  ],
+  "client_must_provide": [
+    "API Credentials (Client ID/Secret or API Key)",
+    "Pharmacy NPI or Store ID",
+    "Developer Portal Access",
+    "Signed BAA for data processing"
+  ],
+  "operations_available": [
+    "Retrieve Patient Records",
+    "Check Prescription Fill Status",
+    "Access Medication History",
+    "Sync Patient Contact Information",
+    "Query Pharmacy Inventory"
+  ],
+  "similar_integrations": [
+    "DrChrono",
+    "Acuity Scheduling",
+    "Salesforce Health Cloud"
+  ],
+  "confidence": 0.8,
+  "research_notes": "Integration must be handled via the HTTP Request node. Because PioneerRx is a Pharmacy Management System (PMS), the API is often focused on the RxLocal patient engagement side or direct database integration. Developers will need to handle complex JSON structures and ensure all data at rest and in transit meets healthcare security standards.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration must be handled via the HTTP Request node. Because PioneerRx is a Pharmacy Management System (PMS), the API is often focused on the RxLocal patient engagement side or direct database integration. Developers will need to handle complex JSON structures and ensure all data at rest and in transit meets healthcare security standards."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

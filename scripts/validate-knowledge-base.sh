@@ -8,8 +8,8 @@ required_files=(
   "AGENTS.md"
   ".agents/AGENTS.md"
   "ARCHITECTURE.md"
-  "WORKFLOW.md"
   "README.md"
+  "DESIGN.md"
   "CODE_OF_CONDUCT.md"
   "CONTRIBUTING.md"
   "LICENSE"
@@ -19,113 +19,18 @@ required_files=(
   ".github/ISSUE_TEMPLATE/bug_report.yml"
   ".github/ISSUE_TEMPLATE/feature_request.yml"
   ".github/ISSUE_TEMPLATE/config.yml"
-  "demo/cassette.tape"
-  "scripts/hero.sh"
-  "scripts/bin/llm.sh"
-  "scripts/symphony.sh"
-  "scripts/symphony-follow-up.sh"
-  "scripts/symphony-review-packet.sh"
-  "scripts/symphony-pr-shepherd.sh"
-  "tests/symphony-completion-helpers.sh"
   "docs/index.md"
-  "docs/ORCHESTRATION.md"
-  "docs/design-docs/index.md"
-  "docs/design-docs/core-beliefs.md"
-  "docs/design-docs/agent-legibility.md"
-  "docs/design-docs/symphony-layer.md"
-  "docs/exec-plans/tech-debt-tracker.md"
-  "docs/exec-plans/active/001-build-flagship-monorepo.md"
-  "docs/exec-plans/completed/2026-04-30-harness-hydration.md"
-  "docs/exec-plans/completed/2026-04-30-symphony-hydration.md"
   "docs/generated/README.md"
-  "docs/generated/layer-inventory.md"
   "docs/product-specs/index.md"
-  "docs/product-specs/flagship-gtm-engine.md"
-  "docs/references/dotfiles-hydration.md"
-  "docs/references/harness-engineering.md"
-  "docs/references/layered-domain-architecture.md"
-  "docs/references/doc-gardener.md"
-  "docs/references/local-observability.md"
   "docs/references/README.md"
-  "docs/references/streamlit-llms.txt"
-  "docs/references/openai_harness_engineering_original_spec.txt"
-  "docs/references/openai_symphony_original_spec.txt"
-  "docs/references/openai_symphony_github.txt"
-  "docs/references/openai_symphony_harness_engineering_stack_diagrams_explained.txt"
-  "docs/references/OAI_Harness_engineering_Codex_drives_the_app_with_Chrome_DevTools_MCP_to_validate_its_work_desktop-dark.png"
-  "docs/references/OAI_Harness_engineering_Giving_Codex_a_full_observability_stack_desktop-dark.png"
-  "docs/references/OAI_Harness_engineering_Layered_domain_architecture_with_explicit_cross-cutting_boundries_desktop-dark.png"
-  "docs/references/OAI_Harness_engineering_The_limits_of_agent_knowledge_desktop-dark.png"
-  "docs/references/Coworking-Desktop-Dark-Symphony__1_.png"
-  "docs/references/BeforeAndAfter-Desktop-Dark-Symphony.png"
-  "docs/exec-plans/active/002-harness-machinery.md"
-  "docs/exec-plans/active/003-stack-canonicalization.md"
-  "docs/references/canonical-stack.md"
+  "docs/references/layered-domain-architecture.md"
   ".mise.toml"
-  "tools/edge-mcp/edge-debug-launch.sh"
-  "tools/edge-mcp/install-edge-shortcut.ps1"
-  "tools/edge-mcp/install-mcp.sh"
-  "tools/edge-mcp/filter-unsafe-tools.mjs"
-  "tools/edge-mcp/launch-mcp.sh"
-  "tools/edge-mcp/mcp.json"
-  "tools/edge-mcp/README.md"
-  "tools/edge-mcp/windows/edge-mcp-firewall.cmd"
-  "tools/edge-mcp/windows/edge-mcp-portproxy.cmd"
-  "tools/edge-mcp/windows/setup-elevated.sh"
-  "tools/edge-mcp/smoke/smoke.mjs"
-  "tools/edge-mcp/smoke/LAST_RUN.md"
-  "tools/edge-mcp/smoke/validate-last-run.mjs"
-  "docs/references/edge-devtools-mcp.md"
-  "tools/observability/docker-compose.yml"
-  "tools/observability/vector.yaml"
-  "tools/observability/README.md"
-  "tools/observability/test-namespace-isolation.sh"
-  "tools/ops-console/ops-console.sh"
-  "tools/ops-console/smoke.sh"
   "scripts/lint-layered-architecture.sh"
   "scripts/lint-structured-logging.sh"
   "scripts/lint-naming-conventions.sh"
   "scripts/lint-file-size.sh"
   "scripts/lint-time-in-providers.sh"
   "scripts/lint-json-parse-boundary.sh"
-  "scripts/generate-quality-score-history.sh"
-  "docs/generated/quality-score-history.md"
-  "scripts/generate-layer-inventory.sh"
-  "scripts/gardener.sh"
-  ".github/workflows/gardener.yml"
-  "packages/agent-evals/README.md"
-  "packages/agent-evals/package.json"
-  "packages/agent-evals/src/types/index.ts"
-  "packages/agent-evals/src/config/index.ts"
-  "packages/agent-evals/src/repo/index.ts"
-  "packages/agent-evals/src/providers/index.ts"
-  "packages/agent-evals/src/providers/metrics.ts"
-  "packages/agent-evals/src/service/index.ts"
-  "packages/agent-evals/src/runtime/cli.ts"
-  "packages/agent-evals/src/ui/index.ts"
-  "packages/agent-evals/tests/structure.test.ts"
-  "packages/agent-evals/tests/lint-coverage.test.ts"
-  "apps/ops-console/main.py"
-  "apps/ops-console/domain.py"
-  "apps/ops-console/pyproject.toml"
-  "apps/ops-console/README.md"
-  "apps/ops-console/fixtures/evaluation-results.json"
-  "apps/ops-console/tests/test_domain.py"
-  "docs/DESIGN.md"
-  "docs/FRONTEND.md"
-  "docs/PLANS.md"
-  "docs/PRODUCT_SENSE.md"
-  "docs/QUALITY_SCORE.md"
-  "docs/RELIABILITY.md"
-  "docs/SECURITY.md"
-  ".symphony/issues/in_progress/.gitkeep"
-  ".symphony/issues/human_review/.gitkeep"
-  ".symphony/issues/done/.gitkeep"
-  ".symphony/issues/cancelled/.gitkeep"
-  ".symphony/issues/duplicate/.gitkeep"
-  ".symphony/logs/.gitkeep"
-  ".symphony/workspaces/.gitkeep"
-  ".symphony/runtime/.gitkeep"
 )
 
 missing=0
@@ -135,16 +40,6 @@ for path in "${required_files[@]}"; do
     missing=1
   fi
 done
-
-# WGTE-001 must exist somewhere under .symphony/issues/ but its specific
-# state directory (todo/doing/done/human_review/cancelled) is fluid as
-# the dogfood loop or operators move it through the lifecycle. Hardcoding
-# the todo/ path made any non-todo state look like missing knowledge.
-if ! find .symphony/issues -name 'WGTE-001.md' -type f -print -quit | grep -q .; then
-  printf 'missing required knowledge file: .symphony/issues/**/WGTE-001.md (in any state)\n' >&2
-  missing=1
-fi
-
 if (( missing )); then
   exit 1
 fi
@@ -157,15 +52,8 @@ fi
 
 required_agent_links=(
   "ARCHITECTURE.md"
-  "docs/PLANS.md"
-  "docs/QUALITY_SCORE.md"
-  "docs/RELIABILITY.md"
-  "docs/SECURITY.md"
-  "docs/exec-plans/active"
-  "WORKFLOW.md"
-  "docs/ORCHESTRATION.md"
+  "DESIGN.md"
   "docs/references/layered-domain-architecture.md"
-  "docs/references/doc-gardener.md"
 )
 
 for needle in "${required_agent_links[@]}"; do
@@ -175,165 +63,24 @@ for needle in "${required_agent_links[@]}"; do
   fi
 done
 
-placeholder_scan_targets=(
-  "SECURITY.md"
-  "CODE_OF_CONDUCT.md"
-  "CONTRIBUTING.md"
-  "README.md"
-  ".github/PULL_REQUEST_TEMPLATE.md"
-  ".github/ISSUE_TEMPLATE/config.yml"
-  "demo/cassette.tape"
-  "WORKFLOW.md"
-  "docs"
-  .symphony/issues/todo/*.md
-)
-
-placeholder_scan_tmp="$(mktemp)"
-trap 'rm -f "$placeholder_scan_tmp" "${stack_neutral_scan_tmp:-}"' EXIT
-if grep -R -n -E 'REPO_URL_NOT_DETECTED|bot@gemini.com|Replace this with a real demo|Created `.github/PULL_REQUEST_TEMPLATE.md`' \
-  "${placeholder_scan_targets[@]}" >"$placeholder_scan_tmp"; then
-  cat "$placeholder_scan_tmp" >&2
-  printf 'placeholder text from primitive hydration must be replaced before commit\n' >&2
-  exit 1
-fi
-
-stack_neutral_scan_targets=(
-  "AGENTS.md"
-  ".agents/AGENTS.md"
-  "ARCHITECTURE.md"
-  "WORKFLOW.md"
-  "README.md"
-  "CODE_OF_CONDUCT.md"
-  "CONTRIBUTING.md"
-  "LICENSE"
-  "SECURITY.md"
-  ".github/PULL_REQUEST_TEMPLATE.md"
-  ".github/dependabot.yml"
-  ".github/ISSUE_TEMPLATE/bug_report.yml"
-  ".github/ISSUE_TEMPLATE/feature_request.yml"
-  "demo/cassette.tape"
-  "scripts/hero.sh"
-  "scripts/bin/llm.sh"
-  "scripts/symphony.sh"
-  "scripts/symphony-follow-up.sh"
-  "scripts/symphony-review-packet.sh"
-  "scripts/symphony-pr-shepherd.sh"
-  "tests/symphony-completion-helpers.sh"
-  "scripts/lint-layered-architecture.sh"
-  "scripts/gardener.sh"
-  "scripts/validate-knowledge-base.sh"
-  "scripts/generate-layer-inventory.sh"
-  "docs/index.md"
-  "docs/ORCHESTRATION.md"
-  "docs/DESIGN.md"
-  "docs/FRONTEND.md"
-  "docs/PLANS.md"
-  "docs/PRODUCT_SENSE.md"
-  "docs/QUALITY_SCORE.md"
-  "docs/RELIABILITY.md"
-  "docs/SECURITY.md"
-  "docs/design-docs"
-  "docs/exec-plans/active/003-stack-canonicalization.md"
-  "docs/generated"
-  "docs/references/dotfiles-hydration.md"
-  "docs/references/harness-engineering.md"
-  "docs/references/layered-domain-architecture.md"
-  "docs/references/doc-gardener.md"
-  "docs/references/local-observability.md"
-  "docs/references/README.md"
-  "docs/references/streamlit-llms.txt"
-  "docs/references/edge-devtools-mcp.md"
-  "tools/edge-mcp/README.md"
-  "tools/edge-mcp/edge-debug-launch.sh"
-  "tools/edge-mcp/install-edge-shortcut.ps1"
-  "tools/edge-mcp/install-mcp.sh"
-  "tools/edge-mcp/filter-unsafe-tools.mjs"
-  "tools/edge-mcp/launch-mcp.sh"
-  "tools/edge-mcp/mcp.json"
-  "tools/edge-mcp/smoke"
-  "tools/edge-mcp/windows"
-  "tools/observability/README.md"
-  "tools/observability/docker-compose.yml"
-  "tools/observability/vector.yaml"
-  "tools/observability/test-namespace-isolation.sh"
-)
-
-stack_neutral_scan_tmp="$(mktemp)"
-stack_neutral_pattern='gtm''_ops|Eleven''Labs|GTM ''Ops'
-if find "${stack_neutral_scan_targets[@]}" \
-  \( -path '*/_build/*' -o -path '*/deps/*' -o -path '*/node_modules/*' -o -path '*/.git/*' -o -path '*/__pycache__/*' -o -path '*/.pytest_cache/*' \) -prune \
-  -o -type f \
-  \( -name '*.md' -o -name '*.txt' -o -name '*.sh' -o -name '*.ex' -o -name '*.exs' -o -name '*.js' -o -name '*.mjs' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' -o -name '*.toml' -o -name '*.ps1' -o -name '*.cmd' -o -name '*.tape' \) \
-  -print0 \
-  | xargs -0 grep -n -E "$stack_neutral_pattern" >"$stack_neutral_scan_tmp"; then
-  cat "$stack_neutral_scan_tmp" >&2
-  printf 'stack-level artifacts must stay project-name-agnostic; update prose or narrow the artifact boundary in docs/references/canonical-stack.md\n' >&2
-  exit 1
-fi
-
-if ! grep -Fq 'command: scripts/bin/llm.sh' WORKFLOW.md; then
-  printf 'WORKFLOW.md must keep scripts/bin/llm.sh as the default codex-independent agent command (now under agent.command)\n' >&2
-  exit 1
-fi
-if ! grep -Eq '^tracker:[[:space:]]*$' WORKFLOW.md; then
-  printf 'WORKFLOW.md must use the Symphony spec nested schema (top-level tracker:, polling:, workspace:, hooks:, agent:, codex:)\n' >&2
-  exit 1
-fi
-
-if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-  tools/observability/test-namespace-isolation.sh
-else
-  printf 'skip: docker compose is not available; observability namespace isolation test not run\n' >&2
-fi
-
-if ! grep -Fq '.symphony/workspaces/*' .gitignore || ! grep -Fq '.symphony/logs/*.jsonl' .gitignore; then
-  printf '.gitignore must keep Symphony workspaces and logs out of git\n' >&2
-  exit 1
-fi
-
-if ! scripts/lint-layered-architecture.sh; then
-  printf 'layered-architecture lint failed; fix the import-direction violations above\n' >&2
-  exit 1
-fi
-
-if ! scripts/lint-structured-logging.sh; then
-  printf 'structured-logging lint failed; route log emission through the package logger provider\n' >&2
-  exit 1
-fi
-
-if ! scripts/lint-naming-conventions.sh; then
-  printf 'naming-conventions lint failed; align schema/type identifiers with the canonical pair\n' >&2
-  exit 1
-fi
-
-if ! scripts/lint-file-size.sh; then
-  printf 'file-size lint failed; split files exceeding the hard cap\n' >&2
-  exit 1
-fi
-
-if ! scripts/lint-time-in-providers.sh; then
-  printf 'time-in-providers lint failed; route wall-clock + random sampling through providers/\n' >&2
-  exit 1
-fi
-
-if ! scripts/lint-json-parse-boundary.sh; then
-  printf 'json-parse-boundary lint failed; keep JSON.parse() in repo/, config/, or providers/ only\n' >&2
-  exit 1
-fi
-
-if ! scripts/generate-layer-inventory.sh --check; then
-  printf 'layer-inventory generated artifact is stale; run scripts/generate-layer-inventory.sh\n' >&2
-  exit 1
-fi
-
-if ! tests/symphony-completion-helpers.sh; then
-  printf 'symphony completion helper smoke failed; fix follow-up/review-packet/pr-shepherd helper behavior\n' >&2
-  exit 1
-fi
+# Run lint suite. Each lint script enforces one architectural rule.
+for lint in \
+  scripts/lint-layered-architecture.sh \
+  scripts/lint-structured-logging.sh \
+  scripts/lint-naming-conventions.sh \
+  scripts/lint-file-size.sh \
+  scripts/lint-time-in-providers.sh \
+  scripts/lint-json-parse-boundary.sh
+do
+  if ! "$lint"; then
+    printf '%s failed\n' "$lint" >&2
+    exit 1
+  fi
+done
 
 # Markdown link resolution: owned Markdown links of the form ](path) must
-# resolve to a file/directory or an allowed external URL. Generated artifacts,
-# upstream source snapshots, and image references are intentionally excluded.
+# resolve to a file/directory or an allowed external URL. Generated artifacts
+# and image references are intentionally excluded.
 markdown_link_failed=0
 while IFS=$'\t' read -r doc target; do
   [[ -z "$target" ]] && continue
@@ -370,8 +117,8 @@ while IFS=$'\t' read -r doc target; do
     markdown_link_failed=1
   fi
 done < <(
-  find AGENTS.md .agents/AGENTS.md README.md ARCHITECTURE.md WORKFLOW.md SECURITY.md CONTRIBUTING.md docs \
-    \( -path 'docs/generated/*' -o -path 'docs/references/openai_*.txt' -o -path 'docs/references/*.png' \) -prune \
+  find AGENTS.md .agents/AGENTS.md README.md ARCHITECTURE.md DESIGN.md SECURITY.md CONTRIBUTING.md docs \
+    \( -path 'docs/generated/*' -o -path 'docs/references/*.png' \) -prune \
     -o -type f -name '*.md' -print 2>/dev/null \
     | sort \
     | while IFS= read -r doc; do
@@ -383,60 +130,6 @@ done < <(
       done
 )
 if (( markdown_link_failed )); then
-  exit 1
-fi
-
-# docs/index.md coverage: every top-level docs/*.md (excluding index itself)
-# and every key docs subdirectory named by AGENTS.md must be mentioned in
-# docs/index.md so nothing goes orphaned.
-index_missing=0
-while IFS= read -r doc; do
-  base="$(basename "$doc")"
-  [[ "$base" == "index.md" ]] && continue
-  if ! grep -Fq "$base" docs/index.md; then
-    printf 'docs/index.md does not mention %s; add a link or remove the file\n' "$base" >&2
-    index_missing=1
-  fi
-done < <(find docs -maxdepth 1 -type f -name '*.md')
-if (( index_missing )); then
-  exit 1
-fi
-
-required_index_entries=(
-  "design-docs"
-  "exec-plans"
-  "generated"
-  "product-specs"
-  "references"
-)
-
-for entry in "${required_index_entries[@]}"; do
-  if ! grep -Fq "$entry" docs/index.md; then
-    printf 'docs/index.md does not mention docs/%s; add an index entry or remove the directory\n' "$entry" >&2
-    index_missing=1
-  fi
-done
-if (( index_missing )); then
-  exit 1
-fi
-
-# Design-doc metadata: every design doc must declare verification status and a
-# last-reviewed date so an agent can spot rotted docs without reading them in
-# full. (Per the Harness post: "verification status".)
-design_meta_failed=0
-while IFS= read -r doc; do
-  base="$(basename "$doc")"
-  [[ "$base" == "index.md" ]] && continue
-  if ! grep -Eq '^Status:[[:space:]]+(Active|Draft|Deprecated|Completed)$' "$doc"; then
-    printf '%s missing `Status: Active|Draft|Deprecated|Completed` line\n' "$doc" >&2
-    design_meta_failed=1
-  fi
-  if ! grep -Eq '^Last reviewed:[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}$' "$doc"; then
-    printf '%s missing `Last reviewed: YYYY-MM-DD` line\n' "$doc" >&2
-    design_meta_failed=1
-  fi
-done < <(find docs/design-docs -maxdepth 1 -type f -name '*.md')
-if (( design_meta_failed )); then
   exit 1
 fi
 

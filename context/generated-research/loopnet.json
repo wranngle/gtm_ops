@@ -1,0 +1,63 @@
+{
+  "integration": "LoopNet",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:25.924Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "LoopNet",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 or API Key (Enterprise Restricted)",
+  "auth_complexity": "complex",
+  "auth_notes": "LoopNet is owned by CoStar Group. API access is generally restricted to enterprise customers and requires specific provisioning through a CoStar account manager. It typically uses OAuth2 or a proprietary API key system provided upon contract signing.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://www.costar.com/products/costar-api",
+  "rate_limits": "Strictly enforced based on contract tier; typically limited by requests per minute and monthly data quotas.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "No public self-service API signup; requires direct sales contact and enterprise licensing.",
+    "Aggressive bot detection makes web scraping for data extraction nearly impossible without official API access.",
+    "Data structure is often deeply nested and may require significant transformation in n8n using Function nodes."
+  ],
+  "client_must_provide": [
+    "CoStar/LoopNet Enterprise API Credentials",
+    "Client ID and Client Secret",
+    "Developer API Key"
+  ],
+  "operations_available": [
+    "Search Commercial Listings",
+    "Retrieve Property Details",
+    "Access Market Analytics",
+    "Get Listing Photos/Media"
+  ],
+  "similar_integrations": [
+    "Zillow",
+    "Google Maps",
+    "HubSpot (for Real Estate CRM)"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration must be performed via the HTTP Request node. Because LoopNet does not provide a public API for standard users, most n8n implementations either use the CoStar API (for enterprise) or third-party data aggregators like Apify or Bridge Interactive to bridge the gap.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration must be performed via the HTTP Request node. Because LoopNet does not provide a public API for standard users, most n8n implementations either use the CoStar API (for enterprise) or third-party data aggregators like Apify or Bridge Interactive to bridge the gap."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,64 @@
+{
+  "integration": "Personal Scheduling",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-07T23:23:05.678Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Personal Scheduling",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.calendly",
+  "auth_type": "api_key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires a Personal Access Token (PAT) generated from the Calendly 'Integrations' page. Note that while n8n supports API Key, Calendly also offers OAuth2 for enterprise applications.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.calendly.com/api-docs/ZG9jOjM5MzE3MTEtY2FsZW5kbHktYXBp",
+  "rate_limits": "Standard limit is 30 requests per minute per user. Higher tiers may have increased limits.",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhooks and certain API features require a paid Calendly subscription (Standard or higher).",
+    "Calendly API v2 uses full URIs (e.g., https://api.calendly.com/users/UUID) as identifiers rather than just the UUID string, which often requires string manipulation in n8n.",
+    "The 'Invitee Created' trigger does not provide the specific answers to custom questions unless 'List Invitee' or 'Get Invitee' is called subsequently."
+  ],
+  "client_must_provide": [
+    "Calendly Personal Access Token",
+    "Calendly Account Email",
+    "Target Event Type names or UUIDs"
+  ],
+  "operations_available": [
+    "Get User Information",
+    "List Scheduled Events",
+    "List Event Types",
+    "Cancel Event",
+    "Create/Delete Webhook Subscription"
+  ],
+  "similar_integrations": [
+    "Cal.com",
+    "Acuity Scheduling",
+    "YouCanBook.me"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Calendly is the primary provider for this category in n8n. While Cal.com is a popular alternative with a native node, the baseline data specifically references the Calendly node. API v1 is deprecated; all new integrations should use v2.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "Calendly is the primary provider for this category in n8n. While Cal.com is a popular alternative with a native node, the baseline data specifically references the Calendly node. API v1 is deprecated; all new integrations should use v2."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "calendly",
+  "_is_category": true
+}

@@ -1,0 +1,63 @@
+{
+  "integration": "Translation",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:02:11.541Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Translation",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key typically passed via the 'Authorization' header as a Bearer token or a custom header like 'X-API-Key'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://libretranslate.com/docs/",
+  "rate_limits": "Varies by provider; typically 1,000 to 5,000 characters per request and 20-50 requests per minute on standard tiers.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": false,
+  "gotchas": [
+    "Large payloads may exceed the maximum request size, requiring text chunking logic within the workflow.",
+    "Source language detection often fails on very short strings (less than 10 characters).",
+    "Preserving HTML tags or Markdown formatting requires specific API parameters that vary between providers."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Base API URL",
+    "Target Language Codes (ISO 639-1)"
+  ],
+  "operations_available": [
+    "Translate Text",
+    "Detect Language",
+    "Get Supported Languages",
+    "Translate HTML/Document"
+  ],
+  "similar_integrations": [
+    "Google Translate",
+    "DeepL",
+    "Microsoft Translator"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation requires the HTTP Request node. Users must manually construct the JSON body with 'q' (text), 'source', and 'target' fields. Error handling is critical for 429 (Rate Limit) and 413 (Payload Too Large) responses.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Implementation requires the HTTP Request node. Users must manually construct the JSON body with 'q' (text), 'source', and 'target' fields. Error handling is critical for 429 (Rate Limit) and 413 (Payload Too Large) responses."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,28 @@
+{
+  "transcript_id": "tr_demo_evergreen_001",
+  "scenario": "appointment reminder confirmation",
+  "duration_seconds": 78,
+  "started_at": "2026-04-21T13:42:11Z",
+  "ended_at": "2026-04-21T13:43:29Z",
+  "agent_id": "agent_yyyy_demo",
+  "caller_phone": "+15550199",
+  "turns": [
+    { "ts": 0.0, "role": "agent", "text": "Hi, this is Riley calling from Evergreen Family Clinics with a reminder for your appointment tomorrow at 2:30 PM with Dr. Patel. Are you still able to make it?" },
+    { "ts": 7.2, "role": "caller", "text": "Hi yeah, can we do later? I have a work meeting." },
+    { "ts": 9.8, "role": "agent", "tool_call": { "name": "list_open_slots", "arguments": { "date": "2026-04-22", "provider": "patel" } } },
+    { "ts": 10.4, "role": "tool_response", "result": { "slots": ["3:30 PM", "4:00 PM", "4:30 PM"] } },
+    { "ts": 11.1, "role": "agent", "text": "Sure — I have 3:30, 4:00, or 4:30 with Dr. Patel tomorrow. Any of those work?" },
+    { "ts": 16.5, "role": "caller", "text": "4 o'clock." },
+    { "ts": 17.8, "role": "agent", "tool_call": { "name": "reschedule_appointment", "arguments": { "patient_id": "P_demo_4421", "new_time": "2026-04-22T16:00:00" } } },
+    { "ts": 18.4, "role": "tool_response", "result": { "ok": true, "confirmation_id": "RX_demo_88203" } },
+    { "ts": 19.0, "role": "agent", "text": "Done — moved to 4 PM tomorrow. You'll get a text confirmation in a few minutes. Anything else?" },
+    { "ts": 24.2, "role": "caller", "text": "Nope, thanks." },
+    { "ts": 25.0, "role": "agent", "text": "See you tomorrow at 4." }
+  ],
+  "metadata": {
+    "transcribed_by": "deepgram-nova-3",
+    "ttfb_ms": 645,
+    "end_to_first_audio_ms": 1240
+  },
+  "_demo_note": "Synthetic transcript — fictional patient, fictional clinic."
+}

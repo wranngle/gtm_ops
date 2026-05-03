@@ -1,0 +1,83 @@
+{
+  "id": "bland-hvac-001",
+  "source": {
+    "vendor": "bland",
+    "url": "https://bland.ai/case-studies/comfort-air-hvac",
+    "title": "Comfort Air HVAC: 24/7 Emergency Dispatch"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "home-services",
+    "company_size": "35 technicians, 8 dispatchers",
+    "company_type": "HVAC service company",
+    "pain_points": [
+      "After-hours emergency calls going to voicemail",
+      "Dispatchers overwhelmed during peak seasons",
+      "Average 12-minute hold times during summer",
+      "Lost $200k annually in missed emergency calls",
+      "High dispatcher turnover (40% annually)"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 3500,
+      "calls_per_day": 115,
+      "avg_call_duration_minutes": 6,
+      "staff_hours_per_month": 350
+    },
+    "systems_involved": [
+      "ServiceTitan",
+      "Google Workspace",
+      "RingCentral"
+    ],
+    "goals": [
+      "24/7 emergency call handling",
+      "Reduce hold times to under 30 seconds",
+      "Automatic technician dispatch for emergencies",
+      "Capture all after-hours revenue"
+    ],
+    "constraints": [
+      "Must integrate with ServiceTitan for dispatching",
+      "Need Spanish language support for 30% of customers"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "PlayHT",
+    "integrations": [
+      { "system_name": "ServiceTitan", "integration_type": "api", "purpose": "job creation and technician dispatch" },
+      { "system_name": "Twilio", "integration_type": "native", "purpose": "voice platform" },
+      { "system_name": "Google Calendar", "integration_type": "webhook", "purpose": "technician availability" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "monthly_cost": 1800,
+      "setup_cost": 12000,
+      "per_minute_rate": 0.08,
+      "total_cost": 33600
+    },
+    "timeline_weeks": 10,
+    "roi_achieved": {
+      "hours_saved_per_month": 280,
+      "calls_automated_percent": 72,
+      "monthly_savings": 8500,
+      "annual_savings": 102000,
+      "revenue_increase_percent": 15,
+      "payback_period_months": 4
+    },
+    "key_features": [
+      "Emergency triage and prioritization",
+      "Automatic technician dispatch",
+      "Service area verification",
+      "Appointment scheduling",
+      "Bilingual support (English/Spanish)",
+      "After-hours pricing quotes"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Excellent detail including per-minute pricing, revenue impact, and specific integration requirements",
+    "domain_tags": ["home-services", "scheduling", "after-hours", "crm-integration"],
+    "holdout": true,
+    "harvested_by": "manual-entry"
+  }
+}

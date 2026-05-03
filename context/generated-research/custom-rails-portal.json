@@ -1,0 +1,65 @@
+{
+  "integration": "Custom Rails Portal",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:09.654Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Custom Rails Portal",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key or Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Most Rails APIs utilize either a simple API Key in the headers or a Bearer Token (JWT) via gems like Devise or Doorkeeper. If the portal uses session-based auth, CSRF tokens must be handled.",
+  "api_quality": "unknown",
+  "api_documentation_url": null,
+  "rate_limits": "Dependent on server-side middleware like Rack::Attack; typically defaults to 60-100 requests per minute in production environments.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Rails 'Wrap Parameters' can cause unexpected nesting in the JSON body sent to the API.",
+    "CSRF protection may interfere with POST/PUT requests if the API is not properly scoped to skip forgery protection.",
+    "ActiveRecord errors often return a 422 Unprocessable Entity status with a specific error object structure that needs parsing."
+  ],
+  "client_must_provide": [
+    "Base API URL",
+    "API Key or Bearer Token",
+    "Swagger/OpenAPI documentation or endpoint list",
+    "Access to configure Webhook URLs in the portal admin"
+  ],
+  "operations_available": [
+    "GET /api/v1/resources (Index)",
+    "POST /api/v1/resources (Create)",
+    "GET /api/v1/resources/:id (Show)",
+    "PATCH /api/v1/resources/:id (Update)",
+    "DELETE /api/v1/resources/:id (Destroy)"
+  ],
+  "similar_integrations": [
+    "Strapi",
+    "Directus",
+    "PocketBase"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the n8n HTTP Request node. Authentication should be set up as a 'Header Auth' credential. For webhooks, the Rails application must be configured to send a POST request to the n8n Webhook URL, likely triggered by an 'after_commit' callback in the relevant Rails model.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration requires the n8n HTTP Request node. Authentication should be set up as a 'Header Auth' credential. For webhooks, the Rails application must be configured to send a POST request to the n8n Webhook URL, likely triggered by an 'after_commit' callback in the relevant Rails model."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

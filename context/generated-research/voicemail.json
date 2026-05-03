@@ -1,0 +1,65 @@
+{
+  "integration": "Voicemail",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T03:02:35.222Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Voicemail",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.gmail",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires a Google Cloud Console project with Gmail API enabled. Must configure OAuth consent screen and create credentials to obtain Client ID and Client Secret. Specific scopes like 'https://www.googleapis.com/auth/gmail.modify' are typically required.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.google.com/gmail/api/reference/rest",
+  "rate_limits": "1,000,000,000 quota units per day per project; 250 quota units per user per second (per-method costs vary, e.g., 'get' is 5 units).",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "OAuth2 tokens expire every 7 days if the Google Cloud Project is in 'Testing' mode; must set to 'Production' for long-term use.",
+    "Voicemails are typically received as attachments; n8n requires a separate 'Gmail: Get Attachment' operation to process the audio file.",
+    "Gmail Push notifications (webhooks) require Google Cloud Pub/Sub setup, which is more complex than standard polling."
+  ],
+  "client_must_provide": [
+    "Google Cloud Console access",
+    "OAuth Client ID and Client Secret",
+    "Gmail account credentials",
+    "Specific email filters or labels used by the voicemail provider"
+  ],
+  "operations_available": [
+    "Message: Get",
+    "Message: List",
+    "Attachment: Get",
+    "Message: Trash",
+    "Message: Mark as Read"
+  ],
+  "similar_integrations": [
+    "Microsoft Outlook",
+    "Twilio",
+    "RingCentral"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Voicemail integration via Gmail assumes the user is receiving voicemail-to-email notifications (common with Google Voice, Vonage, or PBX systems). The workflow usually involves filtering for these emails and downloading the audio attachment for transcription or storage.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "Voicemail integration via Gmail assumes the user is receiving voicemail-to-email notifications (common with Google Voice, Vonage, or PBX systems). The workflow usually involves filtering for these emails and downloading the audio attachment for transcription or storage."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "gmail",
+  "_is_category": true
+}

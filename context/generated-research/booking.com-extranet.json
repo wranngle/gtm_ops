@@ -1,0 +1,64 @@
+{
+  "integration": "Booking.com Extranet",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:42:39.217Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Booking.com Extranet",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Basic Auth / Machine Account",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a Connectivity Partner account or a specific Machine Account created within the Extranet. Authentication typically uses Basic Auth over HTTPS, but often requires IP whitelisting and specific XML headers.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://connectivity.booking.com/developers/",
+  "rate_limits": "Varies by partner tier; generally 100-500 requests per minute per property.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Heavy reliance on XML (OTA standard) rather than JSON for many core endpoints",
+    "Strict IP whitelisting is often enforced for API access",
+    "Becoming a certified Connectivity Partner is a lengthy legal and technical process"
+  ],
+  "client_must_provide": [
+    "Machine Account Username",
+    "Machine Account Password",
+    "Property ID (Hotel ID)",
+    "Whitelisted Server IP"
+  ],
+  "operations_available": [
+    "OTA_HotelAvailNotif (Update Availability)",
+    "OTA_HotelRateAmountNotif (Update Rates)",
+    "OTA_ResRetrieveRS (Retrieve Reservations)",
+    "OTA_HotelDescriptiveContentNotif (Update Property Details)"
+  ],
+  "similar_integrations": [
+    "Lodgify",
+    "Airbnb (via iCal/API)",
+    "HotelRunner"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration must be built using the HTTP Request node. Because the Booking.com Connectivity API is largely based on the OTA (OpenTravel Alliance) XML standard, the workflow will require 'XML to JSON' and 'JSON to XML' nodes to process data. Developers must ensure the 'Content-Type' is set to 'text/xml' and handle SOAP-like envelopes in the request body.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration must be built using the HTTP Request node. Because the Booking.com Connectivity API is largely based on the OTA (OpenTravel Alliance) XML standard, the workflow will require 'XML to JSON' and 'JSON to XML' nodes to process data. Developers must ensure the 'Content-Type' is set to 'text/xml' and handle SOAP-like envelopes in the request body."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

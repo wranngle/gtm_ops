@@ -1,0 +1,64 @@
+{
+  "integration": "Lead Source",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T01:32:11.025Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Lead Source",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication typically requires an API Key or Token passed via the HTTP Header (e.g., 'Authorization: Bearer <token>' or 'x-api-key'). Some legacy versions may use Basic Auth.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://leadsource.com/api-docs",
+  "rate_limits": "Typically 60-100 requests per minute depending on the subscription tier.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Documentation is often not public and requires an active account to access",
+    "Lead field mapping is highly dynamic and varies by campaign type",
+    "Webhook payloads may require manual parsing of nested JSON objects"
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Account ID",
+    "Campaign or Source ID"
+  ],
+  "operations_available": [
+    "Get Leads",
+    "Create Lead",
+    "Update Lead Status",
+    "List Campaigns",
+    "Search Leads by Email"
+  ],
+  "similar_integrations": [
+    "HubSpot",
+    "Salesforce",
+    "Pipedrive"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Since no native node exists, the HTTP Request node is the primary tool. Authentication should be set up as a Header Auth credential. For lead ingestion, a Webhook node should be used to receive real-time POST requests from the Lead Source platform.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Since no native node exists, the HTTP Request node is the primary tool. Authentication should be set up as a Header Auth credential. For lead ingestion, a Webhook node should be used to receive real-time POST requests from the Lead Source platform."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

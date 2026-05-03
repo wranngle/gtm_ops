@@ -1,0 +1,65 @@
+{
+  "integration": "8 instances",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:25.153Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "8x8 (8 instances)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "8x8 uses different authentication methods depending on the product (e.g., Wavecell SMS vs. Virtual Office). Most modern endpoints require an API Key passed in the '8x8-API-Key' header or a Bearer token generated via OAuth2 for administrative tasks.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.8x8.com/",
+  "rate_limits": "Varies by service; Messaging APIs typically allow 20 requests per second, while Analytics APIs are more restrictive (approx. 1 request per second).",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Documentation is fragmented between legacy Wavecell (Messaging) and 8x8 (Voice/Video) portals.",
+    "Webhook URLs for call events often need to be configured via the 8x8 Admin Console rather than the API itself.",
+    "Response formats can vary significantly between the V1 and V2 versions of their Communication APIs."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Application ID",
+    "Subdomain/Region (e.g., 'vcc-eu1')",
+    "OAuth Credentials (if using Admin APIs)"
+  ],
+  "operations_available": [
+    "Send SMS/MMS",
+    "Retrieve Call Detail Records (CDR)",
+    "List Virtual Office Users",
+    "Get Meeting Analytics",
+    "Trigger Voice Notifications"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "RingCentral",
+    "MessageBird"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration requires the HTTP Request node. For messaging, use the 'Header Auth' method with '8x8-API-Key'. For call logs, you may need to handle pagination manually as 8x8 uses a 'nextPageToken' or offset-based system depending on the endpoint.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "The integration requires the HTTP Request node. For messaging, use the 'Header Auth' method with '8x8-API-Key'. For call logs, you may need to handle pagination manually as 8x8 uses a 'nextPageToken' or offset-based system depending on the endpoint."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,65 @@
+{
+  "integration": "Cerner",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:05.834Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Cerner",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (SMART on FHIR)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires SMART on FHIR protocol implementation. This involves discovering endpoints via the .well-known/smart-configuration, handling specific FHIR scopes, and managing bearer tokens that are often tenant-specific.",
+  "api_quality": "good",
+  "api_documentation_url": "https://fhir.cerner.com/",
+  "rate_limits": "Not explicitly defined globally; varies by tenant and application tier. Throttling is managed via 429 status codes.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "FHIR versioning differences (DSTU2 vs R4) across different Cerner implementations",
+    "Strict IP whitelisting and SSL requirements for production environments",
+    "Complex data mapping required to transform JSON responses into usable business objects"
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret (for confidential clients)",
+    "Tenant ID / FHIR Base URL",
+    "Authorized Scopes (e.g., patient/*.read, user/Patient.read)"
+  ],
+  "operations_available": [
+    "Patient Search/Read",
+    "Encounter Retrieval",
+    "Observation List (Vitals/Labs)",
+    "Appointment Scheduling",
+    "DocumentReference (Clinical Notes)"
+  ],
+  "similar_integrations": [
+    "DrChrono",
+    "Salesforce Health Cloud",
+    "Microsoft Dynamics 365"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will rely heavily on the HTTP Request node. Developers must first query the metadata/conformance statement to identify the OAuth2 endpoints. For system-to-system integration, the 'Client Credentials' flow is used, but for user-facing apps, the 'Authorization Code' flow is required. All data must be handled according to HIPAA compliance standards within the n8n environment.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration will rely heavily on the HTTP Request node. Developers must first query the metadata/conformance statement to identify the OAuth2 endpoints. For system-to-system integration, the 'Client Credentials' flow is used, but for user-facing apps, the 'Authorization Code' flow is required. All data must be handled according to HIPAA compliance standards within the n8n environment."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

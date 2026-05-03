@@ -1,0 +1,65 @@
+{
+  "integration": "Spark API",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:40.294Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Spark API (Spark Platform)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires OAuth2 Authorization Code Grant. Developers must register an application via the Spark Platform portal to obtain a Client ID and Client Secret. n8n's HTTP Request node must be configured with the specific Authorization and Access Token URLs provided in their documentation.",
+  "api_quality": "good",
+  "api_documentation_url": "https://sparkplatform.com/docs/overview/api",
+  "rate_limits": "Typically 1,000 requests per hour per access token, though this can vary based on the specific API key agreement and MLS rules.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Data access is strictly governed by MLS (Multiple Listing Service) rules; some fields may be hidden based on the user's permissions.",
+    "The API uses a specific 'SparkQL' query language for filtering which requires a learning curve for complex searches.",
+    "Pagination uses a limit/offest approach but requires careful handling of the 'total' count to avoid infinite loops in n8n."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "Spark Platform Developer Account",
+    "Approved API Scopes for specific MLS data"
+  ],
+  "operations_available": [
+    "Search Property Listings",
+    "Create and Update Contacts/Leads",
+    "Retrieve Market Statistics",
+    "Access Member and Office Information",
+    "Manage Saved Searches and Subscriptions"
+  ],
+  "similar_integrations": [
+    "Follow Up Boss",
+    "HubSpot",
+    "Salesforce"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation will rely heavily on the HTTP Request node. Authentication should be set to 'OAuth2' within the node credentials. Because Spark Platform returns highly nested JSON objects, users will likely need 'Item Lists' or 'Code' nodes to flatten data for use in subsequent workflow steps. Webhooks can be configured via the Spark Platform developer dashboard to point to an n8n Webhook trigger node.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation will rely heavily on the HTTP Request node. Authentication should be set to 'OAuth2' within the node credentials. Because Spark Platform returns highly nested JSON objects, users will likely need 'Item Lists' or 'Code' nodes to flatten data for use in subsequent workflow steps. Webhooks can be configured via the Spark Platform developer dashboard to point to an n8n Webhook trigger node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

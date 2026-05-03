@@ -1,0 +1,65 @@
+{
+  "integration": "VoIP/PBX",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:07:27.569Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "VoIP/PBX",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.twilio",
+  "auth_type": "api_key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires Twilio Account SID and Auth Token. For certain operations, a Messaging Service SID or specific Twilio Phone Number is also needed.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://www.twilio.com/docs/usage/api",
+  "rate_limits": "Default concurrency limit of 100 requests. SMS throughput varies by number type (e.g., 1 MPS for standard long codes, higher for Toll-Free or Short Codes).",
+  "complexity_score": 3,
+  "complexity_tier": "moderate",
+  "estimated_hours": 8,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict A2P 10DLC registration requirements for US SMS to prevent carrier filtering.",
+    "Trial accounts can only send to verified 'To' numbers and include mandatory branding.",
+    "Webhook URLs must be publicly accessible and should ideally implement X-Twilio-Signature validation for security."
+  ],
+  "client_must_provide": [
+    "Twilio Account SID",
+    "Auth Token",
+    "Purchased Twilio Phone Number",
+    "A2P 10DLC Registration status (for US SMS)"
+  ],
+  "operations_available": [
+    "Send SMS",
+    "Make Call",
+    "Send WhatsApp Message",
+    "List Messages",
+    "Get Call Details"
+  ],
+  "similar_integrations": [
+    "Vonage",
+    "RingCentral",
+    "Plivo"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Twilio is the default n8n provider for this category. While the API is excellent, deliverability depends heavily on regulatory compliance and number reputation rather than technical API constraints.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 3,
+    "tier": "moderate",
+    "estimated_hours": 8
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 8,
+    "rationale": "Twilio is the default n8n provider for this category. While the API is excellent, deliverability depends heavily on regulatory compliance and number reputation rather than technical API constraints."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "twilio",
+  "_is_category": true
+}

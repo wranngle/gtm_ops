@@ -1,0 +1,64 @@
+{
+  "integration": "Fuel",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:41:59.029Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Fuel API (Automotive)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is handled via an API Key passed as a query parameter (e.g., ?api_key=...) or via a custom header depending on the specific API version used.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.fuelapi.com/docs/",
+  "rate_limits": "Varies by subscription tier; typically limited to 5,000 requests per day for standard commercial tiers with per-second throttling.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": false,
+  "gotchas": [
+    "Media endpoints (images) return large JSON arrays that require significant data manipulation in n8n to extract specific angles.",
+    "Strict licensing terms often prohibit caching data for more than 24-72 hours.",
+    "VIN decoding accuracy can vary for very new or specialized vehicle models."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "API Secret (for certain enterprise endpoints)",
+    "Specific Vehicle ID or VIN for testing"
+  ],
+  "operations_available": [
+    "Get Vehicle Specifications",
+    "Get Vehicle Images (OEM Library)",
+    "VIN Decoding",
+    "Get Year/Make/Model/Trim Lists",
+    "Get Vehicle Color Options"
+  ],
+  "similar_integrations": [
+    "Edmunds",
+    "Marketcheck",
+    "DataOne"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation requires the HTTP Request node. Since there is no webhook support, any 'monitoring' of vehicle data changes must be handled via a Cron/Schedule trigger combined with a 'Wait' or 'Compare' logic. Data structures are deeply nested, so the 'Item Lists' node or a 'Code' node will be necessary for flattening responses.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Implementation requires the HTTP Request node. Since there is no webhook support, any 'monitoring' of vehicle data changes must be handled via a Cron/Schedule trigger combined with a 'Wait' or 'Compare' logic. Data structures are deeply nested, so the 'Item Lists' node or a 'Code' node will be necessary for flattening responses."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -2,13 +2,11 @@
 
 This rule binds every business domain in this repo. It is enforced mechanically by `scripts/lint-layered-architecture.sh` and is the agent-legibility prerequisite for any domain that wants to grow beyond a single file.
 
-## Source
+## Rule
 
-The rule comes from OpenAI's *Harness Engineering: leveraging Codex in an agent-first world* (Lopopolo, 2026), specifically the diagram **"Layered domain architecture with explicit cross-cutting boundaries"** (`docs/references/OAI_Harness_engineering_Layered_domain_architecture_with_explicit_cross-cutting_boundries_desktop-dark.png`). The post says:
+Code can only depend "forward" through a fixed set of layers (Types → Config → Repo → Service → Runtime → UI). Cross-cutting concerns (auth, connectors, telemetry, feature flags) enter through a single explicit interface: Providers.
 
-> "code can only depend 'forward' through a fixed set of layers (Types → Config → Repo → Service → Runtime → UI). Cross-cutting concerns (auth, connectors, telemetry, feature flags) enter through a single explicit interface: Providers."
-
-The original diagram shows seven layers inside the business-logic domain plus `Utils` outside:
+Seven layers inside the business-logic domain plus `Utils` outside:
 
 - **Types** — parsed shapes and public contracts
 - **Config** — environment-driven runtime config
@@ -20,13 +18,13 @@ The original diagram shows seven layers inside the business-logic domain plus `U
 
 `Utils` exists outside any business domain and must not import any of these layers.
 
-The original diagram also has an **"App Wiring + UI"** box that depends on both `Providers` and `Runtime`. In our packaging, the `runtime/` directory plays the App-Wiring role: it is the composition root that loads config, builds providers/repo/service, and drives the UI render functions. Splitting App-Wiring into its own layer is overkill for one-CLI domains; we revisit this if a domain grows multiple entry points (CLI + HTTP + worker, for example).
+"App Wiring" is implicit in our packaging: the `runtime/` directory plays that role as the composition root that loads config, builds providers/repo/service, and drives the UI render functions. Splitting App-Wiring into its own layer is overkill for one-CLI domains; revisit if a domain grows multiple entry points (CLI + HTTP + worker, for example).
 
-## Reading the diagram
+## Reading the rule
 
-The diagram's arrows point **from a lower layer to a higher layer that depends on it** (i.e., `Types → Config` means "Config depends on Types"). The full chain is `Types → Config → Repo → Service → Runtime → UI`. A layer may import any layer that sits *behind* it in the chain, plus `Providers` once it is past the `Service` boundary.
+The arrows point **from a lower layer to a higher layer that depends on it** (i.e., `Types → Config` means "Config depends on Types"). The full chain is `Types → Config → Repo → Service → Runtime → UI`. A layer may import any layer that sits *behind* it in the chain, plus `Providers` once it is past the `Service` boundary.
 
-There is one inversion worth calling out: in our agent-evals package, the `runtime/` layer (acting as App Wiring) imports `ui/` because `ui/` is a small library of pure render functions and `runtime/` is the composition root that calls them. This matches the post's note that "Runtime can invoke UI"; the forbidden direction here is `ui → runtime`.
+One inversion worth calling out: the `runtime/` layer (acting as App Wiring) may import `ui/` because `ui/` is a small library of pure render functions and `runtime/` is the composition root that calls them. The forbidden direction is `ui → runtime`.
 
 ## Allowed Imports
 

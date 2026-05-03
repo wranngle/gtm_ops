@@ -1,0 +1,65 @@
+{
+  "integration": "Delivery",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:59:54.289Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Delivery (Delivery.com)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires a Client ID and Client Secret obtained from the Delivery.com Developer Portal. Uses standard OAuth2 authorization code flow for user-level actions and API keys for merchant discovery.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://www.delivery.com/developers/docs",
+  "rate_limits": "Not explicitly documented for public tiers; typically requires developer agreement for high-volume production use.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": false,
+  "gotchas": [
+    "The API documentation is somewhat dated and may not reflect all current merchant constraints.",
+    "Order placement requires a complex multi-step cart creation and checkout flow.",
+    "Address validation is highly sensitive and often requires pre-processing to match the API's expected format."
+  ],
+  "client_must_provide": [
+    "Developer Account Credentials",
+    "Client ID",
+    "Client Secret",
+    "Redirect URI (configured in developer portal)"
+  ],
+  "operations_available": [
+    "Search Merchants by Address",
+    "Get Merchant Menu and Details",
+    "Create and Manage Cart",
+    "Place Order",
+    "Get User Order History"
+  ],
+  "similar_integrations": [
+    "AfterShip",
+    "ShipStation",
+    "Shippo"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation will rely heavily on the HTTP Request node. You will need to set up a generic OAuth2 credential in n8n. Because there is no native webhook support, tracking order status changes will require a polling mechanism (e.g., a Cron trigger checking order status every X minutes).",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation will rely heavily on the HTTP Request node. You will need to set up a generic OAuth2 credential in n8n. Because there is no native webhook support, tracking order status changes will require a polling mechanism (e.g., a Cron trigger checking order status every X minutes)."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

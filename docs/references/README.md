@@ -1,13 +1,15 @@
-# Dependency Reference Snapshots
+# References
 
-This directory can include compact `*-llms.txt` files for dependency documentation that agents may need without web browsing.
+Stack contracts and architectural rules encoded as docs that future agents can read without web access.
 
-Policy:
+Current:
+
+- [`layered-domain-architecture.md`](layered-domain-architecture.md) — per-domain import-direction rule, enforced by `scripts/lint-layered-architecture.sh`
+
+Policy for adding new references:
+
 - Choose dependencies this repo actually uses.
 - Use official or primary public sources.
 - Summarize in repo-specific language instead of copying full documentation pages.
-- Include snapshot date, source URLs, refresh instructions, and a rough size/token estimate in each file.
-- Keep each snapshot small enough to load into context; sub-500 KB is the soft ceiling.
-
-Current snapshots:
-- [streamlit-llms.txt](streamlit-llms.txt): Streamlit APIs used by `apps/ops-console`.
+- Include snapshot date, source URLs, refresh instructions, and a rough size estimate.
+- Keep each snapshot small enough to load into context (sub-500 KB soft ceiling).

@@ -1,0 +1,64 @@
+{
+  "integration": "Dialpad",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:05.955Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Dialpad",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key (Bearer Token)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires generating an API key within the Dialpad Admin portal. The key must be included in the HTTP header as 'Authorization: Bearer <YOUR_API_KEY>'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.dialpad.com/reference",
+  "rate_limits": "Typically 60 requests per minute per API key, though specific endpoints may vary.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhooks often need to be created and managed via the API itself rather than a graphical interface.",
+    "API keys are tied to the permissions of the user who generated them; if that user leaves the company, the integration breaks.",
+    "Call recording URLs are temporary and may require a secondary request to fetch the actual file content."
+  ],
+  "client_must_provide": [
+    "Dialpad API Key",
+    "Company or Office ID",
+    "Admin access to the Dialpad dashboard"
+  ],
+  "operations_available": [
+    "Send SMS/MMS",
+    "List Call Logs",
+    "Create/Update Contacts",
+    "Retrieve Call Recordings",
+    "Get User Presence Status"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "RingCentral",
+    "Vonage"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Since no native node exists, the HTTP Request node is the primary tool. Users should set up a 'Header Auth' credential in n8n. To handle incoming calls or SMS, the user must first use an HTTP Request node to POST to the /webhooks endpoint to register their n8n webhook URL.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "Since no native node exists, the HTTP Request node is the primary tool. Users should set up a 'Header Auth' credential in n8n. To handle incoming calls or SMS, the user must first use an HTTP Request node to POST to the /webhooks endpoint to register their n8n webhook URL."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

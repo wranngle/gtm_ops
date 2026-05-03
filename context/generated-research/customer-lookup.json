@@ -1,0 +1,64 @@
+{
+  "integration": "Customer Lookup",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:07:46.982Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Customer Lookup",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key typically passed as a Header (e.g., 'Authorization: Bearer <token>' or 'X-API-Key'). Some implementations may use Basic Auth with the key as the username.",
+  "api_quality": "good",
+  "api_documentation_url": null,
+  "rate_limits": "Typically 10-50 requests per second depending on the specific provider's tier; standard REST throttling applies.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": false,
+  "gotchas": [
+    "Response data is often deeply nested, requiring the 'Item Lists' or 'Code' node to flatten results.",
+    "Search queries may require URL encoding for special characters in email addresses.",
+    "No native error handling; must manually configure 'Continue On Fail' and check HTTP status codes."
+  ],
+  "client_must_provide": [
+    "API Key/Token",
+    "API Base URL Endpoint",
+    "Sample JSON response for data mapping"
+  ],
+  "operations_available": [
+    "Find Customer by Email",
+    "Get Customer Details by ID",
+    "Search Customers by Phone Number",
+    "List Customer Purchase History",
+    "Update Customer Metadata"
+  ],
+  "similar_integrations": [
+    "Clearbit",
+    "FullContact",
+    "Hunter"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Implementation will require the n8n HTTP Request node. The developer must manually define the REST method (GET/POST) and map the JSON output. Since this is a lookup service, it is recommended to use a 'Wait' node or 'Split In Batches' if processing large lists to avoid hitting rate limits.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Implementation will require the n8n HTTP Request node. The developer must manually define the REST method (GET/POST) and map the JSON output. Since this is a lookup service, it is recommended to use a 'Wait' node or 'Split In Batches' if processing large lists to avoid hitting rate limits."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

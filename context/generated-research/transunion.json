@@ -1,0 +1,64 @@
+{
+  "integration": "TransUnion",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:42.153Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "TransUnion",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 with mTLS",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires OAuth 2.0 Client Credentials flow. Production environments typically mandate Mutual TLS (mTLS) with X.509 certificates and IP whitelisting.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.transunion.com/",
+  "rate_limits": "Contract-specific; typically governed by transactions per second (TPS) limits defined in the service level agreement.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "mTLS requirements are difficult to handle in standard n8n HTTP nodes without a custom proxy or specific environment configuration.",
+    "Strict FCRA compliance and 'Permissible Purpose' strings are required in every request header or body.",
+    "The API response structures are deeply nested and often return legacy-style fixed-width data wrapped in JSON."
+  ],
+  "client_must_provide": [
+    "Client ID and Client Secret",
+    "X.509 Digital Certificates (mTLS)",
+    "Production IP addresses for whitelisting",
+    "Permissible Purpose Code"
+  ],
+  "operations_available": [
+    "Credit Report Retrieval",
+    "IDVision Identity Verification",
+    "TruValidate Fraud Analytics",
+    "Credit Score Calculation"
+  ],
+  "similar_integrations": [
+    "Experian",
+    "Equifax",
+    "Clearbit"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration must be performed via the HTTP Request node. Because TransUnion often requires mTLS, the n8n instance must have the client certificates available at the OS level or handled via a custom Node.js code node using the 'axios' or 'https' library to pass the 'cert' and 'key' options.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration must be performed via the HTTP Request node. Because TransUnion often requires mTLS, the n8n instance must have the client certificates available at the OS level or handled via a custom Node.js code node using the 'axios' or 'https' library to pass the 'cert' and 'key' options."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

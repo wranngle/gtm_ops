@@ -1,0 +1,64 @@
+{
+  "integration": "Manual Review",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T03:02:27.835Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Manual Review",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires custom header-based authentication (e.g., Authorization: Bearer <token>) to connect n8n to a Human-in-the-loop (HITL) service or a custom-built review dashboard.",
+  "api_quality": "fair",
+  "api_documentation_url": null,
+  "rate_limits": "Varies by provider; custom implementations typically allow 10-100 requests per second.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 18,
+  "webhook_support": true,
+  "gotchas": [
+    "n8n 'Wait' nodes have execution timeouts; long-term reviews (days/weeks) require external state management in a database.",
+    "Securing the callback webhook is critical to prevent unauthorized approval injections.",
+    "Handling race conditions if multiple reviewers attempt to process the same task simultaneously."
+  ],
+  "client_must_provide": [
+    "API credentials for the review platform (e.g., Humanloop, Labelbox, or custom DB)",
+    "Publicly accessible Webhook URL for decision callbacks",
+    "Data schema for the review payload"
+  ],
+  "operations_available": [
+    "Create Review Task",
+    "Get Task Status",
+    "Submit Review Decision",
+    "List Pending Reviews",
+    "Assign Reviewer"
+  ],
+  "similar_integrations": [
+    "Slack",
+    "Microsoft Teams",
+    "Google Sheets"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Implementation requires a two-part workflow: 1. An HTTP Request node to send data to the review interface. 2. A Webhook node (or Wait node set to 'On Webhook Call') to pause the workflow until a human submits a decision. State should be tracked via a unique 'External ID' to map the callback to the original execution.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 18
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 18,
+    "rationale": "Implementation requires a two-part workflow: 1. An HTTP Request node to send data to the review interface. 2. A Webhook node (or Wait node set to 'On Webhook Call') to pause the workflow until a human submits a decision. State should be tracked via a unique 'External ID' to map the callback to the original execution."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,65 @@
+{
+  "integration": "8x8",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:20.393Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "8x8",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key or OAuth 2.0",
+  "auth_complexity": "moderate",
+  "auth_notes": "Authentication varies by product line. 8x8 CPaaS (SMS/Video) typically uses an API Key passed in the '8x8-API-Key' header. 8x8 Work and Admin APIs often require OAuth 2.0 or a Service Token generated in the 8x8 Admin Console.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.8x8.com/",
+  "rate_limits": "Varies by service; Admin APIs are generally limited to 5-10 requests per second, while CPaaS APIs have higher burst limits depending on the account tier.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "API documentation is fragmented across different product suites (Work, Contact Center, and CPaaS), making it easy to reference the wrong endpoint.",
+    "Webhook setup for SMS delivery receipts often requires manual configuration within the 8x8 Customer Portal rather than via API.",
+    "Region-specific base URLs are required for certain API calls, which can lead to 404 errors if not correctly identified."
+  ],
+  "client_must_provide": [
+    "API Key or Client ID/Secret",
+    "Application ID",
+    "8x8 Product Type (Work vs. CPaaS)",
+    "Region/Base URL"
+  ],
+  "operations_available": [
+    "Send SMS/MMS",
+    "Retrieve Call Logs and Analytics",
+    "Manage User Directory and Extensions",
+    "Trigger Outbound Voice Calls",
+    "List and Download Meeting Recordings"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Vonage",
+    "RingCentral"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will primarily use the HTTP Request node. It is critical to determine if the client is using the '8x8 Work' API or the '8x8 CPaaS' (formerly Wavecell) API, as they have different authentication schemes and base URLs. For OAuth 2.0 flows in n8n, a custom 'Generic OAuth2' credential will need to be configured.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will primarily use the HTTP Request node. It is critical to determine if the client is using the '8x8 Work' API or the '8x8 CPaaS' (formerly Wavecell) API, as they have different authentication schemes and base URLs. For OAuth 2.0 flows in n8n, a custom 'Generic OAuth2' credential will need to be configured."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

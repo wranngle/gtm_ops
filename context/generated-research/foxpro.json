@@ -1,0 +1,63 @@
+{
+  "integration": "Foxpro",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:52.875Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Foxpro",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Custom (Middleware Dependent)",
+  "auth_complexity": "complex",
+  "auth_notes": "Visual FoxPro (VFP) is a legacy file-based database and does not have a native web API. Authentication must be implemented via a custom-built REST wrapper (e.g., using Python, .NET, or Node.js) or through a database bridge. The auth type will be whatever is defined by that middleware (typically API Key or Basic Auth).",
+  "api_quality": "poor",
+  "api_documentation_url": "https://learn.microsoft.com/en-us/previous-versions/visualstudio/foxpro/mt492322(v=msdn.10)",
+  "rate_limits": "N/A (Limited by file system I/O and middleware implementation)",
+  "complexity_score": 9,
+  "complexity_tier": "complex",
+  "estimated_hours": 30,
+  "webhook_support": false,
+  "gotchas": [
+    "File Locking: VFP uses table-level locking; concurrent writes from an API can cause 'File is in use' errors or data corruption.",
+    "Legacy Drivers: Requires 32-bit OLE DB providers which are difficult to run on modern 64-bit Linux environments where n8n often resides.",
+    "Data Types: Modern JSON types may not map cleanly to legacy FoxPro field types (e.g., Logical, General, or Memo fields)."
+  ],
+  "client_must_provide": [
+    "Direct access to .dbf and .dbc files",
+    "A Windows-based host to run the OLE DB/ODBC driver",
+    "Custom middleware/API wrapper to expose the data"
+  ],
+  "operations_available": [
+    "Execute SQL Queries (SELECT/INSERT/UPDATE)",
+    "Read Table Metadata",
+    "Append Records",
+    "Pack/Reindex (Maintenance)"
+  ],
+  "similar_integrations": [
+    "Microsoft SQL Server",
+    "MySQL",
+    "PostgreSQL"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Direct integration is impossible. The recommended approach is to build a small Python Flask or FastAPI service using the 'dbfread' or 'pyodbc' library to act as a bridge. n8n will then use the HTTP Request node to communicate with this bridge. If n8n is self-hosted on Windows, the 'Execute Command' node could theoretically run local scripts to manipulate the files.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 9,
+    "tier": "complex",
+    "estimated_hours": 30
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 30,
+    "rationale": "Direct integration is impossible. The recommended approach is to build a small Python Flask or FastAPI service using the 'dbfread' or 'pyodbc' library to act as a bridge. n8n will then use the HTTP Request node to communicate with this bridge. If n8n is self-hosted on Windows, the 'Execute Command' node could theoretically run local scripts to manipulate the files."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

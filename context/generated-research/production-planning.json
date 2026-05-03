@@ -1,0 +1,64 @@
+{
+  "integration": "Production Planning",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:43.229Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Production Planning (Katana MRP)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key generated from the Katana settings dashboard. The key is passed in the HTTP header as 'Authorization: Bearer [API_KEY]'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.katanamrp.com/reference/introduction",
+  "rate_limits": "40 requests per minute per account.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Rate limits are relatively low (40 RPM), requiring careful use of n8n Wait nodes or 'Split In Batches'.",
+    "Webhook registration is primarily handled via the API rather than a dedicated UI, requiring a one-time setup workflow.",
+    "Manufacturing Order (MO) updates require specific status transitions; you cannot skip certain production stages via API."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Katana Account Access",
+    "List of specific SKU/Variant IDs for mapping"
+  ],
+  "operations_available": [
+    "Create Manufacturing Order",
+    "List Sales Orders",
+    "Update Stock Levels",
+    "Retrieve Bill of Materials (Recipes)",
+    "Get Production Tasks"
+  ],
+  "similar_integrations": [
+    "QuickBooks Online",
+    "Shopify",
+    "Airtable"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration must be built using the HTTP Request node. Authentication uses the Bearer token pattern. For webhooks, a 'Webhook' node must be used as the destination URL, which then needs to be registered with Katana's /webhooks endpoint using a POST request.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration must be built using the HTTP Request node. Authentication uses the Bearer token pattern. For webhooks, a 'Webhook' node must be used as the destination URL, which then needs to be registered with Katana's /webhooks endpoint using a POST request."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

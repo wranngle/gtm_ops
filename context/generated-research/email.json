@@ -1,0 +1,65 @@
+{
+  "integration": "Email",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T00:04:49.058Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Email",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.gmail",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating a project in Google Cloud Console, enabling the Gmail API, and configuring OAuth 2.0 credentials with specific scopes like 'https://www.googleapis.com/auth/gmail.modify'.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.google.com/gmail/api/reference/rest",
+  "rate_limits": "250 quota units per user per second; 1,000,000,000 quota units per day per project. Different operations consume different amounts of units (e.g., Send: 100, List: 5).",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "OAuth2 tokens expire every 7 days if the Google Cloud project is in 'Testing' status; must be set to 'In Production'.",
+    "Gmail API has a strict 25MB limit for attachments; larger files must be handled via Google Drive or multipart uploads.",
+    "The 'Gmail Trigger' node in n8n uses polling by default, but the API supports real-time push notifications via Google Cloud Pub/Sub."
+  ],
+  "client_must_provide": [
+    "Google Cloud Project access",
+    "OAuth Client ID and Client Secret",
+    "Authorized Redirect URI (n8n callback URL)",
+    "Specific Gmail account for authentication"
+  ],
+  "operations_available": [
+    "Send Email",
+    "List Messages",
+    "Get Message Details",
+    "Add/Remove Labels",
+    "Create Draft"
+  ],
+  "similar_integrations": [
+    "Microsoft Outlook",
+    "SendGrid",
+    "Mailgun"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Focuses on the Gmail native node as specified. Note that for generic SMTP/IMAP, n8n uses different nodes ('Email Read (IMAP)' and 'Send Email').",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "Focuses on the Gmail native node as specified. Note that for generic SMTP/IMAP, n8n uses different nodes ('Email Read (IMAP)' and 'Send Email')."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "gmail",
+  "_is_category": true
+}

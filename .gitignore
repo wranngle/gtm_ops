@@ -18,16 +18,9 @@ build/
 
 # Project-local runtime
 .assessment.cache
-logs/*.jsonl
-!logs/.gitkeep
-
-# Symphony orchestrator runtime (workspaces, logs, in-memory state snapshots)
-.symphony/logs/*.jsonl
-!.symphony/logs/.gitkeep
-.symphony/workspaces/*
-!.symphony/workspaces/.gitkeep
-.symphony/runtime/*
-!.symphony/runtime/.gitkeep
+logs/
+old/
+temp/
 
 # CSV-validator demo runtime state
 examples/csv-validator/queue/in_progress/*
@@ -61,24 +54,15 @@ coverage/
 htmlcov/
 pip-wheel-metadata/
 
-# Elixir / Mix
-tools/symphony-elixir/_build/
-tools/symphony-elixir/deps/
-tools/symphony-elixir/.elixir_ls/
-tools/symphony-elixir/bin/
-tools/symphony-elixir/.symphony/
+# Erlang crash dumps (legacy, never re-add)
 erl_crash.dump
 **/erl_crash.dump
 
+# OpenSpec working state (proposals churn — keep specs/ only)
+openspec/changes/
+
 # Playwright MCP runtime artifacts (transient agent snapshots)
 .playwright-mcp/
-
-# Edge MCP smoke artifacts (screenshots, dom dumps)
-tools/edge-mcp/smoke/out/
-
-# Local observability volume mounts and tail offsets
-tools/observability/.data/
-tools/observability/vector-data/
 
 # Demo render artifacts (regenerate via scripts/hero.sh)
 demo/cassette.gif
@@ -87,3 +71,23 @@ demo/hero.webp
 
 # Windows alternate-data-stream metadata that comes through WSL copies
 **/*:Zone.Identifier
+
+# === Spec 006 §6.7 baseline (post-unification carry-over from unified-presales-report) ===
+# SQLite DBs (branding, evaluation, presales, webhooks, audit, gdpr_test_*, admin_test_*, etc.)
+*.db
+*.sqlite
+*.sqlite3
+
+# Customer-data dirs (real PDFs, GDPR exports, lead inputs — NEVER track)
+input/
+output/
+output_test/
+exports/
+_archive/
+
+# n8n / eval test runtime
+test-results/
+_bmad-output/
+
+# Symphony was relocated to ~/.dotfiles/; ignore any accidental re-creation
+.symphony/

@@ -1,0 +1,65 @@
+{
+  "integration": "AppFolio",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:57:59.245Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "AppFolio",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials or Authorization Code)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires registration through the AppFolio Stack (Developer Marketplace). Authentication uses Client ID and Client Secret, but access is typically restricted to approved partners or specific enterprise customers.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.appfolio.com/",
+  "rate_limits": "Standard limits are approximately 100 requests per minute, but vary based on the specific integration agreement and endpoint.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "AppFolio is a 'walled garden'; getting API access (AppFolio Stack) often requires manual approval or being a verified partner.",
+    "The API is primarily focused on the 'Stack' ecosystem, making ad-hoc internal tool development more difficult than standard REST APIs.",
+    "Sandbox environments are not self-service and usually require coordination with their integration team."
+  ],
+  "client_must_provide": [
+    "AppFolio Stack Developer Account access",
+    "Client ID",
+    "Client Secret",
+    "Specific Scopes/Permissions approved by the property manager"
+  ],
+  "operations_available": [
+    "Retrieve Property/Unit details",
+    "List Tenant/Lease information",
+    "Create/Update Maintenance Requests",
+    "Post Ledger Entries",
+    "Retrieve Work Order status"
+  ],
+  "similar_integrations": [
+    "Propertyware",
+    "Buildium",
+    "DoorLoop"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Development will require the n8n HTTP Request node. Since AppFolio uses a modern OAuth 2.0 flow via their 'Stack' platform, the n8n OAuth2 credentials type can be used, but the main hurdle is the initial API approval and client-side configuration within the AppFolio database settings.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Development will require the n8n HTTP Request node. Since AppFolio uses a modern OAuth 2.0 flow via their 'Stack' platform, the n8n OAuth2 credentials type can be used, but the main hurdle is the initial API approval and client-side configuration within the AppFolio database settings."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

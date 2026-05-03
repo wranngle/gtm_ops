@@ -1,0 +1,77 @@
+{
+  "logs": [
+    {
+      "id": 1024,
+      "timestamp": 1715155200000,
+      "user_id": "demo-operator",
+      "action": "proposal.generated",
+      "resource_type": "execution",
+      "resource_id": "exec_demo_006",
+      "metadata": { "client_slug": "redwood-tax-services", "revision": 2 }
+    },
+    {
+      "id": 1023,
+      "timestamp": 1715151600000,
+      "user_id": "demo-operator",
+      "action": "proposal.exported",
+      "resource_type": "document",
+      "resource_id": "doc_redwood_proposal_r2",
+      "metadata": { "format": "pdf" }
+    },
+    {
+      "id": 1022,
+      "timestamp": 1715068800000,
+      "user_id": "demo-operator",
+      "action": "branding.updated",
+      "resource_type": "workspace",
+      "resource_id": "default",
+      "metadata": { "fields": ["primary_color"] }
+    },
+    {
+      "id": 1021,
+      "timestamp": 1715040000000,
+      "user_id": "system",
+      "action": "audit.integrity_check",
+      "resource_type": "audit_logs",
+      "resource_id": null,
+      "metadata": { "verified_count": 1020, "invalid_count": 0 }
+    },
+    {
+      "id": 1020,
+      "timestamp": 1714982400000,
+      "user_id": "demo-operator",
+      "action": "user.invited",
+      "resource_type": "user",
+      "resource_id": "demo-reviewer",
+      "metadata": { "role": "viewer", "email": "reviewer@example.demo" }
+    },
+    {
+      "id": 1019,
+      "timestamp": 1714896000000,
+      "user_id": "demo-operator",
+      "action": "webhook.created",
+      "resource_type": "webhook",
+      "resource_id": "1",
+      "metadata": { "events": 3 }
+    },
+    {
+      "id": 1018,
+      "timestamp": 1714809600000,
+      "user_id": "demo-operator",
+      "action": "proposal.generated",
+      "resource_type": "execution",
+      "resource_id": "exec_demo_002",
+      "metadata": { "client_slug": "northwind-services", "revision": 2 }
+    },
+    {
+      "id": 1017,
+      "timestamp": 1714723200000,
+      "user_id": "demo-operator",
+      "action": "lead.imported",
+      "resource_type": "lead",
+      "resource_id": "lead_demo_001",
+      "metadata": { "source": "web_form" }
+    }
+  ],
+  "total": 1024
+}

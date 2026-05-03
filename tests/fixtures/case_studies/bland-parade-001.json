@@ -1,0 +1,82 @@
+{
+  "id": "bland-parade-001",
+  "source": {
+    "vendor": "bland",
+    "url": "https://www.bland.ai/case-studies/parade",
+    "title": "Parade: Autonomous Carrier Call Management"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "logistics",
+    "company_size": "Not specified",
+    "company_type": "Carrier logistics platform / Freight brokerage",
+    "pain_points": [
+      "Heavy manual workload from inbound carrier calls",
+      "Long hold times of 30+ minutes",
+      "Delayed after-hours responses",
+      "Repetitive conversations pulling sales reps from high-value deals",
+      "Manual qualification and routing of carrier calls"
+    ],
+    "volume_metrics": {
+      "calls_per_month": null,
+      "calls_per_day": null,
+      "items_processed_per_week": 200000,
+      "avg_call_duration_minutes": null,
+      "staff_hours_per_month": null,
+      "raw_description": "200,000+ weekly load inquiries via email, thousands of inbound carrier calls weekly"
+    },
+    "systems_involved": [
+      "Email system",
+      "Telephony system",
+      "Carrier management platform"
+    ],
+    "goals": [
+      "Eliminate 30+ minute hold times",
+      "Enable 24/7 carrier response",
+      "Automate qualification and routing",
+      "Free sales reps for high-value deals"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "Bland",
+    "integrations": [
+      { "system_name": "Carrier Management", "integration_type": "api", "purpose": "carrier data and routing" },
+      { "system_name": "CRM", "integration_type": "api", "purpose": "lead tracking" },
+      { "system_name": "Human Rep System", "integration_type": "api", "purpose": "escalation and handoff" }
+    ],
+    "pricing_model": {
+      "model_type": "unknown",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null
+    },
+    "timeline_weeks": 1,
+    "roi_achieved": {
+      "hours_saved_per_month": null,
+      "calls_automated_percent": 67,
+      "monthly_savings": null,
+      "annual_savings": null,
+      "qualification_time_seconds": 90,
+      "hold_time_eliminated": true,
+      "raw_description": "67% of carrier calls fully autonomous, 100% coverage for some customers, qualification in under 90 seconds, results in first week"
+    },
+    "key_features": [
+      "Autonomous carrier conversation management",
+      "Full call qualification and routing",
+      "24/7 operation",
+      "Negotiation flow customization",
+      "Low-code platform modifications",
+      "Real-time routing to human reps",
+      "Under 90 second qualification time"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Good automation metrics but missing pricing and volume specifics. Clear use case for logistics industry.",
+    "domain_tags": ["logistics", "freight", "carrier-management", "inbound", "qualification", "after-hours", "high-volume"],
+    "holdout": false,
+    "harvested_by": "web-extraction"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "id": "vapi-automotive-001",
+  "source": {
+    "vendor": "vapi",
+    "url": "https://vapi.ai/blog/case-study-automotive",
+    "title": "Latin American Automotive Marketplace: 200% Revenue Growth"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "automotive",
+    "company_size": "Four floors of human agents across multiple cities",
+    "company_type": "Automotive marketplace (Latin America's first tech unicorn)",
+    "pain_points": [
+      "Traditional call centers couldn't deliver personalized relationship-building",
+      "IVR systems inadequate for customer journey across financing, maintenance, trade-ins",
+      "Need to transition from buying/selling cars to owning customer relationships",
+      "Managing operations across 5 countries"
+    ],
+    "volume_metrics": {
+      "calls_per_day": 12500,
+      "calls_per_month": 375000,
+      "avg_call_duration_minutes": 5,
+      "staff_hours_per_month": 8000,
+      "raw_description": "10,000-15,000 calls per day across 5 countries"
+    },
+    "systems_involved": [
+      "Call center systems",
+      "IVR",
+      "Car financing systems",
+      "Verification services",
+      "Scheduling services"
+    ],
+    "goals": [
+      "Cut call center footprint by 50%+",
+      "Enable personalized customer relationships at scale",
+      "Support financing, maintenance, and trade-in journeys",
+      "Operate across 5 countries with localization"
+    ]
+  },
+  "solution": {
+    "agent_type": "hybrid",
+    "voice_provider": "Vapi",
+    "integrations": [
+      { "system_name": "Car Financing", "integration_type": "api", "purpose": "financing workflows" },
+      { "system_name": "Verification Services", "integration_type": "api", "purpose": "customer verification" },
+      { "system_name": "Scheduling", "integration_type": "api", "purpose": "appointment booking" },
+      { "system_name": "MCP Services", "integration_type": "api", "purpose": "orchestration" },
+      { "system_name": "LangGraph", "integration_type": "api", "purpose": "workflow management" }
+    ],
+    "pricing_model": {
+      "model_type": "enterprise",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null,
+      "raw_description": "Not disclosed - enterprise partnership"
+    },
+    "timeline_weeks": null,
+    "roi_achieved": {
+      "hours_saved_per_month": null,
+      "calls_automated_percent": 80,
+      "monthly_savings": null,
+      "annual_savings": null,
+      "revenue_increase_percent": 200,
+      "customer_acquisition_cost_reduction_percent": 50,
+      "raw_description": "50%+ call center reduction, 200% revenue growth, 50% CAC reduction, 80% of business is AI agents"
+    },
+    "key_features": [
+      "1,000+ localized agents across 5 countries",
+      "450+ concurrent calls capacity",
+      "Dynamic intent-based routing (no predetermined scripts)",
+      "Multi-team collaboration",
+      "Continuous learning from conversations",
+      "Multi-language support"
+    ],
+    "inferred_tier": "flagship"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Impressive scale metrics but missing pricing and timeline details. Company name anonymized.",
+    "domain_tags": ["automotive", "marketplace", "multi-country", "high-volume", "financing", "scheduling", "multilingual"],
+    "holdout": false,
+    "harvested_by": "web-extraction"
+  }
+}

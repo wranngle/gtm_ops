@@ -1,0 +1,57 @@
+[
+  {
+    "id": "lead_demo_001",
+    "client_slug": "acme-hvac",
+    "company": "Acme HVAC Services",
+    "industry": "Field Services",
+    "size": "21-50",
+    "primary_pain": "Missed after-hours dispatch calls",
+    "intake_source": "web_form",
+    "received_at": 1714636800000,
+    "status": "qualified"
+  },
+  {
+    "id": "lead_demo_002",
+    "client_slug": "northwind-services",
+    "company": "Northwind Property Services",
+    "industry": "Property Management",
+    "size": "51-200",
+    "primary_pain": "Voicemail backlog after hours",
+    "intake_source": "referral",
+    "received_at": 1714723200000,
+    "status": "proposal_sent"
+  },
+  {
+    "id": "lead_demo_003",
+    "client_slug": "evergreen-clinics",
+    "company": "Evergreen Family Clinics",
+    "industry": "Healthcare",
+    "size": "11-20",
+    "primary_pain": "No-show rate from missed reminders",
+    "intake_source": "inbound_call",
+    "received_at": 1714809600000,
+    "status": "in_review"
+  },
+  {
+    "id": "lead_demo_004",
+    "client_slug": "blueline-logistics",
+    "company": "Blueline Regional Logistics",
+    "industry": "Transportation",
+    "size": "201-500",
+    "primary_pain": "Driver check-in compliance gaps",
+    "intake_source": "outbound_email",
+    "received_at": 1714896000000,
+    "status": "won"
+  },
+  {
+    "id": "lead_demo_005",
+    "client_slug": "harbor-property-mgmt",
+    "company": "Harbor Coast Property Management",
+    "industry": "Property Management",
+    "size": "11-20",
+    "primary_pain": "Tenant emergency triage",
+    "intake_source": "web_form",
+    "received_at": 1714982400000,
+    "status": "extracting"
+  }
+]

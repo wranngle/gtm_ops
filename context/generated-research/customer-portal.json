@@ -1,0 +1,64 @@
+{
+  "integration": "Customer Portal",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:00.586Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Customer Portal",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires a static API Key generated from the portal settings, typically passed in the HTTP Header as 'Authorization: Bearer <token>' or 'X-API-KEY'.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://docs.customerportal.io/",
+  "rate_limits": "100 requests per minute per organization.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhook signatures often require manual verification using a Code node and the crypto library.",
+    "Pagination is typically cursor-based, requiring a recursive loop or 'Wait' node logic in n8n.",
+    "The API may return 204 No Content for successful updates, which can trigger errors in n8n if 'Ignore Response' is not checked."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Environment Base URL (Production vs Sandbox)",
+    "Webhook Secret Key"
+  ],
+  "operations_available": [
+    "Create Portal Session URL",
+    "Retrieve Customer Profile",
+    "List Invoices/Transactions",
+    "Update Subscription Status",
+    "Upload Document to Portal"
+  ],
+  "similar_integrations": [
+    "Stripe",
+    "Chargebee",
+    "Zendesk"
+  ],
+  "confidence": 0.7,
+  "research_notes": "Implementation requires the HTTP Request node. For session generation, the developer must capture the 'url' field from the JSON response to redirect users. Webhooks must be manually pointed to the n8n production URL and tested for payload structure consistency.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation requires the HTTP Request node. For session generation, the developer must capture the 'url' field from the JSON response to redirect users. Webhooks must be manually pointed to the n8n production URL and tested for payload structure consistency."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

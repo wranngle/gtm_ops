@@ -1,0 +1,65 @@
+{
+  "integration": "Preferences/Loyalty",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:43:50.912Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Preferences/Loyalty",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key with HMAC Signing or OAuth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Most enterprise loyalty APIs (like SessionM or custom REST implementations) require an API Key and Secret. Secure transaction endpoints often require a custom HMAC-SHA256 signature generated per request in a Function node.",
+  "api_quality": "good",
+  "api_documentation_url": "https://docs.sessionm.com/api/",
+  "rate_limits": "Varies by provider; typically 20-50 requests per second with stricter limits on bulk preference updates.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "HMAC signature calculation requires precise string concatenation of method, path, and timestamp, which must be handled in a Function node before the HTTP Request.",
+    "Data types for custom attributes are often strictly enforced (e.g., boolean vs string 'true').",
+    "Race conditions can occur when updating preferences and triggering rewards simultaneously."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "API Secret",
+    "Environment Base URL (Sandbox/Production)",
+    "Organization or Tenant ID"
+  ],
+  "operations_available": [
+    "Get Member Profile",
+    "Update Communication Preferences",
+    "Log Loyalty Transaction/Points",
+    "Retrieve Available Rewards",
+    "Redeem Reward"
+  ],
+  "similar_integrations": [
+    "Voucherify",
+    "Talon.one",
+    "Smile.io"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Since no native node exists, the HTTP Request node is the primary tool. Users will need to use a 'Function' node to handle the authentication headers if the API uses a signature-based security model. Webhooks will require a 'Webhook' node and manual registration via the Loyalty provider's developer portal.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Since no native node exists, the HTTP Request node is the primary tool. Users will need to use a 'Function' node to handle the authentication headers if the API uses a signature-based security model. Webhooks will require a 'Webhook' node and manual registration via the Loyalty provider's developer portal."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

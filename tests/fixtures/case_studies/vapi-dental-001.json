@@ -1,0 +1,78 @@
+{
+  "id": "vapi-dental-001",
+  "source": {
+    "vendor": "vapi",
+    "url": "https://vapi.ai/case-studies/bright-smile-dental",
+    "title": "How Bright Smile Dental Automated 80% of Their Appointment Calls"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "dental",
+    "company_size": "45 employees across 3 locations",
+    "company_type": "multi-location dental practice",
+    "pain_points": [
+      "Front desk staff manually answers 80+ calls daily for appointments",
+      "Paper-based vaccination records require manual reminder calls",
+      "Average 15 minutes per new patient registration",
+      "22% no-show rate due to lack of automated reminders",
+      "Emergency calls often missed during busy periods"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 2400,
+      "calls_per_day": 80,
+      "avg_call_duration_minutes": 4.5,
+      "staff_hours_per_month": 180
+    },
+    "systems_involved": [
+      "Dentrix G7",
+      "Weave",
+      "Google Calendar",
+      "Rectangle Health"
+    ],
+    "goals": [
+      "Automated phone system for appointment booking",
+      "AI-powered reminder calls and texts",
+      "Digital intake forms for new patients",
+      "Reduced no-show rate to under 10%",
+      "24/7 emergency triage routing"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Dentrix G7", "integration_type": "api", "purpose": "appointment scheduling and patient lookup" },
+      { "system_name": "Twilio", "integration_type": "api", "purpose": "SMS reminders and voice calls" },
+      { "system_name": "Google Calendar", "integration_type": "webhook", "purpose": "real-time availability sync" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "total_cost": 18500,
+      "monthly_cost": 650,
+      "setup_cost": 6200
+    },
+    "timeline_weeks": 6,
+    "roi_achieved": {
+      "hours_saved_per_month": 140,
+      "calls_automated_percent": 78,
+      "monthly_savings": 3500,
+      "annual_savings": 42000,
+      "payback_period_months": 2
+    },
+    "key_features": [
+      "24/7 appointment scheduling",
+      "Automated appointment reminders",
+      "Insurance verification",
+      "Emergency call triage and escalation",
+      "Multi-language support (English, Spanish)"
+    ],
+    "inferred_tier": "standard"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Detailed case study with quantified ROI, clear problem statement, and specific integration details",
+    "domain_tags": ["dental", "scheduling", "appointment-reminders", "sms-integration", "crm-integration"],
+    "holdout": false,
+    "harvested_by": "manual-entry"
+  }
+}

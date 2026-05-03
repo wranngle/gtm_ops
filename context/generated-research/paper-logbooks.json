@@ -1,0 +1,63 @@
+{
+  "integration": "Paper Logbooks",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T22:22:21.313Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Paper Logbooks",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Session-based / API Key (Undocumented)",
+  "auth_complexity": "complex",
+  "auth_notes": "Paper Logbooks (aviation/maritime digitization) does not provide a public REST API. Integration requires capturing session cookies from a browser or using an undocumented API key if discovered via network inspection.",
+  "api_quality": "poor",
+  "api_documentation_url": null,
+  "rate_limits": "Unknown (likely restrictive for non-browser traffic)",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "No official public API documentation exists, making the integration fragile to UI changes.",
+    "Data extraction may require parsing PDF or CSV exports rather than direct JSON responses.",
+    "High risk of account lockout if automated requests are detected as bot traffic."
+  ],
+  "client_must_provide": [
+    "Login credentials",
+    "Sample logbook data/exports",
+    "Specific use-case requirements for data extraction"
+  ],
+  "operations_available": [
+    "Retrieve Log Entries (via scraping/export)",
+    "Upload Log Images (via multipart/form-data)",
+    "Download PDF Reports",
+    "List Aircraft/Vehicles"
+  ],
+  "similar_integrations": [
+    "Google Sheets",
+    "Airtable",
+    "Dropbox Paper"
+  ],
+  "confidence": 0.8,
+  "research_notes": "As there is no public API for Paper Logbooks, the HTTP Request node must be configured to simulate a browser session. This involves using a 'Cookie' header and potentially a 'User-Agent' that matches a standard browser. Alternatively, the workflow should focus on an 'Email Read' node to process automated export emails sent from the service.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "As there is no public API for Paper Logbooks, the HTTP Request node must be configured to simulate a browser session. This involves using a 'Cookie' header and potentially a 'User-Agent' that matches a standard browser. Alternatively, the workflow should focus on an 'Email Read' node to process automated export emails sent from the service."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

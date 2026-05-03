@@ -1,0 +1,65 @@
+{
+  "integration": "DoorDash Merchant Portal",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T13:00:03.147Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "DoorDash Merchant Portal",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "JWT (HS256)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires generating a JSON Web Token (JWT) using an Access Key ID and a Signing Secret. The JWT must use the HS256 algorithm and include specific claims: 'iss' (Key ID), 'aud' (doordash), and 'iat'/'exp' timestamps.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.doordash.com/en-US/docs/drive/get_started/",
+  "rate_limits": "Standard rate limit is 300 requests per minute, though this varies by specific endpoint and account tier.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 18,
+  "webhook_support": true,
+  "gotchas": [
+    "JWTs have a maximum expiration time of 30 minutes; n8n must regenerate them dynamically.",
+    "Webhook signatures must be verified using a separate Webhook Secret to ensure authenticity.",
+    "The API distinguishes strictly between the 'Drive' API (white-label delivery) and the 'Marketplace' API."
+  ],
+  "client_must_provide": [
+    "DoorDash Developer Portal Access",
+    "Access Key ID",
+    "Signing Secret",
+    "External Business ID"
+  ],
+  "operations_available": [
+    "Create Delivery",
+    "Get Delivery Status",
+    "Cancel Delivery",
+    "Update Delivery",
+    "Get Delivery Quote"
+  ],
+  "similar_integrations": [
+    "Uber Direct",
+    "ShipEngine",
+    "AfterShip"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation requires a 'Code' node to generate the HS256 JWT before the HTTP Request node. The Code node will need to use the 'crypto' library to sign the payload with the client's Signing Secret. This signed string is then passed as a Bearer token in the Authorization header.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 18
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 18,
+    "rationale": "Implementation requires a 'Code' node to generate the HS256 JWT before the HTTP Request node. The Code node will need to use the 'crypto' library to sign the payload with the client's Signing Secret. This signed string is then passed as a Bearer token in the Authorization header."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

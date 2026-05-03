@@ -1,0 +1,67 @@
+{
+  "generated_at": "2025-12-30T04-54-13-729Z",
+  "integrations": {
+    "phone-system": {
+      "name": "Phone System",
+      "researched_at": "2025-12-30T04-54-13-729Z",
+      "complexity_score": 6,
+      "complexity_tier": "moderate",
+      "estimated_hours": 8,
+      "has_native_node": false,
+      "auth_type": "api_key",
+      "confidence": 0.9
+    },
+    "voip-pbx": {
+      "name": "VoIP/PBX",
+      "researched_at": "2025-12-30T04-54-13-729Z",
+      "complexity_score": 7,
+      "complexity_tier": "moderate",
+      "estimated_hours": 15,
+      "has_native_node": true,
+      "auth_type": "api_key",
+      "confidence": 0.9
+    },
+    "customer-lookup": {
+      "name": "Customer Lookup",
+      "researched_at": "2025-12-30T04-54-13-729Z",
+      "complexity_score": 3,
+      "complexity_tier": "simple",
+      "estimated_hours": 2,
+      "has_native_node": false,
+      "auth_type": "api_key",
+      "confidence": 0.8
+    },
+    "crm": {
+      "name": "CRM",
+      "researched_at": "2025-12-30T04-54-13-729Z",
+      "complexity_score": 5,
+      "complexity_tier": "moderate",
+      "estimated_hours": 4,
+      "has_native_node": true,
+      "auth_type": "oauth2",
+      "confidence": 0.9
+    },
+    "scheduling": {
+      "name": "Scheduling",
+      "researched_at": "2025-12-30T04-54-13-729Z",
+      "complexity_score": 1,
+      "complexity_tier": "simple",
+      "estimated_hours": 0.5,
+      "has_native_node": true,
+      "auth_type": "none",
+      "confidence": 1
+    },
+    "calendar": {
+      "name": "Calendar",
+      "researched_at": "2025-12-30T04-54-13-729Z",
+      "complexity_score": 4,
+      "complexity_tier": "moderate",
+      "estimated_hours": 3,
+      "has_native_node": true,
+      "auth_type": "oauth2",
+      "confidence": 0.95
+    }
+  },
+  "last_updated": "2025-12-30T04-54-13-729Z",
+  "total_integrations": 6
+}

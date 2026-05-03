@@ -1,0 +1,65 @@
+{
+  "integration": "Field Service/CRM/Inventory",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:04.175Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Field Service/CRM/Inventory",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.hubspot",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires a HubSpot Developer Account to create an app for OAuth2 or a Private App Access Token. Scopes must be granularly defined for CRM, Service, and Settings access.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.hubspot.com/docs/api/overview",
+  "rate_limits": "100 requests per 10 seconds for Professional and Enterprise accounts; 10 requests per second for Free/Starter. Daily limit of 250,000 to 1,000,000 calls depending on tier.",
+  "complexity_score": 3,
+  "complexity_tier": "moderate",
+  "estimated_hours": 8,
+  "webhook_support": true,
+  "gotchas": [
+    "Search API Indexing: Newly created or updated records can take up to 5 minutes to appear in Search API results, causing issues with immediate sequential lookups.",
+    "Internal Property Names: n8n requires the internal 'system' name for custom properties, not the user-facing label.",
+    "Association Requirements: Linking objects (e.g., a Ticket to a Company) requires specific Association Type IDs which are not always intuitive in the UI."
+  ],
+  "client_must_provide": [
+    "HubSpot Portal ID",
+    "Private App Access Token (with required scopes)",
+    "List of custom property internal names",
+    "OAuth Client ID and Secret (if using custom OAuth app)"
+  ],
+  "operations_available": [
+    "Create/Update Contact",
+    "Search Deals",
+    "Get Company",
+    "Create Ticket (Service Hub)",
+    "List Products (Inventory)"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "Pipedrive",
+    "Zoho CRM"
+  ],
+  "confidence": 0.95,
+  "research_notes": "HubSpot is the primary provider for this category in n8n. While it handles CRM and Service well, 'Inventory' functionality often requires the Product/Line Item API or custom objects. Webhooks are supported via HubSpot Workflows (requires Professional tier) or the Webhooks API.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 3,
+    "tier": "moderate",
+    "estimated_hours": 8
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 8,
+    "rationale": "HubSpot is the primary provider for this category in n8n. While it handles CRM and Service well, 'Inventory' functionality often requires the Product/Line Item API or custom objects. Webhooks are supported via HubSpot Workflows (requires Professional tier) or the Webhooks API."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "hubspot",
+  "_is_category": true
+}

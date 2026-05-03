@@ -1,0 +1,66 @@
+{
+  "integration": "EHR",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:59:49.115Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "EHR (FHIR Standard)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 (SMART on FHIR)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires SMART on FHIR protocol implementation. This typically involves OAuth2 with specific scopes (e.g., patient/*.read) and often requires a signed JWT for backend-to-backend (system) authentication.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.hl7.org/fhir/http.html",
+  "rate_limits": "Varies by vendor; Epic and Cerner typically enforce burst limits (e.g., 40 req/sec) and daily quotas per developer application.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "HIPAA compliance requires n8n to be self-hosted or on a dedicated HIPAA-compliant instance.",
+    "Data mapping is difficult due to FHIR versioning differences (R4 vs DSTU2) between different hospital systems.",
+    "Many EHRs require IP whitelisting and manual app vetting before production access is granted."
+  ],
+  "client_must_provide": [
+    "OAuth2 Client ID",
+    "Client Secret",
+    "FHIR Base URL (Tenant specific)",
+    "Private RSA Key (for JWT-based system accounts)",
+    "List of required FHIR Scopes"
+  ],
+  "operations_available": [
+    "Search Patient by Identifier",
+    "Create Observation (Vitals/Labs)",
+    "Read Encounter Details",
+    "List MedicationRequests",
+    "Upload DocumentReference (PDFs/Notes)"
+  ],
+  "similar_integrations": [
+    "DrChrono",
+    "Salesforce Health Cloud",
+    "Airtable"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration must be handled via the HTTP Request node. Because EHRs follow the FHIR standard, the developer must be comfortable with deeply nested JSON resources. Authentication is the primary hurdle; using n8n's 'OAuth2' credential type works for user-facing flows, but 'Header Auth' with a pre-computed JWT (via a Function node) is often required for background sync tasks.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration must be handled via the HTTP Request node. Because EHRs follow the FHIR standard, the developer must be comfortable with deeply nested JSON resources. Authentication is the primary hurdle; using n8n's 'OAuth2' credential type works for user-facing flows, but 'Header Auth' with a pre-computed JWT (via a Function node) is often required for background sync tasks."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

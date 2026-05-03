@@ -1,0 +1,64 @@
+{
+  "integration": "Treasury",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:51.263Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Treasury (Treasury Prime)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key & Secret (Header-based)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires two custom headers: 'X-API-Key' and 'X-API-Secret'. These must be configured in the HTTP Request node's header section or via a 'Header Auth' credential type.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.treasuryprime.com/docs",
+  "rate_limits": "Standard rate limits are typically 10 requests per second (RPS) per endpoint, though this varies by contract tier.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhook signatures require manual HMAC SHA256 verification in a Code node to ensure authenticity.",
+    "The API uses specific UUIDs for all objects (Accounts, Persons, Flows) which must be carefully mapped across workflow states.",
+    "Sandbox and Production environments use entirely different base URLs and credential sets."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "API Secret",
+    "Environment (Sandbox vs Production) Base URL"
+  ],
+  "operations_available": [
+    "Create Person (KYC/KYB)",
+    "Open Deposit Account",
+    "Initiate ACH Transfer",
+    "Issue Virtual/Physical Card",
+    "List Transaction History"
+  ],
+  "similar_integrations": [
+    "Stripe",
+    "Plaid",
+    "Wise"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Since no native node exists, the implementation requires the HTTP Request node. Developers should create a reusable 'Treasury Prime' credential in n8n using the 'Header Auth' type to store the API Key and Secret. Webhooks are robust but require a manual 'Webhook' node followed by a 'Code' node to validate the 'X-Treasury-Prime-Signature' header against the raw body.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Since no native node exists, the implementation requires the HTTP Request node. Developers should create a reusable 'Treasury Prime' credential in n8n using the 'Header Auth' type to store the API Key and Secret. Webhooks are robust but require a manual 'Webhook' node followed by a 'Code' node to validate the 'X-Treasury-Prime-Signature' header against the raw body."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

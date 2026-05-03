@@ -1,0 +1,43 @@
+{
+  "name": "Generate Presales Report with Business Profile",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ input: JSON.stringify($json.intake || { prepared_for: { account_name: 'Example Corp' }, section_a_overview: { q06_workflow_name: 'Lead Processing' } }), structured: true, business_profile: { company_name: $json.company_name || 'Example Corp', company_url: $json.company_url || 'https://example.com', employee_count: $json.employee_count || 150, industry: $json.industry || 'technology', tech_stack: $json.tech_stack || ['Salesforce', 'HubSpot'], revenue_estimate: $json.revenue_estimate || '$5M-10M' } }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-1",
+      "name": "Generate Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [{ "node": "Generate Report", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

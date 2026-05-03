@@ -1,0 +1,65 @@
+{
+  "integration": "Mindbody",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:33:58.634Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Mindbody",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key, Site ID, and Staff Token",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a Developer API Key, a specific Site ID for the business, and a Staff User Token (OAuth2-like flow) generated via the POST /usertoken endpoint for most write operations.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.mindbodyonline.com/PublicDocumentation/V6",
+  "rate_limits": "Varies by account level; typically 1,000 requests per day for developer accounts, with burst limits applied per second.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Site ID must be included in the headers of every single request (MBO-Site-Id).",
+    "Staff tokens expire and require a logic flow within n8n to re-authenticate or refresh.",
+    "The API uses PascalCase for JSON keys which may differ from standard n8n camelCase conventions."
+  ],
+  "client_must_provide": [
+    "Mindbody Developer Account API Key",
+    "Target Site ID",
+    "Staff Username",
+    "Staff Password"
+  ],
+  "operations_available": [
+    "GetClasses",
+    "GetClients",
+    "AddArrival",
+    "GetBookableItems",
+    "AddClient"
+  ],
+  "similar_integrations": [
+    "Acuity Scheduling",
+    "Calendly",
+    "SimplyBook.me"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration must be built using the HTTP Request node. A 'Login' sub-workflow is recommended to handle the POST /usertoken request and pass the resulting 'AccessToken' to subsequent nodes. All requests require the 'Api-Key' and 'SiteId' headers.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "The integration must be built using the HTTP Request node. A 'Login' sub-workflow is recommended to handle the POST /usertoken request and pass the resulting 'AccessToken' to subsequent nodes. All requests require the 'Api-Key' and 'SiteId' headers."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

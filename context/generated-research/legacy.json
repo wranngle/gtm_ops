@@ -1,0 +1,63 @@
+{
+  "integration": "Legacy",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-07T22:32:35.550Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Legacy",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Basic Auth / API Key / Session-based",
+  "auth_complexity": "moderate",
+  "auth_notes": "Legacy systems typically utilize Basic Authentication or a session-based approach where a login request is required to obtain a session cookie or token for subsequent requests.",
+  "api_quality": "poor",
+  "api_documentation_url": null,
+  "rate_limits": "Usually undefined or unmanaged; requires manual throttling using n8n 'Wait' nodes to prevent server overload.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "Heavy reliance on XML or SOAP payloads rather than modern JSON.",
+    "Non-standard error handling where 200 OK status codes may still contain error messages in the body.",
+    "Lack of native pagination, requiring complex loop logic in n8n."
+  ],
+  "client_must_provide": [
+    "API Documentation (often in PDF or WSDL format)",
+    "Network access credentials (VPN, SSH Tunnel, or IP Whitelisting)",
+    "Service account credentials"
+  ],
+  "operations_available": [
+    "Get Record",
+    "Update Record",
+    "Create Record",
+    "Search/Query Records"
+  ],
+  "similar_integrations": [
+    "MySQL",
+    "Microsoft SQL Server",
+    "PostgreSQL"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration will require the HTTP Request node as the primary interface. Developers should be prepared to use the XML node for parsing responses if the system is SOAP-based. Custom error handling logic is essential to validate the content of successful HTTP responses.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration will require the HTTP Request node as the primary interface. Developers should be prepared to use the XML node for parsing responses if the system is SOAP-based. Custom error handling logic is essential to validate the content of successful HTTP responses."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

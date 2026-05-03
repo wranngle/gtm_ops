@@ -1,0 +1,65 @@
+{
+  "integration": "Lead Manager",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:17.405Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Lead Manager",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key usually passed in the HTTP Header (e.g., 'Authorization: Bearer [KEY]' or 'x-api-key'). Some legacy versions may use query parameters.",
+  "api_quality": "fair",
+  "api_documentation_url": null,
+  "rate_limits": "Typically 60 requests per minute depending on the specific provider instance.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Generic naming makes identifying the correct API documentation difficult without a specific vendor URL",
+    "Data structures for custom fields often require complex JSON nesting in the HTTP Request node",
+    "Lack of standardized error responses may require extensive 'Wait' or 'Retry' logic in n8n"
+  ],
+  "client_must_provide": [
+    "API Key/Token",
+    "API Base URL (Endpoint)",
+    "Sample JSON payload for a lead object",
+    "Webhook Secret (if using incoming data)"
+  ],
+  "operations_available": [
+    "Create Lead",
+    "Update Lead Status",
+    "Retrieve Lead Details",
+    "Search Leads by Email",
+    "Add Note to Lead"
+  ],
+  "similar_integrations": [
+    "HubSpot",
+    "Pipedrive",
+    "LeadSquared"
+  ],
+  "confidence": 0.75,
+  "research_notes": "Since no native node exists, the implementation must use the HTTP Request node. Authentication should be configured via 'Header Auth' in n8n credentials. For lead ingestion, a Webhook node should be used to receive data from Lead Manager, followed by a Set node to map fields to the internal workflow schema.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Since no native node exists, the implementation must use the HTTP Request node. Authentication should be configured via 'Header Auth' in n8n credentials. For lead ingestion, a Webhook node should be used to receive data from Lead Manager, followed by a Set node to map fields to the internal workflow schema."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

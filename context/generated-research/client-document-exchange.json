@@ -1,0 +1,66 @@
+{
+  "integration": "Client document exchange",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:21.010Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Client document exchange",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 with Subscription Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires an OAuth 2.0 flow (OpenID Connect) combined with an 'Ocp-Apim-Subscription-Key' header. Users must register an application in the vendor's developer portal to obtain a Client ID and Secret.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://developers.cchaxcess.com/api-details#api=document-v1",
+  "rate_limits": "Varies by subscription tier; typically 100 requests per minute with a daily quota.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "File uploads require specific multi-part form-data formatting that can be tricky in the n8n HTTP Request node.",
+    "The API uses GUIDs for all folder and file references, requiring initial 'Search' or 'List' calls to find IDs.",
+    "Token expiration is relatively short, requiring robust refresh token logic within the n8n credentials."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "Ocp-Apim-Subscription-Key",
+    "Firm ID",
+    "Developer Portal Access"
+  ],
+  "operations_available": [
+    "Upload Document",
+    "Download Document",
+    "List Client Files",
+    "Create Folder",
+    "Search Documents"
+  ],
+  "similar_integrations": [
+    "Google Drive",
+    "OneDrive",
+    "Dropbox"
+  ],
+  "confidence": 0.85,
+  "research_notes": "The integration must be built using the HTTP Request node. Authentication should be configured using 'OAuth2' credentials in n8n, but the 'Ocp-Apim-Subscription-Key' must be manually added to the headers of every request. Handling binary data for document transfers will require using n8n's binary property features.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "The integration must be built using the HTTP Request node. Authentication should be configured using 'OAuth2' credentials in n8n, but the 'Ocp-Apim-Subscription-Key' must be manually added to the headers of every request. Handling binary data for document transfers will require using n8n's binary property features."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

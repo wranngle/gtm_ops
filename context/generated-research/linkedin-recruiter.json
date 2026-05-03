@@ -1,0 +1,65 @@
+{
+  "integration": "LinkedIn Recruiter",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:57:55.708Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "LinkedIn Recruiter",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires LinkedIn Developer Portal application approval specifically for 'Talent Solutions'. Uses standard OAuth 2.0 flow but requires specific scopes like r_recruiter_data and potentially member-level permissions.",
+  "api_quality": "good",
+  "api_documentation_url": "https://learn.microsoft.com/en-us/linkedin/talent/",
+  "rate_limits": "Varies by endpoint; typically 100,000 requests per day per application, but subject to specific 'Talent Solutions' throttling policies.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Access to Recruiter APIs is strictly gated and requires a partnership or an active Recruiter Professional/Corporate subscription.",
+    "LinkedIn's OAuth tokens for Recruiter often have specific expiration behaviors that require robust refresh token handling in n8n.",
+    "The 'Candidate Export' functionality often requires a specific 'Middleware' platform integration approval from LinkedIn."
+  ],
+  "client_must_provide": [
+    "LinkedIn Developer App Client ID",
+    "LinkedIn Developer App Client Secret",
+    "Recruiter Contract ID",
+    "Approved API Scopes (e.g., r_compliance, r_recruiter_data)"
+  ],
+  "operations_available": [
+    "Retrieve Candidate Profiles",
+    "Export Candidates to ATS",
+    "Manage Job Postings",
+    "Retrieve Application Data",
+    "Search for Candidates"
+  ],
+  "similar_integrations": [
+    "Greenhouse",
+    "Lever",
+    "Workable"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation requires the HTTP Request node. You must manually configure the OAuth2 credentials in n8n using LinkedIn's authorization and token URLs. Because LinkedIn uses a specific 'Member Authorization' flow for Recruiter, the n8n callback URL must be whitelisted in the LinkedIn Developer Portal. Webhooks (if used) require a validation handshake (Challenge/Response) which must be handled via a Webhook node and an If node.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Implementation requires the HTTP Request node. You must manually configure the OAuth2 credentials in n8n using LinkedIn's authorization and token URLs. Because LinkedIn uses a specific 'Member Authorization' flow for Recruiter, the n8n callback URL must be whitelisted in the LinkedIn Developer Portal. Webhooks (if used) require a validation handshake (Challenge/Response) which must be handled via a Webhook node and an If node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

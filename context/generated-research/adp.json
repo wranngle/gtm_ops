@@ -1,0 +1,65 @@
+{
+  "integration": "ADP",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T13:00:07.483Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "ADP",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 with Mutual TLS (mTLS)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a Certificate Signing Request (CSR) to be signed by ADP. Authentication involves both a Client ID/Secret and a private key/certificate pair (.pem/.key files) for every request.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.adp.com/articles/api",
+  "rate_limits": "Varies by product and contract; typically 5-10 requests per second per consumer application.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "mTLS requirement makes standard n8n cloud hosting difficult without custom certificate management.",
+    "ADP uses a 'Canonical Data Model' which results in extremely deeply nested and verbose JSON responses.",
+    "Sandbox environments often require specific 'test' personas that do not always mirror production data structures exactly."
+  ],
+  "client_must_provide": [
+    "ADP Developer Account access",
+    "Signed SSL Certificate (.pem) and Private Key (.key)",
+    "Client ID and Client Secret",
+    "Specific API Product subscriptions enabled in the ADP Marketplace"
+  ],
+  "operations_available": [
+    "Get Worker Details (HR Management)",
+    "List Payroll Outputs",
+    "Get Time Off Balances",
+    "Update Worker Personal Communications",
+    "Post Journal Entries"
+  ],
+  "similar_integrations": [
+    "BambooHR",
+    "Workday",
+    "Hibob"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The HTTP Request node must be configured to use the 'Import Root CA' or the n8n instance must have the ADP certificates mounted at the OS level. Alternatively, a custom proxy or a specialized function node using 'axios' with 'httpsAgent' may be required to handle the mTLS handshake if the standard node fails to process the local cert files.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "The HTTP Request node must be configured to use the 'Import Root CA' or the n8n instance must have the ADP certificates mounted at the OS level. Alternatively, a custom proxy or a specialized function node using 'axios' with 'httpsAgent' may be required to handle the mTLS handshake if the standard node fails to process the local cert files."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

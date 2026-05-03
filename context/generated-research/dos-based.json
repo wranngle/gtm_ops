@@ -1,0 +1,63 @@
+{
+  "integration": "DOS-based",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:02:14.898Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "DOS-based",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "SSH Key / Local File System Permissions",
+  "auth_complexity": "complex",
+  "auth_notes": "Legacy DOS-based systems lack modern API authentication. Access usually requires SSH/SFTP credentials for the host machine or a VPN to access a local network share where the DOS system resides.",
+  "api_quality": "poor",
+  "api_documentation_url": null,
+  "rate_limits": "Limited by host hardware (CPU/Disk IO) and the locking mechanisms of legacy file formats (e.g., .DBF).",
+  "complexity_score": 9,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": false,
+  "gotchas": [
+    "Lack of structured data; often requires parsing fixed-width text files or legacy database formats like DBF.",
+    "Requires an intermediary 'bridge' (like a Python script or Node.js agent) to expose legacy data to the web.",
+    "Character encoding issues are common, as legacy systems often use OEM code pages (e.g., CP437) rather than UTF-8."
+  ],
+  "client_must_provide": [
+    "SSH or VPN access to the host environment",
+    "Absolute file paths for data input/output",
+    "Documentation on legacy file structures (data dictionaries)"
+  ],
+  "operations_available": [
+    "Execute CLI Command",
+    "Read/Write Flat Files",
+    "Directory Monitoring (via bridge)",
+    "Batch Job Triggering"
+  ],
+  "similar_integrations": [
+    "SSH",
+    "FTP",
+    "Local File Trigger"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires an indirect approach. Since DOS-based systems do not have a native HTTP stack, you must use the n8n SSH node to execute commands on the host or use a local n8n agent to monitor the file system. Data is typically exchanged via 'drop folders' where the legacy system writes output and n8n picks it up for processing.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 9,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Integration requires an indirect approach. Since DOS-based systems do not have a native HTTP stack, you must use the n8n SSH node to execute commands on the host or use a local n8n agent to monitor the file system. Data is typically exchanged via 'drop folders' where the legacy system writes output and n8n picks it up for processing."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

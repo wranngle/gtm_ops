@@ -1,0 +1,19 @@
+{
+  "period": "this_month",
+  "executions_total": 47,
+  "tokens_total": 1284500,
+  "tokens_input": 318200,
+  "tokens_output": 966300,
+  "pdf_generations": 32,
+  "voice_minutes": 412,
+  "by_day": [
+    { "date": "2026-04-15", "executions": 4, "tokens": 98400 },
+    { "date": "2026-04-16", "executions": 6, "tokens": 142200 },
+    { "date": "2026-04-17", "executions": 3, "tokens": 71800 },
+    { "date": "2026-04-18", "executions": 5, "tokens": 125600 },
+    { "date": "2026-04-19", "executions": 7, "tokens": 168300 },
+    { "date": "2026-04-20", "executions": 4, "tokens": 102100 },
+    { "date": "2026-04-21", "executions": 6, "tokens": 148700 },
+    { "date": "2026-04-22", "executions": 12, "tokens": 327400 }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "integration": "Onfleet",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:34.481Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Onfleet",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Basic Auth",
+  "auth_complexity": "simple",
+  "auth_notes": "Onfleet uses Basic Authentication where the API key is provided as the username and the password field is left blank.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://docs.onfleet.com/",
+  "rate_limits": "20 requests per second (standard API key)",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Pagination uses a 'lastId' cursor-based approach rather than traditional page numbers, requiring specific loop logic in n8n.",
+    "The API key must be passed as the username in Basic Auth; leaving the password empty is mandatory.",
+    "Webhook verification requires handling a 'check' parameter during the initial handshake if using the API to create webhooks."
+  ],
+  "client_must_provide": [
+    "API Key"
+  ],
+  "operations_available": [
+    "Create Task",
+    "Update Task",
+    "List Workers",
+    "Get Team Details",
+    "Delete Task"
+  ],
+  "similar_integrations": [
+    "ShipStation",
+    "AfterShip",
+    "Shippo"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Integration requires the HTTP Request node. Users should configure a 'Basic Auth' credential in n8n, entering the Onfleet API key in the username field. For webhooks, the n8n Webhook node URL should be registered in the Onfleet dashboard or via a POST request to the /webhooks endpoint.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Integration requires the HTTP Request node. Users should configure a 'Basic Auth' credential in n8n, entering the Onfleet API key in the username field. For webhooks, the n8n Webhook node URL should be registered in the Onfleet dashboard or via a POST request to the /webhooks endpoint."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

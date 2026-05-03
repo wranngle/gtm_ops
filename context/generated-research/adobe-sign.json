@@ -1,0 +1,66 @@
+{
+  "integration": "Adobe Sign",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:02:09.665Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Adobe Sign",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires creating an application in the Adobe Developer Console to obtain a Client ID and Client Secret. Must configure specific scopes (e.g., agreement_read, agreement_write, agreement_send) and handle shard-specific Authorization URLs.",
+  "api_quality": "good",
+  "api_documentation_url": "https://opensource.adobe.com/adobesign-api-v6-methods/",
+  "rate_limits": "Varies by plan; typically 10-20 requests per second and 100,000 requests per day for enterprise accounts.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhook setup requires a mandatory challenge-response handshake: the endpoint must return a specific header (X-AdobeSign-ClientId) during the initial GET request.",
+    "API endpoints are shard-dependent (e.g., api.na2.adobesign.com vs api.eu1.adobesign.com), requiring dynamic URL configuration.",
+    "File uploads require a two-step process: first creating a 'transient document' and then referencing its ID in the agreement creation call."
+  ],
+  "client_must_provide": [
+    "Adobe Developer Console Access",
+    "Client ID",
+    "Client Secret",
+    "Account Shard/Data Center ID",
+    "Required Scopes"
+  ],
+  "operations_available": [
+    "Create Agreement",
+    "Get Agreement Status",
+    "Upload Transient Document",
+    "Download Signed PDF",
+    "Send Reminders"
+  ],
+  "similar_integrations": [
+    "DocuSign",
+    "Dropbox Sign",
+    "PandaDoc"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Integration must be built using the HTTP Request node. Authentication should be configured using n8n's 'OAuth2' credential type. For webhooks, a separate workflow with an 'If' node is needed to handle the Adobe validation GET request versus the actual event POST notification.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Integration must be built using the HTTP Request node. Authentication should be configured using n8n's 'OAuth2' credential type. For webhooks, a separate workflow with an 'If' node is needed to handle the Adobe validation GET request versus the actual event POST notification."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

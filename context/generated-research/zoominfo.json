@@ -1,0 +1,65 @@
+{
+  "integration": "ZoomInfo",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:20.557Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "ZoomInfo",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "JWT (JSON Web Token)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a multi-step process where you POST your username and password/private key to the /authenticate endpoint to receive a JWT bearer token. This token must be passed in the header of subsequent requests and handled for expiration.",
+  "api_quality": "good",
+  "api_documentation_url": "https://api-docs.zoominfo.com/",
+  "rate_limits": "Typically 25-50 requests per second, subject to daily credit quotas based on the specific enterprise contract.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Token expiration management: Tokens are short-lived and require a dedicated workflow logic to refresh or re-auth before main operations.",
+    "Credit usage: Every successful enrichment or search consumes credits; accidental loops in n8n can deplete monthly quotas rapidly.",
+    "Strict schema: The API is highly structured and requires specific input formatting for 'Match' operations compared to 'Search' operations."
+  ],
+  "client_must_provide": [
+    "API Username",
+    "API Password",
+    "Client ID",
+    "Access to the ZoomInfo Admin Portal to enable API permissions"
+  ],
+  "operations_available": [
+    "Contact Search/Enrichment",
+    "Company Search/Enrichment",
+    "Intent Data Retrieval",
+    "WebSights (IP to Company resolution)",
+    "Match API (Bulk data cleaning)"
+  ],
+  "similar_integrations": [
+    "Apollo.io",
+    "Clearbit",
+    "Hunter.io"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Development will require an initial HTTP Request node to fetch the JWT. This token should ideally be stored in a 'Wait' or 'Static Data' context if used frequently, or fetched at the start of every workflow execution. All subsequent nodes must use the 'Header' authentication method in the HTTP Request node with 'Authorization: Bearer {{token}}'.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Development will require an initial HTTP Request node to fetch the JWT. This token should ideally be stored in a 'Wait' or 'Static Data' context if used frequently, or fetched at the start of every workflow execution. All subsequent nodes must use the 'Header' authentication method in the HTTP Request node with 'Authorization: Bearer {{token}}'."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,64 @@
+{
+  "integration": "Reporting",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T13:00:18.221Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Reporting",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is typically handled via an API Key passed in the HTTP Header (e.g., 'Authorization: ReporterKey [YOUR_KEY]') or as a query parameter depending on the specific ReportingCloud/Reporting.io endpoint.",
+  "api_quality": "good",
+  "api_documentation_url": "https://reporting.cloud/api/docs",
+  "rate_limits": "100 requests per minute for standard tiers; higher limits available for enterprise plans.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": false,
+  "gotchas": [
+    "Generated reports are returned as binary data, requiring the n8n HTTP Request node to be set to 'Response Format: File' to prevent data corruption.",
+    "Template placeholders must strictly follow the service's merge field syntax (e.g., TX Text Control format), or the merge operation will fail silently.",
+    "Large document generation can exceed n8n's default node timeout settings if the dataset is substantial."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Pre-formatted document templates (DOCX, RTF, or TX)",
+    "Sample JSON data structure for mapping merge fields"
+  ],
+  "operations_available": [
+    "Merge Data and Create Document",
+    "Convert Document Format (e.g., DOCX to PDF)",
+    "List and Manage Templates",
+    "Retrieve Account Usage Statistics",
+    "Upload/Download Template Files"
+  ],
+  "similar_integrations": [
+    "Google Docs",
+    "Formstack Documents",
+    "PDF.co"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the HTTP Request node. Users must handle the transition from JSON data to binary file output. It is recommended to use a 'Move Binary Data' node immediately after the request to name the file correctly before storage or transmission.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "Integration requires the HTTP Request node. Users must handle the transition from JSON data to binary file output. It is recommended to use a 'Move Binary Data' node immediately after the request to name the file correctly before storage or transmission."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

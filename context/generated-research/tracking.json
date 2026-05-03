@@ -1,0 +1,64 @@
+{
+  "integration": "Tracking",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T22:41:59.544Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Tracking",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key to be included in the HTTP Header (typically 'Tracking-Api-Key' or 'Authorization: Bearer').",
+  "api_quality": "good",
+  "api_documentation_url": "https://api.tracking.com/v2/docs",
+  "rate_limits": "10 requests per second for standard API plans; higher tiers available.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": true,
+  "gotchas": [
+    "Carrier auto-detection can be inconsistent for smaller regional couriers, requiring manual carrier slug mapping.",
+    "Webhook payloads often contain deeply nested JSON that requires the n8n Item Lists or Code node to flatten.",
+    "Rate limits are strictly enforced and can lead to 429 errors if bulk tracking updates are attempted without batching."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Webhook Secret (for signature verification)",
+    "List of preferred Carrier Slugs"
+  ],
+  "operations_available": [
+    "Create Tracking",
+    "Get Tracking Results",
+    "Update Tracking Info",
+    "Delete Tracking",
+    "List All Trackings"
+  ],
+  "similar_integrations": [
+    "AfterShip",
+    "Shippo",
+    "ShipEngine"
+  ],
+  "confidence": 0.85,
+  "research_notes": "The integration must be built using the HTTP Request node. Authentication is straightforward via headers. To handle real-time updates, a Webhook node should be configured to receive POST requests from the Tracking service. Data normalization is recommended as different carriers return varying levels of detail in the checkpoint arrays.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "The integration must be built using the HTTP Request node. Authentication is straightforward via headers. To handle real-time updates, a Webhook node should be configured to receive POST requests from the Tracking service. Data normalization is recommended as different carriers return varying levels of detail in the checkpoint arrays."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,575 @@
+{
+  "$schema": "../lib/schemas/questionnaire.schema.ts#SystemsCatalogSchema",
+  "version": "1.0.0",
+  "systems": [
+    {
+      "id": "dentrix-g7",
+      "name": "Dentrix G7",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental"]
+    },
+    {
+      "id": "dentrix-ascend",
+      "name": "Dentrix Ascend",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental"]
+    },
+    {
+      "id": "eaglesoft",
+      "name": "Eaglesoft",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental"]
+    },
+    {
+      "id": "open-dental",
+      "name": "Open Dental",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental"]
+    },
+    {
+      "id": "curve-dental",
+      "name": "Curve Dental",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental"]
+    },
+    {
+      "id": "epic",
+      "name": "Epic EHR",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["hospital", "enterprise-healthcare"]
+    },
+    {
+      "id": "cerner",
+      "name": "Cerner (Oracle Health)",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["hospital", "enterprise-healthcare"]
+    },
+    {
+      "id": "athenahealth",
+      "name": "athenahealth",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["medical-practice", "ambulatory"]
+    },
+    {
+      "id": "drchrono",
+      "name": "DrChrono",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["medical-practice"]
+    },
+    {
+      "id": "kareo",
+      "name": "Kareo (Tebra)",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["medical-practice"]
+    },
+    {
+      "id": "nextgen",
+      "name": "NextGen Healthcare",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["medical-practice", "ambulatory"]
+    },
+    {
+      "id": "carestream",
+      "name": "Carestream Dental",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental", "imaging"]
+    },
+    {
+      "id": "3shape",
+      "name": "3Shape",
+      "category": "healthcare",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental", "cad-cam"]
+    },
+    {
+      "id": "dexis",
+      "name": "DEXIS Imaging",
+      "category": "healthcare",
+      "has_api": false,
+      "has_native_node": false,
+      "common_in": ["dental", "imaging"]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.salesforce",
+      "common_in": ["enterprise", "sales"]
+    },
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.hubspot",
+      "common_in": ["smb", "marketing", "sales"]
+    },
+    {
+      "id": "pipedrive",
+      "name": "Pipedrive",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.pipedrive",
+      "common_in": ["smb", "sales"]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.zohoCrm",
+      "common_in": ["smb"]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["smb", "sales"]
+    },
+    {
+      "id": "copper",
+      "name": "Copper",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.copper",
+      "common_in": ["smb", "google-workspace"]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["sales"]
+    },
+    {
+      "id": "servicetitan",
+      "name": "ServiceTitan",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["home-services", "hvac", "plumbing"]
+    },
+    {
+      "id": "housecall-pro",
+      "name": "Housecall Pro",
+      "category": "crm",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["home-services"]
+    },
+    {
+      "id": "twilio",
+      "name": "Twilio",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.twilio",
+      "common_in": ["sms", "voice", "all-industries"]
+    },
+    {
+      "id": "weave",
+      "name": "Weave",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental", "medical-practice", "optometry"]
+    },
+    {
+      "id": "ringcentral",
+      "name": "RingCentral",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["enterprise", "voip"]
+    },
+    {
+      "id": "vonage",
+      "name": "Vonage",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.vonage",
+      "common_in": ["sms", "voice"]
+    },
+    {
+      "id": "sendgrid",
+      "name": "SendGrid",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.sendGrid",
+      "common_in": ["email", "all-industries"]
+    },
+    {
+      "id": "mailchimp",
+      "name": "Mailchimp",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.mailchimp",
+      "common_in": ["email", "marketing"]
+    },
+    {
+      "id": "intercom",
+      "name": "Intercom",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.intercom",
+      "common_in": ["customer-support", "saas"]
+    },
+    {
+      "id": "zendesk",
+      "name": "Zendesk",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.zendesk",
+      "common_in": ["customer-support"]
+    },
+    {
+      "id": "freshdesk",
+      "name": "Freshdesk",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["customer-support", "smb"]
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.slack",
+      "common_in": ["internal-comms", "all-industries"]
+    },
+    {
+      "id": "microsoft-teams",
+      "name": "Microsoft Teams",
+      "category": "communication",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.microsoftTeams",
+      "common_in": ["internal-comms", "enterprise"]
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.stripe",
+      "common_in": ["ecommerce", "saas", "all-industries"]
+    },
+    {
+      "id": "square",
+      "name": "Square",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["retail", "restaurants", "smb"]
+    },
+    {
+      "id": "paypal",
+      "name": "PayPal",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.payPal",
+      "common_in": ["ecommerce", "all-industries"]
+    },
+    {
+      "id": "rectangle-health",
+      "name": "Rectangle Health",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["dental", "medical-practice"]
+    },
+    {
+      "id": "quickbooks",
+      "name": "QuickBooks",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.quickbooks",
+      "common_in": ["accounting", "smb", "all-industries"]
+    },
+    {
+      "id": "xero",
+      "name": "Xero",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.xero",
+      "common_in": ["accounting", "smb"]
+    },
+    {
+      "id": "freshbooks",
+      "name": "FreshBooks",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["accounting", "freelance"]
+    },
+    {
+      "id": "braintree",
+      "name": "Braintree",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["ecommerce", "mobile-apps"]
+    },
+    {
+      "id": "authorize-net",
+      "name": "Authorize.net",
+      "category": "payment",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["ecommerce", "legacy"]
+    },
+    {
+      "id": "sap",
+      "name": "SAP",
+      "category": "erp",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["enterprise", "manufacturing"]
+    },
+    {
+      "id": "oracle-netsuite",
+      "name": "Oracle NetSuite",
+      "category": "erp",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["enterprise", "mid-market"]
+    },
+    {
+      "id": "microsoft-dynamics",
+      "name": "Microsoft Dynamics 365",
+      "category": "erp",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.microsoftDynamicsCrm",
+      "common_in": ["enterprise"]
+    },
+    {
+      "id": "odoo",
+      "name": "Odoo",
+      "category": "erp",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["smb", "open-source"]
+    },
+    {
+      "id": "google-workspace",
+      "name": "Google Workspace",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.googleSheets",
+      "common_in": ["all-industries"]
+    },
+    {
+      "id": "microsoft-365",
+      "name": "Microsoft 365",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.microsoftExcel",
+      "common_in": ["enterprise", "all-industries"]
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.notion",
+      "common_in": ["startups", "knowledge-management"]
+    },
+    {
+      "id": "airtable",
+      "name": "Airtable",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.airtable",
+      "common_in": ["smb", "no-code"]
+    },
+    {
+      "id": "monday",
+      "name": "Monday.com",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.mondayCom",
+      "common_in": ["project-management"]
+    },
+    {
+      "id": "asana",
+      "name": "Asana",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.asana",
+      "common_in": ["project-management"]
+    },
+    {
+      "id": "jira",
+      "name": "Jira",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.jira",
+      "common_in": ["software-development", "enterprise"]
+    },
+    {
+      "id": "trello",
+      "name": "Trello",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.trello",
+      "common_in": ["smb", "project-management"]
+    },
+    {
+      "id": "clickup",
+      "name": "ClickUp",
+      "category": "productivity",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.clickUp",
+      "common_in": ["project-management"]
+    },
+    {
+      "id": "google-ads",
+      "name": "Google Ads",
+      "category": "marketing",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.googleAds",
+      "common_in": ["marketing", "advertising"]
+    },
+    {
+      "id": "facebook-ads",
+      "name": "Facebook/Meta Ads",
+      "category": "marketing",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.facebookLeadAds",
+      "common_in": ["marketing", "advertising"]
+    },
+    {
+      "id": "google-analytics",
+      "name": "Google Analytics",
+      "category": "marketing",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.googleAnalytics",
+      "common_in": ["marketing", "analytics"]
+    },
+    {
+      "id": "marketo",
+      "name": "Marketo",
+      "category": "marketing",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.marketo",
+      "common_in": ["enterprise", "marketing-automation"]
+    },
+    {
+      "id": "activecampaign",
+      "name": "ActiveCampaign",
+      "category": "marketing",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.activeCampaign",
+      "common_in": ["smb", "marketing-automation"]
+    },
+    {
+      "id": "klaviyo",
+      "name": "Klaviyo",
+      "category": "marketing",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["ecommerce", "email-marketing"]
+    },
+    {
+      "id": "custom-api",
+      "name": "Custom/Internal API",
+      "category": "other",
+      "has_api": true,
+      "has_native_node": false,
+      "common_in": ["custom-development"]
+    },
+    {
+      "id": "legacy-database",
+      "name": "Legacy Database (Direct)",
+      "category": "other",
+      "has_api": false,
+      "has_native_node": false,
+      "common_in": ["legacy-systems"]
+    },
+    {
+      "id": "spreadsheet-manual",
+      "name": "Spreadsheet / Manual Process",
+      "category": "other",
+      "has_api": false,
+      "has_native_node": false,
+      "common_in": ["all-industries"]
+    },
+    {
+      "id": "ftp-sftp",
+      "name": "FTP/SFTP File Transfer",
+      "category": "other",
+      "has_api": true,
+      "has_native_node": true,
+      "native_node_name": "n8n-nodes-base.ftp",
+      "common_in": ["legacy-systems", "data-exchange"]
+    },
+    {
+      "id": "other",
+      "name": "Other (Please Specify)",
+      "category": "other",
+      "has_api": false,
+      "has_native_node": false,
+      "common_in": []
+    }
+  ]
+}

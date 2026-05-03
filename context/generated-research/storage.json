@@ -1,0 +1,66 @@
+{
+  "integration": "Storage",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:02:06.816Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Storage",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.googleDrive",
+  "auth_type": "oauth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating a project in Google Cloud Console, enabling the Google Drive API, and configuring an OAuth consent screen to obtain Client ID and Client Secret. Service Account authentication is also supported for server-to-server integration.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://developers.google.com/drive/api/v3/reference",
+  "rate_limits": "20,000 queries per 100 seconds per project; 1,000,000 queries per day. User-level limits also apply (approx 10 requests per second per user).",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "Google Drive allows multiple files with the same name in the same folder; always use File IDs instead of names to avoid targeting the wrong file.",
+    "OAuth scopes must be correctly configured; using 'drive.file' only allows access to files created by the n8n app, while 'drive' allows full access.",
+    "Shared Drives (formerly Team Drives) require specific 'SupportsAllDrives' parameters which are handled in n8n via a toggle, but often overlooked by users."
+  ],
+  "client_must_provide": [
+    "Google Cloud Console Project access",
+    "OAuth Client ID and Client Secret",
+    "Target Folder ID(s)",
+    "Specific Google Account for authentication"
+  ],
+  "operations_available": [
+    "Upload",
+    "Download",
+    "List",
+    "Create Folder",
+    "Delete",
+    "Copy"
+  ],
+  "similar_integrations": [
+    "Dropbox",
+    "OneDrive",
+    "Box"
+  ],
+  "confidence": 0.95,
+  "research_notes": "While 'Storage' is a category, Google Drive is the primary n8n implementation. The node is highly mature and includes a dedicated 'Google Drive Trigger' node for webhook-like functionality using Google's push notifications.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "While 'Storage' is a category, Google Drive is the primary n8n implementation. The node is highly mature and includes a dedicated 'Google Drive Trigger' node for webhook-like functionality using Google's push notifications."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "google drive",
+  "_is_category": true
+}

@@ -1,0 +1,65 @@
+{
+  "integration": "Door Systems",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:45.156Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Door Systems",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 or API Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Authentication typically requires access to the ASSA ABLOY Developer Portal (parent company) or a specific local controller API. Most modern implementations use OAuth2 with Client ID and Client Secret, though some legacy industrial controllers use static API keys with IP whitelisting.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://developer.assaabloy.com/",
+  "rate_limits": "Varies by account tier; typically 5,000 requests per month for standard commercial integrations with burst limits of 10 requests per second.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Remote unlocking often requires additional safety 'handshake' or specific hardware-level permissions not enabled by default.",
+    "Status updates (open/closed) may have a 2-5 second latency depending on the cloud-to-local bridge.",
+    "Documentation is often gated behind a partner approval process."
+  ],
+  "client_must_provide": [
+    "Developer Portal credentials",
+    "Hardware Controller Serial Numbers",
+    "OAuth2 Client ID and Secret",
+    "Site ID/Organization ID"
+  ],
+  "operations_available": [
+    "Get Door Current State",
+    "Trigger Remote Unlock/Open",
+    "Retrieve Access Logs",
+    "List Registered Users/Keycards",
+    "Monitor System Health/Battery"
+  ],
+  "similar_integrations": [
+    "DoorBird",
+    "Brivo",
+    "Kisi"
+  ],
+  "confidence": 0.75,
+  "research_notes": "As there is no native node, the HTTP Request node is mandatory. You will need to configure the 'Authentication' section of the node to 'OAuth2' and manually input the Authorization and Token URLs provided in the ASSA ABLOY/Door Systems developer documentation. Real-time events require setting up a Webhook node and registering that URL via a POST request to their subscription endpoint.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "As there is no native node, the HTTP Request node is mandatory. You will need to configure the 'Authentication' section of the node to 'OAuth2' and manually input the Authorization and Token URLs provided in the ASSA ABLOY/Door Systems developer documentation. Real-time events require setting up a Webhook node and registering that URL via a POST request to their subscription endpoint."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

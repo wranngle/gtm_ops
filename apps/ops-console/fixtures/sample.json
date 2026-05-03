@@ -1,0 +1,8 @@
+{
+  "client_brief": "Acme HVAC Services is a regional HVAC contractor (~30 employees) handling residential and light commercial. Pain: 22% of after-hours calls go to voicemail and 40% of those callers do not call back the next day. They want a voice agent that answers after-hours, gathers caller details, and routes urgency-tagged dispatches to the on-call tech via SMS. Existing stack: HouseCallPro for dispatch, Twilio for inbound SMS, no current AI. Budget signal: comparable peers spending $1.5-2.5k/mo on dispatch tooling.",
+  "intake_metadata": {
+    "received_at": "2026-04-22T14:08:11Z",
+    "source": "web_form",
+    "operator": "demo-operator"
+  }
+}

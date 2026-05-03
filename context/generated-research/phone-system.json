@@ -1,0 +1,65 @@
+{
+  "integration": "Phone system",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:07:34.771Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Phone system",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.twilio",
+  "auth_type": "api_key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires Twilio Account SID and Auth Token found in the Twilio Console. Some operations also require a Messaging Service SID or a specific Twilio Phone Number.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://www.twilio.com/docs/api",
+  "rate_limits": "Twilio limits concurrent requests to the REST API. Most accounts have a default limit of 100 concurrent requests. SMS throughput (Messages Per Second) is limited by the phone number type (e.g., 1 MPS for standard long codes).",
+  "complexity_score": 3,
+  "complexity_tier": "moderate",
+  "estimated_hours": 8,
+  "webhook_support": true,
+  "gotchas": [
+    "Trial accounts require all recipient phone numbers to be manually verified in the Twilio console before messages can be sent.",
+    "SMS messages exceeding 160 characters are split into multiple segments, which can double or triple costs per message.",
+    "Regulatory compliance (A2P 10DLC) is now mandatory for sending messages to US phone numbers, requiring business registration to avoid filtering."
+  ],
+  "client_must_provide": [
+    "Twilio Account SID",
+    "Auth Token",
+    "Purchased Twilio Phone Number",
+    "A2P 10DLC Registration status (for US SMS)"
+  ],
+  "operations_available": [
+    "Send SMS",
+    "Make Phone Call",
+    "List Messages",
+    "Get Call Details",
+    "Fetch Media (MMS)"
+  ],
+  "similar_integrations": [
+    "Vonage",
+    "RingCentral",
+    "MessageBird"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Twilio is the primary provider for this category in n8n. While the node handles basic CRUD operations, complex call flows (IVR) usually require hosting TwiML instructions or using Twilio Studio, which n8n can trigger via the API.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 3,
+    "tier": "moderate",
+    "estimated_hours": 8
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 8,
+    "rationale": "Twilio is the primary provider for this category in n8n. While the node handles basic CRUD operations, complex call flows (IVR) usually require hosting TwiML instructions or using Twilio Studio, which n8n can trigger via the API."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "twilio",
+  "_is_category": true
+}

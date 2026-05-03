@@ -1,0 +1,65 @@
+{
+  "integration": "CAD/CAM",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T03:06:15.145Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "CAD/CAM (Autodesk Platform Services / Forge)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 (2-legged and 3-legged)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Autodesk Developer account to generate Client ID and Client Secret. Implementation in n8n requires manual token management or configuring the OAuth2 credentials type with specific scopes (data:read, data:write, bucket:create, etc.).",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://aps.autodesk.com/developer/documentation",
+  "rate_limits": "Varies by service; Data Management API typically allows 300-500 requests per minute. Model Derivative API uses a credit-based system for translations.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Large CAD files require chunked/resumable upload logic which is difficult to implement in standard HTTP nodes.",
+    "File translation (Model Derivative API) is asynchronous; you must implement a polling loop or a webhook listener to detect when a file is ready.",
+    "URNs for files must be Base64 encoded (without padding) before being passed to certain endpoints."
+  ],
+  "client_must_provide": [
+    "Autodesk Client ID",
+    "Autodesk Client Secret",
+    "Project/Hub ID",
+    "Target Bucket Key"
+  ],
+  "operations_available": [
+    "Upload source CAD files (DWG, STEP, RVT, etc.)",
+    "Trigger Model Derivative translation (convert to SVF/OBJ/STL)",
+    "Extract metadata and Bill of Materials (BOM)",
+    "Manage Hubs, Projects, and Folders",
+    "Generate signed URLs for temporary file access"
+  ],
+  "similar_integrations": [
+    "Autodesk BIM 360",
+    "Google Drive",
+    "Dropbox"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Since CAD/CAM is a category, this analysis focuses on Autodesk Platform Services (formerly Forge) as it is the industry standard for CAD/CAM API integrations. Integration in n8n will require the HTTP Request node for all calls, specifically handling binary data for file transfers and complex JSON bodies for translation jobs.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "Since CAD/CAM is a category, this analysis focuses on Autodesk Platform Services (formerly Forge) as it is the industry standard for CAD/CAM API integrations. Integration in n8n will require the HTTP Request node for all calls, specifically handling binary data for file transfers and complex JSON bodies for translation jobs."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

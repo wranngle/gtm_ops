@@ -2,7 +2,7 @@
 # lint-naming-conventions.sh — enforce schema/type naming pair in
 # packages/*/src/{types,config}/. STACK-041.
 #
-# Per the Harness Engineering custom-lint principle, every Zod schema and the
+# Custom-lint rule: every Zod schema and the
 # type it infers must follow a discoverable naming pair so humans AND agents
 # can pattern-match across the codebase without re-learning conventions per
 # file:

@@ -1,0 +1,65 @@
+{
+  "integration": "ELD/GPS",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:40:02.314Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "ELD/GPS",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key or OAuth2",
+  "auth_complexity": "moderate",
+  "auth_notes": "Most industry leaders (Samsara, Motive, Geotab) utilize Bearer Token authentication. Some require an additional 'X-API-Key' header or a specific 'Fleet ID' parameter in the request URL.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.samsara.com/",
+  "rate_limits": "Typically 10 requests per second for standard tiers; Geotab and Motive use daily quotas ranging from 5,000 to 50,000 calls.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 18,
+  "webhook_support": true,
+  "gotchas": [
+    "High-frequency GPS pings can quickly exhaust rate limits if polling is used instead of webhooks.",
+    "Pagination is usually cursor-based, requiring recursive workflow loops in n8n.",
+    "Timezone handling for HOS (Hours of Service) logs is often inconsistent between different ELD providers."
+  ],
+  "client_must_provide": [
+    "API Access Token",
+    "Organization or Fleet ID",
+    "Webhook Secret Key",
+    "List of specific Asset/Vehicle IDs to monitor"
+  ],
+  "operations_available": [
+    "Get Real-time Vehicle Locations",
+    "Retrieve Driver Hours of Service (HOS) Logs",
+    "Fetch Driver Vehicle Inspection Reports (DVIR)",
+    "List Fleet Assets and Drivers",
+    "Query Engine Diagnostics/Telemetry"
+  ],
+  "similar_integrations": [
+    "Samsara",
+    "Motive (formerly KeepTruckin)",
+    "Geotab"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Since no native node exists, the HTTP Request node is mandatory. Users should implement a 'Split In Batches' node when fetching fleet-wide data to prevent memory issues. For real-time tracking, the Webhook node should be used to receive 'Geofence' or 'Status Change' triggers directly from the ELD provider.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 18
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 18,
+    "rationale": "Since no native node exists, the HTTP Request node is mandatory. Users should implement a 'Split In Batches' node when fetching fleet-wide data to prevent memory issues. For real-time tracking, the Webhook node should be used to receive 'Geofence' or 'Status Change' triggers directly from the ELD provider."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

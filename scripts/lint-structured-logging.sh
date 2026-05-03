@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # lint-structured-logging.sh — enforce structured logging across packages/*/src/.
 #
-# Per the Harness Engineering structural-lint principle (docs/references/
-# openai_harness_engineering_original_spec.txt L163-165), all log emission in
+# Structured-logging rule: all log emission in
 # packages/<name>/src/<layer>/ must go through the structured logger provider
 # (packages/<name>/src/providers/logger.ts or equivalent) instead of raw
 # `console.log` or `process.{stderr,stdout}.write` calls. Direct stream writes

@@ -1,0 +1,82 @@
+{
+  "id": "vapi-svg-001",
+  "source": {
+    "vendor": "vapi",
+    "url": "https://vapi.ai/blog/case-study-SVG",
+    "title": "Spring Venture Group: $5.8M Impact with 4 Engineers in 1 Week"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "insurance",
+    "company_size": "400+ agents, $325M revenue",
+    "company_type": "Medicare insurance brokerage",
+    "pain_points": [
+      "50-person team dedicated solely to initial Medicare qualification calls",
+      "Only 12% transfer-to-close rate",
+      "Repetitive script-reading causing poor customer experience",
+      "Long hold times",
+      "Inconsistent data capture by human agents"
+    ],
+    "volume_metrics": {
+      "calls_per_month": null,
+      "calls_per_day": null,
+      "avg_call_duration_minutes": null,
+      "staff_hours_per_month": null,
+      "raw_description": "50-person team handling thousands of calls monthly for lead qualification"
+    },
+    "systems_involved": [
+      "Amazon Connect",
+      "Salesforce"
+    ],
+    "goals": [
+      "Reduce qualification team size",
+      "Improve transfer-to-close rate",
+      "Better data capture from calls",
+      "Create natural conversational experience (not IVR menus)"
+    ],
+    "constraints": [
+      "Must integrate with existing Amazon Connect phone system",
+      "Medicare compliance requirements"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "Vapi",
+    "integrations": [
+      { "system_name": "Amazon Connect", "integration_type": "api", "purpose": "phone system integration" },
+      { "system_name": "Salesforce", "integration_type": "api", "purpose": "automatic data capture and CRM" }
+    ],
+    "pricing_model": {
+      "model_type": "unknown",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null
+    },
+    "timeline_weeks": 2,
+    "roi_achieved": {
+      "hours_saved_per_month": null,
+      "calls_automated_percent": 50,
+      "monthly_savings": null,
+      "annual_savings": null,
+      "staff_reduction_percent": 50,
+      "transfer_to_close_rate_increase_percent": 15,
+      "total_financial_impact": 5800000,
+      "raw_description": "50-person team reduced by half, 15% increase in transfer-to-close rate, $5.8M+ in savings and new revenue"
+    },
+    "key_features": [
+      "Natural conversation flows (not IVR menus)",
+      "Automatic caller data capture (names, DOB, plan details)",
+      "Human-like interactions",
+      "Seamless agent transfer",
+      "Flexible model/voice switching (ASR, LLM, TTS)"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Excellent detail including timeline breakdown, team size impact, conversion metrics, and dollar impact. Clear integration requirements.",
+    "domain_tags": ["insurance", "medicare", "lead-qualification", "crm-integration", "amazon-connect", "salesforce"],
+    "holdout": false,
+    "harvested_by": "web-extraction"
+  }
+}

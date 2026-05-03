@@ -1,0 +1,301 @@
+{
+  "$schema": "wranngle://config/sales-strategy/v1",
+  "version": "1.1.0",
+  "industry": "trades",
+  "industry_label": "Trade Services (HVAC, Plumbing, Electrical)",
+  "product_name": "24/7 AI Voice Agent",
+  "last_updated": "2026-01",
+
+  "market_context": {
+    "core_problem": {
+      "headline": "The 'Bleeding Neck' Problem",
+      "description": "Trade businesses lose significant revenue through missed calls. A missed call is not just a missed connection—it's lost immediate revenue and lifetime value. SMBs miss 20-62% of inbound calls, with weekend/after-hours rates reaching 60%."
+    },
+    "missed_call_value": {
+      "range_low": 180,
+      "range_high": 1200,
+      "display": "$180 – $1,200",
+      "description": "Revenue per missed call varies by trade and urgency. Emergency calls command 1.5-2x premium rates.",
+      "citation": "[Industry Analysis]"
+    },
+    "voicemail_abandonment": {
+      "percent": 85,
+      "display": "70% – 85%",
+      "description": "Callers who reach voicemail typically hang up and dial a competitor immediately.",
+      "citation": "[Consumer Behavior Study]"
+    },
+    "speed_to_lead": {
+      "window_minutes": 5,
+      "display": "5 minutes",
+      "description": "Leads contacted within 5 minutes are significantly more likely to convert. Average response time for many businesses is hours or days.",
+      "citation": "[Lead Response Study]"
+    },
+    "competitor_pivot": {
+      "percent": 62,
+      "display": "62%",
+      "description": "Customers will switch to a competitor after a poor experience (unanswered call). In high-urgency trades, lack of immediate response = lost deal.",
+      "citation": "[Consumer Behavior Study]"
+    },
+    "competitive_landscape": [
+      {
+        "option": "In-House Receptionist",
+        "cost": "$3,200+/mo",
+        "limitations": "9-5 only; sick days; training overhead; no after-hours coverage (misses 40% of calls)",
+        "citation": ""
+      },
+      {
+        "option": "Traditional Answering Service",
+        "cost": "$200 – $800+/mo",
+        "limitations": "Per-minute/per-call billing leads to unpredictable bills; agents lack trade-specific knowledge",
+        "citation": ""
+      },
+      {
+        "option": "AI Voice Agent (Our Solution)",
+        "cost": "$250 fixed",
+        "limitations": "None — infinite concurrency, 24/7, trade-trained, $0.25-$0.50/interaction vs $3-6 for humans",
+        "citation": ""
+      }
+    ],
+    "web_chat_economics": {
+      "text_preference_percent": 54,
+      "display": "54%",
+      "description": "Homeowners prefer texting for project details over phone calls. Millennial homeowners increasingly digital-first.",
+      "zero_click_lead": "Visitors see no instant way to communicate (only phone number) and bounce. AI Web Chat captures passive visitors into active leads.",
+      "citation": "[Consumer Preference Study]"
+    },
+    "annual_loss_estimates": [
+      {
+        "segment": "Small Contractor (1-5 employees)",
+        "amount": 62000,
+        "display": "$62,000 – $90,000",
+        "assumption": "Based on 20% missed call rate × avg ticket × non-callback rate",
+        "citation": ""
+      },
+      {
+        "segment": "Mid-Size Shop (6-15 employees)",
+        "amount": 150000,
+        "display": "$120,000 – $180,000",
+        "assumption": "Higher call volume, similar miss rate patterns",
+        "citation": ""
+      },
+      {
+        "segment": "Multi-Location (16+ employees)",
+        "amount": 255000,
+        "display": "$200,000 – $255,000",
+        "assumption": "Peak season overflow, after-hours emergency premium",
+        "citation": ""
+      }
+    ],
+    "value_framing": "The cost of our solution is less than 1% of the annual revenue loss from missed calls."
+  },
+
+  "pricing_strategy": {
+    "approach": "Door-in-the-Face technique: Present high anchor ($500), retreat to target ($250). The retreat triggers reciprocity—buyer feels they 'won' the negotiation.",
+    "packages": [
+      {
+        "name": "Growth Bundle",
+        "label": "Growth Bundle (Anchor)",
+        "price": 500,
+        "period": "mo",
+        "display": "$500",
+        "includes": "AI Voice Agent + Website Chat Widget",
+        "badge": "Full Virtual Office",
+        "badge_class": "info",
+        "is_anchor": true,
+        "is_target": false
+      },
+      {
+        "name": "Core Protection",
+        "label": "Core Protection (Target)",
+        "price": 250,
+        "period": "mo",
+        "display": "$250",
+        "includes": "AI Voice Agent only",
+        "badge": "Most Popular",
+        "badge_class": "healthy",
+        "is_target": true
+      },
+      {
+        "name": "Walk-Away Floor",
+        "label": "Walk-Away Floor",
+        "price": 250,
+        "period": "mo",
+        "display": "$250",
+        "includes": "Minimum viable offer—do not go below",
+        "badge": "Hard Floor",
+        "badge_class": "critical",
+        "is_floor": true
+      }
+    ]
+  },
+
+  "compensation": {
+    "role_type": "1099 Independent Contractor (No Base Salary)",
+    "components": [
+      {
+        "name": "Base Commission",
+        "structure": "30% uncapped recurring on gross collected revenue",
+        "rationale": "Recurring commission aligns rep with retention, not just closes",
+        "citation": ""
+      },
+      {
+        "name": "Launch Bonus",
+        "structure": "40% commission on first 3 closed deals",
+        "rationale": "Accelerates early traction and validates product-market fit",
+        "citation": ""
+      },
+      {
+        "name": "Minimum Guarantee",
+        "structure": "3 months commission per deal guaranteed",
+        "rationale": "Protects rep from early churn outside their control (even if client cancels)",
+        "citation": ""
+      },
+      {
+        "name": "Resignation Tail",
+        "structure": "12-month tail on entire book",
+        "rationale": "Applies to voluntary departure or termination without cause; no production requirement during tail",
+        "citation": ""
+      },
+      {
+        "name": "Expansion Revenue",
+        "structure": "Clients exclusively attributed for all future upgrades",
+        "rationale": "Incentivizes upsell conversations and relationship maintenance",
+        "citation": ""
+      },
+      {
+        "name": "Activity Requirement",
+        "structure": "1 closed deal minimum every 90 days",
+        "rationale": "Ensures active engagement without punitive quotas",
+        "citation": ""
+      },
+      {
+        "name": "Payment Terms",
+        "structure": "Issued within 7 business days of client payment clearing",
+        "rationale": "Fast, predictable cash flow for contractors",
+        "citation": ""
+      },
+      {
+        "name": "Clawback Policy",
+        "structure": "Proportional clawback on refunds within 60 days only",
+        "rationale": "Limited exposure; refunds after 60 days don't affect commission",
+        "citation": ""
+      }
+    ],
+    "estimated_metrics": {
+      "monthly_churn": "Up to 15%",
+      "annual_contract_value": "$3,000/yr (low end)"
+    }
+  },
+
+  "scripts": {
+    "cold_call": {
+      "goal": "Book a 10-minute demo call by agitating the pain of missed emergency revenue",
+      "segments": [
+        {
+          "label": "Opener (Pattern Interrupt)",
+          "script": "Hi [Name], this is [Rep]. I'm not calling to sell you leads or SEO. I'm calling because I see you're one of the top [Trade] in [City], and I wanted to ask—how are you handling the emergency calls you miss when you're asleep or on a job site?"
+        },
+        {
+          "label": "Bridge (Pain Agitation)",
+          "script": "We ran a study that showed most local contractors miss about 30% of their calls, mostly nights and weekends. For a business your size, that's usually about $5,000 to $10,000 a month walking out the door to your competitors. Does that sound about right?"
+        },
+        {
+          "label": "Solution (Employee Reframe)",
+          "script": "I have an AI system that acts like a 24/7 receptionist. It answers every call, filters out the spam, takes the job details, and books the appointment directly on your calendar. It sounds human, it never sleeps, and it costs less than your phone bill."
+        },
+        {
+          "label": "Anchor Pitch ($500)",
+          "script": "Normally, for the full system that handles your phone lines and puts a live agent on your website too, we charge $500 a month. It's a full office staff replacement. Is capturing those extra 10-15 jobs a month worth a 10-minute conversation?"
+        },
+        {
+          "label": "Retreat ($250)",
+          "script": "I get it. $500 is a commitment if you haven't seen it work yet. Tell you what—let's strip off the website stuff for now. Let's just protect your phone line. I can deploy just the Voice Agent for $250 a month. That's $8 a day to never miss a job. If it catches one call, it pays for itself. Fair?"
+        }
+      ]
+    },
+    "plumbers_nightmare": {
+      "goal": "Alternate opener specifically for plumbing businesses - emphasizes 3 AM emergencies",
+      "segments": [
+        {
+          "label": "Opener",
+          "script": "Hi, is this [Owner Name]? This is [Rep]. I'm calling because I saw you guys are open 24/7 on Google, but I know how hard it is to actually answer the phone at 3 AM. We've got a new AI that handles those midnight emergency calls so you can sleep, and it only wakes you up if it's a real paying job. Is that worth a 2-minute chat?"
+        }
+      ],
+      "why_it_works": "Acknowledges their hard work ('I know how hard it is'), validates their offer ('open 24/7'), and offers immediate relief ('so you can sleep')."
+    },
+    "reciprocity_negotiation": {
+      "goal": "Use when prospect rejects the $500 bundle - leverage reciprocity principle",
+      "segments": [
+        {
+          "label": "Price Retreat",
+          "script": "I understand. $500 is a lot to add to overhead right now, especially if you're watching margins. Look, I really want you to see the power of not missing calls. What if I drop the website chat for now? I can give you the 24/7 Voice Agent—which is the most important part for catching those emergency calls—for just $250 a month. That's $8 a day to never miss a job. Can we start there?"
+        }
+      ],
+      "why_it_works": "Concession ('I really want you to see...'), Reframing ($250 → $8/day), and Contrast ($500 → $250)."
+    }
+  },
+
+  "objections": [
+    {
+      "trigger": "My customers hate robots/machines",
+      "response": "I agree—people hate voicemail menus. But they hate <em>waiting</em> even more. Data shows 62% of consumers prefer a bot over waiting. Would you rather they talk to my AI instantly, or your competitor's voicemail?",
+      "citation": "[Consumer Preference Study]"
+    },
+    {
+      "trigger": "I already have a receptionist",
+      "response": "That's great for 9-to-5. But what about 2 AM when a pipe bursts? Or when she's at lunch? This doesn't replace them; it's their backup. It catches the overflow so you never miss a dime.",
+      "citation": ""
+    },
+    {
+      "trigger": "It's too expensive ($250)",
+      "response": "Let's do the math. What's your average ticket? $300? If this system saves you <em>one</em> missed call a month, it's free. Everything after that is pure profit. Can you honestly say you don't miss one call a month?",
+      "citation": "[ROI Logic]"
+    },
+    {
+      "trigger": "Is this legal? AI calls are illegal",
+      "response": "The FCC cracked down on spam <em>outbound</em> cold calling. This is for <em>inbound</em> calls—people calling YOU. It's 100% legal to answer your own phone with an assistant. We also include a clear disclosure so your customers know they're being helped instantly.",
+      "citation": "[FCC 2024 Ruling]"
+    },
+    {
+      "trigger": "It won't understand trade terms",
+      "response": "Our system is trained specifically on [Trade]. It knows what a 'flapper' is, it knows what a 'capacitor' is. It's not generic ChatGPT; it's a trade-specific agent built for your industry.",
+      "citation": ""
+    }
+  ],
+
+  "compliance": [
+    {
+      "title": "AI Disclosure (Required)",
+      "content": "The AI must identify itself: 'Hi, I am an automated assistant for [Company Name].' This satisfies transparency requirements and emerging state laws.",
+      "citation": "[CA BOT Act]",
+      "style_warning": true,
+      "style_healthy": false
+    },
+    {
+      "title": "Inbound Safe Harbor",
+      "content": "FCC/TCPA restrictions target unsolicited outbound calls. Inbound calls (customer-initiated) are generally exempt from strict consent requirements.",
+      "citation": "[FCC 2024]",
+      "style_warning": false,
+      "style_healthy": true
+    },
+    {
+      "title": "Recording Disclosure",
+      "content": "Two-party consent states (CA, FL, etc.) require: 'This call may be recorded for quality purposes' immediately upon connection.",
+      "citation": "[State Law]",
+      "style_warning": true,
+      "style_healthy": false
+    },
+    {
+      "title": "Data Security",
+      "content": "Customer addresses and payment info require enterprise-grade encryption. Emphasize 'Compliance-First' positioning vs. cheap non-compliant tools.",
+      "citation": "[PCI-DSS]",
+      "style_warning": false,
+      "style_healthy": true
+    }
+  ],
+
+  "sources": {
+    "label": "Sources:",
+    "citations": "Industry research, FCC/TCPA 2024-2025 rulings"
+  }
+}

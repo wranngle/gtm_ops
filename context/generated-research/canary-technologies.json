@@ -1,0 +1,65 @@
+{
+  "integration": "Canary Technologies",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:44:23.533Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Canary Technologies",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Authentication typically requires a Bearer token provided via the Canary Partner Portal or by an account manager. Some endpoints may require a Property-ID header in addition to the authorization token.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.canarytechnologies.com/api-docs",
+  "rate_limits": "Typically 10-20 requests per second depending on the specific partner agreement and endpoint.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Documentation is often restricted to verified partners and may not be fully accessible to public developers without an account.",
+    "The API is heavily dependent on the underlying Property Management System (PMS) integration, which can cause latency in data updates.",
+    "Webhook setup usually requires manual configuration within the Canary dashboard or coordination with their support team."
+  ],
+  "client_must_provide": [
+    "API Key / Bearer Token",
+    "Property ID",
+    "Client ID (for OAuth flows if applicable)",
+    "Access to the Canary Dashboard for webhook registration"
+  ],
+  "operations_available": [
+    "Retrieve Guest Stay Details",
+    "Update Digital Check-in Status",
+    "Create/Trigger Upsell Offers",
+    "Send Guest Messages",
+    "Fetch Digital Authorization/Contract Records"
+  ],
+  "similar_integrations": [
+    "Cloudbeds",
+    "Mews",
+    "Stayntouch"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation will require the n8n HTTP Request node. Users should set up a 'Header Auth' credential type in n8n to handle the 'Authorization: Bearer <token>' requirement. For webhooks, use the n8n Webhook node and provide the resulting URL to Canary's technical team or input it into their developer settings.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation will require the n8n HTTP Request node. Users should set up a 'Header Auth' credential type in n8n to handle the 'Authorization: Bearer <token>' requirement. For webhooks, use the n8n Webhook node and provide the resulting URL to Canary's technical team or input it into their developer settings."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

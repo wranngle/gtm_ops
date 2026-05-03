@@ -1,0 +1,80 @@
+{
+  "id": "elevenlabs-freedomforever-001",
+  "source": {
+    "vendor": "elevenlabs",
+    "url": "https://elevenlabs.io/blog/category/customer-stories",
+    "title": "Freedom Forever Enhanced Support Performance with ElevenLabs Conversational AI"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "solar",
+    "company_size": "500+ employees, nationwide operations",
+    "company_type": "residential solar installation company",
+    "pain_points": [
+      "High volume of inbound customer support calls overwhelming call center",
+      "Sales team spending excessive time on initial qualification calls",
+      "Inconsistent customer experience across different support agents",
+      "Long hold times during peak hours leading to customer frustration",
+      "Manual scheduling of site assessments creating bottlenecks"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 15000,
+      "calls_per_day": 500,
+      "avg_call_duration_minutes": 8,
+      "staff_hours_per_month": 2000
+    },
+    "systems_involved": [
+      "Salesforce",
+      "ServiceTitan",
+      "Calendly",
+      "Twilio"
+    ],
+    "goals": [
+      "Automate initial customer inquiry handling",
+      "Qualify leads before routing to sales team",
+      "Reduce average hold time to under 30 seconds",
+      "Provide 24/7 customer support coverage",
+      "Increase sales team capacity by reducing low-value calls"
+    ]
+  },
+  "solution": {
+    "agent_type": "hybrid",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Salesforce", "integration_type": "api", "purpose": "CRM lookup and lead creation" },
+      { "system_name": "ServiceTitan", "integration_type": "api", "purpose": "service scheduling and dispatch" },
+      { "system_name": "Calendly", "integration_type": "webhook", "purpose": "site assessment scheduling" },
+      { "system_name": "Twilio", "integration_type": "native", "purpose": "telephony and SMS" }
+    ],
+    "pricing_model": {
+      "model_type": "enterprise",
+      "total_cost": 85000,
+      "monthly_cost": 4500,
+      "setup_cost": 31000
+    },
+    "timeline_weeks": 10,
+    "roi_achieved": {
+      "hours_saved_per_month": 800,
+      "calls_automated_percent": 65,
+      "monthly_savings": 28000,
+      "annual_savings": 336000,
+      "payback_period_months": 3
+    },
+    "key_features": [
+      "Inbound customer support automation",
+      "Outbound lead qualification calls",
+      "Real-time CRM integration",
+      "Intelligent call routing and escalation",
+      "Multi-language support",
+      "Sentiment analysis for priority routing"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Enterprise-scale deployment with hybrid agent handling both support and sales qualification",
+    "domain_tags": ["solar", "customer-support", "sales-automation", "lead-qualification", "crm-integration"],
+    "holdout": false,
+    "harvested_by": "web-search-extraction"
+  }
+}

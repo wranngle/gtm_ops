@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Slack — proposal-pipeline channel",
+    "url": "https://hooks.example.com/services/DEMO/SAMPLE/SLACK_HOOK",
+    "events": ["proposal.created", "proposal.sent", "proposal.won"],
+    "enabled": true,
+    "created_at": 1714464000000,
+    "last_delivery_at": 1715068800000,
+    "delivery_count": 47
+  },
+  {
+    "id": 2,
+    "name": "CRM Sync — pipeline.example.com",
+    "url": "https://pipeline.example.com/api/webhooks/inbound",
+    "events": ["lead.received", "lead.qualified", "proposal.created"],
+    "enabled": true,
+    "created_at": 1714291200000,
+    "last_delivery_at": 1715155200000,
+    "delivery_count": 132
+  },
+  {
+    "id": 3,
+    "name": "Audit Sink — internal-soc",
+    "url": "https://soc.example.internal/ingest/audit",
+    "events": ["audit.created", "user.invited", "user.role_changed"],
+    "enabled": false,
+    "created_at": 1713945600000,
+    "last_delivery_at": 1714464000000,
+    "delivery_count": 18
+  }
+]

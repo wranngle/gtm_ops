@@ -1,0 +1,12 @@
+{
+  "corpus": {
+    "total": 12,
+    "holdout": 4
+  },
+  "evaluations": {
+    "total": 8,
+    "mean_score": 0.74,
+    "latest_score": 0.81,
+    "best_score": 0.95
+  }
+}

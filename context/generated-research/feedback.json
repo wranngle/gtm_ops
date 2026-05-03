@@ -1,0 +1,63 @@
+{
+  "integration": "Feedback",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:59:33.485Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Feedback (Pendo Feedback)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key (X-Auth-Token)",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key generated from the Pendo Feedback settings page. The key must be passed in the HTTP header as 'X-Auth-Token'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://support.pendo.io/hc/en-us/articles/360034233392-Pendo-Feedback-API",
+  "rate_limits": "100 requests per minute per subscription.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "The API uses a non-standard header name 'X-Auth-Token' which requires manual Header Auth configuration in n8n.",
+    "Webhooks must be manually configured within the Pendo Feedback UI as there is no API endpoint for webhook management.",
+    "Pagination uses limit/offset parameters, requiring a recursive loop or 'Wait' node logic in n8n for large datasets."
+  ],
+  "client_must_provide": [
+    "API Key (X-Auth-Token)",
+    "Pendo Feedback Subdomain"
+  ],
+  "operations_available": [
+    "Create Request",
+    "List Features",
+    "Get User Details",
+    "Update Request Status",
+    "List Votes"
+  ],
+  "similar_integrations": [
+    "Productboard",
+    "Canny",
+    "Typeform"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the n8n HTTP Request node. Authentication should be set up using 'Header Auth' with the name 'X-Auth-Token'. The base URL is typically https://feedback.pendo.io/api/v1. Webhook integration will require a standard n8n Webhook node, with the resulting URL pasted into the Pendo Feedback 'Integrations' settings.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Integration requires the n8n HTTP Request node. Authentication should be set up using 'Header Auth' with the name 'X-Auth-Token'. The base URL is typically https://feedback.pendo.io/api/v1. Webhook integration will require a standard n8n Webhook node, with the resulting URL pasted into the Pendo Feedback 'Integrations' settings."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

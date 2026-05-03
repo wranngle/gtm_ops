@@ -1,0 +1,78 @@
+{
+  "id": "bland-veterinary-001",
+  "source": {
+    "vendor": "bland",
+    "url": "https://bland.ai/case-studies/pawsitive-care-clinics",
+    "title": "Pawsitive Care: AI Receptionist Reduces Wait Times by 75%"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "veterinary",
+    "company_size": "6 veterinarians, 15 support staff",
+    "company_type": "multi-location veterinary clinic",
+    "pain_points": [
+      "Pet emergencies require immediate triage but staff is overwhelmed",
+      "Appointment scheduling takes 8+ minutes per call",
+      "Vaccination reminder calls consume 20 staff hours weekly",
+      "After-hours emergencies route to expensive answering service",
+      "High call abandonment rate during busy periods"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 3500,
+      "calls_per_day": 117,
+      "avg_call_duration_minutes": 5,
+      "staff_hours_per_month": 290
+    },
+    "systems_involved": [
+      "eVetPractice",
+      "VetSuccess",
+      "Square",
+      "Google Calendar"
+    ],
+    "goals": [
+      "24/7 emergency triage routing",
+      "Automated appointment scheduling",
+      "Vaccination and checkup reminders",
+      "Prescription refill requests",
+      "Reduce call wait times under 30 seconds"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "PlayHT",
+    "integrations": [
+      { "system_name": "eVetPractice", "integration_type": "api", "purpose": "patient records and scheduling" },
+      { "system_name": "VetSuccess", "integration_type": "webhook", "purpose": "automated reminders" },
+      { "system_name": "Square", "integration_type": "api", "purpose": "payment processing" }
+    ],
+    "pricing_model": {
+      "model_type": "monthly",
+      "total_cost": 8500,
+      "monthly_cost": 350,
+      "setup_cost": 3000
+    },
+    "timeline_weeks": 3,
+    "roi_achieved": {
+      "hours_saved_per_month": 120,
+      "calls_automated_percent": 72,
+      "monthly_savings": 4200,
+      "annual_savings": 50400,
+      "payback_period_months": 2
+    },
+    "key_features": [
+      "Emergency triage and routing",
+      "Appointment scheduling",
+      "Vaccination reminders",
+      "Prescription refill requests",
+      "Pet record lookup"
+    ],
+    "inferred_tier": "standard"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Good veterinary use case with clear workflow automation",
+    "domain_tags": ["veterinary", "medical", "scheduling", "appointment-reminders", "triage"],
+    "holdout": false,
+    "harvested_by": "manual-entry"
+  }
+}

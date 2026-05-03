@@ -1,0 +1,79 @@
+{
+  "id": "synthflow-hospitality-001",
+  "source": {
+    "vendor": "synthflow",
+    "url": "https://synthflow.ai/case-studies/seaside-resorts",
+    "title": "Seaside Resorts: AI Concierge Handles 90% of Guest Inquiries"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "hospitality",
+    "company_size": "450 rooms across 5 resort properties",
+    "company_type": "boutique hotel chain",
+    "pain_points": [
+      "Front desk overwhelmed with reservation calls during peak season",
+      "International guests calling from different time zones",
+      "Room service and amenity requests clog phone lines",
+      "30% of calls are simple FAQ questions",
+      "High seasonal staff turnover affects service quality"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 6000,
+      "calls_per_day": 200,
+      "avg_call_duration_minutes": 6,
+      "staff_hours_per_month": 600
+    },
+    "systems_involved": [
+      "Opera PMS",
+      "OpenTable",
+      "Stripe",
+      "Slack"
+    ],
+    "goals": [
+      "24/7 reservation assistance in multiple languages",
+      "Automated room service ordering",
+      "FAQ handling for amenities and policies",
+      "VIP guest recognition and personalized service",
+      "Reduce front desk call volume by 60%"
+    ]
+  },
+  "solution": {
+    "agent_type": "hybrid",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Opera PMS", "integration_type": "api", "purpose": "reservation management and guest profiles" },
+      { "system_name": "OpenTable", "integration_type": "webhook", "purpose": "restaurant reservations" },
+      { "system_name": "Stripe", "integration_type": "api", "purpose": "payment processing for bookings" },
+      { "system_name": "Slack", "integration_type": "webhook", "purpose": "staff notifications" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "total_cost": 32000,
+      "monthly_cost": 1500,
+      "setup_cost": 12000
+    },
+    "timeline_weeks": 8,
+    "roi_achieved": {
+      "hours_saved_per_month": 400,
+      "calls_automated_percent": 88,
+      "monthly_savings": 15000,
+      "annual_savings": 180000,
+      "payback_period_months": 3
+    },
+    "key_features": [
+      "Multi-language support (8 languages)",
+      "Room booking and modifications",
+      "Concierge services",
+      "VIP guest recognition",
+      "Room service ordering"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Enterprise hospitality deployment with complex integrations and multi-property support",
+    "domain_tags": ["hospitality", "scheduling", "customer-support", "multilingual", "payments"],
+    "holdout": true,
+    "harvested_by": "manual-entry"
+  }
+}

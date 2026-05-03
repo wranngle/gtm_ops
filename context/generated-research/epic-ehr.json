@@ -1,0 +1,65 @@
+{
+  "integration": "Epic EHR",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T00:04:03.842Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Epic EHR",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (SMART on FHIR) with JWT",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires SMART on FHIR backend-to-backend authentication. This involves generating a signed JWT (RS256) using a private key, exchanging it for an access token via Epic's OAuth2 endpoint, and registering the public key in the Epic Developer Portal.",
+  "api_quality": "good",
+  "api_documentation_url": "https://fhir.epic.com/",
+  "rate_limits": "Varies by endpoint and specific Epic instance; typically enforced via concurrent request limits and daily quotas per client ID.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict HIPAA compliance requirements mean data must be encrypted in transit and at rest within n8n.",
+    "Epic's FHIR implementation varies slightly between versions (e.g., DSTU2 vs R4), requiring careful resource mapping.",
+    "Testing requires access to the Epic Sandbox (App Orchard) which has different data than production environments."
+  ],
+  "client_must_provide": [
+    "Epic Developer Client ID",
+    "Private RSA Key (for JWT signing)",
+    "FHIR Base URL (Sandbox or Production)",
+    "Specific FHIR Resource Scopes (e.g., Patient.Read, Observation.Write)"
+  ],
+  "operations_available": [
+    "Patient.Read (Retrieve patient demographics)",
+    "Appointment.Search (Find scheduled visits)",
+    "Observation.Create (Post vitals or lab results)",
+    "MedicationRequest.Read (Retrieve active prescriptions)",
+    "DocumentReference.Create (Upload clinical notes or PDFs)"
+  ],
+  "similar_integrations": [
+    "Salesforce (Health Cloud)",
+    "Google Cloud Healthcare",
+    "Airtable"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration must be built using the HTTP Request node. A pre-processing step (likely a Code node) is required to generate the RS256 JWT assertion. The workflow must handle token refreshing manually as Epic tokens are short-lived. All data structures must follow the HL7 FHIR standard.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "The integration must be built using the HTTP Request node. A pre-processing step (likely a Code node) is required to generate the RS256 JWT assertion. The workflow must handle token refreshing manually as Epic tokens are short-lived. All data structures must follow the HL7 FHIR standard."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

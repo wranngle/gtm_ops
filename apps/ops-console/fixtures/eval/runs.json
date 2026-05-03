@@ -1,0 +1,98 @@
+[
+  {
+    "id": 8,
+    "case_study_id": "northwind-after-hours-pilot",
+    "status": "passed",
+    "aggregate_score": 0.81,
+    "flaw_count": 1,
+    "flaws": ["barge_in_recovery_slow"],
+    "pipeline_version": "v0.4.2",
+    "scores_json": "{\"barge_in\": 0.6, \"tool_routing\": 0.95, \"latency\": 0.88, \"tone\": 0.92}",
+    "flaws_json": "[\"barge_in_recovery_slow\"]",
+    "created_at": "2026-04-22T15:58:44Z"
+  },
+  {
+    "id": 7,
+    "case_study_id": "evergreen-clinic-reminders",
+    "status": "passed",
+    "aggregate_score": 0.95,
+    "flaw_count": 0,
+    "flaws": [],
+    "pipeline_version": "v0.4.2",
+    "scores_json": "{\"scope\": 0.98, \"handoff\": 0.95, \"tone\": 0.94}",
+    "flaws_json": "[]",
+    "created_at": "2026-04-22T15:49:02Z"
+  },
+  {
+    "id": 6,
+    "case_study_id": "harbor-coast-noisy-line",
+    "status": "failed",
+    "aggregate_score": 0.52,
+    "flaw_count": 2,
+    "flaws": ["asr_overconfidence", "skipped_clarification"],
+    "pipeline_version": "v0.4.2",
+    "scores_json": "{\"asr\": 0.4, \"clarification\": 0.3, \"tone\": 0.85}",
+    "flaws_json": "[\"asr_overconfidence\", \"skipped_clarification\"]",
+    "created_at": "2026-04-22T15:53:18Z"
+  },
+  {
+    "id": 5,
+    "case_study_id": "blueline-driver-checkin",
+    "status": "passed",
+    "aggregate_score": 0.92,
+    "flaw_count": 0,
+    "flaws": [],
+    "pipeline_version": "v0.4.2",
+    "scores_json": "{\"tool_calls\": 1.0, \"latency\": 0.88}",
+    "flaws_json": "[]",
+    "created_at": "2026-04-22T15:38:14Z"
+  },
+  {
+    "id": 4,
+    "case_study_id": "summit-multi-location",
+    "status": "failed",
+    "aggregate_score": 0.38,
+    "flaw_count": 2,
+    "flaws": ["name_disambiguation", "premature_commit"],
+    "pipeline_version": "v0.4.1",
+    "scores_json": "{\"disambig\": 0.2, \"latency\": 0.78}",
+    "flaws_json": "[\"name_disambiguation\", \"premature_commit\"]",
+    "created_at": "2026-04-22T15:45:33Z"
+  },
+  {
+    "id": 3,
+    "case_study_id": "redwood-tax-intake",
+    "status": "passed",
+    "aggregate_score": 0.88,
+    "flaw_count": 0,
+    "flaws": [],
+    "pipeline_version": "v0.4.2",
+    "scores_json": "{\"kb_grounded\": 0.95, \"tone\": 0.92}",
+    "flaws_json": "[]",
+    "created_at": "2026-04-22T15:42:01Z"
+  },
+  {
+    "id": 2,
+    "case_study_id": "acme-hvac-barge-in-stress",
+    "status": "failed",
+    "aggregate_score": 0.45,
+    "flaw_count": 2,
+    "flaws": ["barge_in_recovery_slow", "post_interrupt_replan_latency"],
+    "pipeline_version": "v0.4.1",
+    "scores_json": "{\"barge_in\": 0.2, \"replan\": 0.4, \"tone\": 0.9}",
+    "flaws_json": "[\"barge_in_recovery_slow\", \"post_interrupt_replan_latency\"]",
+    "created_at": "2026-04-22T15:34:48Z"
+  },
+  {
+    "id": 1,
+    "case_study_id": "acme-hvac-greeting-lookup",
+    "status": "passed",
+    "aggregate_score": 1.0,
+    "flaw_count": 0,
+    "flaws": [],
+    "pipeline_version": "v0.4.2",
+    "scores_json": "{\"barge_in\": 1.0, \"tool_calls\": 1.0, \"latency\": 1.0}",
+    "flaws_json": "[]",
+    "created_at": "2026-04-22T15:32:11Z"
+  }
+]

@@ -1,0 +1,64 @@
+{
+  "integration": "Airbnb Host Dashboard",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:42:48.618Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Airbnb Host Dashboard",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Partner API) or Session Cookies (Unofficial)",
+  "auth_complexity": "complex",
+  "auth_notes": "Airbnb does not provide a public API for individual hosts. Access is restricted to 'Airbnb Software Partners'. Unofficial integration requires extracting session cookies from a browser or using a third-party proxy service, which is highly unstable.",
+  "api_quality": "poor",
+  "api_documentation_url": "https://www.airbnb.com/partner",
+  "rate_limits": "Strict and undocumented for non-partners; subject to aggressive bot detection.",
+  "complexity_score": 9,
+  "complexity_tier": "complex",
+  "estimated_hours": 40,
+  "webhook_support": false,
+  "gotchas": [
+    "No public API access for standard developer accounts; requires manual approval as a business partner.",
+    "Using unofficial API endpoints or scraping via HTTP Request node frequently results in account shadow-banning or 403 Forbidden errors.",
+    "iCal remains the only 'official' way for individual hosts to sync data without partner status."
+  ],
+  "client_must_provide": [
+    "Airbnb Partner API Credentials (if approved)",
+    "Session Cookies/Auth Tokens (for unofficial workarounds)",
+    "iCal Feed URLs for basic calendar syncing"
+  ],
+  "operations_available": [
+    "Retrieve Reservation List",
+    "Sync Calendar Availability",
+    "Guest Messaging",
+    "Update Listing Pricing",
+    "Manage Check-in Instructions"
+  ],
+  "similar_integrations": [
+    "Guesty",
+    "Hostaway",
+    "Smoobu"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Direct HTTP Request node integration is not recommended for Airbnb due to the lack of a public API. The most viable path for n8n users is to use a Property Management System (PMS) like Guesty or Hostaway as a bridge, or use the iCal integration for basic availability sync. If direct access is required, a headless browser tool like Apify or Puppeteer would be needed to handle the session-based authentication.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 9,
+    "tier": "complex",
+    "estimated_hours": 40
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 40,
+    "rationale": "Direct HTTP Request node integration is not recommended for Airbnb due to the lack of a public API. The most viable path for n8n users is to use a Property Management System (PMS) like Guesty or Hostaway as a bridge, or use the iCal integration for basic availability sync. If direct access is required, a headless browser tool like Apify or Puppeteer would be needed to handle the session-based authentication."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

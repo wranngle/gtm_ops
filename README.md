@@ -1,35 +1,46 @@
-# Agent-First GTM Engine Harness
+# gtm_ops
 
-A clean-room flagship monorepo for voice-agent evals, GTM automation, internal ops tooling, and Python/SQL revenue reconciliation.
+Voice-AI-led GTM motion runtime. An inbound voice agent enriches the lead from CRM context, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console — one repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
 
-## What it does
+## What's in here
 
-This repo coordinates the moving parts of an AI-first GTM and operations workflow: synthetic lead intake, enrichment, CRM-style routing, voice-agent evaluation, webhook validation, post-call processing, internal operator review, and usage/revenue reconciliation.
+- **`apps/ops-console/`** — operator UI (vanilla HTML/JS) for proposal review, eval-run triage, and audit-log inspection. Same code runs static (`DEMO_MODE`) or against the live backend.
+- **`lib/`** — intake, CRM enrichment, post-call processing, LLM extraction, branded PDF generation, audit log surface, evaluation hooks.
+- **`server.js`** — Express `/api/*` surface (live mode).
+- **`cli.js`** — presales pipeline CLI.
+- **`templates/`** — branded PDF templates rendered with `tokens/`.
+- **`workflows/`** — three to five sanitized n8n example workflows; the full library lives at [`wranngle/n8n`](https://github.com/wranngle/n8n).
+- **`tokens/`** — machine-readable extracts of the brand system (`tokens.css`, `tokens.json`, `tokens.tailwind.js`); see [`DESIGN.md`](DESIGN.md) for the long-form spec.
 
-This repo starts from a clean public-safe baseline. Existing private operational repos are source material only; public code and fixtures here should be sanitized, synthetic, and reviewable from the first commit.
+## Architecture
 
-The repository is also built as an agent-first engineering harness: humans steer, agents execute, and repo-local knowledge is the system of record. See [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [docs/index.md](docs/index.md).
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the product layers (intake → enrichment → voice → post-call → presales → ops-console) and how this repo connects to its satellites:
 
-This is a greenfield project. Interfaces and internals are still settling; expect breaking changes.
+- [`wranngle/voice_ai_agent_evals`](https://github.com/wranngle/voice_ai_agent_evals) — eval harness wired to the live ElevenLabs agent
+- [`wranngle/n8n`](https://github.com/wranngle/n8n) — full sanitized n8n workflow library
 
-## Usage
+## Running it
 
-Setup and usage docs will land here once the first runnable surface is in place. Until then, the source tree is the source of truth.
-
-Current validation:
+**Live mode** (full backend):
 
 ```bash
-scripts/validate-knowledge-base.sh
-scripts/symphony.sh validate
-scripts/symphony.sh list
-scripts/symphony.sh once --dry-run
-tests/symphony-completion-helpers.sh
+bun install
+bun run start  # Express server on :3000
 ```
 
-## Maintenance
+**Static / DEMO_MODE** (no backend, fixture-driven UI):
 
-This repository is autonomously maintained and deployed via an automated, dogfooded dotfiles framework. Routine updates, dependency bumps, and housekeeping commits may be authored by scheduled agents rather than a human. Substantive changes still go through review.
+```bash
+cd apps/ops-console
+python -m http.server  # then open http://localhost:8000
+```
+
+In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/fixtures/`. The same UI runs in both modes.
+
+## Brand system
+
+[`DESIGN.md`](DESIGN.md) is the canonical brand system, mirrored from `~/.dotfiles/DESIGN.md`. Token extracts in `tokens/` are vendored by every consumer repo (no long-form duplication).
 
 ## License
 
-See [LICENSE](./LICENSE).
+See [`LICENSE`](./LICENSE).

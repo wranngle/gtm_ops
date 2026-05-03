@@ -1,0 +1,64 @@
+{
+  "integration": "5 instances",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:50.154Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "5 instances",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key and Instance ID",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is handled by passing an 'access_token' and 'instance_id' as query parameters or within the JSON body of the HTTP request.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://5-instances.com/",
+  "rate_limits": "Rate limits are not explicitly documented but are constrained by the WhatsApp instance's capacity and anti-spam measures to prevent account banning.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": true,
+  "gotchas": [
+    "WhatsApp account disconnection requires manual QR code re-scanning, which can break automated workflows.",
+    "High frequency of messages can lead to WhatsApp account bans as this is a third-party API wrapper.",
+    "API responses may occasionally be in Portuguese or poorly translated English."
+  ],
+  "client_must_provide": [
+    "API Access Token",
+    "Instance ID",
+    "Active WhatsApp account linked via QR code"
+  ],
+  "operations_available": [
+    "Send Text Message",
+    "Send File/Media",
+    "Check Instance Status",
+    "Set Webhook URL",
+    "Get Contact List"
+  ],
+  "similar_integrations": [
+    "Twilio",
+    "Wati",
+    "MessageBird"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the n8n HTTP Request node. The developer must construct the URL using the format 'https://api.5-instances.com/api/v1/sendText?token=YOUR_TOKEN&instance_id=YOUR_ID'. Webhooks must be configured in the 5-instances dashboard to point to an n8n Webhook node for receiving incoming messages.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "Integration requires the n8n HTTP Request node. The developer must construct the URL using the format 'https://api.5-instances.com/api/v1/sendText?token=YOUR_TOKEN&instance_id=YOUR_ID'. Webhooks must be configured in the 5-instances dashboard to point to an n8n Webhook node for receiving incoming messages."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

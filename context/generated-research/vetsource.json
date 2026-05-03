@@ -1,0 +1,65 @@
+{
+  "integration": "VetSource",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:53.806Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "VetSource",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 (Client Credentials Flow)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires Client ID and Client Secret to generate a Bearer token. Authentication is typically scoped to specific practice IDs or partner accounts.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.vetsource.com/",
+  "rate_limits": "Standard limits are typically 100 requests per minute, but vary based on the specific partner agreement and endpoint.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Sandbox access requires a formal vetting process and manual approval from the VetSource integration team.",
+    "Data schemas for patient and prescription records are highly rigid and require specific formatting for veterinary medical codes.",
+    "Webhook events for order status changes may have a delay depending on the pharmacy fulfillment cycle."
+  ],
+  "client_must_provide": [
+    "VetSource Developer Portal Credentials",
+    "Client ID",
+    "Client Secret",
+    "Practice ID (Site ID)"
+  ],
+  "operations_available": [
+    "Submit Prescription Request",
+    "Retrieve Order Status",
+    "Search Product Catalog",
+    "Update Patient Records",
+    "Get Practice Catalog Pricing"
+  ],
+  "similar_integrations": [
+    "Shopify",
+    "Salesforce Health Cloud",
+    "Fullscript"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration will rely on the HTTP Request node. Since it uses OAuth 2.0 Client Credentials, n8n's built-in OAuth2 credential type can be used, or a separate HTTP Request node can be configured to fetch the token and pass it as a header to subsequent calls. Webhooks must be registered via the developer portal or API depending on the specific VetSource product (Home Delivery vs. ScriptRight).",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will rely on the HTTP Request node. Since it uses OAuth 2.0 Client Credentials, n8n's built-in OAuth2 credential type can be used, or a separate HTTP Request node can be configured to fetch the token and pass it as a header to subsequent calls. Webhooks must be registered via the developer portal or API depending on the specific VetSource product (Home Delivery vs. ScriptRight)."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

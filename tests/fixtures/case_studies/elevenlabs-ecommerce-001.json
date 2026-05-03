@@ -1,0 +1,79 @@
+{
+  "id": "elevenlabs-ecommerce-001",
+  "source": {
+    "vendor": "elevenlabs",
+    "url": "https://elevenlabs.io/case-studies/trendy-threads",
+    "title": "Trendy Threads: Proactive Order Updates Drive 92% CSAT"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "e-commerce",
+    "company_size": "50 employees, $15M annual revenue",
+    "company_type": "online fashion retailer",
+    "pain_points": [
+      "Customer service team receives 500+ 'where is my order' calls daily",
+      "Shipping delay notifications sent via email have low open rates",
+      "Returns process requires lengthy phone calls",
+      "Black Friday/Cyber Monday overwhelms support team",
+      "International customers frustrated by timezone limitations"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 12000,
+      "calls_per_day": 400,
+      "avg_call_duration_minutes": 4,
+      "staff_hours_per_month": 800
+    },
+    "systems_involved": [
+      "Shopify",
+      "Gorgias",
+      "ShipStation",
+      "Klaviyo"
+    ],
+    "goals": [
+      "Proactive shipping delay notifications via voice",
+      "Automated order status updates",
+      "Self-service returns initiation",
+      "Peak season scalability",
+      "Global support coverage"
+    ]
+  },
+  "solution": {
+    "agent_type": "outbound",
+    "voice_provider": "ElevenLabs",
+    "integrations": [
+      { "system_name": "Shopify", "integration_type": "api", "purpose": "order and customer data" },
+      { "system_name": "ShipStation", "integration_type": "webhook", "purpose": "shipping status tracking" },
+      { "system_name": "Gorgias", "integration_type": "api", "purpose": "ticket creation and history" },
+      { "system_name": "Twilio", "integration_type": "api", "purpose": "outbound calls and SMS" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "total_cost": 22000,
+      "monthly_cost": 1200,
+      "setup_cost": 8000
+    },
+    "timeline_weeks": 6,
+    "roi_achieved": {
+      "hours_saved_per_month": 350,
+      "calls_automated_percent": 75,
+      "monthly_savings": 12500,
+      "annual_savings": 150000,
+      "payback_period_months": 2
+    },
+    "key_features": [
+      "Proactive shipping delay calls",
+      "Order status lookups",
+      "Returns initiation",
+      "Delivery scheduling",
+      "Multi-language support"
+    ],
+    "inferred_tier": "standard"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Strong e-commerce outbound use case with excellent ROI metrics",
+    "domain_tags": ["e-commerce", "retail", "outbound", "order-updates", "customer-support"],
+    "holdout": false,
+    "harvested_by": "manual-entry"
+  }
+}

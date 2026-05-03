@@ -1,0 +1,66 @@
+{
+  "integration": "API Gateway",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:53.888Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "AWS API Gateway",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "AWS Signature Version 4 (SigV4) or API Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Interacting with the AWS API Gateway Management API requires AWS SigV4 signing. While the n8n HTTP Request node supports AWS Auth, configuring the correct service (apigateway) and region is required. Endpoints created via Gateway may use API Keys (x-api-key header).",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://docs.aws.amazon.com/apigateway/api-reference/",
+  "rate_limits": "Standard quota is 10,000 requests per second (RPS) with a burst limit of 5,000 RPS across the AWS account.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 18,
+  "webhook_support": true,
+  "gotchas": [
+    "AWS SigV4 signing requires precise header matching; any mismatch in payload hashing results in 403 Forbidden.",
+    "Changes to the API structure (Resources/Methods) require a 'Deployment' to a 'Stage' before they become active.",
+    "CORS settings must be manually handled within the API Gateway configuration to allow n8n to receive data from browser-based triggers."
+  ],
+  "client_must_provide": [
+    "AWS Access Key ID",
+    "AWS Secret Access Key",
+    "AWS Region",
+    "RestApiId",
+    "IAM Permissions (AmazonAPIGatewayAdministrator or specific resource policy)"
+  ],
+  "operations_available": [
+    "CreateResource",
+    "PutMethod",
+    "CreateDeployment",
+    "GetResources",
+    "UpdateIntegration"
+  ],
+  "similar_integrations": [
+    "AWS Lambda",
+    "AWS S3",
+    "Google Cloud Functions"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The HTTP Request node should be used with 'AWS Auth' credentials. For the 'Service' field, use 'apigateway'. To manage APIs, you will target the control plane URL (apigateway.{region}.amazonaws.com). To invoke APIs, you target the execute-api URL.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 18
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 18,
+    "rationale": "The HTTP Request node should be used with 'AWS Auth' credentials. For the 'Service' field, use 'apigateway'. To manage APIs, you will target the control plane URL (apigateway.{region}.amazonaws.com). To invoke APIs, you target the execute-api URL."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

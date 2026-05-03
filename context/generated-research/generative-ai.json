@@ -1,0 +1,63 @@
+{
+  "integration": "Generative AI",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-10T01:31:33.335Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Generative AI",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API key generated via Google AI Studio. The key is passed as a query parameter (key=API_KEY) or via the 'x-goog-api-key' header.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://ai.google.dev/api/rest",
+  "rate_limits": "Free tier: 15 RPM (Requests Per Minute), 1 million TPM (Tokens Per Minute), 1,500 RPD (Requests Per Day). Paid tiers offer higher throughput.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": false,
+  "gotchas": [
+    "Strict safety filters may block responses without clear error messages unless 'safetySettings' are explicitly configured",
+    "The JSON payload structure for multi-turn chat ('contents' array) is more rigid than OpenAI's 'messages' format",
+    "Free tier usage is used to improve Google products, which may be a data privacy concern for some clients"
+  ],
+  "client_must_provide": [
+    "Google AI Studio API Key",
+    "Specific Model ID (e.g., gemini-1.5-flash or gemini-1.5-pro)"
+  ],
+  "operations_available": [
+    "generateContent",
+    "streamGenerateContent",
+    "embedContent",
+    "countTokens",
+    "listModels"
+  ],
+  "similar_integrations": [
+    "OpenAI",
+    "Anthropic",
+    "Mistral AI"
+  ],
+  "confidence": 0.95,
+  "research_notes": "To integrate via HTTP Request node, use POST to 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'. You must set the Content-Type header to application/json and include the API key in the URL query parameters. The request body requires a specific 'contents' block containing 'parts' and 'text'.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "To integrate via HTTP Request node, use POST to 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'. You must set the Content-Type header to application/json and include the API key in the URL query parameters. The request body requires a specific 'contents' block containing 'parts' and 'text'."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

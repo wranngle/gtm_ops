@@ -1,0 +1,64 @@
+{
+  "integration": "The usual",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:25.543Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "The usual",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key / Bearer Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Authentication typically requires a private API key generated within the application dashboard. As a Shopify-centric app, it may also require Shopify Admin API credentials or specific session headers if using internal endpoints.",
+  "api_quality": "fair",
+  "api_documentation_url": null,
+  "rate_limits": "Likely governed by Shopify's standard rate limits (40 requests per minute per store) if integrated via the Shopify ecosystem.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Lack of public API documentation requires manual inspection of network requests to identify endpoints.",
+    "Data structures are often nested and may require significant JSON transformation using the Code node.",
+    "Webhook payloads may differ significantly from GET request responses."
+  ],
+  "client_must_provide": [
+    "API Key or Access Token",
+    "Shopify Store Domain",
+    "Admin access to the app dashboard for webhook configuration"
+  ],
+  "operations_available": [
+    "Get Subscription Details",
+    "Update Next Order Date",
+    "Cancel Subscription",
+    "List Customer Recurring Orders",
+    "Trigger Manual Charge"
+  ],
+  "similar_integrations": [
+    "Recharge",
+    "Bold Subscriptions",
+    "Appstle"
+  ],
+  "confidence": 0.65,
+  "research_notes": "The integration will require the n8n HTTP Request node. Since official documentation is not publicly available, the developer must use browser developer tools to capture the API endpoints and request headers used by the web interface. Authentication will likely be handled via a 'X-API-Key' or 'Authorization: Bearer' header.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "The integration will require the n8n HTTP Request node. Since official documentation is not publicly available, the developer must use browser developer tools to capture the API endpoints and request headers used by the web interface. Authentication will likely be handled via a 'X-API-Key' or 'Authorization: Bearer' header."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

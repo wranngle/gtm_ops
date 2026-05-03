@@ -1,0 +1,64 @@
+{
+  "integration": "OTA",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:42:19.453Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "OTA Sync",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key passed in the request header as 'X-API-KEY'. Keys are generated within the OTA Sync property settings.",
+  "api_quality": "good",
+  "api_documentation_url": "https://otasync.me/api/docs/",
+  "rate_limits": "Typically 60 requests per minute per API key.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Date formats are strictly YYYY-MM-DD and will fail otherwise.",
+    "Pagination is not automatic; must handle 'page' and 'limit' parameters in n8n loops.",
+    "Property ID is required for almost every endpoint and must be stored as a variable."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Property ID",
+    "Access to the OTA Sync Dashboard"
+  ],
+  "operations_available": [
+    "Get Bookings List",
+    "Update Room Availability",
+    "Update Room Rates",
+    "Create New Reservation",
+    "Retrieve Guest Details"
+  ],
+  "similar_integrations": [
+    "Mews",
+    "Cloudbeds",
+    "Guesty"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration will rely on the HTTP Request node. Authentication should be configured using the 'Header Auth' option in n8n credentials to inject the X-API-KEY. Webhooks are supported and can be pointed to an n8n Webhook node to trigger workflows on new bookings or status changes.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "The integration will rely on the HTTP Request node. Authentication should be configured using the 'Header Auth' option in n8n credentials to inject the X-API-KEY. Webhooks are supported and can be pointed to an n8n Webhook node to trigger workflows on new bookings or status changes."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

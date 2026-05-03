@@ -1,0 +1,66 @@
+{
+  "integration": "DoorDash",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-07T22:34:33.529Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "DoorDash",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "JWT (JSON Web Token)",
+  "auth_complexity": "complex",
+  "auth_notes": "DoorDash Drive API uses JWT for authentication. You must generate a token signed with an Access Key ID and a Signing Secret. The token must include specific claims (iss, aud, exp, iat) and be refreshed frequently as they typically expire within 30 minutes.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.doordash.com/en-US/docs/drive/get_started/",
+  "rate_limits": "Approximately 300 requests per minute for most endpoints, though specific limits vary by account tier and endpoint.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "JWT generation requires a Code node in n8n to sign the payload using the crypto library, as n8n's standard Auth types don't support DoorDash's specific JWT implementation.",
+    "Address validation is extremely strict; it is recommended to use a separate address validation service before hitting the DoorDash API.",
+    "The Sandbox environment behaves differently regarding driver assignment simulation compared to Production."
+  ],
+  "client_must_provide": [
+    "Developer Portal Access",
+    "Developer ID",
+    "Key ID",
+    "Signing Secret",
+    "Business ID"
+  ],
+  "operations_available": [
+    "Create Delivery",
+    "Get Delivery Quote",
+    "Get Delivery Status",
+    "Cancel Delivery",
+    "Update Delivery"
+  ],
+  "similar_integrations": [
+    "ShipEngine",
+    "AfterShip",
+    "FedEx"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Integration requires a two-step process in n8n: 1. A Code node to generate and sign the JWT using the developer credentials. 2. An HTTP Request node using the generated token in the 'Authorization: Bearer' header. Webhooks can be configured in the DoorDash Developer Portal to send status updates to an n8n Webhook trigger node.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Integration requires a two-step process in n8n: 1. A Code node to generate and sign the JWT using the developer credentials. 2. An HTTP Request node using the generated token in the 'Authorization: Bearer' header. Webhooks can be configured in the DoorDash Developer Portal to send status updates to an n8n Webhook trigger node."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,64 @@
+{
+  "integration": "Load planning",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:41:09.282Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Load planning",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Requires an API Key generated from the LoadPlanning.com dashboard, typically passed in the HTTP header as 'X-API-Key' or 'Authorization: Bearer'.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://www.loadplanning.com/api-docs",
+  "rate_limits": "Typically limited to 60 requests per minute depending on the subscription tier.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": false,
+  "gotchas": [
+    "Highly sensitive to unit of measurement consistency (metric vs imperial) across all items.",
+    "Complex nested JSON structures required for 3D coordinate mapping of cargo.",
+    "Optimization timeouts can occur with very large item sets (over 200 items)."
+  ],
+  "client_must_provide": [
+    "API Key",
+    "Pre-defined Vehicle/Container dimensions",
+    "Detailed Cargo list (length, width, height, weight, and stackability constraints)"
+  ],
+  "operations_available": [
+    "Calculate Load Optimization",
+    "Get Loading Diagrams",
+    "Manage Vehicle Profiles",
+    "Manage Cargo Templates",
+    "Retrieve Calculation History"
+  ],
+  "similar_integrations": [
+    "ShipStation",
+    "Shippo",
+    "AfterShip"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation requires the HTTP Request node. The primary challenge is the 'Calculate' endpoint which requires a deeply nested JSON body. Users will likely need to use a 'Function' or 'Code' node before the HTTP Request to transform flat data into the specific hierarchical format required for 3D load optimization.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "Implementation requires the HTTP Request node. The primary challenge is the 'Calculate' endpoint which requires a deeply nested JSON body. Users will likely need to use a 'Function' or 'Code' node before the HTTP Request to transform flat data into the specific hierarchical format required for 3D load optimization."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

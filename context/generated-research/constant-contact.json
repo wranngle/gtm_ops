@@ -1,0 +1,65 @@
+{
+  "integration": "Constant Contact",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:17.194Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Constant Contact",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires OAuth 2.0 Authorization Code Flow via the Constant Contact V3 Developer Portal. You must create an application to obtain a Client ID and Client Secret, and configure the Redirect URI to match your n8n instance.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.constantcontact.com/api_reference/index.html",
+  "rate_limits": "10,000 requests per day per account and a burst limit of 4 requests per second.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "The V3 API is strictly JSON-based and requires specific 'update_source' fields for contact modifications.",
+    "Handling contact opt-in status requires explicit 'permission_to_send' flags or the request will fail.",
+    "The API returns a 409 Conflict if attempting to POST a contact that already exists, requiring a separate PUT logic for updates."
+  ],
+  "client_must_provide": [
+    "Client ID (API Key)",
+    "Client Secret",
+    "Constant Contact Account Credentials",
+    "List of required Scopes (e.g., contact_data, campaign_data, offline_access)"
+  ],
+  "operations_available": [
+    "Create or Update Contact",
+    "Retrieve Contact Lists",
+    "Create Email Campaign",
+    "Get Campaign Reporting/Analytics",
+    "Manage Custom Fields"
+  ],
+  "similar_integrations": [
+    "Mailchimp",
+    "ActiveCampaign",
+    "SendGrid"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Implementation requires the n8n HTTP Request node using the 'OAuth2' authentication type. The Authorization URL is https://authz.constantcontact.com/oauth2/default/v1/authorize and the Token URL is https://authz.constantcontact.com/oauth2/default/v1/token. Ensure 'offline_access' is included in scopes to allow n8n to refresh tokens automatically.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation requires the n8n HTTP Request node using the 'OAuth2' authentication type. The Authorization URL is https://authz.constantcontact.com/oauth2/default/v1/authorize and the Token URL is https://authz.constantcontact.com/oauth2/default/v1/token. Ensure 'offline_access' is included in scopes to allow n8n to refresh tokens automatically."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

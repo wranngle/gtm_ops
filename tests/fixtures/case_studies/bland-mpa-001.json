@@ -1,0 +1,86 @@
+{
+  "id": "bland-mpa-001",
+  "source": {
+    "vendor": "bland",
+    "url": "https://www.bland.ai/case-studies/mpa",
+    "title": "MyPlanAdvocate: 262x ROI in 5 Months"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "insurance",
+    "company_size": "100+ licensed agents",
+    "company_type": "Medicare brokerage",
+    "pain_points": [
+      "AI vendor abruptly exited market, forcing urgent replacement",
+      "25-30% of paid calls were ineligible prospects",
+      "Mandatory 15-minute disclosure readings per sale limited agents to 4-5 sales/day",
+      "Agent qualification approaches varied, some pushed transfers too aggressively",
+      "Only paid for calls exceeding 90 seconds; unqualified callers = pure cost"
+    ],
+    "volume_metrics": {
+      "calls_per_day": 5000,
+      "calls_per_month": 150000,
+      "avg_call_duration_minutes": 3,
+      "staff_hours_per_month": 2000,
+      "raw_description": "4,000-5,000 inbound calls daily purchased in real-time"
+    },
+    "systems_involved": [
+      "Telephony system",
+      "CRM",
+      "Previous AI vendor (exited market)"
+    ],
+    "goals": [
+      "Replace failed AI vendor urgently",
+      "Reduce unqualified call rate from 25-30%",
+      "Automate mandatory disclosure readings",
+      "Improve agent efficiency and sales per day"
+    ],
+    "constraints": [
+      "Medicare compliance requirements",
+      "Strict disclosure reading regulations"
+    ]
+  },
+  "solution": {
+    "agent_type": "hybrid",
+    "voice_provider": "Bland",
+    "integrations": [
+      { "system_name": "Bland AI", "integration_type": "native", "purpose": "voice platform" },
+      { "system_name": "CRM", "integration_type": "api", "purpose": "lead qualification and transfer" },
+      { "system_name": "Telephony", "integration_type": "api", "purpose": "call routing" }
+    ],
+    "pricing_model": {
+      "model_type": "hybrid",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null,
+      "raw_description": "Not disclosed - Bland Labs implementation partnership"
+    },
+    "timeline_weeks": 1,
+    "roi_achieved": {
+      "hours_saved_per_month": 1700,
+      "calls_automated_percent": 50,
+      "monthly_savings": 125000,
+      "annual_savings": 1500000,
+      "revenue_increase_percent": null,
+      "payback_period_months": 1,
+      "raw_description": "262x ROI in 5 months, $42M additional revenue, $1.5M annual cost savings"
+    },
+    "key_features": [
+      "Inbound call qualification (Emily agent)",
+      "Automated disclosure reading (Mason agent)",
+      "Medicare eligibility verification",
+      "Service area checking",
+      "Intent confirmation",
+      "Graceful rejection handling",
+      "24-second disclosure handoff vs 15 minutes"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Exceptional detail including specific ROI metrics, call volumes, and conversion improvements. Named AI agents with clear roles.",
+    "domain_tags": ["insurance", "medicare", "lead-qualification", "compliance", "sales-automation", "high-volume"],
+    "holdout": false,
+    "harvested_by": "web-extraction"
+  }
+}

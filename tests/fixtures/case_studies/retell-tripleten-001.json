@@ -1,0 +1,82 @@
+{
+  "id": "retell-tripleten-001",
+  "source": {
+    "vendor": "retell",
+    "url": "https://retellai.com/case-study/tripleten-ai-call-automation-admissions-case-study",
+    "title": "TripleTen: 200+ Hours Saved Monthly with AI Admissions"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "education",
+    "company_size": "500-1000 employees",
+    "company_type": "Tech education / coding bootcamp",
+    "pain_points": [
+      "Unable to scale admissions during summer 2024 growth surge",
+      "High prospective student inquiry volume exceeded team capacity",
+      "Hiring delays - had to wait for new hires to onboard",
+      "Admissions advisors spent excessive time on initial inquiries",
+      "Delayed follow-ups caused prospects to seek alternatives"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 17000,
+      "calls_per_day": 567,
+      "avg_call_duration_minutes": 5,
+      "staff_hours_per_month": 400,
+      "raw_description": "17,000 calls handled monthly, high volume during growth surge"
+    },
+    "systems_involved": [
+      "HubSpot CRM",
+      "Quiz/assessment system",
+      "Appointment scheduling"
+    ],
+    "goals": [
+      "Scale admissions operations quickly",
+      "Handle inquiry volume without waiting for new hires",
+      "Free advisors for deeper engagement with qualified prospects",
+      "Reduce response time to prevent prospect loss"
+    ]
+  },
+  "solution": {
+    "agent_type": "outbound",
+    "voice_provider": "Retell",
+    "integrations": [
+      { "system_name": "HubSpot", "integration_type": "api", "purpose": "CRM integration and lead tracking" },
+      { "system_name": "Calendar", "integration_type": "api", "purpose": "appointment scheduling with human advisors" },
+      { "system_name": "Branded Caller ID", "integration_type": "native", "purpose": "call identification for pickup rates" }
+    ],
+    "pricing_model": {
+      "model_type": "unknown",
+      "monthly_cost": null,
+      "setup_cost": null,
+      "total_cost": null
+    },
+    "timeline_weeks": 4,
+    "roi_achieved": {
+      "hours_saved_per_month": 200,
+      "hours_saved_total": 3000,
+      "calls_automated_percent": null,
+      "monthly_savings": null,
+      "annual_savings": null,
+      "pickup_rate_increase_percent": 20,
+      "conversion_rate_increase_percent": 20,
+      "raw_description": "3,000+ hours saved since August 2024, 200 hours saved monthly, 20% increase in pickup and conversion rates"
+    },
+    "key_features": [
+      "Program introductions to quiz-takers",
+      "FAQ answering (pricing, programs, approach)",
+      "Appointment scheduling with human advisors",
+      "Branded Call ID for improved pickup rates",
+      "Natural conversational flow",
+      "Custom prompt engineering",
+      "Named AI agent (Charlotte)"
+    ],
+    "inferred_tier": "standard"
+  },
+  "meta": {
+    "quality_score": 5,
+    "quality_notes": "Excellent detail including timeline, hours saved, call volumes, and conversion metrics. Clear implementation approach.",
+    "domain_tags": ["education", "admissions", "outbound", "lead-qualification", "scheduling", "crm-integration"],
+    "holdout": true,
+    "harvested_by": "web-extraction"
+  }
+}

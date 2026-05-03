@@ -1,0 +1,65 @@
+{
+  "integration": "ETQ Reliance",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:39.702Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "ETQ Reliance",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "moderate",
+  "auth_notes": "Uses OAuth 2.0 (Client Credentials or Authorization Code flow). Requires a Client ID, Client Secret, and an Instance URL. Some legacy versions may use Basic Auth or API Keys.",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.etq.com/reliance-platform/",
+  "rate_limits": "Typically defined by the customer's specific license and instance configuration; usually managed via concurrent session limits.",
+  "complexity_score": 7,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Highly customized schemas: Field names in the API often use 'Internal Names' which differ from the UI labels, requiring manual mapping.",
+    "Workflow-driven logic: Updating a record often requires triggering a specific 'Action' to move it through phases rather than a simple PATCH request.",
+    "Attachment handling: Managing file uploads/downloads via the API requires multi-part form data handling which can be tricky in n8n's HTTP node."
+  ],
+  "client_must_provide": [
+    "Instance URL (e.g., https://company.etq.com/reliance)",
+    "OAuth 2.0 Client ID and Client Secret",
+    "Internal Data Names for the specific modules (e.g., CAPA, Document Control)",
+    "Service account with appropriate profile permissions"
+  ],
+  "operations_available": [
+    "Create Record",
+    "Search Records (using EQL - ETQ Query Language)",
+    "Update Record Phase/Workflow State",
+    "Fetch Document Attachments",
+    "Get Record Metadata"
+  ],
+  "similar_integrations": [
+    "Salesforce",
+    "ServiceNow",
+    "Jira"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration must be built using the HTTP Request node. Developers should use the ETQ 'Integration API'. It is critical to first use a GET request on the module's metadata endpoint to identify the correct internal field names before attempting POST/PUT operations.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Integration must be built using the HTTP Request node. Developers should use the ETQ 'Integration API'. It is critical to first use a GET request on the module's metadata endpoint to identify the correct internal field names before attempting POST/PUT operations."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

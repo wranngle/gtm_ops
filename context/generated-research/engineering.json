@@ -1,0 +1,65 @@
+{
+  "integration": "Engineering",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:58:10.562Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Engineering",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 or API Key",
+  "auth_complexity": "moderate",
+  "auth_notes": "Most enterprise engineering platforms (like Engineering S.p.A Digital Enabler or proprietary PLM systems) require OAuth2 Grant Type (Client Credentials) or a Bearer Token passed in the Authorization header.",
+  "api_quality": "fair",
+  "api_documentation_url": null,
+  "rate_limits": "Typically 60-100 requests per minute depending on the specific enterprise tenant configuration.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": false,
+  "gotchas": [
+    "Lack of public documentation often requires manual endpoint discovery via browser network inspection or internal documentation.",
+    "Data structures are typically deeply nested, requiring significant use of the n8n 'Code' or 'Set' nodes to flatten data.",
+    "Pagination is often non-standard, requiring manual loop implementation in n8n."
+  ],
+  "client_must_provide": [
+    "API Endpoint/Base URL",
+    "Client ID and Client Secret",
+    "Tenant ID or Organization Identifier",
+    "Technical documentation for custom fields"
+  ],
+  "operations_available": [
+    "List Engineering Projects",
+    "Get Task Details",
+    "Update Component Status",
+    "Retrieve Technical Documentation",
+    "Create Issue/Ticket"
+  ],
+  "similar_integrations": [
+    "Jira",
+    "Linear",
+    "Asana"
+  ],
+  "confidence": 0.65,
+  "research_notes": "As no native node exists, the integration must be constructed using the HTTP Request node. You will need to configure a 'Generic Auth' credential in n8n. Because 'Engineering' is a generic name often associated with custom enterprise PLM or ERP systems, the developer should expect to spend time mapping custom JSON schemas and handling offset-based pagination manually.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "As no native node exists, the integration must be constructed using the HTTP Request node. You will need to configure a 'Generic Auth' credential in n8n. Because 'Engineering' is a generic name often associated with custom enterprise PLM or ERP systems, the developer should expect to spend time mapping custom JSON schemas and handling offset-based pagination manually."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

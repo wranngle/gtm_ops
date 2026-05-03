@@ -1,0 +1,64 @@
+{
+  "integration": "Appointment scheduling",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T13:00:20.803Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Appointment scheduling",
+  "has_native_n8n_node": true,
+  "native_node_name": "n8n-nodes-base.calendly",
+  "auth_type": "api_key",
+  "auth_complexity": "simple",
+  "auth_notes": "Calendly v2 uses Personal Access Tokens (API Key) for individual access or OAuth2 for application-level access. n8n supports both.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.calendly.com/api-docs/864690367c969-calendly-api",
+  "rate_limits": "Standard rate limit is 30 requests per minute per user, with bursts up to 50 requests per minute.",
+  "complexity_score": 2,
+  "complexity_tier": "standard",
+  "estimated_hours": 4,
+  "webhook_support": true,
+  "gotchas": [
+    "Webhooks and certain API features require a paid Calendly subscription (Standard plan or higher).",
+    "Calendly API v2 uses URIs (e.g., 'https://api.calendly.com/users/UUID') as identifiers rather than simple IDs, which can complicate data mapping.",
+    "Timezone data is returned in UTC; workflows must explicitly handle conversion if local time display is required for follow-up actions."
+  ],
+  "client_must_provide": [
+    "Calendly Personal Access Token (v2)",
+    "Calendly Account Email",
+    "Organization/User URI (if configuring custom HTTP requests)"
+  ],
+  "operations_available": [
+    "Get Invitee",
+    "List Events",
+    "Create Webhook",
+    "Get User Information",
+    "List Event Types"
+  ],
+  "similar_integrations": [
+    "Cal.com",
+    "Acuity Scheduling",
+    "YouCanBook.me"
+  ],
+  "confidence": 0.95,
+  "research_notes": "While n8n lists api_key as the primary auth, OAuth2 is recommended for multi-user environments. Cal.com is the primary alternative for users seeking an open-source or self-hosted scheduling solution.",
+  "has_native_node": true,
+  "complexity": {
+    "score": 2,
+    "tier": "standard",
+    "estimated_hours": 4
+  },
+  "effort_recommendation": {
+    "tier": "standard",
+    "base_hours": 4,
+    "rationale": "While n8n lists api_key as the primary auth, OAuth2 is recommended for multi-user environments. Cal.com is the primary alternative for users seeking an open-source or self-hosted scheduling solution."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.85,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": "calendly",
+  "_is_category": true
+}

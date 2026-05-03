@@ -1,0 +1,66 @@
+{
+  "integration": "Clover",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:00.451Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Clover",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0 or API Token",
+  "auth_complexity": "moderate",
+  "auth_notes": "Clover uses OAuth 2.0 for third-party apps. For merchant-specific private apps, an API Token (Bearer) can be generated in the Clover Dashboard. Authentication requires different base URLs for Sandbox (sandbox.dev.clover.com) and Production (api.clover.com).",
+  "api_quality": "good",
+  "api_documentation_url": "https://docs.clover.com/reference/api-reference",
+  "rate_limits": "Standard rate limit is 16 requests per second (RPS) per merchant per app, though this varies by endpoint and plan.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "The Merchant ID (mID) is a required path parameter for nearly every API call.",
+    "Regional fragmentation: US/Canada and Europe use different API base URLs and developer dashboards.",
+    "Sandbox and Production environments are entirely distinct; credentials from one will not work in the other."
+  ],
+  "client_must_provide": [
+    "Client ID (App ID)",
+    "Client Secret (App Secret)",
+    "Merchant ID",
+    "Environment (Sandbox vs Production)",
+    "Region (US/Canada vs Europe)"
+  ],
+  "operations_available": [
+    "Get Merchant Details",
+    "List/Create Orders",
+    "Manage Inventory Items",
+    "Process Payments",
+    "Retrieve Customer Records"
+  ],
+  "similar_integrations": [
+    "Square",
+    "Stripe",
+    "PayPal"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Development will rely on the HTTP Request node. For OAuth 2.0, n8n's generic OAuth2 credential can be used, but the 'Authorization URL' and 'Access Token URL' must be set according to the Clover region. Most endpoints follow the pattern: /v3/merchants/{mID}/[endpoint].",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Development will rely on the HTTP Request node. For OAuth 2.0, n8n's generic OAuth2 credential can be used, but the 'Authorization URL' and 'Access Token URL' must be set according to the Clover region. Most endpoints follow the pattern: /v3/merchants/{mID}/[endpoint]."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

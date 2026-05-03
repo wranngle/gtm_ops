@@ -1,30 +1,38 @@
-# Product Spec: Flagship GTM Engine
+# Product spec: voice-AI-led GTM motion runtime
 
-Status: Draft
+Status: Active
 Owner: wranngle
-Last reviewed: 2026-04-30
+Last reviewed: 2026-05-03
 
-## One-Line Product
+## One-line product
 
-A synthetic internal automation system that demonstrates voice-agent evals, GTM workflow routing, Python/SQL reconciliation, and operator review in one public-safe monorepo.
+`gtm_ops` is the unified runtime: an inbound voice agent enriches the lead from CRM context, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console — runnable end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
 
-## Primary Users
+## Primary users
 
-- Hiring reviewers evaluating automation, internal tooling, and agent workflow judgment.
-- Future agents implementing and validating the repo.
-- Human operator reviewing synthetic GTM events.
+- Operators reviewing proposals, eval-run triage, and audit logs (the daily ops-console surface).
+- Engineers wiring new CRM adapters, prompt versions, or PDF templates.
+- Reviewers evaluating the architecture, code, and integration discipline (cold readers landing on the public GitHub repo).
 
-## Core Workflows
+## Core workflows
 
-1. Run synthetic voice-agent evals.
-2. Replay a synthetic webhook.
-3. Inspect lead and call outcomes in the ops console.
-4. Run Python/SQL reconciliation over usage and revenue fixtures.
-5. Generate an ops digest.
+1. **Lead intake** — form submission or inbound voice call lands; lead is normalized.
+2. **CRM enrichment** — Pipedrive / HubSpot / Salesforce-shaped adapter pulls account context server-side; voice agent prompt is parameterized before greeting.
+3. **Voice agent** — ElevenLabs handles the call; tools defined in `server.js` `/tools/*` are exposed via webhook.
+4. **Post-call** — `ElevenLabs-Signature` HMAC verified; transcript + analysis fanout to presales pipeline, audit log, CRM, and eval-harness regression queue.
+5. **Presales pipeline** — structured LLM extraction produces a typed proposal; rendered as a branded PDF using `tokens/` from the design system.
+6. **Ops-console review** — operator opens the proposal dashboard, eval-runs page, or audit-log review.
 
-## Non-Goals
+## Non-goals
 
-- No live production credentials.
-- No real customer data.
+- No live production credentials in the public repo.
+- No real customer data; synthetic fixtures only.
 - No private repo history.
-- No live outbound calls or SMS.
+- No live outbound calls or SMS from the public surface.
+
+## Boundary with satellites
+
+- `voice_ai_agent_evals` (separate repo) — owns prompt versioning, tool-call evaluation, scenario framework, methodology. `gtm_ops` references its `tests/runs/` output via the ops-console eval-runs page.
+- `n8n` (separate repo) — owns the full sanitized workflow library. `gtm_ops/workflows/` carries 3-5 showcase samples only.
+
+See [`ARCHITECTURE.md`](../../ARCHITECTURE.md) for layer responsibilities and the layered-import rule.

@@ -1,0 +1,66 @@
+{
+  "integration": "Comdata",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T12:42:07.758Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Comdata",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "SOAP WS-Security / API Key",
+  "auth_complexity": "complex",
+  "auth_notes": "Comdata primarily uses SOAP-based web services for fleet and virtual card management. Authentication typically requires a combination of Account Code, Customer ID, and WS-Security headers (UsernameToken). Some newer REST endpoints use API keys, but IP whitelisting is almost always mandatory.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://developers.comdata.com/",
+  "rate_limits": "Contract-specific; typically restricted to 5-10 requests per second for standard implementations.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 24,
+  "webhook_support": true,
+  "gotchas": [
+    "Heavy reliance on XML/SOAP requires significant manual data mapping and use of the n8n XML node or custom JavaScript.",
+    "Strict IP whitelisting is standard, which can be problematic for n8n Cloud users without a static outbound proxy.",
+    "Production access requires a rigorous certification process with a Comdata implementation manager."
+  ],
+  "client_must_provide": [
+    "Merchant ID / Customer ID",
+    "Account Code",
+    "API Username and Password",
+    "Static IP address of the n8n instance for whitelisting",
+    "WSDL files for specific service endpoints"
+  ],
+  "operations_available": [
+    "Issue Virtual Card",
+    "Real-time Transaction Inquiry",
+    "Card Status Update (Block/Unblock)",
+    "Fleet Card Limit Management",
+    "Balance Inquiry"
+  ],
+  "similar_integrations": [
+    "Stripe",
+    "Marqeta",
+    "Airwallex"
+  ],
+  "confidence": 0.85,
+  "research_notes": "The integration will require the HTTP Request node to send POST requests with XML payloads. Developers must manually construct the SOAP Envelope. Because Comdata's responses are in XML, a 'XML to JSON' node will be necessary after every request. If using n8n Cloud, a static IP service like QuotaGuard may be required to pass Comdata's firewall.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 24
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 24,
+    "rationale": "The integration will require the HTTP Request node to send POST requests with XML payloads. Developers must manually construct the SOAP Envelope. Because Comdata's responses are in XML, a 'XML to JSON' node will be necessary after every request. If using n8n Cloud, a static IP service like QuotaGuard may be required to pass Comdata's firewall."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,78 @@
+{
+  "id": "retell-legal-001",
+  "source": {
+    "vendor": "retell",
+    "url": "https://retellai.com/case-studies/martinez-law-group",
+    "title": "Martinez Law Group: 24/7 Client Intake with AI Voice Agents"
+  },
+  "harvested_at": "2026-01-27T00:00:00.000Z",
+  "problem": {
+    "industry": "legal",
+    "company_size": "12 attorneys, 8 paralegals",
+    "company_type": "personal injury law firm",
+    "pain_points": [
+      "Potential clients call after hours and reach voicemail",
+      "40% of new leads lost due to delayed callback",
+      "Intake coordinators spend 45 min per new case intake",
+      "No way to capture Spanish-speaking callers after hours",
+      "Conflict check process takes 2+ hours"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 800,
+      "calls_per_day": 27,
+      "avg_call_duration_minutes": 15,
+      "staff_hours_per_month": 200
+    },
+    "systems_involved": [
+      "Clio",
+      "Calendly",
+      "LawPay",
+      "RingCentral"
+    ],
+    "goals": [
+      "24/7 intake for potential clients",
+      "Automated conflict of interest checks",
+      "Bilingual support (English/Spanish)",
+      "Instant case qualification",
+      "Seamless handoff to attorneys"
+    ]
+  },
+  "solution": {
+    "agent_type": "inbound",
+    "voice_provider": "Deepgram",
+    "integrations": [
+      { "system_name": "Clio", "integration_type": "api", "purpose": "case management and conflict checks" },
+      { "system_name": "Calendly", "integration_type": "webhook", "purpose": "consultation scheduling" },
+      { "system_name": "Twilio", "integration_type": "api", "purpose": "voice calls and SMS notifications" }
+    ],
+    "pricing_model": {
+      "model_type": "monthly",
+      "total_cost": 12000,
+      "monthly_cost": 450,
+      "setup_cost": 4500
+    },
+    "timeline_weeks": 4,
+    "roi_achieved": {
+      "hours_saved_per_month": 80,
+      "calls_automated_percent": 70,
+      "monthly_savings": 6000,
+      "annual_savings": 72000,
+      "payback_period_months": 2
+    },
+    "key_features": [
+      "24/7 client intake",
+      "Automated conflict checking",
+      "Bilingual support",
+      "Case type qualification",
+      "Attorney availability lookup"
+    ],
+    "inferred_tier": "standard"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Good detail on legal workflow automation with clear business impact",
+    "domain_tags": ["legal", "customer-support", "scheduling", "bilingual"],
+    "holdout": false,
+    "harvested_by": "manual-entry"
+  }
+}

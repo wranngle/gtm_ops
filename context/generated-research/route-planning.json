@@ -1,0 +1,64 @@
+{
+  "integration": "Route Planning",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:28.210Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Route Planning (Route4Me API)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "API Key",
+  "auth_complexity": "simple",
+  "auth_notes": "Authentication is handled via an 'api_key' query parameter appended to the request URL.",
+  "api_quality": "good",
+  "api_documentation_url": "https://support.route4me.com/route4me-api-documentation/",
+  "rate_limits": "Standard accounts are typically limited to 5,000 requests per day, though higher tiers allow for more frequent polling.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Optimization is often asynchronous; the API returns an optimization_problem_id which must be polled to retrieve the final route.",
+    "The API is highly sensitive to coordinate formatting (Latitude/Longitude) and requires specific JSON structures for 'addresses' arrays.",
+    "Rate limits apply strictly to the optimization engine; sending too many re-optimization requests in a short window can trigger 429 errors."
+  ],
+  "client_must_provide": [
+    "Route4Me API Key",
+    "List of start/end coordinates",
+    "Vehicle constraints (capacity, max distance, etc.)"
+  ],
+  "operations_available": [
+    "Create Optimization Problem",
+    "Get Single Route",
+    "Add Address to Optimization",
+    "Update Route Destination",
+    "Get Optimization Status"
+  ],
+  "similar_integrations": [
+    "Google Maps",
+    "Mapbox",
+    "Strava"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Integration will utilize the HTTP Request node. Because the optimization process is non-blocking, the workflow must be designed with a 'Wait' node or a polling loop to check the status of the 'optimization_problem_id' before attempting to fetch the final route data.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Integration will utilize the HTTP Request node. Because the optimization process is non-blocking, the workflow must be designed with a 'Wait' node or a polling loop to check the status of the 'optimization_problem_id' before attempting to fetch the final route data."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

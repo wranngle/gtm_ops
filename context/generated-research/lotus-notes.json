@@ -1,0 +1,65 @@
+{
+  "integration": "Lotus Notes",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:01:42.996Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Lotus Notes",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Basic Auth or Session-based Auth",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires the Domino Data Service (DDS) or the newer HCL Domino REST API (Project KEEP) to be enabled on the server. Authentication typically uses standard credentials or a session cookie obtained via a login endpoint.",
+  "api_quality": "fair",
+  "api_documentation_url": "https://help.hcltechsw.com/domino/12.0.2/admin/wn_domino_rest_api.html",
+  "rate_limits": "Controlled at the server level via Domino's Internet Site documents or Server documents; no fixed global limit.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": false,
+  "gotchas": [
+    "The Domino Data Service (DDS) must be manually enabled for each specific database (.nsf) and view.",
+    "Data is often returned in a flat JSON structure that requires significant mapping to handle multi-value fields.",
+    "On-premise deployments often require a VPN or n8n tunnel/agent to bypass firewalls."
+  ],
+  "client_must_provide": [
+    "Domino Server URL",
+    "Database path (e.g., mail/user.nsf)",
+    "API-enabled credentials",
+    "Firewall whitelisting for n8n IP addresses"
+  ],
+  "operations_available": [
+    "Read Documents",
+    "Create Documents",
+    "Update Documents",
+    "Delete Documents",
+    "Get View/Folder Entries"
+  ],
+  "similar_integrations": [
+    "Microsoft Outlook",
+    "Gmail",
+    "Microsoft SharePoint"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Integration requires the HTTP Request node. If using the legacy Domino Data Service, the URL pattern is typically /database.nsf/api/data/documents. If using the modern HCL Domino REST API (KEEP), it provides a more standard Swagger/OpenAPI experience but requires separate installation on the Domino server.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "Integration requires the HTTP Request node. If using the legacy Domino Data Service, the URL pattern is typically /database.nsf/api/data/documents. If using the modern HCL Domino REST API (KEEP), it provides a more standard Swagger/OpenAPI experience but requires separate installation on the Domino server."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

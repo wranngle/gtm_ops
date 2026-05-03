@@ -1,0 +1,65 @@
+{
+  "integration": "Digital imaging",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-09T05:11:53.597Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Digital imaging (Adobe Photoshop API)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 (JWT / Service Account)",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires Adobe Developer Console configuration. Uses JWT-based authentication where a private key is used to sign a token, which is then exchanged for an access token. n8n's standard OAuth2 credentials may require a custom Function node to handle the JWT signing process.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.adobe.com/photoshop/api/docs/",
+  "rate_limits": "Quota-based (e.g., 5,000 calls per month for trial accounts); burst limits apply based on the specific endpoint and tier.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 20,
+  "webhook_support": true,
+  "gotchas": [
+    "Asynchronous processing: The API returns a Job ID immediately; the workflow must poll a status endpoint or use Adobe I/O Events to know when the task is finished.",
+    "External Storage Required: Files cannot be uploaded directly to the API. You must provide pre-signed URLs (AWS S3, Azure Blob, or Dropbox) for both input and output.",
+    "Strict timeout limits on job execution for large PSD files."
+  ],
+  "client_must_provide": [
+    "Adobe Developer Console Project access",
+    "Client ID and Client Secret",
+    "Private Key (.key file) for JWT signing",
+    "Cloud Storage credentials (S3/Azure) for file hosting"
+  ],
+  "operations_available": [
+    "Remove Background",
+    "Smart Object Replacement",
+    "Create Renditions (JPEG/PNG/TIFF)",
+    "Apply Lightroom Presets",
+    "Image Masking and Selection"
+  ],
+  "similar_integrations": [
+    "Cloudinary",
+    "Bannerbear",
+    "Imgix"
+  ],
+  "confidence": 0.9,
+  "research_notes": "The integration must be built using the HTTP Request node. A 'Wait' node or a recursive loop is necessary to handle the asynchronous nature of the 'Job' pattern used by Adobe. Authentication is the primary hurdle, often requiring a 'Function' node to generate the signed JWT before the first HTTP request.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 20
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 20,
+    "rationale": "The integration must be built using the HTTP Request node. A 'Wait' node or a recursive loop is necessary to handle the asynchronous nature of the 'Job' pattern used by Adobe. Authentication is the primary hurdle, often requiring a 'Function' node to generate the signed JWT before the first HTTP request."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

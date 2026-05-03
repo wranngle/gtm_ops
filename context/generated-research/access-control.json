@@ -1,0 +1,65 @@
+{
+  "integration": "Access Control",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:34:54.349Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Access Control (by Text.com)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 or Personal Access Token (Bearer)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating an application in the Text.com Developer Console to obtain a Client ID and Client Secret for OAuth2, or generating a Personal Access Token for simpler Bearer authentication.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.text.com/access-control/management-api/",
+  "rate_limits": "Generally 50 requests per second for management operations, though specific endpoints may vary based on account tier.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 14,
+  "webhook_support": true,
+  "gotchas": [
+    "Scopes are highly granular; missing a single scope will result in 403 errors without clear messaging.",
+    "The API is part of the broader Text.com (formerly LiveChat) ecosystem, requiring navigation through their unified developer console.",
+    "Pagination uses a limit/offset pattern which requires manual loop implementation in n8n."
+  ],
+  "client_must_provide": [
+    "Client ID",
+    "Client Secret",
+    "Organization ID",
+    "Developer Console Admin Access"
+  ],
+  "operations_available": [
+    "Create User",
+    "List Groups",
+    "Assign Permissions (Grants)",
+    "Revoke Access",
+    "Fetch Audit Logs"
+  ],
+  "similar_integrations": [
+    "Auth0",
+    "Okta",
+    "Firebase Auth"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation requires the HTTP Request node. For production environments, n8n's OAuth2 credential type should be used to handle token refreshing. Webhooks must be manually registered in the Text.com Developer Console to point to the n8n Webhook node URL.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 14
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 14,
+    "rationale": "Implementation requires the HTTP Request node. For production environments, n8n's OAuth2 credential type should be used to handle token refreshing. Webhooks must be manually registered in the Text.com Developer Console to point to the n8n Webhook node URL."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

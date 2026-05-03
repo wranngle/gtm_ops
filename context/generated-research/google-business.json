@@ -1,0 +1,64 @@
+{
+  "integration": "Google Business",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:35:45.963Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Google Business",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "complex",
+  "auth_notes": "Requires a Google Cloud Console project with the 'Google Business Profile API' enabled. Must configure OAuth 2.0 credentials and use specific scopes such as 'https://www.googleapis.com/auth/business.manage'.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developers.google.com/my-business/reference/rest",
+  "rate_limits": "Varies by endpoint; typically 10 requests per second (RPS) per project for most management operations.",
+  "complexity_score": 8,
+  "complexity_tier": "complex",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "The API is fragmented into multiple sub-APIs (Business Information, Reviews, etc.), requiring different base URLs.",
+    "Webhooks are not direct; they require setting up Google Cloud Pub/Sub to push notifications to an n8n webhook endpoint.",
+    "Verification status of the business account can restrict access to certain write operations."
+  ],
+  "client_must_provide": [
+    "Google Cloud Project Client ID and Client Secret",
+    "Verified Google Business Profile account access",
+    "Pub/Sub Topic/Subscription (if webhooks are required)"
+  ],
+  "operations_available": [
+    "Create and manage local posts (Google Posts)",
+    "List and reply to customer reviews",
+    "Update business hours and location information",
+    "Retrieve performance insights and metrics",
+    "Manage media/photos for business locations"
+  ],
+  "similar_integrations": [
+    "Facebook Pages",
+    "Google Sheets",
+    "Google Calendar"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Development will rely heavily on the HTTP Request node. Authentication should be handled via n8n's 'OAuth2' credential type. Users must manually map the REST endpoints for the Business Information API (v1) and the My Business Business Calls/Reviews APIs, as they are hosted on different subdomains.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 8,
+    "tier": "complex",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "complex",
+    "base_hours": 16,
+    "rationale": "Development will rely heavily on the HTTP Request node. Authentication should be handled via n8n's 'OAuth2' credential type. Users must manually map the REST endpoints for the Business Information API (v1) and the My Business Business Calls/Reviews APIs, as they are hosted on different subdomains."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

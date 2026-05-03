@@ -1,0 +1,14 @@
+[
+  { "id": "acme-hvac-greeting-lookup", "industry": "Field Services", "company_type": "SMB", "tier": "starter", "agent_type": "sewy", "holdout": false },
+  { "id": "acme-hvac-barge-in-stress", "industry": "Field Services", "company_type": "SMB", "tier": "starter", "agent_type": "sewy", "holdout": false },
+  { "id": "redwood-tax-intake", "industry": "Tax Services", "company_type": "SMB", "tier": "starter", "agent_type": "sewy", "holdout": false },
+  { "id": "summit-multi-location", "industry": "Healthcare", "company_type": "Group", "tier": "growth", "agent_type": "sewy", "holdout": true },
+  { "id": "blueline-driver-checkin", "industry": "Logistics", "company_type": "Mid-Market", "tier": "growth", "agent_type": "sewy", "holdout": false },
+  { "id": "harbor-coast-noisy-line", "industry": "Property Management", "company_type": "SMB", "tier": "starter", "agent_type": "sewy", "holdout": true },
+  { "id": "evergreen-clinic-reminders", "industry": "Healthcare", "company_type": "SMB", "tier": "starter", "agent_type": "sewy", "holdout": false },
+  { "id": "northwind-after-hours-pilot", "industry": "Property Services", "company_type": "Mid-Market", "tier": "growth", "agent_type": "sewy", "holdout": false },
+  { "id": "lakeside-auto-booking", "industry": "Automotive", "company_type": "SMB", "tier": "starter", "agent_type": "sewy", "holdout": false },
+  { "id": "demo-hold-out-handoff", "industry": "Generic", "company_type": "Synthetic", "tier": "starter", "agent_type": "sewy", "holdout": true },
+  { "id": "demo-hold-out-tool-loop", "industry": "Generic", "company_type": "Synthetic", "tier": "growth", "agent_type": "sewy", "holdout": true },
+  { "id": "demo-hold-out-asr-stress", "industry": "Generic", "company_type": "Synthetic", "tier": "starter", "agent_type": "sewy", "holdout": false }
+]

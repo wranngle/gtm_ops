@@ -1,0 +1,64 @@
+{
+  "integration": "Paper",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:36:06.147Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Paper (Dropbox Paper)",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth 2.0",
+  "auth_complexity": "moderate",
+  "auth_notes": "Requires creating a Dropbox Developer App, configuring redirect URIs for n8n, and selecting specific Paper scopes (e.g., members.read, paper.content.write).",
+  "api_quality": "good",
+  "api_documentation_url": "https://www.dropbox.com/developers/documentation/http/documentation#paper",
+  "rate_limits": "Dropbox uses a tiered rate limiting system; typically allows for thousands of requests per month on free tiers, with specific 'too_many_requests' errors if burst limits are exceeded.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Dropbox Paper is transitioning from a standalone format to 'Paper in Dropbox' (standard file system), which may require using the Files API instead of the Paper API for newer documents.",
+    "The legacy Paper API uses different ID formats than the standard Dropbox Files API.",
+    "Exporting content often requires handling binary streams for PDF or Markdown formats."
+  ],
+  "client_must_provide": [
+    "Dropbox App Client ID",
+    "Dropbox App Client Secret",
+    "App Scopes (paper.content.write, paper.content.read)"
+  ],
+  "operations_available": [
+    "docs/create",
+    "docs/archive",
+    "docs/download",
+    "docs/users/add",
+    "docs/list"
+  ],
+  "similar_integrations": [
+    "Google Docs",
+    "Notion",
+    "Coda"
+  ],
+  "confidence": 0.9,
+  "research_notes": "Implementation requires the HTTP Request node. Use 'OAuth2' for Authentication. Note that the API endpoint base is 'https://api.dropboxapi.com/2/paper/'. For newer accounts, Paper docs are stored as .paper files, so some operations might shift to the standard Dropbox 'files' endpoints.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Implementation requires the HTTP Request node. Use 'OAuth2' for Authentication. Note that the API endpoint base is 'https://api.dropboxapi.com/2/paper/'. For newer accounts, Paper docs are stored as .paper files, so some operations might shift to the standard Dropbox 'files' endpoints."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

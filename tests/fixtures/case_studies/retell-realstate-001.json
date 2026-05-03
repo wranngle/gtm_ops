@@ -1,0 +1,78 @@
+{
+  "id": "retell-realestate-001",
+  "source": {
+    "vendor": "retell",
+    "url": "https://retellai.com/customers/premier-properties",
+    "title": "Premier Properties: AI-Powered Lead Qualification"
+  },
+  "harvested_at": "2026-01-24T00:00:00.000Z",
+  "problem": {
+    "industry": "real-estate",
+    "company_size": "25 agents, 3 offices",
+    "company_type": "residential real estate brokerage",
+    "pain_points": [
+      "Agents spend 40% of time on unqualified leads",
+      "Missed calls during showings cost $50k+ annually in lost commissions",
+      "No way to respond to web inquiries after hours",
+      "Lead response time averages 4 hours",
+      "High cost of ISA (Inside Sales Agents) at $4k/month"
+    ],
+    "volume_metrics": {
+      "calls_per_month": 800,
+      "items_processed_per_month": 350,
+      "staff_hours_per_month": 200,
+      "raw_description": "350 new leads per month, 800 inbound calls"
+    },
+    "systems_involved": [
+      "Follow Up Boss",
+      "Zillow",
+      "Realtor.com",
+      "Google Voice"
+    ],
+    "goals": [
+      "Qualify leads automatically before agent contact",
+      "Respond to inquiries within 2 minutes 24/7",
+      "Book showings directly into agent calendars",
+      "Reduce cost per qualified lead"
+    ]
+  },
+  "solution": {
+    "agent_type": "hybrid",
+    "voice_provider": "Deepgram",
+    "integrations": [
+      { "system_name": "Follow Up Boss", "integration_type": "api", "purpose": "CRM sync and lead management" },
+      { "system_name": "Calendly", "integration_type": "api", "purpose": "showing appointments" },
+      { "system_name": "Twilio", "integration_type": "native", "purpose": "voice and SMS" }
+    ],
+    "pricing_model": {
+      "model_type": "monthly",
+      "monthly_cost": 1200,
+      "setup_cost": 8000,
+      "total_cost": 22400
+    },
+    "timeline_weeks": 8,
+    "roi_achieved": {
+      "hours_saved_per_month": 160,
+      "calls_automated_percent": 65,
+      "monthly_savings": 4000,
+      "annual_savings": 48000,
+      "conversion_rate_improvement": 35,
+      "payback_period_months": 3
+    },
+    "key_features": [
+      "Lead qualification scoring",
+      "Showing scheduler",
+      "Property info delivery",
+      "After-hours coverage",
+      "Agent-specific routing"
+    ],
+    "inferred_tier": "enterprise"
+  },
+  "meta": {
+    "quality_score": 4,
+    "quality_notes": "Good detail on problem and ROI, some pricing inferred from industry benchmarks",
+    "domain_tags": ["real-estate", "lead-qualification", "scheduling", "after-hours", "crm-integration"],
+    "holdout": false,
+    "harvested_by": "manual-entry"
+  }
+}

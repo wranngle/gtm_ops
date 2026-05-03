@@ -1,0 +1,11 @@
+{
+  "workspace_id": "default",
+  "logo_url": "",
+  "primary_color": "#ff5f00",
+  "secondary_color": "#cf3c69",
+  "background_color": "#fcfaf5",
+  "text_color": "#12111a",
+  "font_family": "Inter",
+  "updated_at": 1715068800000,
+  "_demo_note": "Synthetic branding fixture — defaults from gtm_ops/tokens/. No customer artifacts."
+}

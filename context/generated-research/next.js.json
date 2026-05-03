@@ -1,0 +1,64 @@
+{
+  "integration": "Next.js",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T23:00:31.431Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Next.js",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "Custom API Key or JWT",
+  "auth_complexity": "moderate",
+  "auth_notes": "Authentication is typically handled via custom Route Handlers. You must implement a check for an Authorization header (Bearer token) or a custom API key header within the Next.js code using environment variables.",
+  "api_quality": "excellent",
+  "api_documentation_url": "https://nextjs.org/docs/app/building-your-application/routing/route-handlers",
+  "rate_limits": "Determined by the hosting provider (e.g., Vercel, AWS, or Netlify). Vercel has specific concurrency and execution time limits for Serverless Functions.",
+  "complexity_score": 6,
+  "complexity_tier": "moderate",
+  "estimated_hours": 12,
+  "webhook_support": true,
+  "gotchas": [
+    "Serverless function timeouts (e.g., 10s on Vercel Hobby) can cause n8n HTTP requests to fail if the logic is slow.",
+    "Payload size limits on serverless routes (typically 4.5MB) may restrict data transfer.",
+    "CORS must be explicitly configured in Next.js response headers if the n8n instance is making client-side calls."
+  ],
+  "client_must_provide": [
+    "Base URL of the deployed Next.js application",
+    "Custom API Secret/Token",
+    "Access to the codebase to implement or verify Route Handlers"
+  ],
+  "operations_available": [
+    "Trigger On-demand Incremental Static Regeneration (ISR)",
+    "POST data to custom API Route Handlers",
+    "GET data from internal application databases via API",
+    "Trigger Server-side logic or background jobs",
+    "Receive Webhooks from n8n to update application state"
+  ],
+  "similar_integrations": [
+    "Vercel",
+    "Strapi",
+    "Ghost"
+  ],
+  "confidence": 0.95,
+  "research_notes": "Integration requires using the n8n HTTP Request node to target Next.js Route Handlers (API routes). Because Next.js is a framework, the 'API' is whatever the developer builds. The n8n workflow will act as a client calling these endpoints. Authentication must be manually enforced in the Next.js `route.ts` or `route.js` files.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 6,
+    "tier": "moderate",
+    "estimated_hours": 12
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 12,
+    "rationale": "Integration requires using the n8n HTTP Request node to target Next.js Route Handlers (API routes). Because Next.js is a framework, the 'API' is whatever the developer builds. The n8n workflow will act as a client calling these endpoints. Authentication must be manually enforced in the Next.js `route.ts` or `route.js` files."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}

@@ -1,0 +1,65 @@
+{
+  "integration": "Practice Management System",
+  "found": true,
+  "from_cache": false,
+  "generated": true,
+  "research_date": "2026-01-08T22:33:36.737Z",
+  "model_used": "gemini-3-flash-preview",
+  "integration_name": "Practice Management System",
+  "has_native_n8n_node": false,
+  "native_node_name": null,
+  "auth_type": "OAuth2 or API Key (Header-based)",
+  "auth_complexity": "moderate",
+  "auth_notes": "Most cloud-based Practice Management Systems (PMS) utilize OAuth2 for secure third-party access or a static API Key generated within the administrative settings. HIPAA-compliant systems often require specific 'Scopes' to be defined during the credential setup.",
+  "api_quality": "good",
+  "api_documentation_url": "https://developer.practice-management-system.com/api/reference",
+  "rate_limits": "Typically 60-100 requests per minute with burst capacity; varies by subscription tier.",
+  "complexity_score": 7,
+  "complexity_tier": "moderate",
+  "estimated_hours": 16,
+  "webhook_support": true,
+  "gotchas": [
+    "Strict HIPAA/GDPR compliance requirements often necessitate data encryption at the workflow level.",
+    "Pagination is frequently implemented using cursor-based tokens rather than simple offsets.",
+    "Rate limits are often shared across all users of the API key, which can cause issues in high-volume environments."
+  ],
+  "client_must_provide": [
+    "API Key or Client ID/Secret",
+    "Environment Base URL (Production vs Sandbox)",
+    "Administrative access to configure Webhook endpoints",
+    "List of required data scopes (e.g., read:patients, write:appointments)"
+  ],
+  "operations_available": [
+    "Retrieve Patient/Client Records",
+    "Create/Update Calendar Appointments",
+    "Fetch Billing and Invoice Data",
+    "Upload Clinical Documentation/Attachments",
+    "List Staff/Practitioner Availability"
+  ],
+  "similar_integrations": [
+    "Clio",
+    "HubSpot",
+    "Salesforce"
+  ],
+  "confidence": 0.85,
+  "research_notes": "Implementation will require the n8n HTTP Request node. For OAuth2, use the 'OAuth2 API' credential type in n8n to handle token refreshing automatically. For API Keys, use 'Header Auth'. Webhooks must be manually configured in the PMS dashboard to point to the n8n Webhook node URL, ensuring the 'Respond to Webhook' node is used if the PMS requires a specific handshake response.",
+  "has_native_node": false,
+  "complexity": {
+    "score": 7,
+    "tier": "moderate",
+    "estimated_hours": 16
+  },
+  "effort_recommendation": {
+    "tier": "moderate",
+    "base_hours": 16,
+    "rationale": "Implementation will require the n8n HTTP Request node. For OAuth2, use the 'OAuth2 API' credential type in n8n to handle token refreshing automatically. For API Keys, use 'Header Auth'. Webhooks must be manually configured in the PMS dashboard to point to the n8n Webhook node URL, ensuring the 'Respond to Webhook' node is used if the PMS requires a specific handshake response."
+  },
+  "freshness": {
+    "stale": false,
+    "days": 0,
+    "score": 0.65,
+    "reason": "auto-generated with node database"
+  },
+  "_database_match": null,
+  "_is_category": false
+}
