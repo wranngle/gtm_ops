@@ -9,10 +9,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../tokens/tokens.css">
 
-    <!-- DEMO_MODE: file:// or window.DEMO_MODE → serve fixtures from ../fixtures/ -->
+    <!-- DEMO_MODE: file://, *.pages.dev host, or window.DEMO_MODE → fixtures from ../fixtures/ -->
     <script>
       (function () {
-        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true;
+        var host = (window.location.hostname || '').toLowerCase();
+        var isPagesDemo = /\.pages\.dev$/.test(host);
+        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo;
         window.DEMO_MODE = DEMO_MODE;
         if (!DEMO_MODE) return;
         var nativeFetch = window.fetch.bind(window);

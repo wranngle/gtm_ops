@@ -19,10 +19,15 @@
 
     <!-- DEMO_MODE: serves fixtures from ./fixtures/ when loaded via file:// or window.DEMO_MODE === true.
          Wraps window.fetch so the 31+ existing /api/* call sites are unmodified. Mutating verbs
-         (POST/PUT/DELETE) return a synthetic { ok: true } payload in demo mode (no-op). -->
+         (POST/PUT/DELETE) return a synthetic { ok: true } payload in demo mode (no-op).
+         The static Cloudflare Pages deploy has no Express backend, so we hard-pin DEMO_MODE on
+         when the host matches *.pages.dev / gtm-ops.* — operators running locally against
+         `bun run start` (server.js) hit live mode automatically because the host doesn't match. -->
     <script>
       (function () {
-        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true;
+        var host = (window.location.hostname || '').toLowerCase();
+        var isPagesDemo = /\.pages\.dev$/.test(host) || host === 'gtm-ops.pages.dev';
+        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo;
         window.DEMO_MODE = DEMO_MODE;
         if (!DEMO_MODE) return;
 
