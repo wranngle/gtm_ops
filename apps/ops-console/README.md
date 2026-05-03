@@ -63,8 +63,7 @@ See `gtm_ops/DESIGN.md` for the long-form design system.
 
 ## Notes
 
-- The previous Python/Streamlit operator console is preserved at
-  `apps/ops-console-py-legacy/` for reference.
+- This is the canonical gtm_ops operator UI; it has no Python predecessor in this repo. (A separate Symphony-flavored agent-orchestration console lives at `~/.dotfiles/lib/symphony-console/` — that's a backend tool for agent dispatch / monitoring, NOT a former version of this UI.)
 - The DEMO_MODE shim is per-page (small, self-contained block at the top of
   each HTML file). It overrides `window.fetch` and `window.EventSource` only
   when DEMO_MODE is detected — live mode is untouched.
