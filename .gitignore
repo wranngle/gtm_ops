@@ -32,9 +32,20 @@ examples/csv-validator/queue/human_review/*
 examples/csv-validator/workspaces/*
 !examples/csv-validator/workspaces/.gitkeep
 
-# Claude Code agent worktrees (transient, not for git)
+# Claude Code / Gemini operator-local (keep .claude/commands/ + .gemini/commands/ committed; ignore everything else)
+.claude/local/
 .claude/worktrees/
+.claude/mcp.json
+.claude/.env
+.claude/settings.json
+.claude/scheduled_tasks*
 .claude/*.lock
+.claude/logs/
+.gemini/local/
+.gemini/settings.json
+.bmad-output/
+# Husky auto-managed (we use lefthook now — lefthook.yml is committed)
+.husky/_/
 
 # Bun
 .bun/
