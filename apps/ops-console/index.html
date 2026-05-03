@@ -34,9 +34,13 @@
           u = u.split('?')[0].split('#')[0];
           if (!u.indexOf('/api')) u = u.slice(4); // remove leading /api
           if (!u || u === '/') u = '/index';
-          // Collapse path params (numeric ids become "default") so the same fixture
-          // file serves /api/foo/123 and /api/foo/456 in static demo mode.
-          u = u.replace(/\/\d+(\/|$)/g, '/default$1');
+          // Collapse path params so the same fixture file serves /api/foo/123 and
+          // /api/foo/exec_demo_007 in static demo mode. We match either pure digits
+          // or {prefix}_{stuff}_{stuff}-style identifiers (exec_demo_001, lead_xyz)
+          // — anything with at least one digit or underscore that isn't a known
+          // resource segment. Two-segment routes like /api/eval/runs are preserved
+          // because neither segment matches the id pattern.
+          u = u.replace(/\/(?:\d+|[a-z]+_[\w-]+)(\/|$)/gi, '/default$1');
           return './fixtures' + u + '.json';
         }
 

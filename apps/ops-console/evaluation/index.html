@@ -27,7 +27,7 @@
           }
           var u = url.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
           if (!u.indexOf('/api')) u = u.slice(4);
-          u = u.replace(/\/\d+(\/|$)/g, '/default$1');
+          u = u.replace(/\/(?:\d+|[a-z]+_[\w-]+)(\/|$)/gi, '/default$1');
           return nativeFetch('../fixtures' + u + '.json').then(function (r) {
             if (r.ok) return r;
             return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
