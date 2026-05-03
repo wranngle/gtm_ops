@@ -58,8 +58,24 @@
           }
 
           // Mutating verbs: short-circuit with a synthetic ok payload — DEMO_MODE is read-only.
+          // Include the keys downstream consumers check (success / job_id / status / etc.) so
+          // optimistic UI flows (alert("X saved!"), poll-until-status) terminate cleanly.
           if (method !== 'GET' && method !== 'HEAD') {
-            return Promise.resolve(jsonResponse({ ok: true, demo: true, method: method }));
+            return Promise.resolve(jsonResponse({
+              ok: true,
+              demo: true,
+              method: method,
+              success: true,
+              status_code: 200,
+              status: 'completed',
+              response_time_ms: 187,
+              job_id: 'demo-job-' + Date.now(),
+              grace_period_ends: Date.now() + 30 * 24 * 60 * 60 * 1000,
+              days_remaining: 30,
+              file_path: '/exports/demo-export.zip',
+              file_size: 184320,
+              expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000
+            }));
           }
 
           var fixturePath = pathToFixture(url);
@@ -955,6 +971,42 @@
             border-width: 1px;
             border-style: solid;
         }
+
+        /* DEMO_MODE banner — only shown when window.DEMO_MODE === true. */
+        #demo-mode-banner {
+            display: none;
+            grid-column: 1 / -1;
+            margin-top: -8px;
+            padding: 8px 14px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(90deg, rgba(255,95,0,0.10), rgba(207,60,105,0.10));
+            border: 1px solid rgba(255,95,0,0.35);
+            color: var(--sunset-300);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: space-between;
+        }
+        body.demo #demo-mode-banner { display: flex; }
+        #demo-mode-banner .demo-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: var(--radius-pill);
+            background: var(--sunset-500);
+            color: #fff;
+            font-weight: 700;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        #demo-mode-banner .demo-text { flex: 1; line-height: 1.5; }
+        #demo-mode-banner a {
+            color: var(--sunset-500);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
     </style>
 </head>
 <body>
@@ -984,6 +1036,14 @@
                 </label>
             </div>
         </header>
+
+        <!-- DEMO_MODE: hidden unless window.DEMO_MODE === true (set by the fetch shim above). -->
+        <div id="demo-mode-banner" role="note" aria-label="Demo mode">
+            <span class="demo-pill">Demo</span>
+            <span class="demo-text">
+                You are viewing the static <strong>DEMO_MODE</strong> deploy — every <code>/api/*</code> call is intercepted client-side and answered from synthetic <a href="https://github.com/wranngle/gtm_ops/tree/main/apps/ops-console/fixtures" target="_blank" rel="noopener">fixtures</a>. Mutations are no-ops. Click any row to drill into the Acme HVAC pilot.
+            </span>
+        </div>
 
         <div class="card input-panel">
             <div class="card-content">
@@ -1536,6 +1596,9 @@
         }
         toggleTheme();
 
+        // DEMO_MODE banner toggle — the fetch shim sets window.DEMO_MODE early.
+        if (window.DEMO_MODE) document.body.classList.add('demo');
+
         const grid = new gridjs.Grid({
             columns: [
                 {
@@ -1616,10 +1679,25 @@
                     formatter: (cell, row) => {
                         if (!cell || !cell.length) return '';
                         const rowId = row.cells[11].data;
-                        
+
+                        // Normalize artifacts: tolerate bare strings ('proposal.pdf')
+                        // or objects ({type, path, webPath}) so the grid never throws
+                        // when a fixture/server payload drifts.
+                        const normalized = cell.map(a => {
+                            if (typeof a === 'string') {
+                                const ext = a.split('.').pop().toLowerCase();
+                                return { type: ext || 'file', path: a, webPath: '#' };
+                            }
+                            return {
+                                type: (a && typeof a.type === 'string') ? a.type : 'file',
+                                path: a && a.path ? a.path : '',
+                                webPath: a && a.webPath ? a.webPath : '#'
+                            };
+                        });
+
                         // Deduplicate artifacts by type, keeping the latest of each
                         const latestByType = {};
-                        cell.forEach(a => {
+                        normalized.forEach(a => {
                             latestByType[a.type] = a;
                         });
                         const uniqueArtifacts = Object.values(latestByType);
@@ -2051,8 +2129,14 @@
                     </div>
                 </div>
                 <div class="detail-row"><span class="detail-key">MONTHLY BLEED</span><span class="detail-val" style="color:var(--violet-500)">$${(job.monthly_bleed || 0).toLocaleString()} /mo</span></div>
-                <div class="detail-row"><span class="detail-key">ARTIFACTS</span><div class="detail-val"> 
-                    ${(job.artifacts || []).map(a => `<a href="${a.webPath}" target="_blank" style="color:var(--sunset-500); text-decoration:none; display:block;">${a.type.toUpperCase()}: ${a.path.split(/[\\\/]/).pop()}</a>`).join('')}
+                <div class="detail-row"><span class="detail-key">ARTIFACTS</span><div class="detail-val">
+                    ${(job.artifacts || []).map(a => {
+                        const norm = typeof a === 'string'
+                            ? { type: (a.split('.').pop() || 'file'), path: a, webPath: '#' }
+                            : { type: (a && a.type) || 'file', path: (a && a.path) || '', webPath: (a && a.webPath) || '#' };
+                        const filename = norm.path ? norm.path.split(/[\\\/]/).pop() : norm.type;
+                        return `<a href="${norm.webPath}" target="_blank" style="color:var(--sunset-500); text-decoration:none; display:block;">${norm.type.toUpperCase()}: ${filename}</a>`;
+                    }).join('')}
                 </div></div>
             `;
             try {
@@ -2064,8 +2148,8 @@
             
             document.getElementById('tab-overview').innerHTML = overviewHtml;
 
-            const jsonArt = job.artifacts?.find(a => a.type === 'json');
-            if (jsonArt) {
+            const jsonArt = (job.artifacts || []).find(a => a && typeof a === 'object' && a.type === 'json');
+            if (jsonArt && jsonArt.webPath && jsonArt.webPath !== '#') {
                 try {
                     const schemaResp = await fetch(jsonArt.webPath);
                     if (!schemaResp.ok) throw new Error(`HTTP ${schemaResp.status}`);
@@ -2241,12 +2325,14 @@
                     document.getElementById('json-viewer-container').innerHTML = errHtml;
                 }
             } else {
-                const noJsonHtml = "<p>JSON artifact not available for this execution.</p>";
+                const noJsonHtml = window.DEMO_MODE
+                    ? '<div class="ai-summary-box"><strong>DEMO mode</strong> — no schema artifact attached to this execution. Run the live pipeline (<code>bun run start</code>) to generate one.</div>'
+                    : '<p>JSON artifact not available for this execution.</p>';
                 document.getElementById('tab-research').innerHTML = noJsonHtml;
                 document.getElementById('tab-milestones').innerHTML = noJsonHtml;
                 document.getElementById('json-viewer-container').innerHTML = noJsonHtml;
             }
-            
+
             document.getElementById('drilldown-modal').classList.add('open');
         }
 
@@ -2454,7 +2540,7 @@
             switch(tabName) {
                 case 'webhooks': loadWebhooks(); break;
                 case 'versions': populateExecutionSelect(); break;
-                case 'audit': break; // Load on demand
+                case 'audit': loadAuditLogs(true); break;
                 case 'usage': loadUsage('this_month'); break;
                 case 'branding': loadBranding(); break;
                 case 'admin': loadAdminDashboard('this_month'); break;
