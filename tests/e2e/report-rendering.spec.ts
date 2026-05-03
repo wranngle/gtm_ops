@@ -22,7 +22,7 @@ test.describe('Report Rendering', () => {
   test('[P0] should render all 7 sheets', async ({ page }) => {
     // GIVEN: A generated report exists
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Checking sheet count
     const sheetCount = await report.getSheetCount();
@@ -34,7 +34,7 @@ test.describe('Report Rendering', () => {
   test('[P0] should display client name correctly', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Checking header
     await report.verifyHeader();
@@ -49,7 +49,7 @@ test.describe('Report Rendering', () => {
   test('[P0] should have no placeholder values', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Checking for placeholders
     const issues = await report.verifyNoPlaceholders();
@@ -61,7 +61,7 @@ test.describe('Report Rendering', () => {
   test('[P1] should have valid document slug format', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Getting document slug
     const slug = await report.documentSlug.textContent();
@@ -73,7 +73,7 @@ test.describe('Report Rendering', () => {
   test('[P1] should have properly formatted currency values', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Getting stat values
     const stats = await report.getStatValues();
@@ -90,7 +90,7 @@ test.describe('Report Rendering', () => {
   test('[P1] should display integrations in scope sheet', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Getting integrations list
     const integrations = await report.getIntegrations();
@@ -104,7 +104,7 @@ test.describe('Report Rendering', () => {
   test('[P2] visual regression - full page', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // Wait for layout to stabilize (font loading can cause height changes)
     await page.waitForLoadState('networkidle');
@@ -122,7 +122,7 @@ test.describe('Report Rendering', () => {
   test('[P2] visual regression - individual sheets', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN/THEN: Each sheet should match its baseline
     const sheetCount = await report.getSheetCount();
@@ -142,7 +142,7 @@ test.describe('Report Data Integrity', () => {
   test('[P0] should not contain literal "undefined" text', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Searching for undefined
     const undefinedCount = await page.locator('text=undefined').count();
@@ -154,7 +154,7 @@ test.describe('Report Data Integrity', () => {
   test('[P0] should not contain "NaN" values', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Searching for NaN (use regex to match exact "NaN", not substrings like "maintenance")
     // Playwright's text= without quotes does substring matching, so use regex
@@ -167,7 +167,7 @@ test.describe('Report Data Integrity', () => {
   test('[P1] should have ROI values populated', async ({ page }) => {
     // GIVEN: A generated report
     const report = new ReportPage(page);
-    await report.goto(reportPath);
+    await report.goto(reportPath!);
 
     // WHEN: Getting ROI values
     const roi = await report.getROIValues();
