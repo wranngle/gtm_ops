@@ -22,23 +22,17 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "apps/ops-console"
 
-# D1 — relational store (presales config seed + Phase 2.5 runtime tables).
-# Until the operator runs `wrangler d1 create presales-d1` and pastes the
-# returned database_id below, deploys still succeed: every Pages Function
-# detects an unbound DB and falls back to the bundled fixture JSON.
-[[d1_databases]]
-binding = "DB"
-database_name = "presales-d1"
-database_id = "00000000-0000-0000-0000-000000000000"
-
-# KV — bundled template strings + small read-mostly settings.
-[[kv_namespaces]]
-binding = "TEMPLATES"
-id = "0000000000000000000000000000000000"
-
-# Browser Rendering — used by the /api/generate route's Phase 2.5 PDF path
-# (replacement for puppeteer; see lib/pdf_generator.js). The binding is
-# declared up front so the operator only needs to enable Browser Rendering
-# in the Cloudflare dashboard and redeploy.
-[browser]
-binding = "BROWSER"
+# Bindings (D1 / KV / Browser Rendering) are intentionally NOT declared in
+# this checked-in wrangler.toml — Cloudflare's deploy validator rejects
+# placeholder/zero ids. The operator wires bindings via the Cloudflare
+# dashboard (Pages → gtm-ops → Settings → Functions → Bindings) AFTER
+# running the operator-action steps in docs/cf-fullstack-feasibility.md:
+#
+#   wrangler d1 create presales-d1               # → bind as DB on the project
+#   wrangler kv namespace create TEMPLATES       # → bind as TEMPLATES
+#   (Browser Rendering: enable on the project + bind as BROWSER)
+#
+# Every ported Pages Function under functions/api/ detects when DB is
+# undefined (or bound but empty / throws) and serves the bundled fixture
+# JSON from apps/ops-console/fixtures/, so deploys succeed and the UI
+# stays functional throughout the migration.

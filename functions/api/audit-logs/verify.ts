@@ -13,13 +13,15 @@
 
 import {jsonResponse, tryD1, type Env} from '../../_lib/respond';
 
-const DEMO_VERIFICATION = {
+// Build per-request — `new Date()` at module scope gets baked into the
+// Workers bundle at deploy time and freezes to epoch on cold start.
+const demoVerification = () => ({
   valid: true,
   mode: 'demo',
   checked_at: new Date().toISOString(),
   log_count: 0,
   note: 'DEMO_MODE: no D1 schema migrated; verification is a no-op. See docs/cf-fullstack-feasibility.md "Audit chain (relaxed)".',
-};
+});
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const live = await tryD1(context.env.DB, async (db) => {
@@ -44,5 +46,5 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     };
   });
 
-  return jsonResponse(live ?? DEMO_VERIFICATION);
+  return jsonResponse(live ?? demoVerification());
 };
