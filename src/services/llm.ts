@@ -370,6 +370,7 @@ export interface LLMExecutorOptions {
   useGroq?: boolean;
   skipRefinement?: boolean;
   useGrounding?: boolean; // NEW: Enable Google Search Grounding
+  task?: string;
 }
 
 export interface LLMStats {

@@ -320,12 +320,8 @@ export {
 
   // System Intelligence (Unified Lookup)
   ResearchFreshnessSchema,
-  LaborFactorSchema,
-  CitationSchema,
   SystemIntelligenceSchema,
   type ResearchFreshness,
-  type LaborFactor,
-  type Citation,
   type SystemIntelligence,
 
   // Company profile (internal sheet)

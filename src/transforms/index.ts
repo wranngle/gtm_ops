@@ -1269,7 +1269,7 @@ export async function buildProposal(
   const roi = calculateROI(monthlyBleed, pricing.final_price as number);
 
   // Build phases
-  const phases = await buildPhases(extracted.raw_audit || extracted, pricing, options);
+  const phases = await buildPhases((extracted.raw_audit as Record<string, unknown> | undefined) || extracted, pricing, options as Record<string, unknown>);
   const totalDuration = calculateTotalDuration(phases);
 
   // Generate metadata

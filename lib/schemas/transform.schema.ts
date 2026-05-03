@@ -31,6 +31,8 @@ export const TechStackItemSchema = z.object({
   version: z.string().optional(),
 });
 
+export type TechStackItem = z.infer<typeof TechStackItemSchema>;
+
 export const IntegrationRowSchema = z.object({
   system: z.string(),
   type: z.string().optional(),
@@ -40,6 +42,8 @@ export const IntegrationRowSchema = z.object({
   native_node_name: z.string().optional(),
   notes: z.string().optional(),
 });
+
+export type IntegrationRow = z.infer<typeof IntegrationRowSchema>;
 
 export const TechnicalApproachSchema = z.object({
   summary: z.string().optional(),
