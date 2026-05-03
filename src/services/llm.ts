@@ -264,7 +264,7 @@ export class GroqAdapter {
 
     const body: {
       model: string;
-      messages: { role: string; content: string }[];
+      messages: Array<{ role: string; content: string }>;
       temperature: number;
       max_tokens: number;
     } = {

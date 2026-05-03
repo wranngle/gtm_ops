@@ -20,10 +20,10 @@ interface ExtractionExpectation {
 }
 
 // Load all input/output pairs
-function loadTestPairs(): { input: string; schema: any; inputFile: string }[] {
+function loadTestPairs(): Array<{ input: string; schema: any; inputFile: string }> {
   const inputDir = path.join(process.cwd(), 'input');
   const outputDir = path.join(process.cwd(), 'output');
-  const pairs: { input: string; schema: any; inputFile: string }[] = [];
+  const pairs: Array<{ input: string; schema: any; inputFile: string }> = [];
 
   const inputFiles = fs.readdirSync(inputDir).filter(f => f.endsWith('.txt'));
 

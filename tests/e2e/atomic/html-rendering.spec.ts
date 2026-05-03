@@ -11,9 +11,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Helper: Find matching HTML and schema pairs
-function findOutputPairs(): { html: string; schema: any; clientSlug: string }[] {
+function findOutputPairs(): Array<{ html: string; schema: any; clientSlug: string }> {
   const outputDir = path.join(process.cwd(), 'output');
-  const pairs: { html: string; schema: any; clientSlug: string }[] = [];
+  const pairs: Array<{ html: string; schema: any; clientSlug: string }> = [];
 
   function findInDir(dir: string, clientSlug: string) {
     try {

@@ -17,7 +17,6 @@ import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import http from 'http';
 import dotenv from 'dotenv';
-import { UnifiedPipeline } from './lib/pipeline.js';
 
 // Load environment variables from script directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

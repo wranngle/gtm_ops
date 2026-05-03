@@ -16,17 +16,16 @@ import {
   inputValidationMiddleware,
   generateLimiter,
   historyLimiter,
-  generalLimiter,
-  maskApiKey
+  generalLimiter
 } from './lib/security.js';
 import { getUsageTracker } from './lib/usage.js';
 import { getWebhookManager, ALL_WEBHOOK_EVENTS } from './lib/webhooks.js';
 import { VersionManager } from './lib/versioning.js';
-import { getAuditLogger, auditContextMiddleware, AuditAction, RetentionPolicy } from './lib/audit.js';
+import { getAuditLogger, auditContextMiddleware, RetentionPolicy } from './lib/audit.js';
 import { BrandingManager } from './lib/branding.js';
-import { AdminManager, TimePeriod } from './lib/admin.js';
-import { GdprManager, ConsentType } from './lib/gdpr.js';
-import { Role, Permission, hasPermission, getPermissionSummary, getUserManager, canChangeRole, canRemoveUser } from './lib/rbac.js';
+import { AdminManager } from './lib/admin.js';
+import { GdprManager } from './lib/gdpr.js';
+import { Role, getPermissionSummary, getUserManager } from './lib/rbac.js';
 
 // =============================================================================
 // Evaluation API endpoints
@@ -717,6 +716,18 @@ app.get('/api/admin/health', generalLimiter, async (req, res) => {
     console.error('[ADMIN] Health error:', error.message);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Minimal liveness probe for external callers (Cloudflare, uptime monitors,
+// the legacy `unified-presales-report` deployment). Intentionally has zero
+// runtime dependencies so it stays green even when downstream managers/DBs
+// are degraded — use `/api/admin/health` for deep checks.
+app.get('/api/health', generalLimiter, (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0'
+  });
 });
 
 // GDPR endpoints
