@@ -1,0 +1,51 @@
+{
+  "scenario_id": "lookup-record-greeting",
+  "agent_id": "agent_xxxx_demo",
+  "prompt_tag": "prompt/sewy/v3",
+  "harness_version": "0.0.1",
+  "started_at": "2026-04-22T15:32:11Z",
+  "duration_ms": 4287,
+  "verdict": "pass",
+  "score": {
+    "weighted": 1,
+    "axes": [
+      {
+        "name": "barge_in_recovery",
+        "pass": true,
+        "weight": 1,
+        "detail": "no caller barge-in in this scenario; axis n/a (skipped, not failed)"
+      },
+      {
+        "name": "tool_call_schema",
+        "pass": true,
+        "weight": 1,
+        "detail": "lookup_record called with valid {id: string} args"
+      },
+      {
+        "name": "tool_call_routing",
+        "pass": true,
+        "weight": 1,
+        "detail": "agent chose tool over KB (correct: caller-specific lookup)"
+      },
+      {
+        "name": "ttfb_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 612ms (budget <= 800ms)"
+      },
+      {
+        "name": "end_to_first_audio_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 1180ms (budget <= 1400ms)"
+      },
+      {
+        "name": "total_turn_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 2640ms (budget <= 3000ms)"
+      }
+    ]
+  },
+  "result_path": "../fixtures/runs/lookup-record-greeting.json"
+}

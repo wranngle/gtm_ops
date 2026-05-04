@@ -1,0 +1,39 @@
+{
+  "scenario_id": "out-of-scope-handoff",
+  "agent_id": "agent_xxxx_demo",
+  "prompt_tag": "prompt/sewy/v3",
+  "harness_version": "0.0.1",
+  "started_at": "2026-04-22T15:49:02Z",
+  "duration_ms": 4520,
+  "verdict": "pass",
+  "score": {
+    "weighted": 0.95,
+    "axes": [
+      {
+        "name": "scope_recognition",
+        "pass": true,
+        "weight": 1,
+        "detail": "agent identified billing dispute as out-of-scope and offered handoff"
+      },
+      {
+        "name": "handoff_protocol",
+        "pass": true,
+        "weight": 1,
+        "detail": "warm transfer template followed correctly"
+      },
+      {
+        "name": "ttfb_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 605ms"
+      },
+      {
+        "name": "tone_judge",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "empathetic, not dismissive"
+      }
+    ]
+  },
+  "result_path": "../fixtures/runs/out-of-scope-handoff.json"
+}

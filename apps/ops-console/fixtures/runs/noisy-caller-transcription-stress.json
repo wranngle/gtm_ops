@@ -1,0 +1,39 @@
+{
+  "scenario_id": "noisy-caller-transcription-stress",
+  "agent_id": "agent_xxxx_demo",
+  "prompt_tag": "prompt/sewy/v3",
+  "harness_version": "0.0.1",
+  "started_at": "2026-04-22T15:53:18Z",
+  "duration_ms": 8930,
+  "verdict": "fail",
+  "score": {
+    "weighted": 0.52,
+    "axes": [
+      {
+        "name": "asr_robustness",
+        "pass": false,
+        "weight": 1,
+        "detail": "agent confidently filled-in for misheard tokens instead of asking clarification"
+      },
+      {
+        "name": "barge_in_recovery",
+        "pass": true,
+        "weight": 1,
+        "detail": "no barge-in"
+      },
+      {
+        "name": "ttfb_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 612ms"
+      },
+      {
+        "name": "tone_judge",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "polite but overconfident"
+      }
+    ]
+  },
+  "result_path": "../fixtures/runs/noisy-caller-transcription-stress.json"
+}

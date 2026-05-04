@@ -8,17 +8,47 @@
     "duration_ms": 4287,
     "verdict": "pass",
     "score": {
-      "weighted": 1.0,
+      "weighted": 1,
       "axes": [
-        { "name": "barge_in_recovery", "pass": true, "weight": 1.0, "detail": "no caller barge-in in this scenario; axis n/a (skipped, not failed)" },
-        { "name": "tool_call_schema", "pass": true, "weight": 1.0, "detail": "lookup_record called with valid {id: string} args" },
-        { "name": "tool_call_routing", "pass": true, "weight": 1.0, "detail": "agent chose tool over KB (correct: caller-specific lookup)" },
-        { "name": "ttfb_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 612ms (budget <= 800ms)" },
-        { "name": "end_to_first_audio_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 1180ms (budget <= 1400ms)" },
-        { "name": "total_turn_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 2640ms (budget <= 3000ms)" }
+        {
+          "name": "barge_in_recovery",
+          "pass": true,
+          "weight": 1,
+          "detail": "no caller barge-in in this scenario; axis n/a (skipped, not failed)"
+        },
+        {
+          "name": "tool_call_schema",
+          "pass": true,
+          "weight": 1,
+          "detail": "lookup_record called with valid {id: string} args"
+        },
+        {
+          "name": "tool_call_routing",
+          "pass": true,
+          "weight": 1,
+          "detail": "agent chose tool over KB (correct: caller-specific lookup)"
+        },
+        {
+          "name": "ttfb_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 612ms (budget <= 800ms)"
+        },
+        {
+          "name": "end_to_first_audio_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 1180ms (budget <= 1400ms)"
+        },
+        {
+          "name": "total_turn_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 2640ms (budget <= 3000ms)"
+        }
       ]
     },
-    "result_path": "../../../voice_ai_agent_evals/tests/runs/2026-04-pass-lookup-record-greeting/result.json"
+    "result_path": "../fixtures/runs/lookup-record-greeting.json"
   },
   {
     "scenario_id": "barge-in-mid-question",
@@ -31,15 +61,45 @@
     "score": {
       "weighted": 0.45,
       "axes": [
-        { "name": "barge_in_recovery", "pass": false, "weight": 1.0, "detail": "agent continued speaking 1.8s after caller began interrupting; expected yield within 400ms" },
-        { "name": "tool_call_schema", "pass": true, "weight": 1.0, "detail": "n/a — no tool call in this scenario" },
-        { "name": "ttfb_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 698ms (budget <= 800ms)" },
-        { "name": "end_to_first_audio_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 1320ms (budget <= 1400ms)" },
-        { "name": "total_turn_p95_ms", "pass": false, "weight": 0.5, "detail": "p95 = 3450ms (budget <= 3000ms)" },
-        { "name": "tone_judge", "pass": true, "weight": 0.5, "detail": "tone remained polite after the interrupt; judge: claude-haiku-4-5" }
+        {
+          "name": "barge_in_recovery",
+          "pass": false,
+          "weight": 1,
+          "detail": "agent continued speaking 1.8s after caller began interrupting; expected yield within 400ms"
+        },
+        {
+          "name": "tool_call_schema",
+          "pass": true,
+          "weight": 1,
+          "detail": "n/a — no tool call in this scenario"
+        },
+        {
+          "name": "ttfb_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 698ms (budget <= 800ms)"
+        },
+        {
+          "name": "end_to_first_audio_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 1320ms (budget <= 1400ms)"
+        },
+        {
+          "name": "total_turn_p95_ms",
+          "pass": false,
+          "weight": 0.5,
+          "detail": "p95 = 3450ms (budget <= 3000ms)"
+        },
+        {
+          "name": "tone_judge",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "tone remained polite after the interrupt; judge: claude-haiku-4-5"
+        }
       ]
     },
-    "result_path": "../../../voice_ai_agent_evals/tests/runs/2026-04-fail-barge-in/result.json"
+    "result_path": "../fixtures/runs/barge-in-mid-question.json"
   },
   {
     "scenario_id": "appointment-reschedule-flow",
@@ -52,14 +112,45 @@
     "score": {
       "weighted": 0.92,
       "axes": [
-        { "name": "barge_in_recovery", "pass": true, "weight": 1.0, "detail": "no barge-in" },
-        { "name": "tool_call_schema", "pass": true, "weight": 1.0, "detail": "reschedule_appointment called with valid args" },
-        { "name": "tool_call_routing", "pass": true, "weight": 1.0, "detail": "agent confirmed before mutating calendar" },
-        { "name": "ttfb_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 645ms" },
-        { "name": "end_to_first_audio_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 1240ms" },
-        { "name": "total_turn_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 2890ms" }
+        {
+          "name": "barge_in_recovery",
+          "pass": true,
+          "weight": 1,
+          "detail": "no barge-in"
+        },
+        {
+          "name": "tool_call_schema",
+          "pass": true,
+          "weight": 1,
+          "detail": "reschedule_appointment called with valid args"
+        },
+        {
+          "name": "tool_call_routing",
+          "pass": true,
+          "weight": 1,
+          "detail": "agent confirmed before mutating calendar"
+        },
+        {
+          "name": "ttfb_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 645ms"
+        },
+        {
+          "name": "end_to_first_audio_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 1240ms"
+        },
+        {
+          "name": "total_turn_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 2890ms"
+        }
       ]
-    }
+    },
+    "result_path": "../fixtures/runs/appointment-reschedule-flow.json"
   },
   {
     "scenario_id": "knowledge-base-pricing-question",
@@ -72,12 +163,33 @@
     "score": {
       "weighted": 0.88,
       "axes": [
-        { "name": "tool_call_routing", "pass": true, "weight": 1.0, "detail": "agent correctly chose KB over tool (reference info, not caller-specific)" },
-        { "name": "kb_retrieval_grounded", "pass": true, "weight": 1.0, "detail": "answer cited service-tiers KB document" },
-        { "name": "ttfb_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 590ms" },
-        { "name": "tone_judge", "pass": true, "weight": 0.5, "detail": "judge: claude-haiku-4-5; on-brand professional tone" }
+        {
+          "name": "tool_call_routing",
+          "pass": true,
+          "weight": 1,
+          "detail": "agent correctly chose KB over tool (reference info, not caller-specific)"
+        },
+        {
+          "name": "kb_retrieval_grounded",
+          "pass": true,
+          "weight": 1,
+          "detail": "answer cited service-tiers KB document"
+        },
+        {
+          "name": "ttfb_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 590ms"
+        },
+        {
+          "name": "tone_judge",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "judge: claude-haiku-4-5; on-brand professional tone"
+        }
       ]
-    }
+    },
+    "result_path": "../fixtures/runs/knowledge-base-pricing-question.json"
   },
   {
     "scenario_id": "ambiguous-caller-name-confirmation",
@@ -90,12 +202,33 @@
     "score": {
       "weighted": 0.38,
       "axes": [
-        { "name": "name_disambiguation", "pass": false, "weight": 1.0, "detail": "agent assumed first match without spelling-out confirmation; v2 prompt lacks the disambig step added in v3" },
-        { "name": "tool_call_schema", "pass": true, "weight": 1.0, "detail": "schema valid" },
-        { "name": "ttfb_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 720ms" },
-        { "name": "tone_judge", "pass": true, "weight": 0.5, "detail": "tone fine; problem is logic not voice" }
+        {
+          "name": "name_disambiguation",
+          "pass": false,
+          "weight": 1,
+          "detail": "agent assumed first match without spelling-out confirmation; v2 prompt lacks the disambig step added in v3"
+        },
+        {
+          "name": "tool_call_schema",
+          "pass": true,
+          "weight": 1,
+          "detail": "schema valid"
+        },
+        {
+          "name": "ttfb_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 720ms"
+        },
+        {
+          "name": "tone_judge",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "tone fine; problem is logic not voice"
+        }
       ]
-    }
+    },
+    "result_path": "../fixtures/runs/ambiguous-caller-name-confirmation.json"
   },
   {
     "scenario_id": "out-of-scope-handoff",
@@ -108,12 +241,33 @@
     "score": {
       "weighted": 0.95,
       "axes": [
-        { "name": "scope_recognition", "pass": true, "weight": 1.0, "detail": "agent identified billing dispute as out-of-scope and offered handoff" },
-        { "name": "handoff_protocol", "pass": true, "weight": 1.0, "detail": "warm transfer template followed correctly" },
-        { "name": "ttfb_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 605ms" },
-        { "name": "tone_judge", "pass": true, "weight": 0.5, "detail": "empathetic, not dismissive" }
+        {
+          "name": "scope_recognition",
+          "pass": true,
+          "weight": 1,
+          "detail": "agent identified billing dispute as out-of-scope and offered handoff"
+        },
+        {
+          "name": "handoff_protocol",
+          "pass": true,
+          "weight": 1,
+          "detail": "warm transfer template followed correctly"
+        },
+        {
+          "name": "ttfb_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 605ms"
+        },
+        {
+          "name": "tone_judge",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "empathetic, not dismissive"
+        }
       ]
-    }
+    },
+    "result_path": "../fixtures/runs/out-of-scope-handoff.json"
   },
   {
     "scenario_id": "noisy-caller-transcription-stress",
@@ -126,12 +280,33 @@
     "score": {
       "weighted": 0.52,
       "axes": [
-        { "name": "asr_robustness", "pass": false, "weight": 1.0, "detail": "agent confidently filled-in for misheard tokens instead of asking clarification" },
-        { "name": "barge_in_recovery", "pass": true, "weight": 1.0, "detail": "no barge-in" },
-        { "name": "ttfb_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 612ms" },
-        { "name": "tone_judge", "pass": true, "weight": 0.5, "detail": "polite but overconfident" }
+        {
+          "name": "asr_robustness",
+          "pass": false,
+          "weight": 1,
+          "detail": "agent confidently filled-in for misheard tokens instead of asking clarification"
+        },
+        {
+          "name": "barge_in_recovery",
+          "pass": true,
+          "weight": 1,
+          "detail": "no barge-in"
+        },
+        {
+          "name": "ttfb_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 612ms"
+        },
+        {
+          "name": "tone_judge",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "polite but overconfident"
+        }
       ]
-    }
+    },
+    "result_path": "../fixtures/runs/noisy-caller-transcription-stress.json"
   },
   {
     "scenario_id": "multi-turn-tool-loop",
@@ -144,11 +319,32 @@
     "score": {
       "weighted": 0.81,
       "axes": [
-        { "name": "tool_call_schema", "pass": true, "weight": 1.0, "detail": "3 tool calls, all schema-valid" },
-        { "name": "tool_response_consumption", "pass": true, "weight": 1.0, "detail": "tool outputs reflected in subsequent turns" },
-        { "name": "total_turn_p95_ms", "pass": true, "weight": 0.5, "detail": "p95 = 2980ms (close to budget)" },
-        { "name": "tone_judge", "pass": true, "weight": 0.5, "detail": "consistent throughout" }
+        {
+          "name": "tool_call_schema",
+          "pass": true,
+          "weight": 1,
+          "detail": "3 tool calls, all schema-valid"
+        },
+        {
+          "name": "tool_response_consumption",
+          "pass": true,
+          "weight": 1,
+          "detail": "tool outputs reflected in subsequent turns"
+        },
+        {
+          "name": "total_turn_p95_ms",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "p95 = 2980ms (close to budget)"
+        },
+        {
+          "name": "tone_judge",
+          "pass": true,
+          "weight": 0.5,
+          "detail": "consistent throughout"
+        }
       ]
-    }
+    },
+    "result_path": "../fixtures/runs/multi-turn-tool-loop.json"
   }
 ]

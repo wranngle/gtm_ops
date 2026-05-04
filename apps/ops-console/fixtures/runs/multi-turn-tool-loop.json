@@ -1,0 +1,39 @@
+{
+  "scenario_id": "multi-turn-tool-loop",
+  "agent_id": "agent_yyyy_demo",
+  "prompt_tag": "prompt/sewy/v3",
+  "harness_version": "0.0.1",
+  "started_at": "2026-04-22T15:58:44Z",
+  "duration_ms": 9120,
+  "verdict": "pass",
+  "score": {
+    "weighted": 0.81,
+    "axes": [
+      {
+        "name": "tool_call_schema",
+        "pass": true,
+        "weight": 1,
+        "detail": "3 tool calls, all schema-valid"
+      },
+      {
+        "name": "tool_response_consumption",
+        "pass": true,
+        "weight": 1,
+        "detail": "tool outputs reflected in subsequent turns"
+      },
+      {
+        "name": "total_turn_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 2980ms (close to budget)"
+      },
+      {
+        "name": "tone_judge",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "consistent throughout"
+      }
+    ]
+  },
+  "result_path": "../fixtures/runs/multi-turn-tool-loop.json"
+}

@@ -1,0 +1,39 @@
+{
+  "scenario_id": "ambiguous-caller-name-confirmation",
+  "agent_id": "agent_yyyy_demo",
+  "prompt_tag": "prompt/sewy/v2",
+  "harness_version": "0.0.1",
+  "started_at": "2026-04-22T15:45:33Z",
+  "duration_ms": 7140,
+  "verdict": "fail",
+  "score": {
+    "weighted": 0.38,
+    "axes": [
+      {
+        "name": "name_disambiguation",
+        "pass": false,
+        "weight": 1,
+        "detail": "agent assumed first match without spelling-out confirmation; v2 prompt lacks the disambig step added in v3"
+      },
+      {
+        "name": "tool_call_schema",
+        "pass": true,
+        "weight": 1,
+        "detail": "schema valid"
+      },
+      {
+        "name": "ttfb_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 720ms"
+      },
+      {
+        "name": "tone_judge",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "tone fine; problem is logic not voice"
+      }
+    ]
+  },
+  "result_path": "../fixtures/runs/ambiguous-caller-name-confirmation.json"
+}

@@ -1,0 +1,39 @@
+{
+  "scenario_id": "knowledge-base-pricing-question",
+  "agent_id": "agent_xxxx_demo",
+  "prompt_tag": "prompt/sewy/v3",
+  "harness_version": "0.0.1",
+  "started_at": "2026-04-22T15:42:01Z",
+  "duration_ms": 3987,
+  "verdict": "pass",
+  "score": {
+    "weighted": 0.88,
+    "axes": [
+      {
+        "name": "tool_call_routing",
+        "pass": true,
+        "weight": 1,
+        "detail": "agent correctly chose KB over tool (reference info, not caller-specific)"
+      },
+      {
+        "name": "kb_retrieval_grounded",
+        "pass": true,
+        "weight": 1,
+        "detail": "answer cited service-tiers KB document"
+      },
+      {
+        "name": "ttfb_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 590ms"
+      },
+      {
+        "name": "tone_judge",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "judge: claude-haiku-4-5; on-brand professional tone"
+      }
+    ]
+  },
+  "result_path": "../fixtures/runs/knowledge-base-pricing-question.json"
+}

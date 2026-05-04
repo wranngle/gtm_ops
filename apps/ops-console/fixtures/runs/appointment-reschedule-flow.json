@@ -1,0 +1,51 @@
+{
+  "scenario_id": "appointment-reschedule-flow",
+  "agent_id": "agent_yyyy_demo",
+  "prompt_tag": "prompt/sewy/v3",
+  "harness_version": "0.0.1",
+  "started_at": "2026-04-22T15:38:14Z",
+  "duration_ms": 6420,
+  "verdict": "pass",
+  "score": {
+    "weighted": 0.92,
+    "axes": [
+      {
+        "name": "barge_in_recovery",
+        "pass": true,
+        "weight": 1,
+        "detail": "no barge-in"
+      },
+      {
+        "name": "tool_call_schema",
+        "pass": true,
+        "weight": 1,
+        "detail": "reschedule_appointment called with valid args"
+      },
+      {
+        "name": "tool_call_routing",
+        "pass": true,
+        "weight": 1,
+        "detail": "agent confirmed before mutating calendar"
+      },
+      {
+        "name": "ttfb_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 645ms"
+      },
+      {
+        "name": "end_to_first_audio_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 1240ms"
+      },
+      {
+        "name": "total_turn_p95_ms",
+        "pass": true,
+        "weight": 0.5,
+        "detail": "p95 = 2890ms"
+      }
+    ]
+  },
+  "result_path": "../fixtures/runs/appointment-reschedule-flow.json"
+}
