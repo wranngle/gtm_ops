@@ -226,6 +226,12 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
         <span className="tb__sep">/</span>
         <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
       </div>
+      {window.GTM?._isDemoFallback && (
+        <span className="tb__demo-pill" role="status" aria-label="Demo data — backend returned no historic runs">
+          <span className="dot dot--accent" style={{width:5,height:5}} aria-hidden="true"/>
+          demo data
+        </span>
+      )}
 
       <button type="button" className="tb__search" onClick={openPalette}
               aria-label="Open command palette to search leads, calls, proposals">

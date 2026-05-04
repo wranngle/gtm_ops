@@ -33,49 +33,60 @@ function App() {
     document.documentElement.style.setProperty('--font-display', `'${tw.fontDisplay}', system-ui, sans-serif`);
   }, [tw.theme, tw.accentColor, tw.fontDisplay]);
 
-  // Fetch real backend data
+  // Fetch real backend data. Important: when the API returns an empty
+  // array (fresh deploy, no historic runs yet) we PRESERVE the synthetic
+  // fallback fixtures from data.js — overwriting with [] would leave the
+  // entire UI looking broken (empty kanban, blank proposals, no hot leads)
+  // and a brand-new visitor would conclude the app itself is broken.
+  // window.GTM._isDemoFallback signals to consumers (banner, etc.) that
+  // they're looking at demo data, not real history.
   useE(() => {
     async function loadData() {
       try {
         const histRes = await fetch('/api/history');
-        if (histRes.ok) {
-          const history = await histRes.json();
-          window.GTM.companies = history.map(h => ({
-            id: h.slug || h.id,
-            name: h.client_slug,
-            industry: 'Unspecified',
-            size: '-',
-            region: '-',
-            stage: h.status === 'completed' ? 'closing' : (h.status === 'failed' ? 'qualifying' : 'discovery'),
-            score: h.audit_score || 0,
-            owner: 'system',
-            icp: 0.5,
-            intent: h.status === 'completed' ? 'high' : 'med',
-            pain: h.project_name || 'N/A',
-            url: '#',
-            techStack: [],
-            lastTouch: new Date(h.timestamp).toLocaleDateString(),
-            nextStep: 'Generated proposal',
-            nextStepWhen: '-',
-            arr: `$${h.monthly_bleed || 0}K`,
-            dealSize: `$${((h.total_price || 0) / 1000).toFixed(1)}K`,
-            closeProb: 0.5,
-            artifacts: h.artifacts || []
-          }));
-          window.GTM.proposals = history.map(h => ({
-            id: h.slug || h.id,
-            co: h.client_slug,
-            owner: 'system',
-            stage: h.status === 'completed' ? 'signed' : (h.status === 'failed' ? 'closed lost' : 'drafting'),
-            amount: `$${((h.total_price || 0) / 1000).toFixed(1)}K`,
-            sections: 5,
-            accepted: h.status === 'completed' ? 5 : 2,
-            sent: new Date(h.timestamp).toLocaleDateString(),
-            viewed: 'today',
-            blockers: h.risk_score > 3 ? ['High risk score'] : []
-          }));
+        if (!histRes.ok) return;
+        const history = await histRes.json();
+        if (!Array.isArray(history) || history.length === 0) {
+          window.GTM._isDemoFallback = true;
           setDataLoaded(n => n + 1);
+          return;
         }
+        window.GTM._isDemoFallback = false;
+        window.GTM.companies = history.map(h => ({
+          id: h.slug || h.id,
+          name: h.client_slug,
+          industry: 'Unspecified',
+          size: '-',
+          region: '-',
+          stage: h.status === 'completed' ? 'closing' : (h.status === 'failed' ? 'qualifying' : 'discovery'),
+          score: h.audit_score || 0,
+          owner: 'system',
+          icp: 0.5,
+          intent: h.status === 'completed' ? 'high' : 'med',
+          pain: h.project_name || 'N/A',
+          url: '#',
+          techStack: [],
+          lastTouch: new Date(h.timestamp).toLocaleDateString(),
+          nextStep: 'Generated proposal',
+          nextStepWhen: '-',
+          arr: `$${h.monthly_bleed || 0}K`,
+          dealSize: `$${((h.total_price || 0) / 1000).toFixed(1)}K`,
+          closeProb: 0.5,
+          artifacts: h.artifacts || []
+        }));
+        window.GTM.proposals = history.map(h => ({
+          id: h.slug || h.id,
+          co: h.client_slug,
+          owner: 'system',
+          stage: h.status === 'completed' ? 'signed' : (h.status === 'failed' ? 'closed lost' : 'drafting'),
+          amount: `$${((h.total_price || 0) / 1000).toFixed(1)}K`,
+          sections: 5,
+          accepted: h.status === 'completed' ? 5 : 2,
+          sent: new Date(h.timestamp).toLocaleDateString(),
+          viewed: 'today',
+          blockers: h.risk_score > 3 ? ['High risk score'] : []
+        }));
+        setDataLoaded(n => n + 1);
       } catch (err) {
         console.error("Failed to load history", err);
       }

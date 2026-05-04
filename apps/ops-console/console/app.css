@@ -1314,3 +1314,20 @@ a:focus-visible,
   /* Re-enable a single pulse so the live-status dot still has visual hierarchy
      on first render; the iteration-count: 1 above stops the loop. */
 }
+
+/* "Demo data" pill in topbar — shown when /api/history returned an
+   empty array and we kept the synthetic fallback fixtures so the UI
+   stays useful. */
+.tb__demo-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent-fg);
+  background: rgba(255,95,0,.10);
+  border: 1px solid rgba(255,95,0,.28);
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
