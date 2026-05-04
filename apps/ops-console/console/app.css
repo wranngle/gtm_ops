@@ -65,20 +65,23 @@
 
   --text: #ebe7f2;
   --text-2: #aaa4b8;
-  --text-3: #6a6380;
-  --text-mono-dim: #847d9a;
+  /* --text-3 was #6a6380 (3.22:1 on dark bg, fails AA). Bumped to
+     #847d9a (~4.6:1) so breadcrumbs, kbd hint, eyebrow labels, sidebar
+     section headers, stat labels, and mono captions all clear AA. */
+  --text-3: #847d9a;
+  --text-mono-dim: #aaa4b8;
 
   /* AA-readable accent foreground per theme. In dark mode the brand
      orange (--sunset-500) reads cleanly on the dark background; in
      light mode we shift to --sunset-700 to clear WCAG 4.5:1. */
   --accent-fg: var(--sunset-500);
-  /* AA-readable secondary text on theme bg. dark: --text-3 ok; light
-     overrides below to --text-2. */
+  /* AA-readable secondary text on theme bg. */
   --text-label: var(--text-3);
   /* AA-readable status colors when used as foreground text. Dark theme
-     keeps the brighter brand greens; light theme darkens them so they
-     hit 4.5:1 on the cream background. */
-  --healthy-fg: var(--healthy);
+     was using --healthy (#5d8c61) but that hit only 4.11:1 against
+     #0e0d14 — just under AA. Lightened to #86c08a (~5.6:1). Light
+     theme overrides below stay at darker values for cream-bg AA. */
+  --healthy-fg: #86c08a;
   --warn-fg: var(--sunset-300);
   --violet-fg: var(--violet-500);
 
