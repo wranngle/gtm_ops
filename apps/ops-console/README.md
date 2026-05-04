@@ -1,69 +1,96 @@
 # ops-console
 
-Vanilla HTML/JS operator UI for the `gtm_ops` runtime. No build system, no
-bundler, no framework — open `index.html` in a browser or serve the directory
-with any static file server.
+Operator UI for the `gtm_ops` runtime. Three surfaces ship here, all backed
+by the same fixture / Pages-Functions / Express live-mode contract:
 
-## Two modes
+| Path | Surface | Stack |
+|---|---|---|
+| `index.html` | Public landing page (Get-a-real-run lead form) | Vanilla HTML + inline JS |
+| `console/` | Main operator UI — home, pipeline, calls, proposals, evals, **agents** (live ElevenLabs ConvAI playgrounds for Sales Coach + Sarah Intake), settings, generate | React 18 (UMD + babel-standalone, no build step) |
+| `evaluation/` | Evaluation Dashboard — corpus stats, flaw distribution, per-run drill-in | Vanilla HTML + inline JS |
+| `eval-runs/` | Per-run harness output surface | Vanilla HTML + inline JS |
 
-### Static / DEMO_MODE (no backend)
+A 404.html ships at the root. Every entrypoint pulls brand colors and
+type from the shared `tokens/` extracts.
 
-When the page is loaded over `file://` *or* when `window.DEMO_MODE === true` is
-set before script load, every `/api/*` fetch is rewritten to read fixture JSON
-from `./fixtures/`. Mutating verbs (POST/PUT/DELETE) short-circuit to a synthetic
-`{ ok: true, demo: true }` response; the UI is read-only in this mode.
+## Three modes
+
+The same UI runs against three different backends. The DEMO_MODE shim in
+each HTML page swaps live fetches for fixture reads when no backend is
+reachable, so the static deploy stays interactive.
+
+### 1. Static / DEMO_MODE (no backend)
+
+When the page loads from `file://`, from a `*.pages.dev` host, or with
+`window.DEMO_MODE === true` set before script load, every `/api/*` fetch
+is rewritten to read fixture JSON from `./fixtures/`. Mutating verbs
+(POST/PUT/DELETE) short-circuit to `{ ok: true, demo: true }`; the UI
+is read-only.
 
 Run it locally:
 
 ```sh
 # from this directory
-python -m http.server 8080
-# then open http://localhost:8080
+python3 -m http.server 4173
+# then open http://localhost:4173/console/
 ```
 
-Or simply double-click `index.html` to open it directly via `file://`.
+### 2. Cloudflare Pages — full-stack
 
-### Live mode (against `server.js`)
+Pages Functions under `gtm_ops/functions/api/*` serve `/api/*` directly,
+backed by D1 where bindings are configured and falling back to the
+bundled fixtures otherwise. See `gtm_ops/wrangler.toml` for the operator
+setup steps and `gtm_ops/.github/workflows/test.yml` for CI gates.
 
-Point `server.js` at this directory's static assets and let `/api/*` calls hit
-the real Express handlers in the parent repo:
+### 3. Local Express (legacy live mode)
 
 ```sh
 # from gtm_ops/ root
 bun run start
 ```
 
-`server.js` serves the live runtime API; this directory's files are the
-operator UI on top of it.
+`server.js` exposes `/api/*` and serves this directory's static files.
+Useful when you need long-running streams, native binary deps, or
+big-memory PDF rendering that Pages Functions can't easily host.
 
-## Page index
+## ElevenLabs ConvAI integration
 
-| Path | What it is |
-|---|---|
-| `index.html` | Lead intake + proposal-pipeline dashboard (kept in sync with the live runtime UI) |
-| `evaluation/index.html` | Evaluation runs review for the presales pipeline scoring |
-| `eval-runs/index.html` | Voice-agent eval surface — reads `voice_ai_agent_evals/tests/runs/` output (or fixture in DEMO_MODE) |
+The `/console/agents` route mounts live ElevenLabs ConvAI widgets for the
+Sales Coach and Sarah Intake agents. Agent IDs and surface bindings live
+in `console/agents-registry.js`. The widget script is loaded lazily from
+`unpkg.com/@elevenlabs/convai-widget-embed`; if that load is blocked
+(strict CSP, corporate firewall) the widget container renders a fallback
+message + deep link to the agent on `elevenlabs.io`.
+
+Append `?admin=1` to the `/console/` URL to reveal admin-only agents.
 
 ## Fixtures
 
-`fixtures/` holds synthetic JSON replacements for every `/api/*` endpoint the
-UI consumes. All names, phone numbers, and prices are fictional. The DEMO_MODE
-shim in each HTML page maps `/api/foo/123` → `./fixtures/foo/default.json`
-(numeric path segments collapse to `default`) and `/api/foo` → `./fixtures/foo.json`.
+`fixtures/` holds synthetic JSON replacements for every `/api/*` endpoint
+the UI consumes. All names, phone numbers, and prices are fictional —
+guarded by `gtm_ops/tests/unit/fixture-pii.test.ts` on every PR.
 
-If a fixture is missing, the shim returns `[]` so consumers don't throw.
+The DEMO_MODE shim in each HTML page maps `/api/foo/123` →
+`./fixtures/foo/default.json` (numeric or snake-case path segments
+collapse to `default`) and `/api/foo` → `./fixtures/foo.json`. If a
+fixture is missing, the shim returns `[]` so consumers don't throw.
 
 ## Tokens
 
-`tokens/` is vendored from the repo-root `tokens/` directory (the canonical
-machine-readable slice of the brand system). Do not edit here — edit
-`DESIGN.md` at the repo root, re-extract the token set, then re-vendor.
+`tokens/` is vendored from the repo-root `tokens/` directory (the
+canonical machine-readable slice of the brand system). Do not edit
+here — edit `DESIGN.md` at the repo root, re-extract the token set,
+then re-vendor.
 
 See `gtm_ops/DESIGN.md` for the long-form design system.
 
 ## Notes
 
-- This is the canonical gtm_ops operator UI; it has no Python predecessor in this repo.
-- The DEMO_MODE shim is per-page (small, self-contained block at the top of
-  each HTML file). It overrides `window.fetch` and `window.EventSource` only
-  when DEMO_MODE is detected — live mode is untouched.
+- The DEMO_MODE shim is per-page (small, self-contained block at the
+  top of each HTML file). It overrides `window.fetch` and
+  `window.EventSource` only when DEMO_MODE is detected — live mode
+  is untouched.
+- The React console has no build step. JSX is transpiled in-browser
+  via babel-standalone for ergonomics; this trades ~3 MB of bundle
+  weight for zero build infrastructure. React itself ships as the
+  production-min UMD build.
