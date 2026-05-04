@@ -385,7 +385,9 @@ test.describe('settings', () => {
       /^settings-tab-/,
     );
 
-    // ArrowDown moves focus and selection to next tab.
+    // Pin starting tab so ArrowDown's expected target is deterministic
+    // regardless of whatever earlier tests in the same worker may have done.
+    await page.locator('.settings-nav__item:has-text("Integrations")').click();
     await page.locator('[role="tab"][aria-selected="true"]').focus();
     await page.keyboard.press('ArrowDown');
     const after = await page.evaluate(() => ({
