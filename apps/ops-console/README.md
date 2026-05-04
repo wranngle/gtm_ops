@@ -40,7 +40,7 @@ operator UI on top of it.
 
 | Path | What it is |
 |---|---|
-| `index.html` | Lead intake + proposal-pipeline dashboard (carried forward from `unified-presales-report/public/`, kept in sync with the live runtime UI) |
+| `index.html` | Lead intake + proposal-pipeline dashboard (kept in sync with the live runtime UI) |
 | `evaluation/index.html` | Evaluation runs review for the presales pipeline scoring |
 | `eval-runs/index.html` | Voice-agent eval surface — reads `voice_ai_agent_evals/tests/runs/` output (or fixture in DEMO_MODE) |
 

@@ -72,7 +72,7 @@ module.exports = [
       'n/prefer-global/buffer': 'off',
       'n/file-extension-in-import': 'off',
       'import/extensions': 'off',
-      // Mixed `.ts` / `.js` state during unified-presales-report absorption;
+      // Mixed `.ts` / `.js` state during presales pipeline absorption;
       // re-enable once the codebase is single-extension.
       'import-x/extensions': 'off',
       'import-x/order': 'off',

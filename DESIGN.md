@@ -700,7 +700,7 @@ extend: {
 }
 ```
 
-### Default brand exports (JS — mirrors `unified-presales-report/lib/branding.js`)
+### Default brand exports (JS — mirrors `gtm_ops/lib/branding.js`)
 
 ```js
 export const DefaultBranding = {

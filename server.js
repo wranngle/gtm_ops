@@ -720,7 +720,7 @@ app.get('/api/admin/health', generalLimiter, async (req, res) => {
 });
 
 // Minimal liveness probe for external callers (Cloudflare, uptime monitors,
-// the legacy `unified-presales-report` deployment). Intentionally has zero
+// the legacy presales pipeline deployment). Intentionally has zero
 // runtime dependencies so it stays green even when downstream managers/DBs
 // are degraded — use `/api/admin/health` for deep checks.
 app.get('/api/health', generalLimiter, (req, res) => {
