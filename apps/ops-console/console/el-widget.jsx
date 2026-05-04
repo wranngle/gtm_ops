@@ -107,6 +107,14 @@ function loadConvaiWidget() {
   document.head.append(s);
 }
 
+/* Returns true once the elevenlabs-convai custom element has been
+   registered by the embed script. Used to drive the fallback UI when
+   the script can't load (CSP, corporate network blocking unpkg, etc). */
+function isConvaiReady() {
+  return typeof globalThis.customElements !== 'undefined' &&
+    !!customElements.get('elevenlabs-convai');
+}
+
 /* ConvaiWidget — declarative React wrapper around <elevenlabs-convai>.
    Updates dynamic-variables JSON whenever the app context changes. */
 globalThis.ConvaiWidget = function ConvaiWidget({
@@ -124,11 +132,30 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   const widgetRef = React.useRef(null);
   const reg = globalThis.AGENT_REGISTRY.byKey(agentKey);
   const agent_id = agentIdProp || (reg && reg.agent_id);
+  const [ready, setReady] = React.useState(isConvaiReady());
+  const [unreachable, setUnreachable] = React.useState(false);
 
   React.useEffect(() => { loadConvaiWidget(); }, []);
 
+  /* Poll for the custom-element registration; flip to "unreachable" if
+     it's still not registered after 5 seconds — that's the signal a
+     network policy (CSP, corporate blocker) prevented unpkg from
+     loading the embed script. */
   React.useEffect(() => {
-    if (!agent_id) return;
+    if (ready) return undefined;
+    let cancelled = false;
+    const interval = setInterval(() => {
+      if (cancelled) return;
+      if (isConvaiReady()) { setReady(true); clearInterval(interval); }
+    }, 200);
+    const timeout = setTimeout(() => {
+      if (!cancelled && !isConvaiReady()) setUnreachable(true);
+    }, 5000);
+    return () => { cancelled = true; clearInterval(interval); clearTimeout(timeout); };
+  }, [ready]);
+
+  React.useEffect(() => {
+    if (!agent_id || !ready) return;
     const el = document.createElement('elevenlabs-convai');
     el.setAttribute('agent-id', agent_id);
     if (variant) el.setAttribute('variant', variant);
@@ -146,7 +173,7 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       try { el.remove(); } catch (_) {}
       widgetRef.current = null;
     };
-  }, [agent_id, variant, expanded, height, width]);
+  }, [agent_id, variant, expanded, height, width, ready]);
 
   /* Push dynamic variables + override config every time context changes. */
   React.useEffect(() => {
@@ -162,6 +189,41 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     }
   }, [ctx, textOnly]);
 
+  if (unreachable) {
+    const fallbackHref = agent_id
+      ? `https://elevenlabs.io/app/conversational-ai/agents/${agent_id}`
+      : 'https://elevenlabs.io/app/conversational-ai/agents';
+    return React.createElement('div', {
+      className: 'convai-mount convai-mount--unreachable',
+      role: 'alert',
+      'aria-live': 'polite',
+    },
+      React.createElement('div', { className: 'convai-fallback' },
+        React.createElement('div', { className: 'convai-fallback__title' }, 'ConvAI widget unreachable'),
+        React.createElement('div', { className: 'convai-fallback__body' },
+          'The ElevenLabs embed script (',
+          React.createElement('code', null, 'unpkg.com/@elevenlabs/convai-widget-embed'),
+          ') did not load. This is usually a corporate-network or CSP block. ',
+          reg ? `You can still talk to ${reg.display_name} directly on ElevenLabs:` : 'Open the agent on ElevenLabs:'
+        ),
+        React.createElement('a', {
+          className: 'btn btn--primary btn--sm',
+          href: fallbackHref,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          style: { marginTop: 12, display: 'inline-flex' },
+        }, 'Open on ElevenLabs ↗')
+      )
+    );
+  }
+  if (!ready) {
+    return React.createElement('div', { className: 'convai-mount convai-mount--loading', 'aria-busy': 'true' },
+      React.createElement('div', { className: 'convai-fallback' },
+        React.createElement('div', { className: 'mono dim', style: { fontSize: 11 } },
+          'Loading ElevenLabs widget…')
+      )
+    );
+  }
   return React.createElement('div', { ref: containerRef, className: 'convai-mount' });
 };
 

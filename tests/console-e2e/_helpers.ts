@@ -53,6 +53,9 @@ const WIDGET_NOISE = [
   'AbortError',           // widget media stream cancel
   'NotAllowedError',      // mic permission in headless
   'elevenlabs-convai',    // any direct widget tag log
+  'ConversationalAI',     // widget runtime logger prefix
+  'widget_config',        // remote config fetch failures from the widget
+  'Cannot fetch config',  // same fetch path, different message format
 ];
 export async function smokeClickAll(page: Page, opts: { exclude?: string[] } = {}) {
   const errors: string[] = [];

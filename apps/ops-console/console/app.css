@@ -1331,3 +1331,40 @@ a:focus-visible,
   border-radius: var(--r-pill);
   white-space: nowrap;
 }
+
+/* ConvAI fallback — when the unpkg embed script is blocked or fails to
+   register the custom element within 5s, render a helpful message and
+   a deep link to the agent on elevenlabs.io. */
+.convai-mount--loading,
+.convai-mount--unreachable {
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.convai-fallback {
+  max-width: 420px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.convai-fallback__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: -.01em;
+}
+.convai-fallback__body code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg-inset);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent-fg);
+}
+.convai-mount--unreachable {
+  background: var(--bg-inset);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+}
