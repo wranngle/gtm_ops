@@ -30,12 +30,18 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'npm run start',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  // The e2e suite is split: most specs load pre-generated reports via
+  // file:// URLs (and skip via test.skip(!reportPath) when output/ is
+  // empty). The webServer is only useful when an operator wants to test
+  // the live HTTP pipeline locally. Skip it under CI / PDF_E2E_NO_SERVER.
+  ...(process.env.CI || process.env.PDF_E2E_NO_SERVER ? {} : {
+    webServer: {
+      command: 'bun run start',
+      url: 'http://localhost:3000',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  }),
   // Output directories
   outputDir: 'test-results/',
   snapshotDir: 'tests/e2e/__snapshots__',

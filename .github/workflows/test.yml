@@ -72,3 +72,25 @@ jobs:
           name: playwright-console-report
           path: playwright-console-report/
           retention-days: 14
+
+  pdf-e2e-collect:
+    name: pdf e2e (collect-only)
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+    # Lightweight guard — full PDF e2e tests require pre-generated reports
+    # under output/ which CI can't produce without LLM API secrets. This
+    # job runs `playwright test --list` to verify the 326 PDF e2e tests
+    # still COLLECT cleanly (catches the kind of module-load ENOENT bug
+    # that tick 36 fixed) without trying to execute them.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1.1'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Verify PDF e2e suite collects
+        run: bun x playwright test --list
+        env:
+          PDF_E2E_NO_SERVER: '1'
