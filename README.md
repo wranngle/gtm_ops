@@ -45,7 +45,7 @@ In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/f
 
 ## Brand system
 
-[`DESIGN.md`](DESIGN.md) is the canonical brand system, mirrored from `~/.dotfiles/DESIGN.md`. Token extracts in `tokens/` are vendored by every consumer repo (no long-form duplication).
+[`DESIGN.md`](DESIGN.md) is the canonical brand system. Token extracts in [`tokens/`](tokens/) (`tokens.css`, `tokens.json`, `tokens.tailwind.js`) are the machine-readable surface — vendor those into consumer repos rather than copy the long-form spec.
 
 ## License
 

@@ -1,4 +1,4 @@
-# Lighthouse baseline — preview.gtm-ops.pages.dev
+# Lighthouse baseline — gtm-ops.pages.dev
 
 Captured immediately after the production-app polish baseline (commit
 `a2e5c27`). Re-run any time the landing surface changes; commit the new
@@ -8,14 +8,14 @@ numbers next to the old ones below.
 
 ```bash
 CHROME_PATH=/home/wranngle/.cache/ms-playwright/chromium-1194/chrome-linux/chrome \
-  npx lighthouse https://preview.gtm-ops.pages.dev/ \
+  npx lighthouse https://gtm-ops.pages.dev/ \
     --form-factor=mobile --screenEmulation.mobile \
     --output=json --output-path=/tmp/lh-mobile.json \
     --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" \
     --only-categories=performance,accessibility,best-practices,seo
 
 CHROME_PATH=/home/wranngle/.cache/ms-playwright/chromium-1194/chrome-linux/chrome \
-  npx lighthouse https://preview.gtm-ops.pages.dev/ \
+  npx lighthouse https://gtm-ops.pages.dev/ \
     --preset=desktop \
     --output=json --output-path=/tmp/lh-desktop.json \
     --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" \

@@ -304,19 +304,23 @@ a:hover { color: var(--sunset-500); }
   max-width: 480px;
   position: relative;
   display: flex; align-items: center;
-}
-.tb__search input {
-  width: 100%;
   background: var(--bg-inset);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   padding: 6px 12px 6px 32px;
   font-size: 13px;
+  color: var(--text-3);
+  font-family: inherit;
+  text-align: left;
+  cursor: text;
   outline: 0;
-  transition: border-color .15s, background .15s;
+  appearance: none;
+  transition: border-color .15s, background .15s, color .15s;
 }
-.tb__search input:focus { border-color: var(--sunset-500); background: var(--bg-elev); }
-.tb__search-icon { position: absolute; left: 10px; color: var(--text-3); }
+.tb__search:hover { color: var(--text-2); border-color: var(--border-strong); }
+.tb__search:focus-visible { border-color: var(--sunset-500); background: var(--bg-elev); color: var(--text); outline: 2px solid var(--sunset-500); outline-offset: 2px; }
+.tb__search-placeholder { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb__search-icon { position: absolute; left: 10px; color: var(--text-3); display: inline-flex; align-items: center; }
 .tb__kbd {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
   font-family: var(--font-mono);
@@ -1061,4 +1065,227 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--suns
 @keyframes toast-in {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   CALLS PAGE — robust full-height grid that doesn't depend on
+   viewport-relative magic numbers. Each column owns its scroll;
+   the page scroller (.scroll) flexes to host height.
+   ============================================================ */
+.calls-page {
+  display: flex; flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.calls-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 320px;
+  gap: 18px;
+}
+@media (max-width: 1100px) {
+  .calls-grid { grid-template-columns: 280px minmax(0, 1fr); }
+  .calls-grid__side { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .calls-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.calls-grid__list,
+.calls-grid__transcript,
+.calls-grid__side {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.calls-grid__side { gap: 14px; overflow: auto; padding-right: 2px; }
+/* Card body inside the transcript card must be allowed to shrink so the
+   inner scroll container actually scrolls. */
+.calls-grid__transcript .card__body { min-height: 0; flex: 1; display: flex; flex-direction: column; }
+.calls-grid__list .card__body { min-height: 0; flex: 1; overflow: auto; padding-right: 6px; }
+.calls-grid__trans-scroll {
+  flex: 1; min-height: 0; overflow: auto;
+  padding-right: 6px;
+  scroll-behavior: smooth;
+}
+
+/* ============================================================
+   AGENTS PAGE
+   ============================================================ */
+.agents-grid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+}
+@media (max-width: 980px) {
+  .agents-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ============================================================
+   ConvAI mount + Coach launcher
+   ============================================================ */
+.convai-mount {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+.convai-mount > elevenlabs-convai {
+  flex: 1; min-height: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+.coach-launcher {
+  position: fixed; bottom: 18px; left: 18px;
+  z-index: 180;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: transform .15s var(--ease-out), border-color .15s;
+}
+.coach-launcher:hover { transform: translateY(-1px); border-color: var(--sunset-500); }
+.coach-launcher:focus-visible { outline: 2px solid var(--sunset-500); outline-offset: 2px; }
+.coach-launcher__orb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #F97316, #8B5CF6);
+  box-shadow: 0 0 12px rgba(249,115,22,.55);
+}
+.coach-dock {
+  position: fixed; bottom: 64px; left: 18px;
+  width: 380px; height: 560px;
+  z-index: 190;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.coach-dock__hd {
+  padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700; font-family: var(--font-display);
+  font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
+}
+.coach-dock__hd > :nth-child(2) { flex: 1; text-align: right; }
+.coach-dock__body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+@media (max-width: 600px) {
+  .coach-dock { left: 8px; right: 8px; width: auto; }
+}
+
+/* ============================================================
+   Sidebar agent orb (replaces the bot icon)
+   ============================================================ */
+.sb__agent-orb { box-shadow: 0 0 6px rgba(249,115,22,.45); }
+
+/* ============================================================
+   Focus rings — universal a11y baseline. Many interactive divs
+   in this app are role="button" tabindex; give them a visible ring.
+   ============================================================ */
+[role="button"]:focus-visible,
+button:focus-visible,
+a:focus-visible,
+.cp__row:focus-visible,
+.sb__item:focus-visible {
+  outline: 2px solid var(--sunset-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   MOBILE — viewport-respecting layout below 760px.
+   Sidebar collapses to its compact rail, .split--2 drops to a
+   single column, stats grid relaxes its minmax, page padding
+   tightens, the topbar search/breadcrumbs adjust.
+   ============================================================ */
+@media (max-width: 760px) {
+  /* Force the sidebar into compact rail mode on phones, regardless of the
+     user's saved tweak — they can still toggle to nothing via the menu
+     button, but the default is "no horizontal scroll on first paint." */
+  .app, .app[data-collapsed="false"] {
+    grid-template-columns: var(--sidebar-collapsed-w) 1fr;
+  }
+  .app .sb__section,
+  .app .sb__label,
+  .app .sb__count,
+  .app .sb__user,
+  .app .sb__brand-text,
+  .app .sb__brand-sub { display: none; }
+  .app .sb__item { justify-content: center; padding: 9px; }
+
+  /* Page chrome */
+  .page { padding: 18px 14px 48px; }
+  .ph__title { font-size: 22px; }
+  .ph__actions { gap: 6px; flex-wrap: wrap; }
+  .ph__actions .btn { font-size: 11px; padding: 6px 10px; }
+
+  /* Topbar squishing — drop crumbs to last segment, hide search placeholder */
+  .tb { padding: 0 12px; gap: 8px; }
+  .tb__crumbs { display: none; }
+  .tb__search { max-width: 38px; padding: 6px; justify-content: center; }
+  .tb__search-placeholder { display: none; }
+  .tb__search-icon { position: static; }
+  .tb__kbd { display: none; }
+
+  /* Stats: let cards stack into ~140px columns instead of 180px;
+     prevents 5-card row from going off-screen. */
+  .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .stat { padding: 12px; }
+  .stat__value { font-size: 24px; }
+
+  /* Generic two-up splits collapse to one column */
+  .split--2 { grid-template-columns: minmax(0, 1fr) !important; }
+
+  /* Pipeline kanban — prevent 5-column horizontal blowout; use horizontal
+     scroll inside the .pipe container with a column min-width. */
+  .pipe { overflow-x: auto; }
+  .pipe__col { min-width: 240px; }
+
+  /* Lead detail and intake panel become bottom sheets so they don't
+     overlap the whole viewport. */
+  .lead-detail-panel,
+  [aria-label="Intake agent panel"] {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    top: auto !important;
+    height: 70vh !important;
+    bottom: 0 !important;
+    border-radius: var(--r-lg) var(--r-lg) 0 0 !important;
+  }
+
+  /* Coach launcher shrinks its label to icon-only on phones */
+  .coach-launcher { padding: 8px 12px; bottom: 12px; left: 12px; }
+  .coach-launcher__label { display: none; }
+}
+
+@media (max-width: 480px) {
+  /* Even tighter — stats stack to single column */
+  .stats { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   prefers-reduced-motion — WCAG 2.3.3.
+   Disable infinite-loop animations (pulse on live dots, blink
+   on the console cursor) and shorten/disable transitions for
+   users who have set reduced-motion in their OS.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Re-enable a single pulse so the live-status dot still has visual hierarchy
+     on first render; the iteration-count: 1 above stops the loop. */
 }

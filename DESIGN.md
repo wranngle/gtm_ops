@@ -4,17 +4,15 @@ Single source of truth for visual brand across all Wranngle repos.
 Apply these tokens to every project to keep `wranngle.com`, internal tools,
 emails, and proposal artifacts visually coherent.
 
-> **Sources consolidated:**
-> - `~/projects/wranngle_com/openspec/design_system.html` (most complete artifact — full token set + components)
-> - `~/projects/wranngle_com/email-templates/STYLE_GUIDE.md` (email/SMS palette + voice rules)
-> - `~/projects/wranngle_com/email-templates/master/master-template.html` (token defs in CSS)
-> - `~/projects/wranngle_com/openspec/project.md` & `specs/landing-page/spec.md` (console aesthetic + fonts)
-> - `~/projects/wranngle_com/client/src/index.css` & `tailwind.config.ts` (runtime brand vars)
-> - `~/projects/wranngle_com/client/src/App.tsx` (hero tagline)
-> - `~/projects/unified-presales-report/lib/branding.js` (default brand exports — confirms canonical hexes)
-> - `~/projects/gtm_ops/docs/DESIGN.md` (operational/internal tooling principles)
+> **Origin:** this document is the canonical public export of the Wranngle
+> brand system, consolidated from the marketing-site OpenSpec, the email
+> template style guide, the proposal-PDF default brand exports, and the
+> internal GTM-engine tooling principles. All token values below are
+> authoritative; conflicts between historic source docs are flagged inline.
 >
-> **Conflicts flagged inline below.** When in doubt, the `openspec/design_system.html` token table (Wranngle Color Palette section) is the canonical reference for the marketing surface; the email STYLE_GUIDE governs transactional email; the GTM engine doc governs internal tools.
+> **Precedence:** the Color Palette section governs the marketing surface;
+> the Email Patterns section governs transactional email; the Component
+> Patterns section governs internal operator tools.
 
 ---
 
@@ -367,8 +365,9 @@ Recurring patterns:
 
 ## 8. Component Patterns (web)
 
-Every component below uses the unified token system. The full reference
-implementation lives in `~/projects/wranngle_com/openspec/design_system.html`.
+Every component below uses the unified token system defined in section 3.
+Markup conventions are stable; consumers should treat the rendered HTML
+classes as the contract.
 
 ### 8.1 Card (`.card`)
 
@@ -530,7 +529,7 @@ padding: 24px;
 
 ### Confirmed assets
 
-- `~/projects/wranngle_com/client/public/assets/rcs/logo-card.png` — RCS messaging logo card
+- RCS messaging logo card — square brand mark on the night-950 surface
 - RCS branded sender display name: **"Wranngle"**
 
 ### Required assets per RCS carrier-approval spec
@@ -721,11 +720,13 @@ export const DefaultBranding = {
    coexisting stacks across surfaces).
 2. **Logo system** — no formal logo doc exists. Need: vector source, light/dark
    variants, clearspace, min sizes, wordmark vs. icon rules.
-3. **Tailwind shadcn radius reconciliation** — `wranngle_com/tailwind.config.ts`
-   uses 3/6/9px radii; the rest of the system uses 4/8/12px. Pick one.
-4. **`client/src/index.css` shadcn HSL vars are placeholders** ("red" stubs).
-   These should be filled with the canonical Sunset/Violet/Sand/Night
-   conversions if shadcn components are intended to actually render branded.
+3. **Tailwind shadcn radius reconciliation** — the marketing-site Tailwind
+   config uses 3/6/9px radii while the rest of the system uses 4/8/12px.
+   Pick one.
+4. **shadcn HSL placeholder vars** — the marketing-site shadcn HSL channel
+   vars are still "red" stubs and should be filled with the canonical
+   Sunset / Violet / Sand / Night conversions if shadcn components are
+   intended to actually render in-brand.
 5. **Form / input components** — no documented styling rules for inputs,
    selects, textareas. Currently relies on implicit Tailwind defaults.
 6. **Iconography** — Lucide React is in use, but no documented size scale or

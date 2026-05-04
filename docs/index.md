@@ -6,7 +6,7 @@ Product runtime documentation. The system of record is here, in this repo — if
 
 - [`README.md`](../README.md) — product frame and how to run it
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — product layers (intake → enrichment → voice → post-call → presales → ops-console)
-- [`DESIGN.md`](../DESIGN.md) — brand system (long-form, mirrored from `~/.dotfiles/DESIGN.md`)
+- [`DESIGN.md`](../DESIGN.md) — brand system (long-form)
 - [`AGENTS.md`](../AGENTS.md) — agent operating map
 
 ## Subdirectories

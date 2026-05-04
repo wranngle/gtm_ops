@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /fixtures/
 
-Sitemap: https://preview.gtm-ops.pages.dev/sitemap.xml
+Sitemap: https://gtm-ops.pages.dev/sitemap.xml

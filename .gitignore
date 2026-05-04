@@ -108,7 +108,11 @@ _archive/
 
 # n8n / eval test runtime
 test-results/
+test-results-console/
+playwright-report/
+playwright-console-report/
 _bmad-output/
 
 # Symphony was relocated to ~/.dotfiles/; ignore any accidental re-creation
 .symphony/
+logs/self-audit.log

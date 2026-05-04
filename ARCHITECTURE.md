@@ -96,7 +96,7 @@ The `/api/audit-logs/*` surface is the integrity layer — not generic CRUD logg
 
 ### Design system
 
-Brand tokens live in `tokens/{tokens.css, tokens.json, tokens.tailwind.js}`, extracted from `DESIGN.md` (which itself mirrors `~/.dotfiles/DESIGN.md`). Every PDF template, ops-console page, and email surface vendors from this token set. See `DESIGN.md` for the full system; see `tokens/` for the machine-readable extracts.
+Brand tokens live in `tokens/{tokens.css, tokens.json, tokens.tailwind.js}`, extracted from `DESIGN.md`. Every PDF template, ops-console page, and email surface vendors from this token set. See `DESIGN.md` for the full system; see `tokens/` for the machine-readable extracts.
 
 ### Workflow library
 
@@ -131,7 +131,7 @@ When in doubt, add a small boundary parser instead of probing data by assumption
 
 ```
 gtm_ops/
-├── DESIGN.md                # synced from ~/.dotfiles/DESIGN.md
+├── DESIGN.md                # canonical brand system
 ├── ARCHITECTURE.md          # this file
 ├── README.md
 ├── CHANGELOG.md

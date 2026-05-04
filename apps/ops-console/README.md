@@ -55,15 +55,15 @@ If a fixture is missing, the shim returns `[]` so consumers don't throw.
 
 ## Tokens
 
-`tokens/` is vendored from `gtm_ops/tokens/` (the canonical machine-readable
-slice of the brand system). Do not edit here — edit `~/.dotfiles/DESIGN.md`,
-re-extract via the dotfiles tooling, then re-vendor.
+`tokens/` is vendored from the repo-root `tokens/` directory (the canonical
+machine-readable slice of the brand system). Do not edit here — edit
+`DESIGN.md` at the repo root, re-extract the token set, then re-vendor.
 
 See `gtm_ops/DESIGN.md` for the long-form design system.
 
 ## Notes
 
-- This is the canonical gtm_ops operator UI; it has no Python predecessor in this repo. (A separate Symphony-flavored agent-orchestration console lives at `~/.dotfiles/lib/symphony-console/` — that's a backend tool for agent dispatch / monitoring, NOT a former version of this UI.)
+- This is the canonical gtm_ops operator UI; it has no Python predecessor in this repo.
 - The DEMO_MODE shim is per-page (small, self-contained block at the top of
   each HTML file). It overrides `window.fetch` and `window.EventSource` only
   when DEMO_MODE is detected — live mode is untouched.
