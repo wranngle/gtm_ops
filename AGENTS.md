@@ -25,10 +25,15 @@ Keep this file short. It is a table of contents, not the manual.
 ## Validation
 
 ```bash
-scripts/validate-knowledge-base.sh
-scripts/lint-layered-architecture.sh
-bun test
+bash scripts/validate-knowledge-base.sh
+bash scripts/lint-layered-architecture.sh
+bash scripts/gardener.sh        # markdown staleness + broken links
+bun run typecheck
+bun run test:run                # vitest unit
+bun run test:console            # Playwright UI suite
 ```
+
+CI runs `static`, `unit`, `console-e2e` jobs in `.github/workflows/test.yml` and a doc-shaped validator in `.github/workflows/knowledge-base.yml`.
 
 ## Repo map
 
