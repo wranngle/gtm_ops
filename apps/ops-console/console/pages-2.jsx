@@ -70,7 +70,7 @@ function EvalsPage() {
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:18}}>
               <div>
                 <div className="eyebrow">Pass rate</div>
-                <div style={{fontFamily:'var(--font-display)', fontSize:32, fontWeight:800, color:'var(--healthy)'}}>{(active.pass*100).toFixed(1)}%</div>
+                <div style={{fontFamily:'var(--font-display)', fontSize:32, fontWeight:800, color: 'var(--healthy-fg)'}}>{(active.pass*100).toFixed(1)}%</div>
               </div>
               <div>
                 <div className="eyebrow">Δ vs prev</div>
@@ -93,7 +93,7 @@ function EvalsPage() {
               ].map(f => (
                 <div key={f.id} style={{padding:'10px 12px', background:'var(--bg-inset)', borderRadius:'var(--r-md)', borderLeft:`2px solid var(--${f.sev === 'high' ? 'violet-500' : 'sunset-300'})`}}>
                   <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
-                    <span className="mono" style={{fontSize:11, fontWeight:600, color: f.sev === 'high' ? 'var(--violet-500)' : 'var(--sunset-500)'}}>{f.id}</span>
+                    <span className="mono" style={{fontSize:11, fontWeight:600, color: f.sev === 'high' ? 'var(--violet-fg)' : 'var(--accent-fg)'}}>{f.id}</span>
                     <Badge tone={f.sev === 'high' ? 'critical' : 'warn'}>{f.sev}</Badge>
                   </div>
                   <div style={{fontSize:13, fontWeight:600, marginBottom:2}}>{f.case}</div>
@@ -179,7 +179,7 @@ function ProposalsPage({ setRoute }) {
                    style={{padding:'14px 4px', borderBottom:'1px dashed var(--border)', display:'grid', gridTemplateColumns:'1fr auto', gap:12, cursor:'pointer', borderLeft: activeId === p.id ? '2px solid var(--sunset-500)' : '2px solid transparent', paddingLeft: activeId === p.id ? 10 : 4}}>
                 <div>
                   <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
-                    <span className="mono" style={{fontSize:11, color:'var(--sunset-500)', fontWeight:600}}>{p.id}</span>
+                    <span className="mono" style={{fontSize:11, color:'var(--accent-fg)', fontWeight:600}}>{p.id}</span>
                     <Badge tone={p.stage === 'signed' ? 'healthy' : p.stage === 'legal' || p.stage === 'redlines' ? 'warn' : 'accent'}>{p.stage}</Badge>
                     {p.blockers.length > 0 && <Badge tone="critical">{p.blockers.length} blocker{p.blockers.length > 1 ? 's' : ''}</Badge>}
                   </div>
@@ -205,7 +205,7 @@ function ProposalsPage({ setRoute }) {
                 <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>{active.id} · owner {active.owner}</div>
               </div>
               <div style={{textAlign:'right'}}>
-                <div style={{fontFamily:'var(--font-display)', fontSize:32, fontWeight:800, color:'var(--sunset-500)'}}>{active.amount}</div>
+                <div style={{fontFamily:'var(--font-display)', fontSize:32, fontWeight:800, color:'var(--accent-fg)'}}>{active.amount}</div>
                 <div className="eyebrow">annual</div>
               </div>
             </div>
@@ -393,7 +393,7 @@ function IntegrationsSettings() {
       <div className="vstack" style={{gap:10}}>
         {conns.map(c => (
           <div key={c.name} style={{display:'grid', gridTemplateColumns:'auto 1fr auto auto', gap:14, alignItems:'center', padding:'12px 14px', background:'var(--bg-inset)', borderRadius:'var(--r-md)', border:'1px solid var(--border)'}}>
-            <div style={{width:36, height:36, background:'var(--bg-elev)', border:'1px solid var(--border)', borderRadius:8, display:'grid', placeItems:'center', fontFamily:'var(--font-display)', fontWeight:700, fontSize:14, color:'var(--sunset-500)'}}>{c.icon}</div>
+            <div style={{width:36, height:36, background:'var(--bg-elev)', border:'1px solid var(--border)', borderRadius:8, display:'grid', placeItems:'center', fontFamily:'var(--font-display)', fontWeight:700, fontSize:14, color:'var(--accent-fg)'}}>{c.icon}</div>
             <div>
               <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
               <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{c.sub}</div>
@@ -536,7 +536,7 @@ function SecuritySettings() {
           ].map((e,i)=>(
             <div key={i} style={{display:'grid', gridTemplateColumns:'60px 140px 1fr', gap:12, padding:'8px 0', borderBottom:'1px dashed var(--border)', fontSize:12}}>
               <span className="mono dim">{e.t}</span>
-              <span className="mono" style={{color:'var(--sunset-500)'}}>{e.who}</span>
+              <span className="mono" style={{color:'var(--accent-fg)'}}>{e.who}</span>
               <span>{e.act}</span>
             </div>
           ))}

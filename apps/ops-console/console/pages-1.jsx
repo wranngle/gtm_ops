@@ -90,7 +90,7 @@ function HomePage({ setRoute }) {
                     <div className="eyebrow">tasks</div>
                   </div>
                   <div style={{textAlign:'right', minWidth:60}}>
-                    <div className="mono num" style={{fontSize:18, fontWeight:700, color:'var(--healthy)'}}>{(a.success*100).toFixed(0)}%</div>
+                    <div className="mono num" style={{fontSize:18, fontWeight:700, color: 'var(--healthy-fg)'}}>{(a.success*100).toFixed(0)}%</div>
                     <div className="eyebrow">success</div>
                   </div>
                 </div>
@@ -105,7 +105,7 @@ function HomePage({ setRoute }) {
           </Card>
 
           <div style={{marginTop:18}}>
-            <Card title="hot leads · top 5 by score" action={<a className="mono" style={{fontSize:11, color:'var(--sunset-500)'}} onClick={()=>setRoute('pipeline')}>see all 24 →</a>}>
+            <Card title="hot leads · top 5 by score" action={<a className="mono" style={{fontSize:11, color:'var(--accent-fg)'}} onClick={()=>setRoute('pipeline')}>see all 24 →</a>}>
               <div className="vstack" style={{gap:0}}>
                 {hotLeads.map(c => (
                   <div key={c.id} style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:14, alignItems:'center', padding:'10px 0', borderBottom:'1px dashed var(--border)'}}>
@@ -334,7 +334,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
       </div>
       <div className="scroll" style={{flex:1, padding:18}}>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16}}>
-          <div><div className="eyebrow">Score</div><div className="mono num" style={{fontSize:24, fontWeight:700, color:'var(--healthy)'}}>{c.score}</div></div>
+          <div><div className="eyebrow">Score</div><div className="mono num" style={{fontSize:24, fontWeight:700, color: 'var(--healthy-fg)'}}>{c.score}</div></div>
           <div><div className="eyebrow">Close prob</div><div className="mono num" style={{fontSize:24, fontWeight:700}}>{(c.closeProb*100).toFixed(0)}%</div></div>
           <div><div className="eyebrow">Deal size</div><div className="mono num" style={{fontSize:18, fontWeight:600}}>{c.dealSize}</div></div>
           <div><div className="eyebrow">ARR · current</div><div className="mono num" style={{fontSize:18, fontWeight:600}}>{c.arr}</div></div>
@@ -452,7 +452,7 @@ function CallsPage() {
                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(c.id); } }}
                    style={{padding:10, borderRadius:8, cursor:'pointer', border:'1px solid', borderColor: activeId === c.id ? 'var(--sunset-500)' : 'transparent', background: activeId === c.id ? 'var(--bg-selected)' : 'transparent'}}>
                 <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
-                  <span className="mono" style={{fontSize:11, color:'var(--sunset-500)', fontWeight:600}}>{c.id}</span>
+                  <span className="mono" style={{fontSize:11, color:'var(--accent-fg)', fontWeight:600}}>{c.id}</span>
                   <span className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{c.when}</span>
                 </div>
                 <div style={{fontSize:13, fontWeight:600, marginBottom:2}}>{c.co}</div>
@@ -503,7 +503,7 @@ function CallsPage() {
           <Card title="scorecard · 7 axes" accent="accent">
             <div style={{textAlign:'center', marginBottom:14, paddingBottom:14, borderBottom:'1px solid var(--border)'}}>
               <div className="eyebrow">overall</div>
-              <div style={{fontFamily:'var(--font-display)', fontSize:48, fontWeight:800, color:'var(--healthy)', lineHeight:1}}>
+              <div style={{fontFamily:'var(--font-display)', fontSize:48, fontWeight:800, color: 'var(--healthy-fg)', lineHeight:1}}>
                 {active.score.toFixed(1)}
               </div>
               <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>vs team avg 7.6</div>
