@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # GitHub Actions used by .github/workflows/.
+  # GitHub Actions used by .github/workflows/*.yml.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -9,38 +9,22 @@ updates:
       prefix: "ci"
     open-pull-requests-limit: 5
 
-  # npm / Bun showcase package: packages/agent-evals (zod, @types/bun, typescript).
+  # npm / Bun deps in the root package.json (Express, vitest, playwright,
+  # @anthropic-ai/sdk, ajv, etc.). Bun reads the same package.json so this
+  # covers the whole repo's JS surface.
   - package-ecosystem: "npm"
-    directory: "/packages/agent-evals"
+    directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "deps(agent-evals)"
+      prefix: "deps"
     open-pull-requests-limit: 5
-
-  # Python ops-console (streamlit, pytest).
-  - package-ecosystem: "pip"
-    directory: "/apps/ops-console"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(ops-console)"
-    open-pull-requests-limit: 5
-
-  # Elixir Symphony reference implementation (mix.exs).
-  - package-ecosystem: "mix"
-    directory: "/tools/symphony-elixir"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(symphony-elixir)"
-    open-pull-requests-limit: 5
-
-  # Local observability stack (timberio/vector, victoriametrics images).
-  - package-ecosystem: "docker"
-    directory: "/tools/observability"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(observability)"
-    open-pull-requests-limit: 5
+    # Group runtime + dev deps so the PR list stays readable. Major bumps
+    # remain individual PRs so reviewers can decide them deliberately.
+    groups:
+      runtime:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      dev:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]

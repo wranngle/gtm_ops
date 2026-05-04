@@ -1,5 +1,10 @@
 name: knowledge-base
 
+# Lightweight per-PR doc-hygiene + shell-syntax sanity. The heavier
+# unit / typecheck / console-e2e suites live in test.yml; this workflow
+# only runs the doc-shaped checks that don't need bun / playwright /
+# browsers, so it's fast on PR feedback.
+
 on:
   pull_request:
   push:
@@ -8,78 +13,17 @@ on:
 
 jobs:
   validate:
-    name: Validators (knowledge base + lints + symphony dry-run)
+    name: Validators (knowledge base + lints + doc gardener)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Bash syntax check on shell entrypoints
-        run: bash -n scripts/*.sh scripts/bin/*.sh
+        run: bash -n scripts/*.sh
       - name: Validate repository knowledge base
-        run: scripts/validate-knowledge-base.sh
+        run: bash scripts/validate-knowledge-base.sh
       - name: Lint layered domain architecture
-        run: scripts/lint-layered-architecture.sh
-      - name: Validate Symphony workflow
-        run: scripts/symphony.sh validate
-      - name: Render Symphony dry run
-        run: scripts/symphony.sh once --dry-run --limit 1
-      - name: Edge MCP non-live safety checks
-        run: |
-          node tools/edge-mcp/filter-unsafe-tools.mjs --self-test
-          node tools/edge-mcp/smoke/validate-last-run.mjs --max-age-days 30
-      - name: Run doc gardener (non-blocking)
-        run: scripts/gardener.sh || true
-
-  bun-tests:
-    name: agent-evals (bun test)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.1.x"
-      - name: Install agent-evals deps
-        working-directory: packages/agent-evals
-        run: bun install --frozen-lockfile || bun install
-      - name: bun test
-        working-directory: packages/agent-evals
-        run: bun test
-
-  python-tests:
-    name: ops-console (pytest)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install ops-console with dev extras
-        working-directory: apps/ops-console
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[dev]'
-      - name: pytest
-        working-directory: apps/ops-console
-        run: pytest -q
-
-  elixir-tests:
-    name: symphony-elixir (mix test)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: "27"
-          elixir-version: "1.19.5-otp-27"
-      - name: Install hex/rebar non-interactively
-        run: |
-          mix local.hex --force
-          mix local.rebar --force
-      - name: Fetch deps
-        working-directory: tools/symphony-elixir
-        run: mix deps.get
-      - name: mix test
-        working-directory: tools/symphony-elixir
-        run: mix test
+        run: bash scripts/lint-layered-architecture.sh
+      - name: Doc gardener (markdown staleness + broken links)
+        run: bash scripts/gardener.sh

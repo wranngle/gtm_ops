@@ -1,14 +1,13 @@
 name: "Feature request"
 description: "Suggest an enhancement so an agent or human can pick it up."
 title: "feat: <one-line summary>"
-labels: ["enhancement", "symphony:todo"]
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for proposing an idea. This template is shaped for both human and agent consumption.
 
-        - Symphony reads issues with the `symphony:todo` label as candidate work (see `docs/references/symphony-github-issues-adapter.md`).
         - Add a `priority:N` label (lower = higher priority) to influence dispatch ordering.
         - For multi-step work, an agent should produce an execution plan under `docs/exec-plans/active/` first.
         - Do not include private operational details, customer identifiers, or live URLs. This repo is public.
@@ -18,7 +17,7 @@ body:
     attributes:
       label: Problem statement
       description: What pain point or use case motivates this? Be concrete.
-      placeholder: Today, agents pulling tasks from .symphony/issues/ cannot ...
+      placeholder: Today, operators reviewing a proposal cannot ...
     validations:
       required: true
 
@@ -37,7 +36,7 @@ body:
       placeholder: |
         - `scripts/foo.sh --help` prints usage.
         - `scripts/validate-knowledge-base.sh` still passes.
-        - New behavior is covered by tests under `packages/<area>/tests/` or `apps/<area>/tests/`.
+        - New behavior is covered by tests under `tests/` (vitest unit, console-e2e, or e2e).
         - Docs updated under `docs/` if a new command or boundary is introduced.
     validations:
       required: true
@@ -55,14 +54,14 @@ body:
       description: Which area would change? Agents use this to scope their work.
       multiple: true
       options:
-        - "L0 dotfiles primitives (LICENSE, .github/, demo/, scripts/bin/llm.sh, scripts/hero.sh)"
-        - "Domain 1 LLM fallback chain (scripts/bin/llm.sh)"
-        - "Symphony orchestrator (scripts/symphony.sh, tools/symphony-elixir/)"
+        - "ops-console (apps/ops-console/console/) — main React UI"
+        - "ops-console subapps (apps/ops-console/evaluation/, eval-runs/)"
+        - "ElevenLabs ConvAI integration (Sales Coach / Sarah Intake)"
+        - "Express runtime (server.js, lib/)"
+        - "Cloudflare Pages Functions (functions/api/)"
+        - "Presales pipeline / proposal generation (lib/, cli.js)"
+        - "PDF templates / brand tokens (templates/, tokens/, DESIGN.md)"
         - "Knowledge-base validators (scripts/validate-knowledge-base.sh, scripts/lint-layered-architecture.sh, scripts/gardener.sh)"
-        - "agent-evals (packages/agent-evals/)"
-        - "ops-console (apps/ops-console/)"
-        - "Edge MCP (tools/edge-mcp/)"
-        - "Local observability (tools/observability/)"
         - "CI workflows (.github/workflows/)"
         - "Documentation only"
     validations:
@@ -72,5 +71,5 @@ body:
     id: blocked-by
     attributes:
       label: Blocked-by (optional)
-      description: "If this depends on another open issue, write `Blocked-by: #N` on a single line so Symphony can detect the dependency."
+      description: "If this depends on another open issue, write `Blocked-by: #N` on a single line so the dependency is machine-detectable."
       placeholder: "Blocked-by: #42"
