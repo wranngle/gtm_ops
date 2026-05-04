@@ -387,12 +387,22 @@ test.describe('settings', () => {
 
     // Pin starting tab so ArrowDown's expected target is deterministic
     // regardless of whatever earlier tests in the same worker may have done.
+    // waitForFunction ensures BOTH the React state has rolled over AND the
+    // DOM element is focused before we press the next key.
     await page.locator('.settings-nav__item:has-text("Integrations")').click();
-    await page.locator('[role="tab"][aria-selected="true"]').focus();
+    await page.locator('.settings-nav__item:has-text("Integrations")').focus();
+    await page.waitForFunction(() => {
+      const sel = document.querySelector('[role="tab"][aria-selected="true"]');
+      return sel?.textContent?.trim() === 'Integrations' && document.activeElement === sel;
+    }, null, { timeout: 3000 });
     await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => {
+      const sel = document.querySelector('[role="tab"][aria-selected="true"]');
+      return sel?.textContent?.trim() === 'Eval policy';
+    }, null, { timeout: 3000 });
     const after = await page.evaluate(() => ({
-      selected: document.querySelector('[role="tab"][aria-selected="true"]')?.textContent || '',
-      focused: document.activeElement?.textContent || '',
+      selected: document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.trim() || '',
+      focused: document.activeElement?.textContent?.trim() || '',
     }));
     expect(after.selected).toBe('Eval policy');
     expect(after.focused).toBe('Eval policy');

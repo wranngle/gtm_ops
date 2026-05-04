@@ -452,17 +452,20 @@ function EvalPolicyForm() {
         ]}/>
       </div>
       <div className="field">
-        <div className="field__label">Regression threshold</div>
-        <input className="input" defaultValue="-2.0% (alert) · -5.0% (auto-pause agent)"/>
+        <div className="field__label" id="evalpol-regression-label">Regression threshold</div>
+        <input className="input" defaultValue="-2.0% (alert) · -5.0% (auto-pause agent)"
+               aria-labelledby="evalpol-regression-label"/>
       </div>
       <div className="field">
-        <div className="field__label">Judge consensus required</div>
-        <input className="input" defaultValue="2 of 3 judges must agree" type="text"/>
-        <div className="field__hint">Higher consensus reduces false positives but increases cost ~1.6×.</div>
+        <div className="field__label" id="evalpol-consensus-label">Judge consensus required</div>
+        <input className="input" defaultValue="2 of 3 judges must agree" type="text"
+               aria-labelledby="evalpol-consensus-label" aria-describedby="evalpol-consensus-hint"/>
+        <div className="field__hint" id="evalpol-consensus-hint">Higher consensus reduces false positives but increases cost ~1.6×.</div>
       </div>
       <div className="field">
-        <div className="field__label">Failure → pager</div>
-        <input className="input" defaultValue="#gtm-ops · pagerduty: gtm-oncall"/>
+        <div className="field__label" id="evalpol-pager-label">Failure → pager</div>
+        <input className="input" defaultValue="#gtm-ops · pagerduty: gtm-oncall"
+               aria-labelledby="evalpol-pager-label"/>
       </div>
       <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:14}}>
         <button className="btn btn--ghost btn--sm" onClick={() => window.toast('Policy reverted')}>Revert</button>
