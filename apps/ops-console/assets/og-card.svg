@@ -22,5 +22,5 @@
   <text x="80" y="320" fill="#fcfaf5" font-size="84" font-weight="800" letter-spacing="-0.03em">Lead in.</text>
   <text x="80" y="420" fill="url(#accent)" font-size="84" font-weight="800" letter-spacing="-0.03em">Branded proposal out.</text>
   <text x="80" y="500" fill="#dac39f" font-size="32" font-weight="500">Open-source AI presales pipeline for service businesses.</text>
-  <text x="80" y="560" fill="#847d9a" font-size="22" font-family="JetBrains Mono, monospace">preview.gtm-ops.pages.dev</text>
+  <text x="80" y="560" fill="#847d9a" font-size="22" font-family="JetBrains Mono, monospace">gtm-ops.pages.dev</text>
 </svg>

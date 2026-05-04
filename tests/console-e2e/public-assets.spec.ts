@@ -52,6 +52,22 @@ for (const path of HTML_ENTRYPOINTS) {
   });
 }
 
+test('og-card.svg references the production URL (not the preview branch)', async ({ page }) => {
+  const r = await page.request.get('/assets/og-card.svg');
+  expect(r.status()).toBe(200);
+  const body = await r.text();
+  // og-card.png is rasterized from this SVG by scripts/render-og-card.mjs.
+  // Any URL baked into the SVG ends up baked into every social-share preview
+  // (LinkedIn, Slack, Twitter, etc.) of the landing page. The preview.* host
+  // belongs to a non-production branch and would split page authority.
+  expect(body, 'og-card SVG must not reference the preview branch URL').not.toMatch(
+    /preview\.gtm-ops\.pages\.dev/,
+  );
+  expect(body, 'og-card SVG should reference the production host').toMatch(
+    /gtm-ops\.pages\.dev/,
+  );
+});
+
 test('favicon.svg is fetchable, well-formed SVG, and uses brand colors', async ({ page }) => {
   const r = await page.request.get('/assets/favicon.svg');
   expect(r.status()).toBe(200);
