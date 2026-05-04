@@ -7,7 +7,7 @@
  * is reachable via Tab, declares button semantics, and routes on
  * Enter / Space.
  */
-import { test, expect } from './_helpers';
+import { test, expect } from './_helpers.js';
 
 const WORKSPACE_ITEMS = [
   'Mission Control',
