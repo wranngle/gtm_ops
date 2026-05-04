@@ -5,7 +5,11 @@
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  # Permissions-Policy: scope mic access to the ConvAI widget iframe
+  # (elevenlabs.io). Wildcard subdomains aren't valid in this header per the
+  # W3C draft — only concrete origins. If the widget ever moves to a
+  # subdomain, extend the list with the exact host.
+  Permissions-Policy: camera=(), microphone=("https://elevenlabs.io"), geolocation=(), payment=(), usb=(), interest-cohort=()
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-site
