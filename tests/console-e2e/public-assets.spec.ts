@@ -51,3 +51,28 @@ for (const path of HTML_ENTRYPOINTS) {
     expect(href).toMatch(/favicon/);
   });
 }
+
+test('favicon.svg is fetchable, well-formed SVG, and uses brand colors', async ({ page }) => {
+  const r = await page.request.get('/assets/favicon.svg');
+  expect(r.status()).toBe(200);
+  const ct = r.headers()['content-type'] || '';
+  expect(ct).toMatch(/image\/svg\+xml/);
+  const body = await r.text();
+  // Well-formed SVG root.
+  expect(body).toMatch(/<svg[^>]*xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
+  expect(body).toMatch(/viewBox="0 0 \d+ \d+"/);
+  // Brand colors: sunset-500 + violet-500 + night-950 surface.
+  expect(body, 'favicon should use sunset-500 (#ff5f00)').toMatch(/#ff5f00/i);
+  expect(body, 'favicon should use violet-500 (#cf3c69)').toMatch(/#cf3c69/i);
+  expect(body, 'favicon should use night-950 surface (#12111a)').toMatch(/#12111a/i);
+  // No external resource loads — favicons must be self-contained or
+  // browsers fail to render them in offline / restrictive contexts.
+  // (xmlns="http://www.w3.org/2000/svg" is the SVG namespace declaration,
+  // not a fetched resource — explicitly allowed.)
+  expect(body, 'favicon must not <image> external URLs').not.toMatch(/<image[^>]+(?:href|xlink:href)=/i);
+  expect(body, 'favicon must not <use> external URLs').not.toMatch(/<use[^>]+(?:href|xlink:href)=["']https?:/i);
+  expect(body, 'favicon must not @import external CSS').not.toMatch(/@import\s+(?:url\()?["']?https?:/i);
+  expect(body, 'favicon must not contain scripts').not.toMatch(/<script/i);
+  // Reasonable byte budget — favicons under ~2KB are healthy.
+  expect(body.length, 'favicon byte budget').toBeLessThan(2048);
+});
