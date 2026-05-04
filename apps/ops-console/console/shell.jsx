@@ -37,10 +37,17 @@ function ToastHost() {
   );
 }
 
-/* ---------- Tiny popover (anchored, click-outside-to-close) ---------- */
-function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320 }) {
+/* ---------- Tiny popover (anchored, click-outside-to-close) ----------
+   Treats the popover as a non-modal dialog: announces itself as a
+   landmark, moves focus to its first focusable child on open, traps
+   Tab inside while open, and restores focus to the trigger on close.
+   This keeps click-outside-to-close behavior (pure aria-modal would
+   block that) while giving keyboard users a sane experience. */
+function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320, label }) {
   const [pos, setPos] = useState(null);
   const popRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
   useEffect(() => {
     if (!open || !anchorRef.current) return;
     const r = anchorRef.current.getBoundingClientRect();
@@ -48,10 +55,26 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
       top: r.bottom + 8,
       left: align === 'right' ? Math.max(8, r.right - width) : r.left,
     });
+    previousFocusRef.current = document.activeElement;
     function onDoc(e) {
       if (popRef.current && !popRef.current.contains(e.target) && !anchorRef.current.contains(e.target)) onClose();
     }
-    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    function onKey(e) {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab' && popRef.current) {
+        const focusables = popRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="button"]'
+        );
+        if (focusables.length === 0) { e.preventDefault(); return; }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    }
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -59,9 +82,30 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  // After the popover renders (pos has been computed and the DOM is in
+  // place), move focus to its first focusable child.
+  useEffect(() => {
+    if (open && pos && popRef.current) {
+      const first = popRef.current.querySelector(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="button"]'
+      );
+      first?.focus();
+    }
+  }, [open, pos]);
+
+  // Restore focus to the original trigger when the popover closes.
+  useEffect(() => {
+    if (!open && previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+      try { previousFocusRef.current.focus(); } catch (_) { /* unmounted */ }
+      previousFocusRef.current = null;
+    }
+  }, [open]);
+
   if (!open || !pos) return null;
   return (
-    <div ref={popRef} className="popover" style={{ top: pos.top, left: pos.left, width }}>
+    <div ref={popRef} className="popover" role="dialog" aria-label={label || 'Popover'}
+         style={{ top: pos.top, left: pos.left, width }}>
       {children}
     </div>
   );
@@ -207,14 +251,16 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
         </button>
       </div>
 
-      <Popover open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360}>
+      <Popover open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
         <div className="pop__hd">
           <span>Notifications</span>
           <span className="mono dim" style={{fontSize:10}}>{notifs.length} new</span>
         </div>
         <div className="pop__list">
           {notifs.map(n => (
-            <div key={n.id} className="pop__row" onClick={() => { window.toast(n.title, { sub: n.sub, tone: n.tone }); setNotifOpen(false); }}>
+            <div key={n.id} className="pop__row" role="button" tabIndex={0}
+                 onClick={() => { window.toast(n.title, { sub: n.sub, tone: n.tone }); setNotifOpen(false); }}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.toast(n.title, { sub: n.sub, tone: n.tone }); setNotifOpen(false); } }}>
               <span className={`dot dot--${n.tone === 'neutral' ? 'idle' : n.tone}`} style={{width:7,height:7,marginTop:6}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{n.title}</div>
@@ -230,7 +276,7 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
         </div>
       </Popover>
 
-      <Popover open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={300}>
+      <Popover open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={300} label="Start a run">
         <div className="pop__hd"><span>Start a run</span></div>
         <div className="pop__list">
           {[
@@ -240,7 +286,9 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
             { icon:I.Beaker,label:'Trigger eval suite', sub:'all 6 suites · ⌘E', tone:'accent' },
             { icon:I.Refresh, label:'Re-score stale leads', sub:'24 candidates', tone:'accent' },
           ].map(o => (
-            <div key={o.label} className="pop__row" onClick={() => { window.toast(`${o.label} queued`, { sub: o.sub, tone: 'accent' }); setRunOpen(false); }}>
+            <div key={o.label} className="pop__row" role="button" tabIndex={0}
+                 onClick={() => { window.toast(`${o.label} queued`, { sub: o.sub, tone: 'accent' }); setRunOpen(false); }}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.toast(`${o.label} queued`, { sub: o.sub, tone: 'accent' }); setRunOpen(false); } }}>
               <o.icon size={14} />
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{o.label}</div>

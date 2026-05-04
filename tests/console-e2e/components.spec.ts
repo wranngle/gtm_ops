@@ -78,6 +78,65 @@ test.describe('topbar', () => {
     expect(restored, 'focus did not return to the search trigger').toBe(true);
   });
 
+  test('notifications popover focuses first row + traps Tab + restores focus', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.tb__bell').click();
+    await expect(page.locator('.popover')).toBeVisible();
+    await expect(page.locator('.popover')).toHaveAttribute('role', 'dialog');
+    await expect(page.locator('.popover')).toHaveAttribute('aria-label', /notifications/i);
+    // First focusable child should receive focus.
+    await page.waitForFunction(
+      () => !!document.activeElement?.closest('.popover'),
+      null,
+      { timeout: 2000 },
+    );
+    // Tab cycles inside the popover.
+    for (let i = 0; i < 5; i += 1) {
+      await page.keyboard.press('Tab');
+      const inside = await page.evaluate(() => !!document.activeElement?.closest('.popover'));
+      expect(inside, `Tab ${i + 1} leaked focus outside notifications popover`).toBe(true);
+    }
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.popover')).toHaveCount(0);
+    const restored = await page.evaluate(
+      () => document.activeElement?.classList.contains('tb__bell') ?? false,
+    );
+    expect(restored, 'focus did not return to .tb__bell').toBe(true);
+  });
+
+  test('"New run" popover focuses first row + traps Tab + restores focus', async ({ openConsole }) => {
+    const page = await openConsole();
+    const trigger = page.locator('.tb .btn--primary:has-text("New run")');
+    await trigger.click();
+    await expect(page.locator('.popover')).toBeVisible();
+    await expect(page.locator('.popover')).toHaveAttribute('aria-label', /start a run/i);
+    await page.waitForFunction(
+      () => !!document.activeElement?.closest('.popover'),
+      null,
+      { timeout: 2000 },
+    );
+    for (let i = 0; i < 5; i += 1) {
+      await page.keyboard.press('Tab');
+      const inside = await page.evaluate(() => !!document.activeElement?.closest('.popover'));
+      expect(inside, `Tab ${i + 1} leaked focus outside new-run popover`).toBe(true);
+    }
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.popover')).toHaveCount(0);
+  });
+
+  test('popover rows are keyboard-actionable (Enter triggers click)', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.tb__bell').click();
+    await page.waitForFunction(
+      () => !!document.activeElement?.closest('.popover'),
+      null,
+      { timeout: 2000 },
+    );
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.toast').first()).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('.popover')).toHaveCount(0);
+  });
+
   test('command palette has dialog semantics', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.tb__search').click();
