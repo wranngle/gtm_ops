@@ -77,16 +77,18 @@ Structured LLM extraction over the post-call payload produces a typed proposal. 
 
 ### 6. Ops-console — `apps/ops-console/`
 
-Internal operational UI for non-technical operators. Pages:
+Internal operational UI for non-technical operators. Three surfaces:
 
-- `index.html` — lead / proposal dashboard
-- `evaluation/` — per-proposal eval review
-- `eval-runs/` — surfaces `voice_ai_agent_evals/tests/runs/` output
+- `index.html` — public landing page (Get-a-real-run lead form)
+- `console/` — main React (UMD + babel-standalone, no build step) operator UI; routes home / pipeline / calls / proposals / evals / **agents** (live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake) / settings / generate
+- `evaluation/` — Evaluation Dashboard (eval-runs aggregate stats + flaw distribution)
+- `eval-runs/` — per-run harness output surface
 
-Same code runs in two modes:
+Three deploy modes serve the same UI:
 
-- **Live** — `bun run start` → `server.js` exposes `/api/*` and serves `public/`
-- **Static / DEMO_MODE** — `python -m http.server` from `apps/ops-console/`; `/api/*` calls fall through to `fixtures/*.json`
+- **Local Express** — `bun run start` → `server.js` exposes `/api/*` and serves `public/`
+- **Cloudflare Pages full-stack** — Pages Functions under `functions/api/*` mirror `server.js`'s surface; D1-backed where bindings are configured, falling back to bundled fixtures otherwise
+- **Static / DEMO_MODE** — any static file server pointed at `apps/ops-console/`; the in-page DEMO_MODE shim swaps `/api/*` calls for `fixtures/*.json`
 
 ## Cross-cutting
 
@@ -100,7 +102,7 @@ Brand tokens live in `tokens/{tokens.css, tokens.json, tokens.tailwind.js}`, ext
 
 ### Workflow library
 
-Three to five sanitized n8n workflows ship in `workflows/` as showcase examples. The full library lives at `wranngle/n8n` — a single source of truth, not duplicated here.
+No n8n workflows ship in this repo — the canonical library lives at [`wranngle/n8n`](https://github.com/wranngle/n8n) as a single source of truth. The `examples/` directory carries one or two illustrative payload fixtures (e.g. `n8n_clay_enrichment_webhook.json`) that pair with `lib/enrichment/`.
 
 ### Eval harness
 
@@ -131,41 +133,41 @@ When in doubt, add a small boundary parser instead of probing data by assumption
 
 ```
 gtm_ops/
-├── DESIGN.md                # canonical brand system
+├── DESIGN.md                # canonical brand system (long-form)
 ├── ARCHITECTURE.md          # this file
 ├── README.md
-├── CHANGELOG.md
-├── DEPLOYMENT.md
+├── CONTRIBUTING.md
+├── SECURITY.md
 ├── LICENSE
-├── apps/ops-console/        # vanilla HTML/JS operator UI; DEMO_MODE static + live modes
-├── lib/                     # intake, enrichment, post_call, extraction, pdf_generator,
+├── apps/ops-console/        # operator UI — React (UMD + babel-standalone)
+│                            # main /console/ + static /evaluation/ + /eval-runs/
+├── lib/                     # intake, enrichment, post_call, extraction, pdf,
 │                            # branding, pricing, audit, evaluation
 ├── prompts/                 # LLM extraction prompts (versioned)
-├── server.js                # Express /api/* surface for live mode
+├── server.js                # Express /api/* surface for live Express mode
+├── functions/api/           # Cloudflare Pages Functions mirroring /api/*
+│                            # (D1-backed, falling back to fixtures)
 ├── cli.js                   # presales pipeline CLI
-├── examples/                # synthetic input set (5–10 fake companies)
+├── examples/                # synthetic input fixtures (n8n payload samples, etc.)
 ├── templates/               # PDF templates rendered with tokens/
-├── public/                  # static asset root for server.js (live mode)
+├── public/                  # static asset root for server.js (live Express mode)
 ├── config/
 │   └── branding.example.json
 ├── migrations/              # SQL schema (live-mode persistence)
-├── workflows/               # 3–5 sanitized n8n samples; full library at wranngle/n8n
 ├── tokens/                  # tokens.css, tokens.json, tokens.tailwind.js
 ├── docs/
-│   ├── walkthrough-lead-comes-in.md
-│   └── images/
+│   └── references/          # stack contracts (incl. doc-gardener.md)
 ├── scripts/
-│   ├── lint-file-size.sh
-│   ├── lint-json-parse-boundary.sh
+│   ├── validate-knowledge-base.sh
 │   ├── lint-layered-architecture.sh
-│   ├── lint-naming-conventions.sh
-│   ├── lint-structured-logging.sh
-│   └── lint-time-in-providers.sh
-├── tests/integration/       # synthetic input → PDF round-trip
-└── openspec/
-    ├── AGENTS.md
-    ├── project.md
-    └── specs/
+│   ├── lint-{file-size,json-parse-boundary,naming-conventions,structured-logging,time-in-providers}.sh
+│   ├── gardener.sh          # weekly doc staleness + broken-link scan
+│   └── render-og-card.mjs   # rasterizes og-card.svg → og-card.png
+└── tests/
+    ├── unit/                # vitest (incl. README + gardener drift guards)
+    ├── integration/         # synthetic input → PDF round-trip
+    ├── e2e/                 # Playwright PDF / report rendering
+    └── console-e2e/         # Playwright UI suite for apps/ops-console/console/
 ```
 
 ## Feedback loops

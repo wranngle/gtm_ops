@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const readme = readFileSync(join(root, 'README.md'), 'utf8');
+const architecture = readFileSync(join(root, 'ARCHITECTURE.md'), 'utf8');
 const pkgJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
   scripts: Record<string, string>;
 };
@@ -70,5 +71,56 @@ describe('README content reflects reality', () => {
     expect(statSync(consoleDir).isDirectory()).toBe(true);
     // app.jsx is the React entrypoint added in tick 0.
     expect(existsSync(join(consoleDir, 'app.jsx'))).toBe(true);
+  });
+});
+
+describe('ARCHITECTURE content reflects reality', () => {
+  const claimedPaths = [
+    'apps/ops-console/',
+    'lib/',
+    'prompts/',
+    'server.js',
+    'functions/api/',
+    'cli.js',
+    'examples/',
+    'templates/',
+    'public/',
+    'config/',
+    'migrations/',
+    'tokens/',
+    'docs/',
+    'scripts/',
+    'tests/',
+    'DESIGN.md',
+    'README.md',
+    'CONTRIBUTING.md',
+    'SECURITY.md',
+    'LICENSE',
+  ];
+  for (const p of claimedPaths) {
+    it(`mentions \`${p}\` and the path exists on disk`, () => {
+      expect(architecture).toContain(p);
+      expect(existsSync(join(root, p)), `${p} missing on disk`).toBe(true);
+    });
+  }
+
+  // Negative assertions blocking the specific stale phrases that ticks 24/28
+  // surfaced. If anyone reintroduces these the test fails loudly.
+  const stalePhrases = [
+    'vanilla HTML/JS',           // console is React + babel-standalone
+    'workflows/',                // dir doesn't exist; n8n moved out
+    'openspec/',                 // dir doesn't exist
+    'CHANGELOG.md',              // file doesn't exist
+    'DEPLOYMENT.md',             // file doesn't exist
+    'walkthrough-lead-comes-in', // doc doesn't exist
+  ];
+  for (const phrase of stalePhrases) {
+    it(`does not contain stale phrase "${phrase}"`, () => {
+      expect(architecture).not.toContain(phrase);
+    });
+  }
+
+  it('mentions Cloudflare Pages Functions deploy mode', () => {
+    expect(architecture).toMatch(/pages function/i);
   });
 });
