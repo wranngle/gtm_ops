@@ -537,12 +537,14 @@ padding: 24px;
 - Brand logo: square, **min 1024×1024px**
 - Brand banner: optional, **1440×720px**
 
-### GAP — Cody to fill in
+### Open logo questions
 
-- No formal logo-usage / clearspace / minimum-size doc found in any repo.
-- No stated SVG / vector source path.
-- No defined wordmark vs. icon-only treatment rules.
-- No light/dark logo variants documented.
+The following logo-system facets are not yet specified:
+
+- Formal logo-usage rules (clearspace, minimum size, padding contracts).
+- Canonical SVG / vector source path for the brand mark.
+- Wordmark vs. icon-only treatment guidance.
+- Light/dark logo variants and which surface picks which.
 
 ---
 
@@ -723,8 +725,8 @@ export const DefaultBranding = {
 3. **Tailwind shadcn radius reconciliation** — the marketing-site Tailwind
    config uses 3/6/9px radii while the rest of the system uses 4/8/12px.
    Pick one.
-4. **shadcn HSL placeholder vars** — the marketing-site shadcn HSL channel
-   vars are still "red" stubs and should be filled with the canonical
+4. **shadcn HSL stubs** — the marketing-site shadcn HSL channel
+   vars are still "red" defaults and should be filled with the canonical
    Sunset / Violet / Sand / Night conversions if shadcn components are
    intended to actually render in-brand.
 5. **Form / input components** — no documented styling rules for inputs,

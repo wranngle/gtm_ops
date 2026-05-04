@@ -16,9 +16,7 @@ The n8n workflow library is the single source of truth at [`wranngle/n8n`](https
 
 ## Demo
 
-🎬 _Loom walkthrough coming soon — 3-min architecture tour: lead intake → enrichment → voice → post-call → presales → ops-console._
-
-<!-- Replace with: <a href="https://www.loom.com/share/<id>"><img src="https://cdn.loom.com/sessions/thumbnails/<id>-with-play.gif" alt="Architecture walkthrough"></a> -->
+The deployed Pages site at [`gtm-ops.pages.dev`](https://gtm-ops.pages.dev) runs in DEMO_MODE end-to-end against the bundled fixtures. Open `/console/` to drive the operator UI, `/evaluation/` for the eval dashboard, `/eval-runs/` for the harness output surface. The Generate page replays a canned 11-step pipeline trace so you can see the proposal flow without a live backend. A 3-minute architecture walkthrough video lives at the project's README on GitHub when published.
 
 ## Architecture
 
