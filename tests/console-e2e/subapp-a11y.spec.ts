@@ -7,8 +7,9 @@
  * the dashboards are still loading their data).
  */
 import { test, expect } from './_helpers.js';
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+ 
 import AxeBuilderImport from '@axe-core/playwright';
+
 const AxeBuilder = (AxeBuilderImport as any).default ?? AxeBuilderImport;
 
 const PATHS = ['/evaluation/', '/eval-runs/'];

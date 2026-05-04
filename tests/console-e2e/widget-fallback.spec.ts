@@ -10,7 +10,7 @@ import { test, expect } from './_helpers.js';
 
 test.describe('widget unreachability fallback', () => {
   test('Agents page shows fallback when unpkg is blocked', async ({ page }) => {
-    await page.route('**/unpkg.com/@elevenlabs/**', (route) => route.abort('blockedbyclient'));
+    await page.route('**/unpkg.com/@elevenlabs/**', async (route) => route.abort('blockedbyclient'));
     await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
     await page.goto('/console/');
     await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
@@ -27,7 +27,7 @@ test.describe('widget unreachability fallback', () => {
   });
 
   test('coach dock shows fallback when unpkg is blocked', async ({ page }) => {
-    await page.route('**/unpkg.com/@elevenlabs/**', (route) => route.abort('blockedbyclient'));
+    await page.route('**/unpkg.com/@elevenlabs/**', async (route) => route.abort('blockedbyclient'));
     await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
     await page.goto('/console/');
     await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });

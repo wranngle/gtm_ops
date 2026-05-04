@@ -16,7 +16,8 @@
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": false,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": ["node", "bun-types"]
   },
   "include": [
     "src/**/*",

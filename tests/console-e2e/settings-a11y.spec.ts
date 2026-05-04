@@ -5,8 +5,9 @@
  * switches, etc.) which are the next layer down.
  */
 import { test, expect } from './_helpers.js';
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+ 
 import AxeBuilderImport from '@axe-core/playwright';
+
 const AxeBuilder = (AxeBuilderImport as any).default ?? AxeBuilderImport;
 
 const TABS = ['Integrations', 'Eval policy', 'Team', 'Billing', 'Security'] as const;
@@ -25,7 +26,7 @@ for (const tab of TABS) {
       const summary = blocking.flatMap((v: any) =>
         v.nodes.map((n: any) => `${v.id} :: ${n.target.join(' ')}`),
       );
-      // eslint-disable-next-line no-console
+       
       console.log(`${tab} blocking:`, summary);
     }
     expect(blocking).toEqual([]);
@@ -47,7 +48,7 @@ test('Eval policy form inputs are all labelled (aria-labelledby points at field_
       const labelledby = el.getAttribute('aria-labelledby');
       if (labelledby) {
         const ids = labelledby.split(/\s+/);
-        return ids.map((id) => document.getElementById(id)?.textContent || '').join(' ').trim();
+        return ids.map((id) => document.querySelector(`#${CSS.escape(id)}`)?.textContent || '').join(' ').trim();
       }
       const id = el.getAttribute('id');
       if (id) {

@@ -5,8 +5,9 @@
  * dark theme and asserts zero AA failures.
  */
 import { test, expect } from './_helpers.js';
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+ 
 import AxeBuilderImport from '@axe-core/playwright';
+
 const AxeBuilder = (AxeBuilderImport as any).default ?? AxeBuilderImport;
 
 const ROUTES = [
@@ -22,7 +23,7 @@ const ROUTES = [
 for (const [id, label] of ROUTES) {
   test(`dark theme color-contrast · ${id}`, async ({ openConsole }) => {
     const page = await openConsole();
-    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+    await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
     await page.locator(`.sb__item:has-text("${label}")`).first().click();
     await page.waitForTimeout(150);
     const r = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();

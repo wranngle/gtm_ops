@@ -1,12 +1,14 @@
-/// <reference types="bun-types" />
 /**
  * Tiny static server for ops-console Playwright tests.
  * Bun-native — no Express, no port collisions with the main API server.
  *
  * Serves apps/ops-console as the docroot. Default port 4173.
  */
-import { resolve, join } from 'node:path';
+// Bun globals (Bun.serve, Bun.file, import.meta.dir) are typed via the
+// bun-types package wired into tsconfig.json#compilerOptions.types — no
+// per-file reference needed.
 import { existsSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const port = Number(process.argv[2] || 4173);
 const root = resolve(import.meta.dir, '..', '..', 'apps', 'ops-console');

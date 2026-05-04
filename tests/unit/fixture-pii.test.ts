@@ -9,10 +9,9 @@
  * value, add it to the SAFE_PHONE_PATTERNS allowlist with a comment.
  */
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve, relative } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { globSync } from 'node:fs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -33,13 +32,31 @@ const SYNTHETIC_DOMAINS = new Set([
   'snowflake.com', 'outreach.io', 'pipedrive.com',
 ]);
 
+// Recursive directory walker — returns repo-relative paths to every
+// .json / .txt / .md under the given subtrees. Avoids the @types/node
+// gap on fs.globSync (Node 22+ runtime, TS types still missing).
+function walk(absDir: string): string[] {
+  if (!existsSync(absDir)) return [];
+  const out: string[] = [];
+  for (const entry of readdirSync(absDir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    const full = join(absDir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walk(full));
+    } else if (/\.(json|txt|md)$/i.test(entry.name)) {
+      out.push(relative(root, full));
+    }
+  }
+  return out;
+}
+
 function listFiles(): string[] {
   // Fixture / examples / config trees that ship publicly.
   return [
-    ...globSync('apps/ops-console/fixtures/**/*.{json,txt,md}', { cwd: root }),
-    ...globSync('tests/fixtures/**/*.{json,txt,md}', { cwd: root }),
-    ...globSync('examples/**/*.{json,txt,md}', { cwd: root }),
-    ...globSync('config/**/*.{json,txt,md}', { cwd: root }),
+    ...walk(resolve(root, 'apps/ops-console/fixtures')),
+    ...walk(resolve(root, 'tests/fixtures')),
+    ...walk(resolve(root, 'examples')),
+    ...walk(resolve(root, 'config')),
   ];
 }
 
@@ -64,7 +81,7 @@ describe('fixture PII / secrets sweep', () => {
     for (const f of files) {
       const text = readFileSync(resolve(root, f), 'utf8');
       let m: RegExpExecArray | null;
-      // eslint-disable-next-line no-cond-assign
+       
       while ((m = re.exec(text))) {
         const domain = m[2].toLowerCase();
         if (SYNTHETIC_DOMAINS.has(domain)) continue;
@@ -87,7 +104,7 @@ describe('fixture PII / secrets sweep', () => {
     for (const f of files) {
       const text = readFileSync(resolve(root, f), 'utf8');
       let m: RegExpExecArray | null;
-      // eslint-disable-next-line no-cond-assign
+       
       while ((m = re.exec(text))) {
         if (m[2].startsWith('555')) continue; // 555 prefix = fictitious by convention
         offenders.push(`${f}: ${m[0]}`);
@@ -102,7 +119,7 @@ describe('fixture PII / secrets sweep', () => {
     for (const f of files) {
       const text = readFileSync(resolve(root, f), 'utf8');
       let m: RegExpExecArray | null;
-      // eslint-disable-next-line no-cond-assign
+       
       while ((m = re.exec(text))) {
         offenders.push(`${f}: ${m[0]}`);
       }

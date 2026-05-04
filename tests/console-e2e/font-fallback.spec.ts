@@ -47,19 +47,17 @@ test('every --font-* token chains to a system family fallback', async ({ page })
 });
 
 test('console renders with system-font fallback when Google Fonts is blocked', async ({ page }) => {
-  await page.route('**/fonts.googleapis.com/**', (route) => route.abort('blockedbyclient'));
-  await page.route('**/fonts.gstatic.com/**', (route) => route.abort('blockedbyclient'));
+  await page.route('**/fonts.googleapis.com/**', async (route) => route.abort('blockedbyclient'));
+  await page.route('**/fonts.gstatic.com/**', async (route) => route.abort('blockedbyclient'));
   await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
   await page.goto('/console/');
   await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
   await page.waitForTimeout(300);
-  const families = await page.evaluate(() => {
-    return {
-      body: getComputedStyle(document.body).fontFamily,
-      title: getComputedStyle(document.querySelector('.ph__title') as HTMLElement).fontFamily,
-      mono: getComputedStyle(document.querySelector('.mono') as HTMLElement).fontFamily,
-    };
-  });
+  const families = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).fontFamily,
+    title: getComputedStyle(document.querySelector('.ph__title') as HTMLElement).fontFamily,
+    mono: getComputedStyle(document.querySelector('.mono') as HTMLElement).fontFamily,
+  }));
   for (const [el, chain] of Object.entries(families)) {
     expect(chain, `${el} fontFamily empty under blocked Google Fonts`).toBeTruthy();
     expect(chain, `${el} fontFamily lacks a system fallback: ${chain}`).toMatch(

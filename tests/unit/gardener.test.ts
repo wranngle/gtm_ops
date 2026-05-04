@@ -25,7 +25,7 @@ describe('doc gardener', () => {
   it('runs clean against the current tree (no WIP markers, no broken links)', () => {
     const r = spawnSync('bash', [script], { cwd: root, encoding: 'utf8' });
     if (r.status !== 0) {
-      // eslint-disable-next-line no-console
+       
       console.log('gardener output:\n' + r.stdout);
     }
     expect(r.status, `gardener emitted findings:\n${r.stdout}`).toBe(0);

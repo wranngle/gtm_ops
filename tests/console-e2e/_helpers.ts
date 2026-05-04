@@ -2,7 +2,7 @@
  * Shared helpers for console-e2e Playwright tests.
  */
 import { test as base, type Page } from '@playwright/test';
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+ 
 import AxeBuilderImport from '@axe-core/playwright';
 // The package ships dual ESM/CJS — runtime gets a callable, but tsc sees the
 // namespace. Coerce to the constructor at use-site.

@@ -41,7 +41,11 @@ export const test = base.extend<{
     await use(page);
   },
 
-  // Test output directory fixture with auto-cleanup
+  // Test output directory fixture with auto-cleanup. Playwright's fixture
+  // API requires the first argument to be a destructured object pattern;
+  // {} is the canonical "no fixtures consumed" form so xo's no-empty-pattern
+  // rule has to yield to the framework requirement here.
+  // eslint-disable-next-line no-empty-pattern
   async testOutputDir({}, use) {
     const testDir = path.join(process.cwd(), 'output_test', `test-${Date.now()}`);
     fs.mkdirSync(testDir, { recursive: true });
@@ -54,7 +58,9 @@ export const test = base.extend<{
     }
   },
 
-  // Track files for cleanup
+  // Track files for cleanup. Same Playwright fixture-API constraint as
+  // testOutputDir above — {} is required.
+  // eslint-disable-next-line no-empty-pattern
   async cleanupFiles({}, use) {
     const files: string[] = [];
 

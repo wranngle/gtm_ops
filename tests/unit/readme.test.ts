@@ -46,7 +46,7 @@ describe('README content reflects reality', () => {
   const documentedScripts = ['start', 'typecheck', 'test:run', 'test:console', 'test:e2e', 'deploy', 'deploy:preview', 'pages:dev'];
   for (const s of documentedScripts) {
     it(`documents \`bun run ${s}\` and that script exists in package.json`, () => {
-      expect(readme).toMatch(new RegExp(`bun run ${s.replace(/:/g, '\\:')}`));
+      expect(readme).toMatch(new RegExp(`bun run ${s.replace(/:/g, String.raw`\:`)}`));
       expect(pkgJson.scripts[s], `script "${s}" missing in package.json`).toBeTruthy();
     });
   }

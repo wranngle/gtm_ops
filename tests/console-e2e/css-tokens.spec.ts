@@ -27,7 +27,7 @@ const REQUIRED_TOKENS = [
 for (const theme of ['dark', 'light'] as const) {
   test(`css tokens · all required tokens resolve in ${theme} theme`, async ({ openConsole }) => {
     const page = await openConsole();
-    await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme);
+    await page.evaluate((t) => { document.documentElement.dataset.theme = t; }, theme);
     const missing = await page.evaluate((tokens) => {
       const cs = getComputedStyle(document.documentElement);
       return tokens.filter((tok) => !cs.getPropertyValue(tok).trim());
@@ -47,7 +47,7 @@ test('css tokens · no JSX inline-style refers to a undefined token (sanity grep
     document.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
       const text = el.getAttribute('style') || '';
       let m: RegExpExecArray | null;
-      // eslint-disable-next-line no-cond-assign
+       
       while ((m = re.exec(text))) {
         const tok = m[1];
         if (!cs.getPropertyValue(tok).trim()) {

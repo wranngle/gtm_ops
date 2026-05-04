@@ -55,7 +55,7 @@ test.describe('topbar', () => {
 
     // Wait one rAF tick for the palette's focus() call.
     await page.waitForFunction(
-      () => !!document.activeElement && document.activeElement.classList.contains('cp__input'),
+      () => document.activeElement?.classList.contains('cp__input') ?? false,
       null,
       { timeout: 2000 },
     );
@@ -64,7 +64,7 @@ test.describe('topbar', () => {
     for (let i = 0; i < 6; i += 1) {
       await page.keyboard.press('Tab');
       const inside = await page.evaluate(
-        () => !!document.activeElement?.closest('.cp'),
+        () => Boolean(document.activeElement?.closest('.cp')),
       );
       expect(inside, `Tab ${i + 1} leaked focus outside palette`).toBe(true);
     }
@@ -86,14 +86,14 @@ test.describe('topbar', () => {
     await expect(page.locator('.popover')).toHaveAttribute('aria-label', /notifications/i);
     // First focusable child should receive focus.
     await page.waitForFunction(
-      () => !!document.activeElement?.closest('.popover'),
+      () => Boolean(document.activeElement?.closest('.popover')),
       null,
       { timeout: 2000 },
     );
     // Tab cycles inside the popover.
     for (let i = 0; i < 5; i += 1) {
       await page.keyboard.press('Tab');
-      const inside = await page.evaluate(() => !!document.activeElement?.closest('.popover'));
+      const inside = await page.evaluate(() => Boolean(document.activeElement?.closest('.popover')));
       expect(inside, `Tab ${i + 1} leaked focus outside notifications popover`).toBe(true);
     }
     await page.keyboard.press('Escape');
@@ -111,13 +111,13 @@ test.describe('topbar', () => {
     await expect(page.locator('.popover')).toBeVisible();
     await expect(page.locator('.popover')).toHaveAttribute('aria-label', /start a run/i);
     await page.waitForFunction(
-      () => !!document.activeElement?.closest('.popover'),
+      () => Boolean(document.activeElement?.closest('.popover')),
       null,
       { timeout: 2000 },
     );
     for (let i = 0; i < 5; i += 1) {
       await page.keyboard.press('Tab');
-      const inside = await page.evaluate(() => !!document.activeElement?.closest('.popover'));
+      const inside = await page.evaluate(() => Boolean(document.activeElement?.closest('.popover')));
       expect(inside, `Tab ${i + 1} leaked focus outside new-run popover`).toBe(true);
     }
     await page.keyboard.press('Escape');
@@ -128,7 +128,7 @@ test.describe('topbar', () => {
     const page = await openConsole();
     await page.locator('.tb__bell').click();
     await page.waitForFunction(
-      () => !!document.activeElement?.closest('.popover'),
+      () => Boolean(document.activeElement?.closest('.popover')),
       null,
       { timeout: 2000 },
     );
