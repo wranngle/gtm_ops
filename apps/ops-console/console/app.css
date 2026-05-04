@@ -1377,3 +1377,103 @@ a:focus-visible,
   border: 1px dashed var(--border-strong);
   border-radius: var(--r-md);
 }
+
+/* ============================================================
+   PRINT — operators print call transcripts and proposal reviews
+   for meeting handoffs. Default browser rendering of the dark
+   single-page-app (dark bg, fixed sidebar/topbar, scroll-clipped
+   transcript) makes printed output useless. This block restores
+   document flow, hides chrome, and forces a high-contrast b/w
+   palette so the printed page is actually readable on paper.
+   ============================================================ */
+@media print {
+  /* Page setup — comfortable letter-paper margin. */
+  @page { margin: 0.5in; }
+
+  /* High-contrast b/w palette regardless of theme. */
+  :root, [data-theme="dark"], [data-theme="light"] {
+    --bg: #fff;
+    --bg-elev: #fff;
+    --bg-elev-2: #fff;
+    --bg-card: #fff;
+    --bg-inset: #fff;
+    --bg-hover: transparent;
+    --bg-press: transparent;
+    --bg-selected: transparent;
+    --text: #000;
+    --text-2: #222;
+    --text-3: #444;
+    --border: #999;
+    --border-strong: #666;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-glow: none;
+    --grid-line: transparent;
+    --page-bg: #fff;
+    --accent-fg: #000;
+    --healthy-fg: #000;
+    --warn-fg: #000;
+    --violet-fg: #000;
+  }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Hide app chrome — sidebar, topbar, floating launcher, dock, popovers,
+     command palette overlay, toasts, tweaks panel. The page's main content
+     is what should print. */
+  .sb, .tb, .coach-launcher, .coach-dock, .popover, .cp-overlay, .cp,
+  .toast-host, .twk-panel, .tb__demo-pill,
+  [aria-label="Intake agent panel"], elevenlabs-convai {
+    display: none !important;
+  }
+
+  /* Restore document flow — the SPA layout uses fixed-height grids and
+     overflow:auto scroll regions; both clip content in print. */
+  .app, .main, .scroll, .page, .calls-page, .calls-grid {
+    display: block !important;
+    height: auto !important;
+    width: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    grid-template-columns: none !important;
+  }
+  .calls-grid__list, .calls-grid__transcript, .calls-grid__side,
+  .calls-grid__trans-scroll, .vstack, .split, .split--2, .pipe,
+  .stats, .agents-grid, .settings-grid {
+    display: block !important;
+    overflow: visible !important;
+    max-height: none !important;
+    grid-template-columns: none !important;
+  }
+
+  /* Card surfaces print as plain bordered blocks. */
+  .card {
+    border: 1px solid #999 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    margin-bottom: 12px;
+  }
+
+  /* Avoid orphan headings at the bottom of a page. */
+  h1, h2, h3, h4, .ph__title, .card__title {
+    page-break-after: avoid;
+  }
+
+  /* Disable animations and transitions; print rendering shouldn't
+     waste a render frame on motion. */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Show link URLs after anchor text — useful when the page is read
+     on paper away from a clickable surface. */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 90%;
+    color: #555;
+  }
+}
