@@ -277,6 +277,23 @@ function SettingsPage({ setRoute }) {
     { id:'billing',   label:'Billing' },
     { id:'security',  label:'Security' },
   ];
+  const tabRefs = useRef({});
+
+  // ARIA tabs pattern (manual activation): roving tabindex so only the
+  // selected tab is in the document tab order, ArrowLeft/Right + Home/End
+  // move focus and selection across tabs. Enter/Space were already handled.
+  function onTabKeyDown(e, idx) {
+    let nextIdx = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextIdx = (idx + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nextIdx = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'Home') nextIdx = 0;
+    else if (e.key === 'End') nextIdx = tabs.length - 1;
+    if (nextIdx === null) return;
+    e.preventDefault();
+    const nextId = tabs[nextIdx].id;
+    setTab(nextId);
+    requestAnimationFrame(() => tabRefs.current[nextId]?.focus());
+  }
 
   return (
     <div className="page">
@@ -289,22 +306,31 @@ function SettingsPage({ setRoute }) {
         }/>
 
       <div className="settings-grid">
-        <div className="settings-nav" role="tablist" aria-label="Settings sections">
-          {tabs.map(t => (
+        <div className="settings-nav" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
+          {tabs.map((t, idx) => (
             <div key={t.id}
+                 ref={(el) => { tabRefs.current[t.id] = el; }}
+                 id={`settings-tab-${t.id}`}
                  className="settings-nav__item"
                  role="tab"
-                 tabIndex={0}
+                 tabIndex={tab === t.id ? 0 : -1}
                  aria-selected={tab === t.id}
+                 aria-controls={`settings-panel-${t.id}`}
                  data-active={tab === t.id}
                  onClick={()=>setTab(t.id)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTab(t.id); } }}>
+                 onKeyDown={(e) => {
+                   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTab(t.id); return; }
+                   onTabKeyDown(e, idx);
+                 }}>
               {t.label}
             </div>
           ))}
         </div>
 
-        <div>
+        <div role="tabpanel"
+             id={`settings-panel-${tab}`}
+             aria-labelledby={`settings-tab-${tab}`}
+             tabIndex={0}>
           {tab === 'integrations' && <IntegrationsSettings/>}
           {tab === 'evals' && <EvalPolicySettings/>}
           {tab === 'team' && <TeamSettings/>}

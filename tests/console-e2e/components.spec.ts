@@ -364,6 +364,43 @@ test.describe('settings', () => {
     await page.locator('.btn:has-text("Manage agents")').click();
     await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
   });
+
+  test('settings tabs follow the ARIA tabs pattern (arrow keys + roving tabindex + tabpanel)', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Settings")').first().click();
+    const tablist = page.locator('[role="tablist"][aria-label="Settings sections"]');
+    await expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
+
+    // Roving tabindex: only the selected tab has tabindex=0.
+    const zeros = await page.locator('[role="tab"][tabindex="0"]').count();
+    expect(zeros, 'exactly one tab should be in tab order').toBe(1);
+
+    // Each tab has aria-controls pointing to the panel.
+    await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveAttribute(
+      'aria-controls',
+      /^settings-panel-/,
+    );
+    await expect(page.locator('[role="tabpanel"]')).toHaveAttribute(
+      'aria-labelledby',
+      /^settings-tab-/,
+    );
+
+    // ArrowDown moves focus and selection to next tab.
+    await page.locator('[role="tab"][aria-selected="true"]').focus();
+    await page.keyboard.press('ArrowDown');
+    const after = await page.evaluate(() => ({
+      selected: document.querySelector('[role="tab"][aria-selected="true"]')?.textContent || '',
+      focused: document.activeElement?.textContent || '',
+    }));
+    expect(after.selected).toBe('Eval policy');
+    expect(after.focused).toBe('Eval policy');
+
+    // End jumps to last tab; Home jumps to first.
+    await page.keyboard.press('End');
+    expect(await page.locator('[role="tab"][aria-selected="true"]').textContent()).toBe('Security');
+    await page.keyboard.press('Home');
+    expect(await page.locator('[role="tab"][aria-selected="true"]').textContent()).toBe('Integrations');
+  });
 });
 
 test.describe('coach launcher', () => {
