@@ -322,15 +322,37 @@ function PipelineTable({ companies, onSelect, selected }) {
 }
 
 function LeadDetail({ company: c, onClose, setRoute }) {
+  // Treat the side panel as a non-modal dialog: announce it as a region,
+  // move focus to the close button on open so keyboard users know it
+  // appeared, restore focus to the previously-focused card on close,
+  // and let Escape close it. We do NOT trap Tab since the panel sits
+  // alongside the kanban — operators want to keep navigating both.
+  const closeRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  useEffect(() => {
+    if (!c) return;
+    previousFocusRef.current = document.activeElement;
+    requestAnimationFrame(() => closeRef.current?.focus());
+    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        try { previousFocusRef.current.focus(); } catch (_) { /* unmounted */ }
+        previousFocusRef.current = null;
+      }
+    };
+  }, [c?.id]);
   if (!c) return null;
   return (
-    <div style={{position:'fixed', right:18, top:74, bottom:18, width:420, background:'var(--bg-elev)', border:'1px solid var(--border-strong)', borderRadius:'var(--r-lg)', boxShadow:'var(--shadow-lg)', zIndex:50, display:'flex', flexDirection:'column', overflow:'hidden'}}>
+    <div role="dialog" aria-label={`Lead detail · ${c.name}`}
+         style={{position:'fixed', right:18, top:74, bottom:18, width:420, background:'var(--bg-elev)', border:'1px solid var(--border-strong)', borderRadius:'var(--r-lg)', boxShadow:'var(--shadow-lg)', zIndex:50, display:'flex', flexDirection:'column', overflow:'hidden'}}>
       <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <div>
           <div className="eyebrow eyebrow--accent">{c.industry}</div>
           <div style={{fontSize:18, fontWeight:700, fontFamily:'var(--font-display)', marginTop:2}}>{c.name}</div>
         </div>
-        <button className="btn btn--ghost btn--icon" aria-label="Close lead detail" onClick={onClose}><I2.Close size={14}/></button>
+        <button ref={closeRef} className="btn btn--ghost btn--icon" aria-label="Close lead detail" onClick={onClose}><I2.Close size={14}/></button>
       </div>
       <div className="scroll" style={{flex:1, padding:18}}>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16}}>

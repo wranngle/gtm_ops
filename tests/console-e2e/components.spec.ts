@@ -210,6 +210,24 @@ test.describe('pipeline', () => {
     await expect(page.locator('[aria-label="Intake agent panel"]')).toBeVisible();
   });
 
+  test('lead detail panel has dialog semantics + keyboard close + focus management', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Pipeline")').first().click();
+    const card = page.locator('.pipe__card').first();
+    await card.click();
+    const panel = page.locator('[role="dialog"][aria-label^="Lead detail"]');
+    await expect(panel).toBeVisible();
+    // Close button receives focus on open.
+    await page.waitForFunction(
+      () => document.activeElement?.getAttribute('aria-label') === 'Close lead detail',
+      null,
+      { timeout: 2000 },
+    );
+    // Escape closes the panel.
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+  });
+
   test('view toggle switches between board and table', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.sb__item:has-text("Pipeline")').first().click();
