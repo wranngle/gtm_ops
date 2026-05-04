@@ -1,0 +1,191 @@
+Strategic Market Penetration Blueprint: 24/7 AI Voice Agent for Trade Enterprises
+1. Executive Strategic Overview
+The integration of Artificial Intelligence (AI) into the operational fabric of trade businesses—specifically HVAC, plumbing, and electrical services—represents a paradigm shift from simple cost reduction to aggressive revenue recovery. This report outlines a comprehensive, internal-facing strategy for deploying a "24/7 AI Voice Agent Hotline" priced with a strategic floor of $250 per month and an anchor negotiation price of $500 per month.
+The core value proposition addresses a critical inefficiency in the home services market: the "missed call." For trade businesses, a missed call is not merely a missed connection; it is lost immediate revenue and, more critically, lost Lifetime Value (LTV). The proposed sales strategy leverages psychological principles of persuasion—specifically the "Door-in-the-Face" technique and price anchoring—to maximize Average Revenue Per User (ARPU) while securing a high conversion rate at the floor price.
+Furthermore, this document establishes a rigorous compensation framework for founding sales partners, balancing immediate cash flow incentives with long-term equity alignment, ensuring that the sales engine is driven by individuals with a vested interest in the company's trajectory. All recommendations are grounded in current market data, regulatory compliance standards (specifically 2024-2025 FCC/TCPA rulings), and behavioral economic theory.
+1.1 The Macro-Economic Context
+The trades industry is currently undergoing a "blue-collar productivity boom," driven by the adoption of technologies that streamline labor utilization rather than replacing it.1 Unlike the white-collar sector, where AI threatens to displace roles, in the trades, AI serves as a force multiplier for limited human capital. With labor shortages plaguing the skilled trades, the ability to automate the "front office" functions—specifically intake and dispatch—allows business owners to focus human resources on high-value field work.
+Current analysis suggests that while 85% of people acknowledge the benefits of AI, a significant trust gap remains, with 61% of consumers wary of trusting AI systems.2 However, in the context of emergency home services, this trust barrier is superseded by the demand for speed. The "speed-to-lead" mandate dictates that the first responder often wins the contract, regardless of whether that responder is human or digital.
+1.2 The "Bleeding Neck" Thesis
+The central thesis of this market entry strategy is that trade businesses are currently "bleeding" revenue through missed inquiries. Data indicates that SMBs miss between 20% and 62% of incoming calls.3 In high-ticket trades like HVAC and plumbing, where a single emergency call can generate $500 to $1,200 in immediate revenue 5, this leakage is existential.
+Our solution is positioned not as "software" but as "revenue insurance." By guaranteeing 24/7 responsiveness, the AI Voice Agent captures the high-margin emergency work that typically goes to the first competitor who answers the phone. This report validates this thesis with granular data on missed call economics, establishing a mathematical foundation for the $250/$500 pricing model.
+2. Market Dynamics and The Economic Imperative
+To effectively sell an AI solution to trade business owners, the sales force must first understand the granular economics of the "missed call." The sales narrative must shift from selling "technology" to selling "revenue recovery."
+2.1 The "Bleeding Neck" Problem: Quantifying Revenue Leakage
+Research indicates a systemic failure in call handling within the home services sector. Data from multiple industry analyses suggests that small to medium-sized businesses (SMBs) in the trades miss a staggering percentage of inbound inquiries.
+2.1.1 Missed Call Statistics and Financial Impact
+Trade businesses, often operated by owner-operators or small teams, frequently prioritize active job sites over administrative tasks. This operational reality leads to significant revenue leakage.
+Table 1: The Economics of Missed Calls in Home Services
+Metric, Industry Statistic, Source Context, Implications for Sales Strategy
+Missed Call Rate, 20% - 62%, Varies by seasonality; weekends/after-hours see rates up to 60%. 3, Highlight the weekend/night "gap" where emergency rates apply.
+Voicemail Abandonment, 70% - 85%, Callers who reach voicemail typically hang up and dial a competitor immediately. 3, Voicemail is effectively a "dead end" for revenue.
+Revenue Per Missed Call, $180 - $1,200, Value depends on trade (HVAC vs. Plumbing) and urgency. 3, One saved call justifies the monthly cost.
+Annual Loss (SMB), $62,000 - $255,000, Calculated based on missed call volume x average ticket x non-callback rate. 4, Frame the cost of the software as <1% of the loss.
+Analysis of Data:
+The disconnect between the perceived cost of a missed call (often viewed as a minor annoyance) and the actual cost (massive revenue loss) is the primary lever for the sales pitch. An HVAC contractor missing just five calls a week during peak summer months is not just losing five conversations; they are potentially losing five system replacements or major repairs. With emergency calls valued at premium rates (often 1.5x to 2x standard rates), the opportunity cost of a voicemail box is mathematically indefensible.
+2.1.2 The "Speed-to-Lead" Mandate
+Modern consumer behavior is driven by immediate gratification. In the context of a burst pipe or a failed AC unit in July, consumer loyalty is secondary to availability.
+The 5-Minute Window: Data suggests that leads contacted within 5 minutes are significantly more likely to convert. However, the average response time for many businesses is hours or days.4
+The Competitor Pivot: 62% of customers will switch to a competitor after a poor experience, such as an unanswered call.7 In high-urgency trades, the "poor experience" is simply the lack of an immediate human (or human-like) response.
+Implication for Sales Strategy: The AI Voice Agent must be positioned not as a "replacement" for staff, but as a "speed-to-lead" mechanism that ensures the business never loses a lead to a competitor simply because the owner was in a crawlspace or sleeping.
+2.2 Competitive Landscape: Human vs. AI Economics
+The primary competitor to the AI Voice Agent is not another software, but the Traditional Answering Service or the hiring of an In-House Receptionist.
+Comparative Cost Analysis:
+In-House Receptionist:
+Cost: $3,200+ per month (Salary + Benefits).3
+Limitations: 9-5 availability only; sick days; training overhead.
+Missed Opportunity: No coverage for the critical 40% of calls that occur after hours.3
+Traditional Answering Service:
+Cost: $200 - $800+ per month.3
+Limitations: Per-minute or per-call billing structures often lead to unpredictable bills. Agents are often generic, lacking specific trade knowledge, leading to frustration and poor lead qualification.3
+AI Voice Agent (Our Solution):
+Cost Structure: Fixed pricing (proposed $200-$500).
+Capabilities: Infinite concurrency (can answer 100 calls simultaneously), instant learning of trade-specific scripts, 24/7 availability without overtime pay.12
+Economic Advantage: Offers the "human-like" interaction of a receptionist at a fraction of the cost ($0.25-$0.50 per interaction vs $3.00-$6.00 for humans).12
+Strategic Insight: The sales pitch must highlight the variability and limitations of human alternatives. Answering services punish success (more calls = higher bills), whereas the AI model supports scale.
+2.3 The "Silent" Revenue: Web Chat Economics
+While voice is critical for urgent matters, modern homeowners, particularly younger demographics, increasingly prefer text-based communication. 54% of homeowners prefer texting for project details over phone calls.14 This shift necessitates the inclusion of the web chat agent in the "Anchor" pricing bundle.
+The Millennial Homeowner: As more millennials purchase homes, the preference for digital-first communication grows. A phone-only strategy ignores 43.88% of homeowners who prefer scheduling via text.14
+The "Zero-Click" Lead: Many potential customers visit a website, see no instant way to communicate (other than a phone number they don't want to call), and bounce. An AI Web Chat captures this traffic, converting passive visitors into active leads.
+Implication for Sales Strategy: The $500 bundle isn't just an upsell; it's a necessary adaptation to changing consumer demographics. Selling "Voice Only" leaves the digital-native market segment on the table.
+3. Product Positioning and Quality Assurance
+The "Quality" emphasis in the user request is critical. AI in 2024/2025 faces a "Trust Gap." While 80% of companies plan to adopt AI chatbots by 2025 2, 64% of consumers would currently rather companies avoid AI for customer service if it means a degradation in quality.2 Therefore, the product must be positioned not just as "AI," but as "High-Fidelity, Trade-Specific AI."
+3.1 Overcoming the "Robot" Stigma
+Trade business owners fear that an AI agent will sound robotic, alienate their older customer base, or mishandle complex technical queries. To combat this, the sales narrative must focus on "Conversational Intelligence" rather than "IVR menus."
+Natural Language Processing (NLP): Emphasize that the system does not use "Press 1 for Sales." It uses generative AI to understand context, accent, and trade slang (e.g., "snake the drain," "capacitor blew").
+Latency & Latency Masking: A key indicator of quality is response time. The system must be described as having "human-level latency" (sub-second response) or using "filler words" (e.g., "Hmm, let me check that for you") to mask processing time, maintaining the illusion of a natural conversation.
+The "Hybrid" Safety Net: Positioning the AI as a "triage" agent that can escalate complex issues to a human owner is vital. 67% of CX leaders believe bots can build emotional connections if deployed correctly 15, but the option for human intervention must remain visible.
+3.2 Trade-Specific Training
+Generic AI fails in niche verticals. A "quality" emphasis means the AI is pre-trained on:
+HVAC Ontologies: SEER ratings, BTUs, heat pump vs. furnace logic.16
+Plumbing Scenarios: Emergency shut-off valve locations, leak detection vs. re-piping queries.17
+Electrical Safety: Breaker panel capacity, aluminum wiring risks.
+Scientific Validation: Research shows that 68% of consumers believe chatbots should have the same level of expertise as highly skilled human agents.15 By pre-loading the AI with trade-specific knowledge bases (as seen in platforms like ServiceTitan's AI integrations 18), we meet this high bar for quality.
+3.3 Reliability and "Always-On" Architecture
+In trades, "Quality" equals "Uptime."
+Concurrency: Unlike a human receptionist who can only handle one call at a time, leaving the second caller with a busy signal (or voicemail), the AI can handle infinite concurrent calls.
+24/7/365: The system never calls in sick, takes a holiday, or asks for overtime. This reliability is a key selling point for owners tired of managing staff schedules.3
+4. Strategic Pricing Architecture: Anchoring & Bundling
+The pricing model is designed to maximize revenue through psychological anchoring while ensuring a high close rate by offering a compelling "retreat" option. The goal is to make the $200 floor feel like a massive discount, rather than a cost.
+4.1 The Psychology of Price Anchoring
+The strategy utilizes the "Anchor and Adjustment" heuristic.19 By presenting a higher initial price, the subsequent lower price (the target price) is perceived as a significant value.
+The Anchor ($500/month): This package includes the "Omnichannel Presence" – The AI Voice Agent plus the Website Chat Widget.
+Justification: It captures leads from both primary channels (Voice and Web). It serves as a full "Virtual Front Office."
+Behavioral Mechanism: This high price sets the reference point. It signals "Premium Quality."
+The Floor ($250/month): This is the standalone AI Voice Agent.
+Perception: When retreating from $500 to $200, the $200 price point feels like a "deal" or a concession, triggering the reciprocity principle.
+Scientific Validation: Research on the "Door-in-the-Face" (DITF) technique confirms that rejecting a large initial request increases the likelihood of agreeing to a smaller subsequent request.21 The retreat is viewed as a compromise, pressuring the buyer to reciprocate by accepting the smaller offer.
+4.2 The Bundling Strategy: Voice + Web Chat
+Adding the website widget is not merely a feature add; it is a strategic move to capture the "silent" lead.
+Decoy Pricing: The $500 bundle also acts as a "Decoy".19 Even if the primary goal is to sell the voice agent, the existence of the $500 bundle makes the $200 voice agent look incredibly affordable. Without the $500 anchor, the $200 price might be compared to $0 (voicemail), making it seem expensive.
+Market Alignment: With 54% of homeowners preferring text 14, the bundle genuinely offers higher value. However, for a price-sensitive small contractor, removing the "web" component feels like a safe way to save money without losing the "emergency" protection of the voice agent.
+4.3 Negotiation Flow: The "Rejection-Then-Retreat"
+The sales interaction is structured to lead the prospect through a psychological journey of high value -> sticker shock -> relief/agreement.
+High Anchor Presentation: Pitch the $500 "Growth Package" (Voice + Web + SMS). Focus on the total value of capturing every lead from every channel.
+Expect Rejection: The prospect will likely balk at $500, citing budget or skepticism about AI.
+The Pivot (Concession): Acknowledge the concern. Validate their hesitation. Then, offer the "Core Protection" package (Voice Only) for $200.
+Closing the Gap: Frame the $200 not as a cost, but as less than the revenue of one missed service call ($300+).
+Economic Logic:
+One Missed Call Value: ~$300 (conservative average for plumbing/HVAC service call).5
+Cost of Solution: $200.
+ROI: Immediate positive ROI with a single save. This "One Job Logic" is the ultimate closer for trade businesses.
+5. Legal & Regulatory Framework (TCPA Compliance)
+The regulatory landscape regarding AI voice is rapidly evolving. The Federal Communications Commission (FCC) and the Telephone Consumer Protection Act (TCPA) have issued rulings that directly impact how AI agents can be deployed. A "quality" product must be a "compliant" product.
+5.1 The 2024/2025 FCC Rulings on AI
+In February 2024, the FCC issued a declaratory ruling classifying AI-generated voices as "artificial" under the TCPA.23 This ruling has profound implications:
+Outbound Restrictions: Making outbound cold calls using AI voices to consumer cell phones is now illegal without "Prior Express Written Consent." This effectively kills the "AI Auto-Dialer" model for cold outreach.
+Inbound "Safe Harbor": The regulations are primarily targeted at unsolicited outbound calls. Inbound calls (where the consumer calls the business) are generally exempt from the strictest consent requirements because the consumer initiated the interaction.
+5.2 Disclosure Requirements
+Transparency is not just ethical; it is becoming legal doctrine.
+Mandatory Disclosure: Best practices (and emerging state laws like California's BOT Act) mandate that the AI must disclose its identity.
+Script Integration: The script must begin with a clear statement: "Hi, I am an automated assistant for [Company Name]." This disclosure builds trust and satisfies transparency requirements.26
+5.3 Data Privacy and Recording Laws
+Two-Party Consent States: Many states (e.g., California, Florida) require both parties to consent to call recording. The AI agent must include a disclosure: "This call may be recorded for quality purposes" immediately upon connection.26
+Data Security: Handling customer addresses and potential payment info (PCI compliance) requires robust encryption. The sales pitch should emphasize that the system is "Enterprise-Grade Secure," distinguishing it from cheap, non-compliant hobbyist tools.
+Sales Strategy Implication: The AI solution must be sold as "Compliance-First." By handling inbound calls or requested callbacks, the system bypasses the risks of aggressive dialing. The sales script must reassure trade owners that the system is a shield against TCPA lawsuits, unlike risky outbound dialers.
+6. Internal-Facing Sales Strategy & Scripts
+This section details the operational strategy for the sales team, including objection handling and the specific scripts required to execute the pricing strategy.
+6.1 Cold Calling Strategy & Scripting
+Cold calling trade businesses requires a specific tone: direct, respectful of time, and focused on immediate pain (lost money). Trade owners are often busy, driving, or on job sites. Fluff kills deals.
+6.1.1 The "Emergency" Hook Script
+This script uses the fear of loss (missed emergencies) to gain attention.
+Opener:
+"Hi [Name], this is. I’m not calling to sell you leads or SEO. I’m calling because I see you’re one of the top [Plumbers/HVAC] in [City], and I wanted to ask—how are you handling the emergency calls you miss when you’re asleep or on a job site?"
+The Bridge (Pain Agitation):
+"We ran a study that showed most local contractors miss about 30% of their calls, mostly nights and weekends. For a business your size, that’s usually about $5,000 to $10,000 a month walking out the door to your competitors. Does that sound about right for your missed call volume?"
+The Solution (The "Employee" Reframe):
+"I have an AI system that acts like a 24/7 receptionist. It answers every call, filters out the spam, takes the job details, and books the appointment directly on your calendar. It sounds human, it never sleeps, and it costs less than your phone bill."
+The Anchor Pitch (Negotiation Start):
+"Normally, for the full system that handles your phone lines and puts a live agent on your website to catch visitors there too, we charge $500 a month. It’s a full office staff replacement. Is capturing those extra 10-15 jobs a month worth a conversation?"
+The Retreat (If they balk at price/commitment):
+"I get it. $500 is a commitment if you haven't seen it work yet. Tell you what—let’s strip off the website stuff for now. Let’s just protect your phone line. I can deploy just the Voice Agent for $250 a month. That’s less than the price of one saved drain cleaning job. If it catches one call, it pays for itself. Fair?"
+6.2 Objection Handling Matrix
+Trade owners are skeptical of technology. Objections will be visceral.
+Table 2: Strategic Objection Handling
+Objection, The "Real" Fear, The Strategic Rebuttal, Source Logic
+"My customers hate robots/machines.", Brand damage; loss of "personal touch.", "I agree, people hate voicemail menus. But they hate waiting even more. Data shows 62% of customers prefer a bot over waiting. Would you rather they talk to my AI instantly, or your competitor's voicemail?", 28
+"I have a receptionist.", Sunk cost fallacy., "That's great for 9-to-5. But what about 2 AM when a pipe bursts? Or when they're at lunch? This doesn't replace them; it's their backup. It catches the overflow so you never miss a dime.", 3
+"It's too expensive ($250).", Cash flow sensitivity., "Let's do the math. What's your average ticket? $300? If this system saves you one missed call a month, it's free. Everything after that is pure profit. Can you honestly say you don't miss one call a month?", 9
+"Is this legal? AI calls are illegal.", Litigation fear (TCPA)., "The FCC cracked down on spam cold calling. This is for inbound calls—people calling YOU. It's 100% legal to answer your own phone with an assistant. We also include a clear disclosure so your customers know they're being helped instantly.", 26
+"It won't understand trade terms.", Competence doubt., "Our system is trained specifically on [Plumbing/HVAC]. It knows what a 'flapper' is, it knows what a 'capacitor' is. It's not generic ChatGPT; it's a trade-specific agent.", 17
+7. Founding Sales Partner Commission Structure
+To attract a "Founding Sales Partner" capable of executing this strategy effectively, the compensation model must balance the risk of a startup with the upside of high performance. A standard employee commission model is insufficient; this individual requires an ownership mentality.
+7.1 Compensation Philosophy: Equity + Performance
+For a late co-founder or founding sales lead joining post-product build, the compensation must reflect that the technical risk has been mitigated, but the market risk (can we sell this?) remains high.
+Recommended Structure:
+Base Salary: Low or Draw-based (to preserve cash flow).
+Commission: Aggressive, recurring revenue share.
+Equity: Vesting ownership stake to align long-term incentives.
+7.2 Commission Tiering (The "Cash Now" Incentive)
+Since the monthly price points are relatively low ($250-$500), volume and retention are key. The commission should be based on Monthly Recurring Revenue (MRR) to incentivize retention.
+Table 3: Commission Structure Model
+Revenue Tier (MRR), Commission Rate (Year 1 Value), Rationale
+Tier 1: $0 - $5k, 20%, High incentive to get initial traction/validation.
+Tier 2: $5k - $15k, 25%, Accelerates growth; rewards the "builder" phase.
+Tier 3: $15k+, 30% + "Forever Tail", Once the partner builds a book, a small tail (2-5% ongoing) ensures focus on churn reduction. 32
+Commission on the "Anchor" ($500 deals): Offer a "Bounty Bonus" (e.g., $100 one-time) for every bundle sold. This aligns the rep's behavior with the strategic goal of selling the higher-margin web/voice bundle.
+7.3 Equity Distribution & Vesting (The "Wealth Later" Incentive)
+For a founding sales partner joining after the MVP is built but before significant revenue:
+Equity Range: 5% - 15%.
+Justification: The product exists (lower risk), but revenue is zero (high execution risk). 5-10% is standard for a senior non-technical founding hire; up to 15% if they bring a massive rolodex or take zero salary.34
+Vesting Schedule: 4-Year Vesting with a 1-Year Cliff.
+Mechanism: No equity is earned until month 12. This protects the company if the sales partner fails to deliver in the first year.
+Performance Vesting (Reverse Vesting): Consider tying a portion of the equity (e.g., 50% of the grant) to specific revenue milestones (e.g., reaching $100k ARR, $500k ARR). This ensures equity is exchanged for tangible value creation.36
+Scientific Slicing Pie Model: Alternatively, the "Slicing Pie" model suggests calculating the fair market value of the sales partner's unpaid time (opportunity cost) and converting that into dynamic equity slices until the company reaches breakeven.37 This creates a "fairness" algorithm that adjusts based on actual contribution rather than static negotiation.
+8. Scientific Market Validation
+The proposed strategy is not merely theoretical; it is supported by convergence in economic data, consumer psychology, and technological trends.
+8.1 The Cost of Inaction (Scientific Market Research)
+A study by Invoca and other industry analysts confirms that the home services sector has one of the highest "intent-to-buy" metrics for inbound calls.
+Revenue Loss: The average value of an HVAC installation lead is over $5,000. Missing a single inquiry in this category is catastrophic for an SMB. The $200/month cost is <4% of one high-value conversion.4
+Emergency Premium: Research on emergency service pricing shows that consumers are price-insensitive during crises (e.g., flooding). They buy from the first responder. The AI Agent guarantees the business is always the first responder.5
+8.2 Psychological Validation of Pricing Strategy
+The "Door-in-the-Face" technique is empirically validated to increase compliance. Cialdini’s research (1975) demonstrated that starting with an extreme request (volunteering for 2 years) made a subsequent moderate request (volunteering for 2 hours) significantly more likely to be accepted.
+Application: By asking for $500 (Anchor), the $200 (Target) is psychologically re-categorized from an "expense" to a "concession." The buyer feels they have "won" the negotiation by forcing the price down, increasing satisfaction and retention.21
+8.3 Trust in AI
+While skepticism exists, the trend line is clear. "Speed" is overtaking "Humanity" as the primary driver of trust in transactional services. Consumers value resolution over interaction.
+Data Point: 62% of consumers prefer a chatbot/AI if it means a faster answer than waiting for a human agent. In the context of an emergency trade service, "fast" is the only metric that matters.29
+9. Implementation Roadmap & Conclusion
+To operationalize this report, the following steps should be taken immediately:
+Script Deployment: Integrate the "Emergency Hook" script into the CRM for all sales outreach.
+Pricing Page Update: Ensure all internal and external collateral leads with the $500 "Growth Bundle" to establish the anchor. The $200 price should never be published as the headline rate; it is a "Sales Manager Special" or "Introductory Offer" to be revealed during negotiation.
+Legal Audit: Review all AI voice scripts to ensure the "Automated Assistant" disclosure is the very first sentence spoken, mitigating TCPA risks.
+Partner Recruitment: Source the sales partner with the proposed 10-20% commission + 5-10% equity offer, emphasizing the "Uncapped Commission" on the "Forever Tail."
+The "24/7 AI Voice Agent" for trades is a high-viability product because it solves a high-value problem (lost revenue) with a low-cost solution (AI). However, success relies on overcoming the "trust gap" with trade business owners. By utilizing a "Door-in-the-Face" negotiation strategy, backed by a robust $500 anchor, the sales team can effectively close deals at the sustainable $200 floor. The proposed compensation structure ensures that the sales leader is highly motivated to prove this model, creating a scalable revenue engine that is legally compliant and economically compelling.
+
+10. Appendix: Expanded Sales Scenarios
+10.1 The "Plumber's Nightmare" Cold Call Script
+Scenario: Calling a plumbing business owner.
+Agent: "Hi, is this [Owner Name]? This is Mike. I’m calling because I saw you guys are open 24/7 on Google, but I know how hard it is to actually answer the phone at 3 AM. We’ve got a new AI that handles those midnight emergency calls so you can sleep, and it only wakes you up if it’s a real paying job. Is that worth a 2-minute chat?"
+Why it works: Acknowledges their hard work ("I know how hard it is"), validates their offer ("open 24/7"), and offers immediate relief ("so you can sleep").
+10.2 The "Reciprocity" Negotiation Script
+Scenario: Prospect rejects the $500 bundle.
+Agent: "I understand. $500 is a lot to add to overhead right now, especially if you're watching margins. Look, I really want you to see the power of not missing calls. What if I drop the website chat for now? I can give you the 24/7 Voice Agent—which is the most important part for catching those emergency calls—for just $250 a month. That’s $8 a day to never miss a job. Can we start there?"
+Why it works: Concession ("I really want you to see..."), Reframing ($200 -> $6/day), and Contrast ($500 -> $200).
+10.3 The "Compliance" Rebuttal
+Objection: "I don't want to get sued for robocalls."
+Agent: "Exactly. That's why you need us. Outbound robocalling is a minefield. Our system is for inbound calls—customers calling you. We engage them instantly, announce it's an automated assistant, and take their info. It keeps you compliant while capturing the lead. It’s the safest way to handle overflow."
+This report provides the strategic, economic, and psychological foundation required to launch and scale the "24/7 AI Voice Agent" in the trade services market.
+Compensation & Terms
+1099 independent contractor role with no base salary; compensation is 30% uncapped recurring commission on gross collected revenue for every deal you close, with a guaranteed minimum payout of 3 months' commission per closed deal regardless of early cancellation. Your first 3 closed deals pay 40% commission as a launch bonus. Deal attribution is awarded to the first-to-close agent, unless blocked by an active 90-day lead ownership tag; attribution disputes will be resolved by documented prospect engagement history, with ties defaulting to the earlier-dated record. Clients are exclusively attributed to you for all future revenue expansion such as organic upgrades. Payments are issued within 7 business days of client payment clearing. Active status requires closing 1 revenue-generating deal at least every 90 days. If you resign voluntarily with notice or are terminated without cause, you receive a guaranteed 12-month commission tail on your entire book of business with no production requirement, after which payouts cease. Client cancellations after the guaranteed minimum period stop payouts for that deal regardless of timeframe. Refunds trigger a proportional commission clawback, limited to refunds issued within 60 days of payment. You will have monthly access to live churn and close-rate dashboards. Estimated Monthly Churn: Up to 15%. Estimated Annual Average Contract Value: $3,600/yr on the lower end.
+Independent Contractor Relationship
+You are an independent contractor, not an employee, and you are solely responsible for your own taxes, benefits, and insurance. You retain full autonomy over your schedule, methods, location, and the tools you use to achieve the results defined above. This agreement does not create a partnership, joint venture, or employer-employee relationship. No non-compete: you are free to work with other clients provided it does not create a direct competitive conflict of interest with our specific products. Lead generation is hybrid: You may hunt your own leads and follow up on provided leads. Leads and deals must meet published qualification criteria.
