@@ -57,13 +57,16 @@ You are operating inside `gtm_ops`, an agent-first GTM operations repo. Complete
 ## Validation gates (run before declaring done)
 
 ```bash
-bun run lint
-bun run typecheck
-bun run test:run
-scripts/validate-knowledge-base.sh
+bash scripts/validate-knowledge-base.sh
+bash scripts/lint-layered-architecture.sh
+bash scripts/gardener.sh           # markdown staleness + broken links
+bun run lint                       # xo
+bun run typecheck                  # tsc --noEmit
+bun run test:run                   # vitest unit
+bun run test:console               # Playwright UI suite (when touching apps/ops-console/console/)
 ```
 
-Also run `scripts/lint-layered-architecture.sh` when touching domain imports.
+`bun run test:e2e` (Playwright PDF / report suite) is needed only when touching `templates/` or the proposal-generation surface.
 
 ## Commit message style
 
