@@ -6,7 +6,9 @@
  */
 import { test, expect } from './_helpers.js';
 
-test.use({ colorScheme: 'dark', reducedMotion: 'reduce' });
+// Each test below explicitly emulates reduced-motion via page.emulateMedia,
+// which is more reliable across Playwright versions than the test.use level
+// (which moved between TestOptions root and contextOptions).
 
 test('reduced-motion · matchMedia confirms emulation is active', async ({ openConsole }) => {
   const page = await openConsole();

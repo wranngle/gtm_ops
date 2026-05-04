@@ -6,6 +6,7 @@ on:
     branches: [main]
 jobs:
   test:
+    name: static checks
     runs-on: ubuntu-latest
     env:
       CI: 'true'
@@ -24,3 +25,50 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  unit:
+    name: unit (vitest)
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1.1'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Run vitest
+        run: bun run test:run
+
+  console-e2e:
+    name: console e2e (playwright)
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1.1'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - name: Install Playwright browsers
+        run: bun x playwright install --with-deps chromium
+      - name: Run console e2e suite
+        run: bun run test:console
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-console-report
+          path: playwright-console-report/
+          retention-days: 14
