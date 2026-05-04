@@ -1,0 +1,3541 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Proposal Generator // Wranngle</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.18/dist/json-formatter.umd.min.js"></script>
+
+    <link rel="stylesheet" href="../tokens/tokens.css">
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="alternate icon" href="../assets/favicon.ico">
+    <meta name="theme-color" content="#12111a">
+    <meta name="description" content="Operator console for the Wranngle presales pipeline. Synthetic demo data, no persistence.">
+
+    <!-- DEMO_MODE: serves fixtures from ./fixtures/ when loaded via file:// or window.DEMO_MODE === true.
+         Wraps window.fetch so the 31+ existing /api/* call sites are unmodified. Mutating verbs
+         (POST/PUT/DELETE) return a synthetic { ok: true } payload in demo mode (no-op).
+         The static Cloudflare Pages deploy has no Express backend, so we hard-pin DEMO_MODE on
+         when the host matches *.pages.dev / gtm-ops.* — operators running locally against
+         `bun run start` (server.js) hit live mode automatically because the host doesn't match. -->
+    <script>
+      (function () {
+        var host = (window.location.hostname || '').toLowerCase();
+        var isPagesDemo = /\.pages\.dev$/.test(host) || host === 'gtm-ops.pages.dev';
+        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo;
+        window.DEMO_MODE = DEMO_MODE;
+        if (!DEMO_MODE) return;
+
+        var nativeFetch = window.fetch.bind(window);
+
+        function pathToFixture(pathOrUrl) {
+          // Strip origin if present, drop query string, normalize /api prefix.
+          var u = String(pathOrUrl).replace(/^https?:\/\/[^/]+/, '');
+          u = u.split('?')[0].split('#')[0];
+          if (!u.indexOf('/api')) u = u.slice(4); // remove leading /api
+          if (!u || u === '/') u = '/index';
+          // Collapse path params so the same fixture file serves /api/foo/123 and
+          // /api/foo/exec_demo_007 in static demo mode. We match either pure digits
+          // or {prefix}_{stuff}_{stuff}-style identifiers (exec_demo_001, lead_xyz)
+          // — anything with at least one digit or underscore that isn't a known
+          // resource segment. Two-segment routes like /api/eval/runs are preserved
+          // because neither segment matches the id pattern.
+          u = u.replace(/\/(?:\d+|[a-z]+_[\w-]+)(\/|$)/gi, '/default$1');
+          return '../fixtures' + u + '.json';
+        }
+
+        function jsonResponse(payload, status) {
+          var body = JSON.stringify(payload);
+          return new Response(body, {
+            status: status || 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        window.fetch = function (input, init) {
+          var url = typeof input === 'string' ? input : (input && input.url) || '';
+          var method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+
+          // For non-API fetches (CDN assets, schema artifacts, etc.) defer to native fetch.
+          if (url.indexOf('/api') === -1) {
+            return nativeFetch(input, init);
+          }
+
+          // Mutating verbs: short-circuit with a synthetic ok payload — DEMO_MODE is read-only.
+          // Include the keys downstream consumers check (success / job_id / status / etc.) so
+          // optimistic UI flows (alert("X saved!"), poll-until-status) terminate cleanly.
+          if (method !== 'GET' && method !== 'HEAD') {
+            return Promise.resolve(jsonResponse({
+              ok: true,
+              demo: true,
+              method: method,
+              success: true,
+              status_code: 200,
+              status: 'completed',
+              response_time_ms: 187,
+              job_id: 'demo-job-' + Date.now(),
+              grace_period_ends: Date.now() + 30 * 24 * 60 * 60 * 1000,
+              days_remaining: 30,
+              file_path: '/exports/demo-export.zip',
+              file_size: 184320,
+              expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000
+            }));
+          }
+
+          var fixturePath = pathToFixture(url);
+          return nativeFetch(fixturePath).then(function (r) {
+            if (r.ok) return r;
+            // Missing fixture: return an empty array/object so consumer .map / .field calls don't throw.
+            return jsonResponse([]);
+          }).catch(function () {
+            return jsonResponse([]);
+          });
+        };
+
+        // EventSource is used for /api/stream — there's no streaming in demo mode, so make
+        // construction safe (no-op stub) to avoid uncaught errors when a card mounts.
+        if (typeof window.EventSource === 'function') {
+          var NativeES = window.EventSource;
+          window.EventSource = function (url) {
+            if (typeof url === 'string' && url.indexOf('/api') !== -1) {
+              return {
+                addEventListener: function () {},
+                removeEventListener: function () {},
+                close: function () {},
+                onmessage: null, onerror: null, onopen: null,
+                readyState: 2 // CLOSED
+              };
+            }
+            return new NativeES(url);
+          };
+        }
+      })();
+    </script>
+
+    <style>
+        :root {
+            --violet-500: #cf3c69; --violet-900: #561329;
+            --sunset-100: #ffe0bf; --sunset-300: #ff9e33; --sunset-500: #ff5f00; --sunset-600: #ef4b00;
+            --sand-50: #fcfaf5; --sand-100: #f6f1e7; --sand-200: #ebdfc8; --sand-300: #dac39f; --sand-400: #c2a677;
+            --night-800: #393444; --night-900: #201e28; --night-950: #12111a;
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-lasso: 24px 4px 24px 4px;
+            --radius-lasso-alt: 4px 24px 4px 24px;
+            --radius-md: 8px;
+            --radius-pill: 9999px;
+            --radius-sm: 4px;
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --color-healthy: #5D8C61;
+            /* Button system base values */
+            --btn-font-size-sm: 10px;
+            --btn-font-size-md: 12px;
+            --btn-padding-sm: 4px 10px;
+            --btn-padding-md: 8px 14px;
+        }
+
+        [data-theme="light"] {
+            --bg-body: radial-gradient(ellipse 80% 50% at 50% -20%, var(--sunset-100) 0%, transparent 50%);
+            --surface-card: #ffffff;
+            --surface-console: var(--night-900);
+            --text-primary: var(--night-950);
+            --text-secondary: #6a6380;
+            --text-muted: #847d9a;
+            --border-subtle: var(--sand-200);
+            --border-focus: var(--sunset-300);
+            --shadow-card: 0 6px 16px rgba(18, 17, 26, 0.08);
+            --input-bg: var(--sand-50);
+            --accent-glow: rgba(255, 95, 0, 0.35);
+            --search-bg: rgba(255, 255, 255, 0.5);
+            /* Button theme tokens - Light */
+            --btn-ghost-bg: transparent;
+            --btn-ghost-border: var(--sand-300);
+            --btn-ghost-text: #6a6380;
+            --btn-ghost-hover-border: var(--sunset-500);
+            --btn-ghost-hover-text: var(--sunset-500);
+            --btn-success-border: #059669;
+            --btn-success-text: #059669;
+            --btn-success-hover-bg: rgba(5, 150, 105, 0.1);
+            --btn-internal-bg: var(--violet-500);
+            --btn-internal-text: white;
+            --btn-internal-hover-bg: var(--violet-900);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: radial-gradient(circle at 50% 0%, #2d0914 0%, var(--night-950) 60%);
+            --surface-card: var(--night-900);
+            --surface-console: #0f0f13;
+            --text-primary: var(--sand-50);
+            --text-secondary: var(--sand-300);
+            --text-muted: var(--night-800);
+            --border-subtle: var(--night-800);
+            --border-focus: var(--sunset-500);
+            --shadow-card: 0 6px 16px rgba(0, 0, 0, 0.4);
+            --input-bg: var(--night-950);
+            --accent-glow: rgba(207, 60, 105, 0.35);
+            --search-bg: rgba(0, 0, 0, 0.2);
+            /* Button theme tokens - Dark */
+            --btn-ghost-bg: transparent;
+            --btn-ghost-border: var(--night-800);
+            --btn-ghost-text: var(--sand-300);
+            --btn-ghost-hover-border: var(--sunset-500);
+            --btn-ghost-hover-text: var(--sunset-500);
+            --btn-success-border: #6ee7b7;
+            --btn-success-text: #6ee7b7;
+            --btn-success-hover-bg: rgba(110, 231, 183, 0.15);
+            --btn-internal-bg: var(--violet-500);
+            --btn-internal-text: white;
+            --btn-internal-hover-bg: #e04878;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0; padding: 24px;
+            height: 100vh; overflow: hidden;
+            transition: background 0.3s ease;
+        }
+
+        .app-container {
+            max-width: 1600px; margin: 0 auto;
+            height: calc(100vh - 48px);
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 24px;
+        }
+
+        header {
+            grid-column: 1 / -1; display: flex;
+            justify-content: space-between; align-items: center;
+        }
+        .brand-lockup { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+        .logo-img { height: 42px; width: auto; }
+        .app-title {
+            font-family: var(--font-display); font-size: 24px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--sunset-500) 0%, var(--violet-500) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;
+        }
+
+        .header-search { flex: 1; max-width: 480px; margin: 0 32px; position: relative; }
+        .header-search input {
+            width: 100%; background: var(--search-bg); border: 1px solid var(--border-subtle);
+            padding: 10px 16px; border-radius: var(--radius-pill); color: var(--text-primary);
+            font-family: var(--font-body); font-size: 13px; transition: all 0.2s;
+        }
+        .header-search input:focus {
+            outline: none; border-color: var(--border-focus); background: var(--surface-card);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .header-controls { display: flex; gap: 16px; align-items: center; flex-shrink: 0; }
+        
+        .toggle-switch {
+            position: relative; width: 44px; height: 24px; display: inline-block;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background-color: var(--border-subtle); border-radius: 24px;
+            transition: .3s;
+        }
+        .toggle-slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px;
+            left: 3px; bottom: 3px; background-color: white;
+            border-radius: 50%; transition: .3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .toggle-slider { background-color: var(--night-900); }
+        input:checked + .toggle-slider:before { transform: translateX(20px); background-color: var(--sunset-300); }
+
+        .card {
+            background: var(--surface-card); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lasso); box-shadow: var(--shadow-card);
+            padding: 24px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        .card::before {
+            content: ''; position: absolute; inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.04; pointer-events: none; z-index: 0;
+        }
+        .card-content { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; min-height: 0; }
+        .card-title {
+            font-family: var(--font-display); font-size: 18px; font-weight: 700;
+            color: var(--text-primary); margin: 0 0 16px 0;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .input-panel { grid-row: 2; grid-column: 1; border-left: 4px solid var(--sunset-500); }
+        
+        textarea {
+            flex: 1; width: 100%; background: var(--input-bg);
+            border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+            padding: 16px; font-family: var(--font-mono); font-size: 13px;
+            color: var(--text-primary); resize: none; margin-bottom: 12px;
+        }
+        textarea:focus { outline: none; border-color: var(--border-focus); }
+
+        .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .file-drop {
+            flex: 1; border: 1px dashed var(--border-subtle); border-radius: var(--radius-md);
+            padding: 12px; text-align: center; font-size: 12px; color: var(--text-secondary);
+            cursor: pointer; background: rgba(0,0,0,0.02); transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .file-drop:hover { border-color: var(--sunset-300); color: var(--sunset-500); }
+        input[type="file"] { display: none; }
+
+        .btn-secondary {
+            background: var(--btn-ghost-bg); border: 1px solid var(--btn-ghost-border);
+            color: var(--btn-ghost-text); padding: var(--btn-padding-md); border-radius: var(--radius-sm);
+            cursor: pointer; font-family: var(--font-display); font-size: var(--btn-font-size-md);
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+            transition: all 0.15s ease;
+        }
+        .btn-secondary:hover {
+            border-color: var(--btn-ghost-hover-border);
+            color: var(--btn-ghost-hover-text);
+            background: rgba(255, 95, 0, 0.05);
+        }
+        .btn-secondary--sm {
+            padding: var(--btn-padding-sm);
+            font-size: var(--btn-font-size-sm);
+            height: auto;
+        }
+
+        button#generate-btn {
+            background: linear-gradient(135deg, var(--sunset-500) 0%, var(--sunset-600) 100%);
+            color: white; border: none; padding: 16px;
+            border-radius: var(--radius-md); font-family: var(--font-display);
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+            cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow);
+            transition: all 0.2s var(--ease-spring);
+        }
+        button#generate-btn:hover { transform: translateY(-2px); }
+        button#generate-btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
+
+        .main-panel {
+            grid-row: 2; grid-column: 2; display: grid;
+            grid-template-rows: 1fr 350px;
+            gap: 24px; min-height: 0;
+        }
+
+        .console-panel {
+            background: var(--surface-console);
+            border-color: var(--night-800); border-radius: var(--radius-lasso-alt);
+            height: 350px; position: relative; transition: all 0.3s ease;
+            display: flex; flex-direction: column;
+        }
+        .console-panel.maximized {
+            position: fixed; inset: 24px; z-index: 2000;
+            grid-row: auto; grid-column: auto;
+            height: calc(100vh - 48px) !important;
+        }
+        .console-header-status {
+            font-family: var(--font-mono); font-size: 11px; color: var(--sunset-300);
+            display: flex; align-items: center; gap: 8px;
+        }
+        
+        /* Pipeline Progress Bar */
+        .progress-container {
+            display: none;
+            margin-top: 12px;
+        }
+        .progress-container.active { display: block; }
+        .progress-bar-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--sunset-600) 0%, var(--sunset-500) 50%, var(--sunset-300) 100%);
+            background-size: 200% 100%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+            animation: gradient-shift 2s ease-in-out infinite;
+        }
+        .progress-bar-fill.complete {
+            background: var(--color-healthy);
+            animation: none;
+        }
+        .progress-bar-fill.error {
+            background: var(--violet-500);
+            animation: none;
+        }
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .progress-label {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .progress-label-stage { color: var(--sunset-300); font-weight: 500; }
+        
+        #console-output {
+            flex: 1; background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-md);
+            padding: 16px; font-family: var(--font-mono); font-size: 12px;
+            line-height: 1.5; color: #a9b1d6;
+            overflow-y: auto;
+            white-space: pre-wrap; margin-top: 12px;
+            min-height: 0;
+        }
+        #console-output::-webkit-scrollbar { width: 8px; background: transparent; }
+        #console-output::-webkit-scrollbar-thumb { background: var(--night-800); border-radius: 4px; }
+        
+        .btn-drilldown {
+            background: var(--btn-ghost-bg); border: 1px solid var(--btn-ghost-border);
+            color: var(--btn-ghost-text); padding: var(--btn-padding-sm); border-radius: var(--radius-sm);
+            font-size: var(--btn-font-size-sm); cursor: pointer; font-family: var(--font-display);
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+            transition: all 0.15s ease;
+        }
+        .btn-drilldown:hover {
+            border-color: var(--btn-ghost-hover-border);
+            color: var(--btn-ghost-hover-text);
+            background: rgba(255, 95, 0, 0.05);
+        }
+
+        .history-panel { padding: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+        
+        #grid-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+        
+        .gridjs-container { font-family: var(--font-body); color: var(--text-primary); height: 100%; display: flex; flex-direction: column; }
+        .gridjs-wrapper { border: none; box-shadow: none; flex: 1; overflow: auto !important; }
+        .gridjs-head { display: none; }
+        .gridjs-table { width: 100%; border-collapse: collapse; }
+        th.gridjs-th {
+            background: var(--bg-body); color: var(--text-secondary);
+            font-family: var(--font-display); font-weight: 700; font-size: 11px;
+            text-transform: uppercase; padding: 12px 16px; border: none;
+            border-bottom: 2px solid var(--border-subtle);
+            position: sticky; top: 0; z-index: 10;
+        }
+        td.gridjs-td {
+            background: var(--surface-card); border-bottom: 1px solid var(--border-subtle);
+            padding: 12px 16px; font-size: 13px; color: var(--text-primary);
+            cursor: pointer;
+        }
+        tr.gridjs-tr:hover td { background: var(--input-bg); }
+        
+        .artifact-pill {
+            display: inline-block; padding: 2px 8px; font-size: var(--btn-font-size-sm);
+            font-family: var(--font-mono); background: var(--btn-ghost-border);
+            color: var(--text-primary); border-radius: var(--radius-sm); text-decoration: none;
+            margin-right: 4px; position: relative; border: 1px solid transparent;
+            transition: all 0.15s ease;
+        }
+        .artifact-pill:hover {
+            background: var(--btn-ghost-hover-border);
+            color: white;
+            border-color: var(--btn-ghost-hover-border);
+        }
+        .artifact-pill--internal {
+            background: var(--btn-internal-bg);
+            color: var(--btn-internal-text);
+            border-color: var(--btn-internal-bg);
+        }
+        .artifact-pill--internal:hover {
+            background: var(--btn-internal-hover-bg);
+            border-color: var(--btn-internal-hover-bg);
+        }
+        .artifact-pill--raw {
+            background: var(--night-800);
+            color: var(--text-secondary);
+        }
+        .artifact-pill--raw:hover {
+            background: var(--btn-ghost-hover-border);
+            color: white;
+        }
+
+        .progress-track {
+            width: 100%; height: 4px; background: var(--border-subtle);
+            border-radius: 2px; overflow: hidden; margin-top: 6px;
+        }
+        .progress-fill { height: 100%; background: var(--sunset-500); transition: width 0.3s ease; }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-card {
+            background: var(--surface-card); width: 1000px; height: 90vh;
+            border-radius: var(--radius-lasso); padding: 32px;
+            border: 1px solid var(--border-subtle); display: flex; flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-close-modal {
+            position: absolute; top: 20px; right: 20px;
+            background: var(--btn-ghost-bg); border: 1px solid var(--btn-ghost-border);
+            color: var(--btn-ghost-text); width: 32px; height: 32px;
+            border-radius: var(--radius-sm); font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .btn-close-modal:hover {
+            border-color: var(--btn-ghost-hover-border);
+            color: var(--btn-ghost-hover-text);
+            background: rgba(255, 95, 0, 0.05);
+        }
+
+        .modal-details { flex: 1; overflow: hidden; margin: 20px 0; display: flex; flex-direction: column; }
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; }
+        .detail-key { color: var(--text-secondary); font-weight: 500; }
+        .detail-val { color: var(--text-primary); font-family: var(--font-mono); text-align: right; max-width: 60%; }
+        
+        .ai-summary-box {
+            background: var(--input-bg); border: 1px solid var(--border-subtle);
+            padding: 12px; border-radius: var(--radius-md); font-size: 13px;
+            line-height: 1.5; color: var(--text-primary); margin-top: 12px;
+        }
+
+        .data-grid-summary {
+            display: flex; gap: 16px; margin-top: 4px; font-size: var(--btn-font-size-sm); font-weight: 600;
+            color: var(--btn-ghost-text);
+        }
+        .summary-pill {
+            background: var(--input-bg); padding: 2px 6px; border-radius: var(--radius-sm);
+            border: 1px solid var(--btn-ghost-border);
+        }
+        .summary-pill.accent {
+            border-color: var(--btn-ghost-hover-border);
+            color: var(--btn-ghost-hover-text);
+        }
+
+        .modal-tabs {
+            display: flex; gap: 8px; border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 16px; flex-shrink: 0;
+        }
+        .modal-tab {
+            padding: var(--btn-padding-md); cursor: pointer; font-family: var(--font-display);
+            font-weight: 600; font-size: var(--btn-font-size-md); color: var(--btn-ghost-text);
+            border-bottom: 2px solid transparent; background: transparent;
+            text-transform: uppercase; letter-spacing: 0.03em;
+            transition: color 0.15s ease, border-color 0.15s ease;
+        }
+        .modal-tab:hover {
+            color: var(--btn-ghost-hover-text);
+        }
+        .modal-tab.active {
+            color: var(--btn-ghost-hover-text);
+            border-bottom-color: var(--btn-ghost-hover-border);
+        }
+
+        .tab-content { display: none; height: 100%; min-height: 0; flex-direction: column; overflow-y: auto; padding-right: 8px; }
+        .tab-content.active { display: flex; }
+
+        .command-pill {
+            background: var(--night-950); color: var(--btn-success-text); padding: 12px;
+            border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 11px;
+            margin-top: 8px; border: 1px solid var(--btn-success-border); display: flex;
+            justify-content: space-between; align-items: center;
+        }
+        .btn-copy {
+            background: var(--btn-ghost-bg); border: 1px solid var(--btn-success-border);
+            color: var(--btn-success-text); padding: 2px 8px; border-radius: var(--radius-sm);
+            cursor: pointer; font-size: 9px; font-family: var(--font-display);
+            font-weight: 600; text-transform: uppercase; transition: all 0.15s ease;
+        }
+        .btn-copy:hover {
+            background: var(--btn-success-hover-bg);
+        }
+        
+        /* JSON Formatter Styling (json-formatter-js library) */
+        #json-viewer-container { background: var(--surface-console); padding: 16px; border-radius: var(--radius-md); overflow: auto; max-height: 500px; }
+        #json-viewer-container .json-formatter-row { font-family: var(--font-mono) !important; font-size: 12px !important; line-height: 1.6; }
+        #json-viewer-container .json-formatter-key { color: #bb9af7 !important; }
+        #json-viewer-container .json-formatter-string { color: #9ece6a !important; }
+        #json-viewer-container .json-formatter-number { color: #ff9e64 !important; }
+        #json-viewer-container .json-formatter-boolean { color: #f7768e !important; }
+        #json-viewer-container .json-formatter-null, #json-viewer-container .json-formatter-undefined { color: #565f89 !important; }
+        #json-viewer-container .json-formatter-toggler { cursor: pointer; color: var(--sunset-300) !important; }
+        #json-viewer-container .json-formatter-toggler:hover { color: var(--sunset-500) !important; }
+        #json-viewer-container .json-formatter-children { padding-left: 20px; border-left: 1px solid var(--night-800); margin-left: 4px; }
+        
+        /* JSON Tree Copy Buttons - Inline Icons */
+        #json-viewer-container .json-copy-btn {
+            display: inline-block;
+            margin-left: 6px;
+            opacity: 0.3;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0 2px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: opacity 0.15s ease, color 0.15s ease;
+            vertical-align: middle;
+        }
+        #json-viewer-container .json-copy-btn:hover { opacity: 1; color: var(--sunset-500); }
+        #json-viewer-container .json-copy-btn.copied { opacity: 1; color: var(--color-healthy); }
+
+        /* Settings Modal Styles */
+        .settings-modal .modal-card {
+            width: 1100px;
+            max-width: 95vw;
+            height: 85vh;
+        }
+        .settings-tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 16px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .settings-tab {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--btn-ghost-text);
+            border-bottom: 2px solid transparent;
+            background: transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            transition: color 0.15s ease, border-color 0.15s ease;
+            white-space: nowrap;
+        }
+        .settings-tab:hover { color: var(--btn-ghost-hover-text); }
+        .settings-tab.active {
+            color: var(--btn-ghost-hover-text);
+            border-bottom-color: var(--btn-ghost-hover-border);
+        }
+        .settings-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .settings-section {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .settings-section.active { display: flex; }
+        .settings-card {
+            background: var(--input-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+        .settings-card-title {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+        .stat-cards-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+        .stat-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-card-value {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--sunset-500);
+        }
+        .stat-card-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            background: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 13px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--border-focus);
+        }
+        .form-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .form-row .form-group { flex: 1; min-width: 150px; }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--sunset-500);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--sunset-500) 0%, var(--sunset-600) 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--accent-glow); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-danger {
+            background: transparent;
+            border: 1px solid var(--violet-500);
+            color: var(--violet-500);
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-danger:hover { background: rgba(207, 60, 105, 0.1); }
+        .action-btns { display: flex; gap: 8px; margin-top: 12px; }
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .settings-table th {
+            text-align: left;
+            padding: 8px 12px;
+            background: var(--surface-card);
+            border-bottom: 2px solid var(--border-subtle);
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+        .settings-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+        }
+        .settings-table tr:hover td { background: rgba(255, 95, 0, 0.03); }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-badge.active { background: rgba(93, 140, 97, 0.2); color: var(--color-healthy); }
+        .status-badge.inactive { background: rgba(207, 60, 105, 0.2); color: var(--violet-500); }
+        .status-badge.pending { background: rgba(255, 158, 51, 0.2); color: var(--sunset-300); }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        .empty-state-icon { font-size: 48px; opacity: 0.3; margin-bottom: 12px; }
+        .period-selector {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+        .period-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .period-btn:hover { border-color: var(--sunset-300); color: var(--sunset-500); }
+        .period-btn.active {
+            background: var(--sunset-500);
+            border-color: var(--sunset-500);
+            color: white;
+        }
+        .color-picker-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-picker-row input[type="color"] {
+            width: 40px;
+            height: 32px;
+            padding: 0;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+        .color-picker-row input[type="text"] {
+            width: 100px;
+            font-family: var(--font-mono);
+        }
+        .consent-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+        }
+        .consent-toggle-label {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+        .consent-toggle-label small {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .activity-feed {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .activity-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 12px;
+        }
+        .activity-time {
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .activity-desc { color: var(--text-primary); }
+        .health-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .health-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            text-align: center;
+        }
+        .health-card-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .health-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .health-dot.healthy { background: var(--color-healthy); }
+        .health-dot.degraded { background: var(--sunset-300); }
+        .health-dot.unhealthy { background: var(--violet-500); }
+        .health-card-name {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .health-card-latency {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-subtle);
+            border-top-color: var(--sunset-500);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .contrast-indicator {
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .contrast-indicator.pass {
+            background: rgba(93, 140, 97, 0.15);
+            color: var(--color-healthy);
+            border: 1px solid rgba(93, 140, 97, 0.3);
+        }
+        .contrast-indicator.fail {
+            background: rgba(207, 60, 105, 0.15);
+            color: var(--violet-500);
+            border: 1px solid rgba(207, 60, 105, 0.3);
+        }
+        .contrast-indicator.warn {
+            background: rgba(255, 158, 51, 0.15);
+            color: var(--sunset-400);
+            border: 1px solid rgba(255, 158, 51, 0.3);
+        }
+        .branding-preview {
+            padding: 20px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            transition: all 0.2s ease;
+        }
+        .branding-preview .preview-header {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .branding-preview .preview-body {
+            font-size: 13px;
+            margin-bottom: 16px;
+            opacity: 0.9;
+        }
+        .branding-preview .preview-btn-primary {
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            margin-right: 8px;
+            color: white;
+        }
+        .branding-preview .preview-btn-secondary {
+            padding: 8px 16px;
+            background: transparent;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            border-width: 1px;
+            border-style: solid;
+        }
+
+        /* DEMO_MODE banner — only shown when window.DEMO_MODE === true. */
+        #demo-mode-banner {
+            display: none;
+            grid-column: 1 / -1;
+            margin-top: -8px;
+            padding: 8px 14px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(90deg, rgba(255,95,0,0.10), rgba(207,60,105,0.10));
+            border: 1px solid rgba(255,95,0,0.35);
+            color: var(--sunset-300);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: space-between;
+        }
+        body.demo #demo-mode-banner { display: flex; }
+        #demo-mode-banner .demo-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: var(--radius-pill);
+            background: var(--sunset-500);
+            color: #fff;
+            font-weight: 700;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        #demo-mode-banner .demo-text { flex: 1; line-height: 1.5; }
+        #demo-mode-banner a {
+            color: var(--sunset-500);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        /* ── Responsive overrides ── */
+        @media (max-width: 1100px) {
+            body { height: auto; overflow: auto; padding: 16px; }
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto auto;
+                height: auto;
+                gap: 16px;
+            }
+            header { flex-wrap: wrap; gap: 12px; }
+            .header-search { order: 3; flex-basis: 100%; margin: 0; }
+            .header-search input { width: 100%; }
+            .input-panel { grid-row: auto; grid-column: 1; }
+            .main-panel { grid-row: auto; grid-column: 1; }
+        }
+        @media (max-width: 720px) {
+            .app-title { font-size: 18px; }
+            .logo-img { height: 30px; }
+            .header-controls { gap: 8px; flex-wrap: wrap; }
+            .console-panel { height: 280px; }
+            .main-panel { grid-template-rows: 500px 280px; }
+            #demo-mode-banner { font-size: 11px; padding: 10px 12px; flex-wrap: wrap; }
+            .modal-card { width: 100% !important; max-width: 100% !important; height: 100% !important; max-height: 100vh !important; border-radius: 0; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="brand-lockup">
+                <img src="https://i.ibb.co/WWFmbjKJ/wranngle-wordmark-4096w.png" alt="Logo" class="logo-img">
+                <h1 class="app-title">AI Proposal Generator</h1>
+            </div>
+            
+            <div class="header-search">
+                <input type="text" id="global-search" placeholder="Search logs, clients, or artifacts..." oninput="updateGridSearch(this.value)">
+            </div>
+
+            <div class="header-controls">
+                <a href="/evaluation/" class="btn-secondary btn-secondary--sm" title="Evaluation Dashboard" style="text-decoration:none">Eval</a>
+                <button class="btn-secondary btn-secondary--sm" onclick="refreshDashboard()" title="Refresh dashboard and reconnect">
+                    ⟳ Refresh
+                </button>
+                <button class="btn-secondary btn-secondary--sm" onclick="openSettingsModal()" title="Enterprise Settings">
+                    ⚙ Settings
+                </button>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </header>
+
+        <!-- DEMO_MODE: hidden unless window.DEMO_MODE === true (set by the fetch shim above). -->
+        <div id="demo-mode-banner" role="note" aria-label="Demo mode">
+            <span class="demo-pill">Demo</span>
+            <span class="demo-text">
+                You are viewing the static <strong>DEMO_MODE</strong> deploy — every <code>/api/*</code> call is intercepted client-side and answered from synthetic <a href="https://github.com/wranngle/gtm_ops/tree/main/apps/ops-console/fixtures" target="_blank" rel="noopener">fixtures</a>. Mutations are no-ops. Click any row in the registry to drill into a synthetic engagement, or <a href="/#contact">request a real run</a> to feed your own data.
+            </span>
+        </div>
+
+        <div class="card input-panel">
+            <div class="card-content">
+                <div class="card-title">
+                    <span>Input Data</span>
+                </div>
+                <textarea id="input-text" placeholder="Paste raw text here..."></textarea>
+                
+                <div class="toolbar">
+                    <label class="file-drop" id="file-drop-zone">
+                        <input type="file" id="file-input" accept=".txt,.md,.json,.csv,.xml,.html,.log,.rtf" onchange="handleFileSelect(this)">
+                        <span id="file-label">📎 Attach Context (or drag & drop)</span>
+                    </label>
+                    <button class="btn-secondary" onclick="autoFillInput(this)" title="Auto-Sample using Gemini API">
+                        Auto-Sample
+                    </button>
+                </div>
+
+                <button id="generate-btn" onclick="queueExecution()">
+                    Initialize Sequence
+                </button>
+            </div>
+        </div>
+
+        <div class="main-panel">
+            <div class="card history-panel">
+                <div id="grid-wrapper"></div>
+            </div>
+
+            <div class="card console-panel" id="console-panel">
+                <div class="card-content">
+                    <div class="card-title" style="color: #fff; margin-bottom: 8px;">
+                        <span>System Console</span>
+                        <div class="console-header-status" id="console-header-status">IDLE</div>
+                        <div id="console-actions" style="display:none; gap:8px;">
+                            <button class="btn-drilldown" onclick="toggleMaximizeConsole(event)">Expand</button>
+                            <button class="btn-drilldown" onclick="copyLogs(event)">Copy</button>
+                            <button class="btn-drilldown" onclick="openDrilldown()">Detail</button>
+                        </div>
+                    </div>
+                    <!-- Pipeline Progress Bar -->
+                    <div class="progress-container" id="progress-container">
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                        </div>
+                        <div class="progress-label">
+                            <span class="progress-label-stage" id="progress-stage-name">Initializing...</span>
+                            <span id="progress-percent">0%</span>
+                        </div>
+                    </div>
+                    <div id="console-output">Select a job from the registry above or start a new sequence.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="drilldown-modal" onclick="if(event.target===this) closeDrilldown()">
+        <div class="modal-card">
+            <button class="btn-close-modal" onclick="closeDrilldown()">×</button>
+            <h2 class="card-title">
+                <span>Execution Intelligence</span>
+                <span style="font-size:12px; color:var(--text-secondary); background:var(--input-bg); padding:4px 8px; border-radius:12px;" id="modal-id-badge"></span>
+            </h2>
+            
+            <div class="modal-tabs">
+                <div class="modal-tab active" data-tab="tab-overview" onclick="switchTab(event, 'tab-overview')">Overview</div>
+                <div class="modal-tab" data-tab="tab-logs" onclick="switchTab(event, 'tab-logs')">Logs</div>
+                <div class="modal-tab" data-tab="tab-research" onclick="switchTab(event, 'tab-research')">Research</div>
+                <div class="modal-tab" data-tab="tab-milestones" onclick="switchTab(event, 'tab-milestones')">Phases</div>
+                <div class="modal-tab" data-tab="tab-raw" onclick="switchTab(event, 'tab-raw')">Schema JSON</div>
+            </div>
+
+            <div class="modal-details" id="modal-content">
+                <div id="tab-overview" class="tab-content active"></div>
+                <div id="tab-logs" class="tab-content">
+                    <div id="modal-logs-container" style="background: var(--surface-console); border-radius: var(--radius-md); padding: 16px; font-family: var(--font-mono); font-size: 12px; line-height: 1.5; color: #a9b1d6; overflow-y: auto; flex: 1; white-space: pre-wrap;"></div>
+                </div>
+                <div id="tab-research" class="tab-content"></div>
+                <div id="tab-milestones" class="tab-content"></div>
+                <div id="tab-raw" class="tab-content">
+                    <div id="json-viewer-container" style="min-height: 200px;"></div>
+                </div>
+            </div>
+            
+            <button class="btn-drilldown" onclick="closeDrilldown()" style="align-self: flex-end; padding: 12px 24px; margin-top: 16px; flex-shrink: 0;">Close</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay settings-modal" id="settings-modal" onclick="if(event.target===this) closeSettingsModal()">
+        <div class="modal-card">
+            <button class="btn-close-modal" onclick="closeSettingsModal()">×</button>
+            <h2 class="card-title">Enterprise Settings</h2>
+
+            <div class="settings-tabs">
+                <div class="settings-tab active" data-settings-tab="webhooks" onclick="switchSettingsTab('webhooks')">Webhooks</div>
+                <div class="settings-tab" data-settings-tab="versions" onclick="switchSettingsTab('versions')">Versions</div>
+                <div class="settings-tab" data-settings-tab="audit" onclick="switchSettingsTab('audit')">Audit Logs</div>
+                <div class="settings-tab" data-settings-tab="usage" onclick="switchSettingsTab('usage')">Usage</div>
+                <div class="settings-tab" data-settings-tab="branding" onclick="switchSettingsTab('branding')">Branding</div>
+                <div class="settings-tab" data-settings-tab="admin" onclick="switchSettingsTab('admin')">Admin</div>
+                <div class="settings-tab" data-settings-tab="gdpr" onclick="switchSettingsTab('gdpr')">GDPR</div>
+                <div class="settings-tab" data-settings-tab="users" onclick="switchSettingsTab('users')">Users</div>
+            </div>
+
+            <div class="settings-content">
+                <!-- Webhooks Tab -->
+                <div id="settings-webhooks" class="settings-section active">
+                    <div class="settings-card">
+                        <div class="settings-card-title">Create Webhook</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Name</label>
+                                <input type="text" id="webhook-name" placeholder="My Webhook">
+                            </div>
+                            <div class="form-group">
+                                <label>URL</label>
+                                <input type="url" id="webhook-url" placeholder="https://example.com/webhook">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Events</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" value="document.created" checked> document.created</label>
+                                <label><input type="checkbox" value="document.updated"> document.updated</label>
+                                <label><input type="checkbox" value="pipeline.started"> pipeline.started</label>
+                                <label><input type="checkbox" value="pipeline.completed" checked> pipeline.completed</label>
+                                <label><input type="checkbox" value="pipeline.failed" checked> pipeline.failed</label>
+                            </div>
+                        </div>
+                        <button class="btn-primary" onclick="createWebhook()">Create Webhook</button>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Webhooks</div>
+                        <div id="webhooks-list">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🔗</div>
+                                <p>No webhooks configured</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Versions Tab -->
+                <div id="settings-versions" class="settings-section">
+                    <div class="settings-card">
+                        <div class="settings-card-title">Document Version History</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Execution</label>
+                                <select id="version-execution-select" onchange="loadVersions()">
+                                    <option value="">Select an execution...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="version-type-select" onchange="loadVersions()">
+                                    <option value="json">JSON Schema</option>
+                                    <option value="html">HTML</option>
+                                    <option value="pdf">PDF</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="versions-list">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📜</div>
+                                <p>Select an execution to view versions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Logs Tab -->
+                <div id="settings-audit" class="settings-section">
+                    <div class="settings-card">
+                        <div class="settings-card-title">Audit Log Filters</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Action</label>
+                                <select id="audit-action-filter">
+                                    <option value="">All Actions</option>
+                                    <option value="document.created">document.created</option>
+                                    <option value="document.viewed">document.viewed</option>
+                                    <option value="document.deleted">document.deleted</option>
+                                    <option value="user.login">user.login</option>
+                                    <option value="webhook.triggered">webhook.triggered</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="date" id="audit-start-date">
+                            </div>
+                            <div class="form-group">
+                                <label>End Date</label>
+                                <input type="date" id="audit-end-date">
+                            </div>
+                        </div>
+                        <div class="action-btns">
+                            <button class="btn-primary" onclick="loadAuditLogs(true)">Apply Filters</button>
+                            <button class="btn-secondary btn-secondary--sm" onclick="exportAuditLogs()">Export CSV</button>
+                            <button class="btn-secondary btn-secondary--sm" onclick="verifyAuditIntegrity()">Verify Integrity</button>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Audit Logs</div>
+                        <div id="audit-logs-list">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📋</div>
+                                <p>Click "Apply Filters" to load audit logs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Usage Tab -->
+                <div id="settings-usage" class="settings-section">
+                    <div class="period-selector">
+                        <button class="period-btn" onclick="loadUsage('today')">Today</button>
+                        <button class="period-btn" onclick="loadUsage('this_week')">This Week</button>
+                        <button class="period-btn active" onclick="loadUsage('this_month')">This Month</button>
+                        <button class="period-btn" onclick="loadUsage('all_time')">All Time</button>
+                    </div>
+                    <div class="stat-cards-row" id="usage-stats">
+                        <div class="stat-card">
+                            <div class="stat-card-value" id="usage-documents">-</div>
+                            <div class="stat-card-label">Documents</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value" id="usage-api-calls">-</div>
+                            <div class="stat-card-label">API Calls</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value" id="usage-tokens">-</div>
+                            <div class="stat-card-label">Tokens</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value" id="usage-cost">-</div>
+                            <div class="stat-card-label">Est. Cost</div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Cost Breakdown</div>
+                        <div id="cost-breakdown">
+                            <div class="empty-state">
+                                <div class="loading-spinner"></div>
+                                <p style="margin-top:12px">Loading usage data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Branding Tab -->
+                <div id="settings-branding" class="settings-section">
+                    <div class="settings-card">
+                        <div class="settings-card-title">Logo</div>
+                        <div class="form-row" style="align-items:flex-start;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Upload Logo File</label>
+                                <div class="file-upload-container" id="logo-upload-container">
+                                    <input type="file" id="branding-logo-file" accept="image/png,image/jpeg,image/svg+xml" style="display:none;">
+                                    <button type="button" class="btn-secondary" onclick="document.getElementById('branding-logo-file').click()">
+                                        Choose File
+                                    </button>
+                                    <span id="logo-file-name" style="margin-left:8px;font-size:12px;color:var(--text-secondary);">No file chosen</span>
+                                </div>
+                                <div id="logo-preview-container" style="margin-top:12px;display:none;">
+                                    <img id="logo-preview" style="max-width:200px;max-height:50px;border:1px solid var(--border-subtle);border-radius:4px;padding:4px;background:#fff;">
+                                    <button type="button" class="btn-secondary btn-secondary--sm" style="margin-left:8px;" onclick="clearLogoFile()">Clear</button>
+                                </div>
+                            </div>
+                            <div style="padding:20px 16px 0;color:var(--text-secondary);font-size:12px;">or</div>
+                            <div class="form-group" style="flex:1;">
+                                <label>Logo URL</label>
+                                <input type="url" id="branding-logo-url" placeholder="https://example.com/logo.png">
+                            </div>
+                        </div>
+                        <p style="font-size:11px; color:var(--text-secondary);">Recommended: PNG or SVG, max 200x50px</p>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Colors</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Primary Color</label>
+                                <div class="color-picker-row">
+                                    <input type="color" id="branding-primary" value="#ff5f00">
+                                    <input type="text" id="branding-primary-hex" value="#ff5f00">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Secondary Color</label>
+                                <div class="color-picker-row">
+                                    <input type="color" id="branding-secondary" value="#cf3c69">
+                                    <input type="text" id="branding-secondary-hex" value="#cf3c69">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Background Color</label>
+                                <div class="color-picker-row">
+                                    <input type="color" id="branding-bg" value="#fcfaf5">
+                                    <input type="text" id="branding-bg-hex" value="#fcfaf5">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Text Color</label>
+                                <div class="color-picker-row">
+                                    <input type="color" id="branding-text" value="#12111a">
+                                    <input type="text" id="branding-text-hex" value="#12111a">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="contrast-indicator" class="contrast-indicator"></div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Preview</div>
+                        <div id="branding-preview" class="branding-preview">
+                            <div class="preview-header">Your Company Name</div>
+                            <p class="preview-body">This is how your branded documents will appear to clients.</p>
+                            <button class="preview-btn-primary">Primary Button</button>
+                            <button class="preview-btn-secondary">Secondary</button>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Custom Domain</div>
+                        <div class="form-group">
+                            <label>Domain</label>
+                            <div style="display:flex;gap:8px;">
+                                <input type="text" id="branding-domain" placeholder="proposals.yourcompany.com" style="flex:1;">
+                                <button class="btn-secondary btn-secondary--sm" onclick="checkDomainVerification()">Verify</button>
+                            </div>
+                        </div>
+                        <div id="domain-verification-status"></div>
+                        <div id="domain-dns-instructions" style="display:none;margin-top:16px;">
+                            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">DNS Records Required:</div>
+                            <div style="background:var(--surface-subtle);border-radius:6px;padding:12px;font-family:var(--font-mono);font-size:11px;">
+                                <div style="margin-bottom:8px;">
+                                    <span style="color:var(--text-secondary);">Type:</span> CNAME<br>
+                                    <span style="color:var(--text-secondary);">Name:</span> <span id="dns-cname-name">proposals</span><br>
+                                    <span style="color:var(--text-secondary);">Value:</span> <span id="dns-cname-value">proxy.wranngle.app</span>
+                                </div>
+                                <div>
+                                    <span style="color:var(--text-secondary);">Type:</span> TXT<br>
+                                    <span style="color:var(--text-secondary);">Name:</span> _wranngle-verification.<span id="dns-txt-name">proposals</span><br>
+                                    <span style="color:var(--text-secondary);">Value:</span> <span id="dns-txt-value">wrn-verify-xxxxx</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;">
+                                Add these records in your DNS provider. Verification may take up to 24 hours to propagate.
+                            </p>
+                        </div>
+                        <div id="domain-ssl-status" style="display:none;margin-top:12px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span id="ssl-indicator" class="status-dot healthy"></span>
+                                <span style="font-size:12px;">SSL Certificate: <span id="ssl-status-text">Active</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="action-btns" style="margin-top:16px;">
+                        <button class="btn-primary" onclick="saveBranding()">Save Branding</button>
+                        <button class="btn-secondary btn-secondary--sm" onclick="resetBranding()">Reset to Defaults</button>
+                    </div>
+                </div>
+
+                <!-- Admin Tab -->
+                <div id="settings-admin" class="settings-section">
+                    <div class="period-selector">
+                        <button class="period-btn" onclick="loadAdminDashboard('today')">Today</button>
+                        <button class="period-btn" onclick="loadAdminDashboard('this_week')">This Week</button>
+                        <button class="period-btn active" onclick="loadAdminDashboard('this_month')">This Month</button>
+                        <button class="period-btn" onclick="loadAdminDashboard('all_time')">All Time</button>
+                    </div>
+                    <div class="stat-cards-row">
+                        <div class="stat-card">
+                            <div class="stat-card-value" id="admin-documents">-</div>
+                            <div class="stat-card-label">Documents Created</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value" id="admin-views">-</div>
+                            <div class="stat-card-label">Documents Viewed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value" id="admin-downloads">-</div>
+                            <div class="stat-card-label">Downloads</div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Recent Activity</div>
+                        <div class="activity-feed" id="admin-activity-feed">
+                            <div class="empty-state">
+                                <div class="loading-spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">System Health</div>
+                        <div class="health-cards" id="admin-health-cards">
+                            <div class="health-card">
+                                <div class="health-card-status"><span class="health-dot healthy"></span> Healthy</div>
+                                <div class="health-card-name">Database</div>
+                                <div class="health-card-latency">12ms</div>
+                            </div>
+                            <div class="health-card">
+                                <div class="health-card-status"><span class="health-dot healthy"></span> Healthy</div>
+                                <div class="health-card-name">LLM API</div>
+                                <div class="health-card-latency">450ms</div>
+                            </div>
+                            <div class="health-card">
+                                <div class="health-card-status"><span class="health-dot healthy"></span> Healthy</div>
+                                <div class="health-card-name">PDF Generator</div>
+                                <div class="health-card-latency">1200ms</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GDPR Tab -->
+                <div id="settings-gdpr" class="settings-section">
+                    <div class="settings-card">
+                        <div class="settings-card-title">Data Export</div>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
+                            Request a copy of all data associated with your account. Export files are available for 7 days.
+                        </p>
+                        <div id="gdpr-export-status"></div>
+                        <button class="btn-primary" onclick="requestDataExport()">Request Data Export</button>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Consent Preferences</div>
+                        <div id="gdpr-consents">
+                            <div class="consent-toggle">
+                                <div class="consent-toggle-label">
+                                    Terms of Service
+                                    <small>Required for using the platform</small>
+                                </div>
+                                <input type="checkbox" checked disabled>
+                            </div>
+                            <div class="consent-toggle">
+                                <div class="consent-toggle-label">
+                                    Privacy Policy
+                                    <small>Required for data processing</small>
+                                </div>
+                                <input type="checkbox" checked disabled>
+                            </div>
+                            <div class="consent-toggle">
+                                <div class="consent-toggle-label">
+                                    Marketing Communications
+                                    <small>Receive product updates and newsletters</small>
+                                </div>
+                                <input type="checkbox" id="consent-marketing" onchange="updateConsent('marketing', this.checked)">
+                            </div>
+                            <div class="consent-toggle">
+                                <div class="consent-toggle-label">
+                                    Analytics & Improvement
+                                    <small>Help us improve the product</small>
+                                </div>
+                                <input type="checkbox" id="consent-analytics" checked onchange="updateConsent('analytics', this.checked)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card" style="border-color: var(--violet-500);">
+                        <div class="settings-card-title" style="color: var(--violet-500);">Delete Account</div>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
+                            ⚠️ This action starts a 30-day grace period. After that, all your data will be permanently deleted.
+                        </p>
+                        <div id="gdpr-deletion-status"></div>
+                        <div class="form-group">
+                            <label>Reason (optional)</label>
+                            <input type="text" id="gdpr-deletion-reason" placeholder="Why are you leaving?">
+                        </div>
+                        <button class="btn-danger" onclick="requestAccountDeletion()">Request Account Deletion</button>
+                    </div>
+                </div>
+
+                <!-- Users Tab -->
+                <div id="settings-users" class="settings-section">
+                    <div class="settings-card">
+                        <div class="settings-card-title">Invite User</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="invite-email" placeholder="user@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Role</label>
+                                <select id="invite-role">
+                                    <option value="member">Member</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="viewer">Viewer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-primary" onclick="inviteUser()">Send Invitation</button>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Workspace Users</div>
+                        <div id="users-list">
+                            <table class="settings-table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Role</th>
+                                        <th>Joined</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <tr>
+                                        <td>owner@example.com</td>
+                                        <td><span class="status-badge active">Owner</span></td>
+                                        <td>Jan 1, 2025</td>
+                                        <td>-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-card-title">Role Descriptions</div>
+                        <div style="font-size:12px; color:var(--text-secondary);">
+                            <p><strong>Owner:</strong> Full control including billing and workspace deletion</p>
+                            <p><strong>Admin:</strong> Manage users, documents, and settings</p>
+                            <p><strong>Member:</strong> Create and edit own documents</p>
+                            <p><strong>Viewer:</strong> Read-only access to all documents</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ansi_up = new AnsiUp();
+        const consoleEl = document.getElementById('console-output');
+        const generateBtn = document.getElementById('generate-btn');
+        const statusLabel = document.getElementById('console-header-status');
+        
+        let executions = [];
+        let selectedExecutionId = null;
+        let eventSource = null;
+        let pollingInterval = null;
+
+        function toggleTheme() {
+            const checkbox = document.getElementById('theme-checkbox');
+            const html = document.documentElement;
+            if (checkbox.checked) {
+                html.setAttribute('data-theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+            }
+        }
+        toggleTheme();
+
+        // DEMO_MODE banner toggle — the fetch shim sets window.DEMO_MODE early.
+        if (window.DEMO_MODE) document.body.classList.add('demo');
+
+        const grid = new gridjs.Grid({
+            columns: [
+                {
+                    name: 'Time (EST)',
+                    width: '120px',
+                    sort: {
+                        compare: (a, b) => (Number(a) || 0) - (Number(b) || 0)
+                    },
+                    formatter: (cell) => {
+                        const date = new Date(Number(cell));
+                        if (isNaN(date.getTime())) return 'N/A';
+                        return date.toLocaleString('en-US', {
+                            timeZone: 'America/New_York',
+                            hour: '2-digit', minute: '2-digit',
+                            month: 'numeric', day: 'numeric'
+                        });
+                    }
+                },
+                { name: 'Client', width: '110px' },
+                { name: 'Project', width: '160px' },
+                {
+                    name: 'Financials & Effort',
+                    width: '240px',
+                    sort: {
+                        compare: (a, b, rowA, rowB) => {
+                            const priceA = Number(rowA?.cells?.[6]?.data) || 0;
+                            const priceB = Number(rowB?.cells?.[6]?.data) || 0;
+                            return priceA - priceB;
+                        }
+                    },
+                    formatter: (cell, row) => {
+                        const price = row.cells[6].data;
+                        const hours = row.cells[7].data;
+                        const risk = row.cells[8].data;
+                        const score = row.cells[9].data;
+                        if (!price && !hours) return '';
+                        return gridjs.html(`
+                            <div class="data-grid-summary">
+                                <span class="summary-pill accent">$${Math.round(price).toLocaleString()}</span>
+                                <span class="summary-pill">${hours}h</span>
+                                <span class="summary-pill">Risk: ${risk}/10</span>
+                                <span class="summary-pill" style="color:var(--color-healthy)">Score: ${score}%</span>
+                            </div>
+                        `);
+                    }
+                },
+                {
+                    name: 'Ver',
+                    width: '60px',
+                    sort: {
+                        compare: (a, b) => {
+                            const numA = parseInt(String(a || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                            const numB = parseInt(String(b || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                            return numA - numB;
+                        }
+                    }
+                },
+                {
+                    name: 'Status',
+                    width: '120px',
+                    formatter: (cell, row) => {
+                        const status = (cell || 'unknown').toUpperCase();
+                        const progress = status === 'COMPLETED' ? 100 : (status === 'FAILED' ? 0 : 50);
+                        return gridjs.html(`
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <span style="font-size:10px; font-weight:700; text-transform:uppercase;">${status}</span>
+                                <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
+                            </div>
+                        `);
+                    }
+                },
+                { name: 'Price', hidden: true },
+                { name: 'Hours', hidden: true },
+                { name: 'Risk', hidden: true },
+                { name: 'Score', hidden: true },
+                {
+                    name: 'Artifacts',
+                    formatter: (cell, row) => {
+                        if (!cell || !cell.length) return '';
+                        const rowId = row.cells[11].data;
+
+                        // Normalize artifacts: tolerate bare strings ('proposal.pdf')
+                        // or objects ({type, path, webPath}) so the grid never throws
+                        // when a fixture/server payload drifts.
+                        const normalized = cell.map(a => {
+                            if (typeof a === 'string') {
+                                const ext = a.split('.').pop().toLowerCase();
+                                return { type: ext || 'file', path: a, webPath: '#' };
+                            }
+                            return {
+                                type: (a && typeof a.type === 'string') ? a.type : 'file',
+                                path: a && a.path ? a.path : '',
+                                webPath: a && a.webPath ? a.webPath : '#'
+                            };
+                        });
+
+                        // Deduplicate artifacts by type, keeping the latest of each
+                        const latestByType = {};
+                        normalized.forEach(a => {
+                            latestByType[a.type] = a;
+                        });
+                        const uniqueArtifacts = Object.values(latestByType);
+
+                        // Separate client-facing and internal artifacts
+                        const clientArtifacts = uniqueArtifacts.filter(a => !a.type.endsWith('_internal'));
+                        const internalArtifacts = uniqueArtifacts.filter(a => a.type.endsWith('_internal'));
+
+                        let html = clientArtifacts.map(a => {
+                            if (a.type === 'json') {
+                                return `<a href="#" onclick="event.preventDefault(); openDrilldownWithTab('${rowId}', 'tab-raw')" class="artifact-pill">JSON</a>`;
+                            }
+                            return `<a href="${a.webPath}" target="_blank" class="artifact-pill" title="${a.path}">${a.type.toUpperCase()}</a>`;
+                        }).join('');
+
+                        // Add internal artifacts with distinct violet styling
+                        html += internalArtifacts.map(a => {
+                            const label = a.type.replace('_internal', '').toUpperCase() + ' (INT)';
+                            return `<a href="${a.webPath}" target="_blank" class="artifact-pill artifact-pill--internal" title="Internal: ${a.path}">${label}</a>`;
+                        }).join('');
+
+                        // Always include a RAW button if we have an execution ID
+                        html = `<a href="#" onclick="event.preventDefault(); openDrilldownWithTab('${rowId}', 'tab-overview')" class="artifact-pill artifact-pill--raw">RAW</a>` + html;
+                        
+                        return gridjs.html(html);
+                    }
+                },
+                { name: 'ID', hidden: true }
+            ],
+            data: [],
+            search: { enabled: true },
+            sort: {
+                multiColumn: false
+            },
+            className: { tr: 'grid-row' }
+        }).render(document.getElementById('grid-wrapper'));
+
+        async function refreshHistory() {
+            try {
+                const resp = await fetch('/api/history');
+                const data = await resp.json();
+                executions = data;
+
+                const rows = await Promise.all(executions.map(async (ex) => {
+                    return [
+                        Number(ex.timestamp) || 0,
+                        ex.client_slug || 'N/A',
+                        ex.project_name || 'N/A',
+                        null,
+                        `r${ex.revision}`,
+                        ex.status || 'unknown',
+                        ex.total_price || 0,
+                        ex.total_hours || 0,
+                        ex.risk_score || 0,
+                        ex.audit_score || 0,
+                        ex.artifacts || [],
+                        ex.id
+                    ];
+                }));
+
+                grid.updateConfig({ data: rows }).forceRender();
+                
+                const isRunning = executions.some(e => e.status === 'running');
+                if (isRunning && !pollingInterval) {
+                    pollingInterval = setInterval(refreshHistory, 5000);
+                } else if (!isRunning && pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                }
+            } catch (err) { console.error('History fetch failed', err); }
+        }
+
+        grid.on('rowClick', (...args) => {
+            try {
+                const row = args[1];
+                if (!row || !row.cells) {
+                    console.warn('[Grid] Row click: no row data', args);
+                    return;
+                }
+                const executionId = row.cells[11]?.data;
+                if (executionId) {
+                    selectExecution(executionId);
+                } else {
+                    console.warn('[Grid] Row click: no execution ID in cells', row.cells);
+                }
+            } catch (err) {
+                console.error('[Grid] Row click error:', err);
+            }
+        });
+
+        // Double-click to open Detail modal
+        document.getElementById('grid-wrapper').addEventListener('dblclick', (e) => {
+            const row = e.target.closest('tr.gridjs-tr');
+            if (row && selectedExecutionId) {
+                openDrilldown();
+            }
+        });
+
+        function updateGridSearch(val) {
+            grid.updateConfig({ search: { keyword: val } }).forceRender();
+        }
+
+        // Pipeline stage names for progress bar
+        const STAGE_NAMES = {
+            1: 'Extract', 2: 'Research', 3: 'Project Plan', 4: 'Proposal',
+            5: 'AI Report', 6: 'LLM Fill', 7: 'Render', 8: 'Polish', 9: 'PDF'
+        };
+        const TOTAL_STAGES = 9;
+
+        function updateProgress(currentStage, status = 'running') {
+            const container = document.getElementById('progress-container');
+            const fill = document.getElementById('progress-bar-fill');
+            const stageName = document.getElementById('progress-stage-name');
+            const percent = document.getElementById('progress-percent');
+
+            container.classList.add('active');
+            fill.classList.remove('complete', 'error');
+            
+            const pct = Math.round((currentStage / TOTAL_STAGES) * 100);
+            fill.style.width = pct + '%';
+            
+            if (status === 'error') {
+                fill.classList.add('error');
+                stageName.textContent = `Failed: ${STAGE_NAMES[currentStage] || 'Unknown'}`;
+            } else {
+                stageName.textContent = STAGE_NAMES[currentStage] || 'Processing...';
+            }
+            percent.textContent = pct + '%';
+        }
+
+        function resetProgress() {
+            const container = document.getElementById('progress-container');
+            const fill = document.getElementById('progress-bar-fill');
+            container.classList.remove('active');
+            fill.classList.remove('complete', 'error');
+            fill.style.width = '0%';
+            document.getElementById('progress-stage-name').textContent = 'Initializing...';
+            document.getElementById('progress-percent').textContent = '0%';
+        }
+
+        function completeProgress(success = true) {
+            const fill = document.getElementById('progress-bar-fill');
+            const stageName = document.getElementById('progress-stage-name');
+            const percent = document.getElementById('progress-percent');
+
+            fill.classList.remove('error');
+            fill.style.width = '100%';
+            fill.classList.add(success ? 'complete' : 'error');
+            stageName.textContent = success ? 'Complete!' : 'Failed';
+            percent.textContent = success ? '100%' : '—';
+        }
+
+        function queueExecution() {
+            const input = document.getElementById('input-text').value;
+            if (!input) return alert("Input required");
+            generateBtn.disabled = true;
+            statusLabel.innerText = "INITIALIZING...";
+            consoleEl.innerHTML = '<div style="color:var(--sunset-300)">> Establishing connection to Wranngle Intelligence Core...</div>';
+            // Show action buttons and progress bar during execution
+            document.getElementById('console-actions').style.display = 'flex';
+            resetProgress();
+            document.getElementById('progress-container').classList.add('active');
+            
+            if (eventSource) eventSource.close();
+            eventSource = new EventSource('/api/stream');
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.msg) {
+                    const line = document.createElement('div');
+                    line.innerHTML = ansi_up.ansi_to_html(data.msg);
+                    consoleEl.appendChild(line);
+                    requestAnimationFrame(() => {
+                        consoleEl.scrollTop = consoleEl.scrollHeight;
+                    });
+
+                    // Update progress bar on stage changes
+                    const stageMatch = data.msg.match(/STAGE (\d+)/i);
+                    if (stageMatch) {
+                        const stage = parseInt(stageMatch[1], 10);
+                        updateProgress(stage);
+                        statusLabel.innerText = `STAGE ${stage}: ${STAGE_NAMES[stage] || ''}`;
+                    }
+                    
+                    // Handle completion
+                    if (data.msg.includes('COMPLETED SUCCESSFULLY')) {
+                        statusLabel.innerText = "COMPLETE";
+                        completeProgress(true);
+                        generateBtn.disabled = false;
+                        refreshHistory();
+                    } else if (data.msg.includes('FATAL ERROR') || data.msg.includes('Pipeline failed')) {
+                        statusLabel.innerText = "FAILED";
+                        const currentStage = parseInt(data.msg.match(/STAGE (\d+)/)?.[1] || '1', 10);
+                        updateProgress(currentStage, 'error');
+                        generateBtn.disabled = false;
+                        refreshHistory();
+                    }
+                }
+            };
+            fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ input })
+            }).catch(err => {
+                const line = document.createElement('div');
+                line.style.color = "var(--violet-500)";
+                line.innerText = `> FATAL ERROR: ${err.message}`;
+                consoleEl.appendChild(line);
+                completeProgress(false);
+                generateBtn.disabled = false;
+            });
+        }
+
+        async function selectExecution(id) {
+            selectedExecutionId = id;
+            const job = executions.find(e => e.id == id);
+            if (!job) return;
+
+            statusLabel.innerHTML = `VIEWING: ${job.slug || job.id} <span style="opacity:0.5">|</span> ${job.status.toUpperCase()}`;
+            consoleEl.innerHTML = `<div style="color:var(--sunset-300)">> Loading historical logs for ${job.slug || job.id}...</div>`;
+
+            try {
+                const resp = await fetch(`/api/logs/${id}`);
+                if (!resp.ok) {
+                    consoleEl.innerHTML = `<div>> Logs not available for this job (HTTP ${resp.status}).</div>`;
+                    document.getElementById('console-actions').style.display = 'none';
+                    return;
+                }
+                const data = await resp.json();
+                if (data.logs) {
+                    consoleEl.innerHTML = data.logs.split('\n').map(l => `<div>${ansi_up.ansi_to_html(l)}</div>`).join('');
+                    // Show action buttons when logs are loaded
+                    document.getElementById('console-actions').style.display = 'flex';
+                } else {
+                    consoleEl.innerHTML = `<div>> No logs available for this job.</div>`;
+                    document.getElementById('console-actions').style.display = 'none';
+                }
+            } catch (e) {
+                console.error("Logs error", e);
+                consoleEl.innerHTML = `<div>> Error fetching logs: ${e.message}</div>`;
+                document.getElementById('console-actions').style.display = 'none';
+            }
+
+            requestAnimationFrame(() => {
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            });
+        }
+
+        async function autoFillInput(btn) {
+            const originalText = btn.innerText;
+            btn.innerText = "Generating...";
+            btn.disabled = true;
+            
+            // Log to console panel
+            const logToConsole = (msg, isError = false) => {
+                const line = document.createElement('div');
+                line.style.color = isError ? '#f7768e' : 'var(--sunset-300)';
+                line.textContent = `[AUTO-SAMPLE] ${msg}`;
+                consoleEl.appendChild(line);
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            };
+            
+            try {
+                logToConsole('Requesting sample from Gemini API...');
+                const resp = await fetch('/api/sample');
+                const data = await resp.json();
+                
+                if (!resp.ok) {
+                    throw new Error(data.error || `HTTP ${resp.status}`);
+                }
+                
+                if (data.text) {
+                    document.getElementById('input-text').value = data.text;
+                    statusLabel.innerText = data.note || "SAMPLE LOADED";
+                    logToConsole(`✓ ${data.note || 'Sample loaded'}`);
+                    console.log('[AUTO-SAMPLE] Success:', data.note);
+                } else if (data.error) {
+                    throw new Error(data.error);
+                } else {
+                    throw new Error('No text in response');
+                }
+            } catch (err) {
+                console.error('[AUTO-SAMPLE] Error:', err);
+                logToConsole(`✗ Failed: ${err.message}`, true);
+                statusLabel.innerText = "SAMPLE FAILED";
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function handleFileSelect(input) {
+            if (input.files.length > 0) {
+                loadFile(input.files[0]);
+            }
+        }
+
+        function loadFile(file) {
+            const textExtensions = ['.txt', '.md', '.json', '.csv', '.xml', '.html', '.log', '.rtf', '.yml', '.yaml', '.ini', '.cfg'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!textExtensions.includes(ext) && !file.type.startsWith('text/')) {
+                alert('Please drop a text-based file (.txt, .md, .json, .csv, etc.)');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('input-text').value = e.target.result;
+                document.getElementById('file-label').innerText = `✓ Loaded: ${file.name}`;
+                document.getElementById('file-label').style.color = "var(--sunset-500)";
+            };
+            reader.readAsText(file);
+        }
+
+        // Drag and drop support
+        const dropZone = document.getElementById('file-drop-zone');
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = 'var(--sunset-500)';
+            dropZone.style.background = 'rgba(255, 95, 0, 0.1)';
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = '';
+            dropZone.style.background = '';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = '';
+            dropZone.style.background = '';
+            
+            if (e.dataTransfer.files.length > 0) {
+                loadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function switchTab(event, tabId) {
+            document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                const targetTab = document.querySelector(`.modal-tab[data-tab="${tabId}"]`);
+                if (targetTab) targetTab.classList.add('active');
+            }
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) targetContent.classList.add('active');
+        }
+
+        function toggleMaximizeConsole(event) {
+            const panel = document.getElementById('console-panel');
+            panel.classList.toggle('maximized');
+            event.target.innerText = panel.classList.contains('maximized') ? 'Collapse' : 'Expand';
+        }
+
+        async function refreshDashboard() {
+            // Close any existing SSE connection
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            // Clear polling
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            // Reset UI state
+            statusLabel.innerText = "REFRESHING...";
+            consoleEl.innerHTML = '<div style="color:var(--sunset-300)">> Refreshing dashboard...</div>';
+            resetProgress();
+            generateBtn.disabled = false;
+            // Refresh history data
+            await refreshHistory();
+            statusLabel.innerText = "";
+            consoleEl.innerHTML += '<div style="color:var(--color-healthy)">> Dashboard refreshed successfully.</div>';
+        }
+
+        function openDrilldownWithTab(executionId, tabId) {
+            selectedExecutionId = parseInt(executionId);
+            openDrilldown().then(() => {
+                switchTab(null, tabId);
+            });
+        }
+
+        async function openDrilldown() {
+            const job = executions.find(e => e.id == selectedExecutionId);
+            if (!job) return;
+
+            // Collapse the console if expanded
+            const panel = document.getElementById('console-panel');
+            if (panel.classList.contains('maximized')) {
+                panel.classList.remove('maximized');
+                const expandBtn = document.querySelector('#console-actions .btn-drilldown');
+                if (expandBtn) expandBtn.innerText = 'Expand';
+            }
+
+            switchTab(null, 'tab-overview');
+            document.getElementById('modal-id-badge').innerText = job.slug || job.id;
+
+            // Populate logs tab with current console content
+            const modalLogsContainer = document.getElementById('modal-logs-container');
+            modalLogsContainer.innerHTML = consoleEl.innerHTML;
+
+            // Set initial loading state for tabs that require JSON
+            document.getElementById('tab-research').innerHTML = '<div class="ai-summary-box">Loading technical research...</div>';
+            document.getElementById('tab-milestones').innerHTML = '<div class="ai-summary-box">Loading implementation phases...</div>';
+            document.getElementById('json-viewer-container').innerHTML = '<div class="ai-summary-box">Loading schema...</div>';
+
+            let overviewHtml = `
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; padding-bottom: 24px;">
+                    <div>
+                        <div class="detail-row"><span class="detail-key">CLIENT SLUG</span><span class="detail-val">${job.client_slug}</span></div>
+                        <div class="detail-row"><span class="detail-key">PROJECT</span><span class="detail-val">${job.project_name}</span></div>
+                        <div class="detail-row"><span class="detail-key">REVISION</span><span class="detail-val">r${job.revision}</span></div>
+                        <div class="detail-row"><span class="detail-key">STATUS</span><span class="detail-val">${job.status}</span></div>
+                    </div>
+                    <div>
+                        <div class="detail-row"><span class="detail-key">CLIENT PRICE</span><span class="detail-val" style="color:var(--sunset-500); font-weight:700;">$${(job.total_price || 0).toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-key">TOTAL EFFORT</span><span class="detail-val">${job.total_hours || 0} hrs</span></div>
+                        <div class="detail-row"><span class="detail-key">RISK SCORE</span><span class="detail-val" style="color:${job.risk_score > 6 ? 'var(--violet-500)' : 'inherit'}">${job.risk_score || 0}/10</span></div>
+                        <div class="detail-row"><span class="detail-key">AUDIT SCORE</span><span class="detail-val" style="color:var(--color-healthy)">${job.audit_score || 0}%</span></div>
+                    </div>
+                </div>
+                <div class="detail-row"><span class="detail-key">MONTHLY BLEED</span><span class="detail-val" style="color:var(--violet-500)">$${(job.monthly_bleed || 0).toLocaleString()} /mo</span></div>
+                <div class="detail-row"><span class="detail-key">ARTIFACTS</span><div class="detail-val">
+                    ${(job.artifacts || []).map(a => {
+                        const norm = typeof a === 'string'
+                            ? { type: (a.split('.').pop() || 'file'), path: a, webPath: '#' }
+                            : { type: (a && a.type) || 'file', path: (a && a.path) || '', webPath: (a && a.webPath) || '#' };
+                        const filename = norm.path ? norm.path.split(/[\\\/]/).pop() : norm.type;
+                        return `<a href="${norm.webPath}" target="_blank" style="color:var(--sunset-500); text-decoration:none; display:block;">${norm.type.toUpperCase()}: ${filename}</a>`;
+                    }).join('')}
+                </div></div>
+            `;
+            try {
+                const meta = JSON.parse(job.metadata || '{}');
+                if (meta.client_name) {
+                    overviewHtml += `<div style="margin-top:20px;"><span class="detail-key">PIPELINE IDENTITY</span><div class="ai-summary-box"><b>Full Client:</b> ${meta.client_name}<br><b>Process Name:</b> ${meta.process_name}<br><b>Document ID:</b> ${meta.document_slug}</div></div>`;
+                }
+            } catch (e) { console.error("Metadata parse error", e); }
+            
+            document.getElementById('tab-overview').innerHTML = overviewHtml;
+
+            const jsonArt = (job.artifacts || []).find(a => a && typeof a === 'object' && a.type === 'json');
+            if (jsonArt && jsonArt.webPath && jsonArt.webPath !== '#') {
+                try {
+                    const schemaResp = await fetch(jsonArt.webPath);
+                    if (!schemaResp.ok) throw new Error(`HTTP ${schemaResp.status}`);
+                    const schema = await schemaResp.json();
+                    
+                    // Add raw input opening to Overview tab if available (from schema)
+                    if (schema.raw_input?.opening && schema.raw_input.opening.length > 0) {
+                        const rawInputHtml = `
+                            <div style="margin-top:20px;">
+                                <span class="detail-key">RAW INPUT OPENING (${schema.raw_input?.stats?.characters?.toLocaleString() || 0} chars total)</span>
+                                <div class="ai-summary-box" style="font-family:var(--font-mono); font-size:11px; white-space:pre-wrap; max-height:200px; overflow-y:auto; background:var(--surface-console); color:var(--text-secondary);">${schema.raw_input.opening.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                            </div>
+                        `;
+                        document.getElementById('tab-overview').innerHTML += rawInputHtml;
+                    }
+
+                    // JSON Schema Tab - using json-tree-view library
+                    const viewerContainer = document.getElementById('json-viewer-container');
+                    viewerContainer.innerHTML = '';
+
+                    if (typeof JSONFormatter !== 'undefined') {
+                        const formatter = new JSONFormatter(schema, 2, { hoverPreviewEnabled: true, theme: 'dark' });
+                        viewerContainer.appendChild(formatter.render());
+                        
+                        // Inject copy buttons into JSON tree
+                        injectJsonCopyButtons(viewerContainer, schema);
+                    } else {
+                        console.error('JSONFormatter library not loaded');
+                        viewerContainer.innerHTML = '<pre style="font-size:10px; color:var(--text-secondary);">' + JSON.stringify(schema, null, 2) + '</pre>';
+                    }
+
+                    // Research Tab - Enhanced integration display
+                    const integrations = schema.research?.integrations || schema.audit_report?.research?.integrations || [];
+                    const gapReport = schema.research_gap_report;
+
+                    // Helper to get complexity color
+                    const getComplexityColor = (score) => {
+                        if (score <= 3) return 'var(--color-healthy)';
+                        if (score <= 6) return 'var(--sunset-300)';
+                        return 'var(--violet-500)';
+                    };
+
+                    // Helper to get complexity label
+                    const getComplexityLabel = (tier) => {
+                        const labels = { simple: 'Simple', moderate: 'Moderate', complex: 'Complex' };
+                        return labels[tier] || tier || 'Unknown';
+                    };
+
+                    let researchHtml = `
+                        <div class="detail-key" style="margin-bottom:12px;">
+                            INTEGRATION RESEARCH (${integrations.length} systems)
+                        </div>`;
+
+                    if (integrations.length > 0) {
+                        researchHtml += `<div style="display:flex; flex-direction:column; gap:12px;">`;
+                        researchHtml += integrations.map(i => {
+                            const r = i.research || {};
+                            const isResearched = r.found || r.from_cache || i.research_available;
+                            const name = i.system || i.name || i.integration || 'Unknown';
+                            const hasNative = r.has_native_n8n_node || r.has_native_node;
+                            const complexityScore = r.complexity_score || r.complexity?.score || 5;
+                            const complexityTier = r.complexity_tier || r.complexity?.tier || 'moderate';
+                            const hours = r.estimated_hours || r.complexity?.estimated_hours || r.effort_recommendation?.base_hours || '-';
+                            const authType = r.auth_type || 'Unknown';
+                            const authComplexity = r.auth_complexity || '-';
+                            const webhooks = r.webhook_support;
+                            const gotchas = r.gotchas || [];
+                            const clientNeeds = r.client_must_provide || [];
+                            const operations = r.operations_available || [];
+                            const confidence = r.confidence ? Math.round(r.confidence * 100) : null;
+
+                            return `
+                                <div class="ai-summary-box" style="padding:12px; border-left:3px solid ${isResearched ? 'var(--color-healthy)' : 'var(--sunset-300)'};">
+                                    <!-- Header Row -->
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <b style="font-size:14px;">${name}</b>
+                                            ${hasNative ? '<span class="summary-pill" style="background:var(--color-healthy); color:#fff; font-size:10px;">n8n Native</span>' : '<span class="summary-pill" style="font-size:10px;">HTTP Request</span>'}
+                                        </div>
+                                        <div style="display:flex; gap:6px; align-items:center;">
+                                            <span class="summary-pill" style="background:${getComplexityColor(complexityScore)}; color:#fff; font-size:10px;">
+                                                ${getComplexityLabel(complexityTier)} (${complexityScore}/10)
+                                            </span>
+                                            <span class="summary-pill" style="font-size:10px;">${hours}h</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Details Grid -->
+                                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; font-size:11px; margin-bottom:8px;">
+                                        <div>
+                                            <span style="opacity:0.6;">Auth:</span>
+                                            <span style="font-weight:500;">${authType}</span>
+                                        </div>
+                                        <div>
+                                            <span style="opacity:0.6;">Auth Level:</span>
+                                            <span style="font-weight:500;">${authComplexity}</span>
+                                        </div>
+                                        <div>
+                                            <span style="opacity:0.6;">Webhooks:</span>
+                                            <span style="font-weight:500; color:${webhooks ? 'var(--color-healthy)' : 'var(--sunset-300)'};">${webhooks ? 'Yes' : 'No'}</span>
+                                        </div>
+                                    </div>
+
+                                    ${gotchas.length > 0 ? `
+                                    <details style="font-size:11px; margin-top:8px;">
+                                        <summary style="cursor:pointer; opacity:0.8; font-weight:500;">Gotchas (${gotchas.length})</summary>
+                                        <ul style="margin:6px 0 0 16px; padding:0; opacity:0.9;">
+                                            ${gotchas.map(g => `<li style="margin-bottom:4px;">${g}</li>`).join('')}
+                                        </ul>
+                                    </details>` : ''}
+
+                                    ${clientNeeds.length > 0 ? `
+                                    <details style="font-size:11px; margin-top:6px;">
+                                        <summary style="cursor:pointer; opacity:0.8; font-weight:500;">Client Must Provide (${clientNeeds.length})</summary>
+                                        <ul style="margin:6px 0 0 16px; padding:0; opacity:0.9;">
+                                            ${clientNeeds.map(c => `<li style="margin-bottom:4px;">${c}</li>`).join('')}
+                                        </ul>
+                                    </details>` : ''}
+
+                                    ${operations.length > 0 ? `
+                                    <details style="font-size:11px; margin-top:6px;">
+                                        <summary style="cursor:pointer; opacity:0.8; font-weight:500;">Operations (${operations.length})</summary>
+                                        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+                                            ${operations.map(o => `<span class="summary-pill" style="font-size:9px;">${o}</span>`).join('')}
+                                        </div>
+                                    </details>` : ''}
+
+                                    ${confidence ? `
+                                    <div style="font-size:10px; opacity:0.5; margin-top:8px; text-align:right;">
+                                        Confidence: ${confidence}%
+                                    </div>` : ''}
+                                </div>
+                            `;
+                        }).join('');
+                        researchHtml += `</div>`;
+                    } else {
+                        researchHtml += '<p style="font-size:12px; opacity:0.6; margin-top:8px;">No integration data found in schema.</p>';
+                    }
+
+                    document.getElementById('tab-research').innerHTML = researchHtml;
+
+                    // Milestones Tab
+                    const milestones = schema.project_plan?.milestones || schema.milestones || [];
+                    let milestoneHtml = `<div class="detail-key">IMPLEMENTATION PHASES</div>`;
+                    
+                    if (Array.isArray(milestones) && milestones.length > 0) {
+                        milestoneHtml += milestones.map(m => {
+                            // Handle both milestone objects and Phase objects
+                            const name = m.name || m.milestone_name || m.phase_name || 'Unnamed Phase';
+                            const hours = m.hours || (m.milestones ? m.milestones.reduce((sum, ms) => sum + (ms.hours || 0), 0) : 0);
+                            const desc = m.description || '';
+                            
+                            return `
+                                <div class="ai-summary-box" style="margin-bottom:8px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                        <b>${name}</b>
+                                        <span class="summary-pill">${hours}h</span>
+                                    </div>
+                                    <div style="font-size:11px; opacity:0.8;">${desc}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        milestoneHtml += '<p style="font-size:12px; opacity:0.6; margin-top:8px;">No milestone data found in schema.</p>';
+                    }
+                    document.getElementById('tab-milestones').innerHTML = milestoneHtml;
+
+                } catch (e) { 
+                    console.error("Schema load error", e); 
+                    const errHtml = `<p style="color:var(--violet-500)">Error loading data: ${e.message}</p>`;
+                    document.getElementById('tab-research').innerHTML = errHtml;
+                    document.getElementById('tab-milestones').innerHTML = errHtml;
+                    document.getElementById('json-viewer-container').innerHTML = errHtml;
+                }
+            } else {
+                const noJsonHtml = window.DEMO_MODE
+                    ? '<div class="ai-summary-box"><strong>DEMO mode</strong> — no schema artifact attached to this execution. Run the live pipeline (<code>bun run start</code>) to generate one.</div>'
+                    : '<p>JSON artifact not available for this execution.</p>';
+                document.getElementById('tab-research').innerHTML = noJsonHtml;
+                document.getElementById('tab-milestones').innerHTML = noJsonHtml;
+                document.getElementById('json-viewer-container').innerHTML = noJsonHtml;
+            }
+
+            document.getElementById('drilldown-modal').classList.add('open');
+        }
+
+        /**
+         * Inject copy buttons into JSON tree nodes
+         * @param {HTMLElement} container - The JSON viewer container
+         * @param {Object} rootData - The root JSON data object
+         */
+        function injectJsonCopyButtons(container, rootData) {
+            // Wait for DOM to settle
+            setTimeout(() => {
+                const rows = container.querySelectorAll('.json-formatter-row');
+                
+                rows.forEach((row, index) => {
+                    // Get the key element
+                    const keyEl = row.querySelector(':scope > .json-formatter-key');
+                    if (!keyEl) return;
+                    
+                    // Skip if already has copy button next to this key
+                    if (keyEl.nextElementSibling?.classList?.contains('json-copy-btn')) return;
+                    
+                    // Build the path by traversing up the DOM
+                    const path = buildJsonPath(row);
+                    
+                    // Create inline copy icon button
+                    const btn = document.createElement('button');
+                    btn.className = 'json-copy-btn';
+                    btn.innerHTML = '📋';
+                    btn.title = `Copy: ${path.join('.')}`;
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const value = getValueAtPath(rootData, path);
+                        const text = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+                        navigator.clipboard.writeText(text).then(() => {
+                            btn.innerHTML = '✓';
+                            btn.classList.add('copied');
+                            setTimeout(() => {
+                                btn.innerHTML = '📋';
+                                btn.classList.remove('copied');
+                            }, 1500);
+                        });
+                    };
+                    
+                    // Insert right after the key element
+                    keyEl.insertAdjacentElement('afterend', btn);
+                });
+                
+                // Also inject buttons when nodes are expanded
+                container.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('json-formatter-toggler')) {
+                        setTimeout(() => injectJsonCopyButtons(container, rootData), 50);
+                    }
+                });
+            }, 100);
+        }
+
+        /**
+         * Build JSON path by traversing DOM hierarchy
+         */
+        function buildJsonPath(row) {
+            const path = [];
+            let current = row;
+            
+            while (current && current.id !== 'json-viewer-container') {
+                const keyEl = current.querySelector(':scope > .json-formatter-key');
+                if (keyEl) {
+                    const key = keyEl.textContent.replace(/[":]/g, '').trim();
+                    if (key) path.unshift(key);
+                }
+                // Move up to parent row
+                current = current.parentElement?.closest('.json-formatter-row');
+            }
+            
+            return path;
+        }
+
+        /**
+         * Get value at a specific path in an object
+         */
+        function getValueAtPath(obj, path) {
+            let current = obj;
+            for (const key of path) {
+                if (current === null || current === undefined) return undefined;
+                // Handle array indices
+                if (Array.isArray(current) && /^\d+$/.test(key)) {
+                    current = current[parseInt(key, 10)];
+                } else {
+                    current = current[key];
+                }
+            }
+            return current;
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const original = btn.innerText;
+                btn.innerText = "Copied!";
+                btn.style.background = "var(--color-healthy)";
+                btn.style.borderColor = "var(--color-healthy)";
+                setTimeout(() => {
+                    btn.innerText = original;
+                    btn.style.background = "";
+                    btn.style.borderColor = "";
+                }, 2000);
+            }).catch(err => {
+                btn.innerText = "Failed";
+                setTimeout(() => btn.innerText = "Copy", 2000);
+            });
+        }
+
+        function copyLogs(event) {
+            const logs = consoleEl.innerText;
+            copyToClipboard(logs, event.target);
+        }
+
+        function closeDrilldown() { document.getElementById('drilldown-modal').classList.remove('open'); }
+
+        // Esc key to close modals and expanded console
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Close Detail modal if open
+                const modal = document.getElementById('drilldown-modal');
+                if (modal.classList.contains('open')) {
+                    closeDrilldown();
+                    return;
+                }
+                // Collapse expanded console if maximized
+                const panel = document.getElementById('console-panel');
+                if (panel.classList.contains('maximized')) {
+                    panel.classList.remove('maximized');
+                    const expandBtn = document.querySelector('#console-actions .btn-drilldown');
+                    if (expandBtn && expandBtn.innerText === 'Collapse') {
+                        expandBtn.innerText = 'Expand';
+                    }
+                }
+            }
+        });
+
+        refreshHistory();
+
+        // ========== SETTINGS MODAL ==========
+        let currentSettingsTab = 'webhooks';
+        let settingsCache = {};
+
+        // Pagination state for settings tables
+        const pagination = {
+            audit: { page: 1, pageSize: 20, total: 0 },
+            webhookHistory: { page: 1, pageSize: 20, total: 0 },
+            users: { page: 1, pageSize: 20, total: 0 }
+        };
+
+        function renderPagination(tableName, loadFn) {
+            const state = pagination[tableName];
+            const totalPages = Math.ceil(state.total / state.pageSize) || 1;
+            const start = Math.min((state.page - 1) * state.pageSize + 1, state.total);
+            const end = Math.min(state.page * state.pageSize, state.total);
+
+            return `
+                <div class="pagination-controls" style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--border-subtle);margin-top:12px;">
+                    <span style="font-size:12px;color:var(--text-secondary);">Showing ${start}-${end} of ${state.total}</span>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-secondary btn-secondary--sm"
+                            onclick="pagination.${tableName}.page--; ${loadFn}()"
+                            ${state.page <= 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                            ← Prev
+                        </button>
+                        <span style="padding:6px 12px;font-size:12px;">Page ${state.page} of ${totalPages}</span>
+                        <button class="btn-secondary btn-secondary--sm"
+                            onclick="pagination.${tableName}.page++; ${loadFn}()"
+                            ${state.page >= totalPages ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                            Next →
+                        </button>
+                    </div>
+                </div>`;
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.add('open');
+            switchSettingsTab(currentSettingsTab);
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('open');
+        }
+
+        function switchSettingsTab(tabName) {
+            currentSettingsTab = tabName;
+
+            // Update tab buttons
+            document.querySelectorAll('.settings-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.settingsTab === tabName);
+            });
+
+            // Update sections
+            document.querySelectorAll('.settings-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(`settings-${tabName}`).classList.add('active');
+
+            // Load data for tab
+            loadSettingsTabData(tabName);
+        }
+
+        function loadSettingsTabData(tabName) {
+            switch(tabName) {
+                case 'webhooks': loadWebhooks(); break;
+                case 'versions': populateExecutionSelect(); break;
+                case 'audit': loadAuditLogs(true); break;
+                case 'usage': loadUsage('this_month'); break;
+                case 'branding': loadBranding(); break;
+                case 'admin': loadAdminDashboard('this_month'); break;
+                case 'gdpr': loadGdprStatus(); break;
+                case 'users': loadUsers(); break;
+            }
+        }
+
+        // ========== WEBHOOKS ==========
+        async function loadWebhooks() {
+            try {
+                const resp = await fetch('/api/webhooks');
+                const webhooks = await resp.json();
+
+                if (!webhooks.length) {
+                    document.getElementById('webhooks-list').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🔗</div>
+                            <p>No webhooks configured</p>
+                        </div>`;
+                    return;
+                }
+
+                document.getElementById('webhooks-list').innerHTML = `
+                    <table class="settings-table">
+                        <thead>
+                            <tr><th>Name</th><th>URL</th><th>Events</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            ${webhooks.map(w => `
+                                <tr>
+                                    <td>${w.name}</td>
+                                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.url}</td>
+                                    <td>${(w.events || []).length} events</td>
+                                    <td><span class="status-badge ${w.enabled ? 'active' : 'inactive'}">${w.enabled ? 'Active' : 'Inactive'}</span></td>
+                                    <td>
+                                        <button class="btn-secondary btn-secondary--sm" onclick="showWebhookHistory(${w.id}, '${w.name.replace(/'/g, "\\'")}')">History</button>
+                                        <button class="btn-secondary btn-secondary--sm" onclick="testWebhook(${w.id})">Test</button>
+                                        <button class="btn-secondary btn-secondary--sm" onclick="deleteWebhook(${w.id})">Delete</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) {
+                console.error('[WEBHOOKS] Load error:', e);
+                document.getElementById('webhooks-list').innerHTML = `<p style="color:var(--violet-500)">Error loading webhooks: ${e.message}</p>`;
+            }
+        }
+
+        async function createWebhook() {
+            const name = document.getElementById('webhook-name').value;
+            const url = document.getElementById('webhook-url').value;
+            const events = Array.from(document.querySelectorAll('#settings-webhooks .checkbox-group input:checked')).map(c => c.value);
+
+            if (!name || !url) {
+                alert('Name and URL are required');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/webhooks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, url, events })
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.error || 'Failed to create webhook');
+                }
+
+                document.getElementById('webhook-name').value = '';
+                document.getElementById('webhook-url').value = '';
+                loadWebhooks();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function testWebhook(id) {
+            try {
+                const resp = await fetch(`/api/webhooks/${id}/test`, { method: 'POST' });
+                const result = await resp.json();
+                alert(`Test ${result.success ? 'succeeded' : 'failed'}!\nStatus: ${result.status_code || 'N/A'}\nResponse time: ${result.response_time_ms || 'N/A'}ms`);
+            } catch (e) {
+                alert('Test failed: ' + e.message);
+            }
+        }
+
+        async function deleteWebhook(id) {
+            if (!confirm('Delete this webhook?')) return;
+            try {
+                await fetch(`/api/webhooks/${id}`, { method: 'DELETE' });
+                loadWebhooks();
+            } catch (e) {
+                alert('Delete failed: ' + e.message);
+            }
+        }
+
+        let currentWebhookContext = null;
+
+        function loadMoreWebhookHistory() {
+            if (currentWebhookContext) {
+                showWebhookHistory(currentWebhookContext.id, currentWebhookContext.name, false);
+            }
+        }
+
+        async function showWebhookHistory(webhookId, webhookName, resetPage = true) {
+            try {
+                if (resetPage) {
+                    pagination.webhookHistory.page = 1;
+                    currentWebhookContext = { id: webhookId, name: webhookName };
+                }
+                const ctx = currentWebhookContext || { id: webhookId, name: webhookName };
+                const { page, pageSize } = pagination.webhookHistory;
+                const offset = (page - 1) * pageSize;
+
+                const resp = await fetch(`/api/webhooks/${ctx.id}/deliveries?limit=${pageSize}&offset=${offset}`);
+                const result = await resp.json();
+                const deliveries = result.deliveries || result || [];
+                pagination.webhookHistory.total = result.total || deliveries.length;
+
+                let content;
+                if (!deliveries.length) {
+                    content = `<div class="empty-state"><p>No delivery history yet</p></div>`;
+                } else {
+                    content = `
+                        <table class="settings-table">
+                            <thead>
+                                <tr><th>Time</th><th>Event</th><th>Status</th><th>Response Time</th></tr>
+                            </thead>
+                            <tbody>
+                                ${deliveries.map(d => `
+                                    <tr>
+                                        <td style="font-family:var(--font-mono);font-size:11px;">${new Date(d.delivered_at).toLocaleString()}</td>
+                                        <td>${d.event_type || '-'}</td>
+                                        <td>
+                                            <span class="status-badge ${d.success ? 'active' : 'inactive'}">
+                                                ${d.success ? d.status_code || 'OK' : d.status_code || 'Failed'}
+                                            </span>
+                                        </td>
+                                        <td>${d.response_time_ms ? d.response_time_ms + 'ms' : '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ${pagination.webhookHistory.total > pageSize ? renderPagination('webhookHistory', 'loadMoreWebhookHistory') : ''}`;
+                }
+
+                // Show in the webhooks list area with a back button
+                document.getElementById('webhooks-list').innerHTML = `
+                    <div class="settings-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <div class="settings-card-title" style="margin-bottom:0;">Delivery History: ${ctx.name}</div>
+                            <button class="btn-secondary btn-secondary--sm" onclick="loadWebhooks()">← Back to Webhooks</button>
+                        </div>
+                        ${content}
+                    </div>`;
+            } catch (e) {
+                alert('Failed to load delivery history: ' + e.message);
+            }
+        }
+
+        // ========== VERSIONS ==========
+        function populateExecutionSelect() {
+            const select = document.getElementById('version-execution-select');
+            select.innerHTML = '<option value="">Select an execution...</option>' +
+                executions.map(e => `<option value="${e.id}">${e.client_slug || e.id} - ${new Date(e.timestamp).toLocaleDateString()}</option>`).join('');
+        }
+
+        let currentVersions = [];
+
+        async function loadVersions() {
+            const execId = document.getElementById('version-execution-select').value;
+            const type = document.getElementById('version-type-select').value;
+
+            if (!execId) {
+                document.getElementById('versions-list').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📜</div>
+                        <p>Select an execution to view versions</p>
+                    </div>`;
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/api/documents/${execId}/versions?type=${type}`);
+                const versions = await resp.json();
+                currentVersions = versions;
+
+                if (!versions.length) {
+                    document.getElementById('versions-list').innerHTML = `
+                        <div class="empty-state"><p>No versions found</p></div>`;
+                    return;
+                }
+
+                document.getElementById('versions-list').innerHTML = `
+                    <table class="settings-table">
+                        <thead><tr><th>Version</th><th>Type</th><th>Created</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${versions.map((v, idx) => `
+                                <tr>
+                                    <td>v${v.version}${idx === 0 ? ' <span style="color:var(--color-healthy);font-size:10px;">(current)</span>' : ''}</td>
+                                    <td>${v.type}</td>
+                                    <td>${new Date(v.created_at).toLocaleString()}</td>
+                                    <td>
+                                        ${idx < versions.length - 1 ? `<button class="btn-secondary btn-secondary--sm" onclick="showVersionDiff(${execId}, ${v.version}, ${versions[idx + 1].version}, '${type}')">Compare</button>` : ''}
+                                        ${idx > 0 ? `<button class="btn-secondary btn-secondary--sm" onclick="rollbackVersion(${execId}, ${v.version}, '${type}')">Rollback</button>` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) {
+                document.getElementById('versions-list').innerHTML = `<p style="color:var(--violet-500)">Error: ${e.message}</p>`;
+            }
+        }
+
+        async function rollbackVersion(execId, version, type) {
+            if (!confirm(`Rollback to version ${version}? This will create a new version.`)) return;
+            try {
+                const resp = await fetch(`/api/documents/${execId}/rollback/${version}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type })
+                });
+                const result = await resp.json();
+                alert(result.success ? 'Rollback successful!' : 'Rollback failed');
+                loadVersions();
+            } catch (e) {
+                alert('Rollback failed: ' + e.message);
+            }
+        }
+
+        async function showVersionDiff(execId, v1, v2, type) {
+            try {
+                const resp = await fetch(`/api/documents/${execId}/diff/${v1}/${v2}?type=${type}`);
+                const diff = await resp.json();
+
+                let diffContent;
+                if (diff.error) {
+                    diffContent = `<div class="empty-state"><p>Error: ${diff.error}</p></div>`;
+                } else if (!diff.changes || !diff.changes.length) {
+                    diffContent = `<div class="empty-state"><p>No differences found</p></div>`;
+                } else {
+                    // Format changes for display
+                    const changesHtml = diff.changes.map(change => {
+                        const typeColor = change.type === 'added' ? 'var(--color-healthy)' :
+                                         change.type === 'removed' ? 'var(--violet-500)' : 'var(--sunset-400)';
+                        const symbol = change.type === 'added' ? '+' : change.type === 'removed' ? '-' : '~';
+                        return `
+                            <div style="font-family:var(--font-mono);font-size:12px;padding:4px 8px;background:${change.type === 'added' ? 'rgba(93,140,97,0.1)' : change.type === 'removed' ? 'rgba(207,60,105,0.1)' : 'rgba(255,158,51,0.1)'};margin-bottom:2px;border-radius:3px;">
+                                <span style="color:${typeColor};font-weight:700;">${symbol}</span>
+                                <span style="color:var(--text-secondary);">${change.path || ''}</span>
+                                ${change.value !== undefined ? `<span style="color:var(--text-primary);"> ${JSON.stringify(change.value)}</span>` : ''}
+                            </div>`;
+                    }).join('');
+
+                    diffContent = `
+                        <div style="max-height:400px;overflow-y:auto;background:var(--surface-card);padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                            ${changesHtml}
+                        </div>
+                        <div style="margin-top:12px;font-size:11px;color:var(--text-secondary);">
+                            <span style="color:var(--color-healthy);">+ Added</span> ·
+                            <span style="color:var(--violet-500);">- Removed</span> ·
+                            <span style="color:var(--sunset-400);">~ Modified</span>
+                        </div>`;
+                }
+
+                document.getElementById('versions-list').innerHTML = `
+                    <div class="settings-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <div class="settings-card-title" style="margin-bottom:0;">Compare v${v1} ↔ v${v2}</div>
+                            <button class="btn-secondary btn-secondary--sm" onclick="loadVersions()">← Back to Versions</button>
+                        </div>
+                        ${diffContent}
+                    </div>`;
+            } catch (e) {
+                alert('Failed to load diff: ' + e.message);
+            }
+        }
+
+        // ========== AUDIT LOGS ==========
+        async function loadAuditLogs(resetPage = false) {
+            if (resetPage) pagination.audit.page = 1;
+
+            const action = document.getElementById('audit-action-filter').value;
+            const startDate = document.getElementById('audit-start-date').value;
+            const endDate = document.getElementById('audit-end-date').value;
+            const { page, pageSize } = pagination.audit;
+            const offset = (page - 1) * pageSize;
+
+            let url = `/api/audit-logs?limit=${pageSize}&offset=${offset}`;
+            if (action) url += `&action=${action}`;
+            if (startDate) url += `&start_date=${new Date(startDate).getTime()}`;
+            if (endDate) url += `&end_date=${new Date(endDate).getTime()}`;
+
+            try {
+                const resp = await fetch(url);
+                const result = await resp.json();
+                const logs = result.logs || result || [];
+                pagination.audit.total = result.total || logs.length;
+
+                if (!logs.length) {
+                    document.getElementById('audit-logs-list').innerHTML = `
+                        <div class="empty-state"><p>No audit logs found</p></div>`;
+                    return;
+                }
+
+                document.getElementById('audit-logs-list').innerHTML = `
+                    <table class="settings-table">
+                        <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Resource</th></tr></thead>
+                        <tbody>
+                            ${logs.map(l => `
+                                <tr>
+                                    <td style="font-family:var(--font-mono);font-size:11px;">${new Date(l.timestamp).toLocaleString()}</td>
+                                    <td>${l.user_id || 'system'}</td>
+                                    <td>${l.action}</td>
+                                    <td>${l.resource_type || ''} ${l.resource_id || ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ${pagination.audit.total > pageSize ? renderPagination('audit', 'loadAuditLogs') : ''}`;
+            } catch (e) {
+                document.getElementById('audit-logs-list').innerHTML = `<p style="color:var(--violet-500)">Error: ${e.message}</p>`;
+            }
+        }
+
+        async function exportAuditLogs() {
+            const action = document.getElementById('audit-action-filter').value;
+            const startDate = document.getElementById('audit-start-date').value;
+            const endDate = document.getElementById('audit-end-date').value;
+
+            let url = '/api/audit-logs/export?';
+            if (action) url += `action=${action}&`;
+            if (startDate) url += `start_date=${new Date(startDate).getTime()}&`;
+            if (endDate) url += `end_date=${new Date(endDate).getTime()}`;
+
+            window.location.href = url;
+        }
+
+        async function verifyAuditIntegrity() {
+            try {
+                const resp = await fetch('/api/audit-logs/verify');
+                const result = await resp.json();
+                alert(`Integrity Check: ${result.valid ? 'PASSED ✓' : 'FAILED ✗'}\nVerified: ${result.verified_count} logs\nInvalid: ${result.invalid_count || 0}`);
+            } catch (e) {
+                alert('Verification failed: ' + e.message);
+            }
+        }
+
+        // ========== USAGE ==========
+        async function loadUsage(period) {
+            // Update period buttons
+            document.querySelectorAll('#settings-usage .period-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase().replace(' ', '_') === period);
+            });
+
+            const periodMap = { 'today': 'today', 'this_week': 'this_week', 'this_month': 'this_month', 'all_time': 'all_time' };
+
+            try {
+                const [summaryResp, costsResp] = await Promise.all([
+                    fetch(`/api/usage/summary`),
+                    fetch(`/api/usage/costs`)
+                ]);
+
+                const summary = await summaryResp.json();
+                const costs = await costsResp.json();
+
+                document.getElementById('usage-documents').textContent = (summary.documents_created || 0).toLocaleString();
+                document.getElementById('usage-api-calls').textContent = (summary.api_calls || 0).toLocaleString();
+                document.getElementById('usage-tokens').textContent = formatTokens(summary.total_tokens || 0);
+                document.getElementById('usage-cost').textContent = '$' + (costs.total_cost || 0).toFixed(2);
+
+                document.getElementById('cost-breakdown').innerHTML = `
+                    <div style="font-size:13px;">
+                        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-subtle);">
+                            <span>LLM Costs</span><span>$${(costs.llm_cost || 0).toFixed(2)}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-subtle);">
+                            <span>PDF Generation</span><span>$${(costs.pdf_cost || 0).toFixed(2)}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-subtle);">
+                            <span>Storage</span><span>$${(costs.storage_cost || 0).toFixed(2)}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:12px 0;font-weight:700;color:var(--sunset-500);">
+                            <span>Total</span><span>$${(costs.total_cost || 0).toFixed(2)}</span>
+                        </div>
+                    </div>`;
+            } catch (e) {
+                console.error('[USAGE] Load error:', e);
+            }
+        }
+
+        function formatTokens(n) {
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        // ========== BRANDING ==========
+        async function loadBranding() {
+            try {
+                const resp = await fetch('/api/branding?workspace_id=default');
+                if (!resp.ok) return;
+                const branding = await resp.json();
+
+                if (branding.logo_url) document.getElementById('branding-logo-url').value = branding.logo_url;
+                if (branding.primary_color) {
+                    document.getElementById('branding-primary').value = branding.primary_color;
+                    document.getElementById('branding-primary-hex').value = branding.primary_color;
+                }
+                if (branding.secondary_color) {
+                    document.getElementById('branding-secondary').value = branding.secondary_color;
+                    document.getElementById('branding-secondary-hex').value = branding.secondary_color;
+                }
+                if (branding.background_color) {
+                    document.getElementById('branding-bg').value = branding.background_color;
+                    document.getElementById('branding-bg-hex').value = branding.background_color;
+                }
+                if (branding.text_color) {
+                    document.getElementById('branding-text').value = branding.text_color;
+                    document.getElementById('branding-text-hex').value = branding.text_color;
+                }
+                updateBrandingPreview();
+                checkColorContrast();
+            } catch (e) {
+                console.error('[BRANDING] Load error:', e);
+            }
+        }
+
+        async function saveBranding() {
+            try {
+                // Upload logo file first if one is pending
+                let logoUrl = document.getElementById('branding-logo-url').value;
+                if (pendingLogoFile) {
+                    logoUrl = await uploadLogoFile();
+                    pendingLogoFile = null;
+                    document.getElementById('branding-logo-url').value = logoUrl;
+                }
+
+                const data = {
+                    workspace_id: 'default',
+                    logoUrl: logoUrl,
+                    primaryColor: document.getElementById('branding-primary').value,
+                    secondaryColor: document.getElementById('branding-secondary').value,
+                    backgroundColor: document.getElementById('branding-bg').value,
+                    textColor: document.getElementById('branding-text').value
+                };
+
+                const resp = await fetch('/api/branding', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                alert(result.success ? 'Branding saved!' : 'Error: ' + (result.errors || []).join(', '));
+            } catch (e) {
+                alert('Save failed: ' + e.message);
+            }
+        }
+
+        function resetBranding() {
+            document.getElementById('branding-logo-url').value = '';
+            document.getElementById('branding-primary').value = '#ff5f00';
+            document.getElementById('branding-primary-hex').value = '#ff5f00';
+            document.getElementById('branding-secondary').value = '#cf3c69';
+            document.getElementById('branding-secondary-hex').value = '#cf3c69';
+            document.getElementById('branding-bg').value = '#fcfaf5';
+            document.getElementById('branding-bg-hex').value = '#fcfaf5';
+            document.getElementById('branding-text').value = '#12111a';
+            document.getElementById('branding-text-hex').value = '#12111a';
+            clearLogoFile();
+            updateBrandingPreview();
+            checkColorContrast();
+        }
+
+        // Logo file upload handling
+        let pendingLogoFile = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('branding-logo-file');
+            if (fileInput) {
+                fileInput.addEventListener('change', handleLogoFileSelect);
+            }
+        });
+
+        function handleLogoFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a PNG, JPEG, or SVG file.');
+                e.target.value = '';
+                return;
+            }
+
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('File size must be under 2MB.');
+                e.target.value = '';
+                return;
+            }
+
+            pendingLogoFile = file;
+            document.getElementById('logo-file-name').textContent = file.name;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('logo-preview').src = ev.target.result;
+                document.getElementById('logo-preview-container').style.display = 'flex';
+                document.getElementById('branding-logo-url').value = ''; // Clear URL when file is selected
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearLogoFile() {
+            pendingLogoFile = null;
+            document.getElementById('branding-logo-file').value = '';
+            document.getElementById('logo-file-name').textContent = 'No file chosen';
+            document.getElementById('logo-preview-container').style.display = 'none';
+        }
+
+        async function uploadLogoFile() {
+            if (!pendingLogoFile) return null;
+
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const base64 = e.target.result;
+                        const resp = await fetch('/api/branding/logo', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                workspace_id: 'default',
+                                filename: pendingLogoFile.name,
+                                mimetype: pendingLogoFile.type,
+                                data: base64
+                            })
+                        });
+                        const result = await resp.json();
+                        if (result.success && result.logo_url) {
+                            resolve(result.logo_url);
+                        } else {
+                            reject(new Error(result.error || 'Upload failed'));
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsDataURL(pendingLogoFile);
+            });
+        }
+
+        // Custom domain verification
+        async function checkDomainVerification() {
+            const domain = document.getElementById('branding-domain').value.trim();
+            const statusEl = document.getElementById('domain-verification-status');
+            const dnsInstructions = document.getElementById('domain-dns-instructions');
+            const sslStatus = document.getElementById('domain-ssl-status');
+
+            if (!domain) {
+                statusEl.innerHTML = `<span class="status-badge inactive" style="margin-top:8px;">Please enter a domain</span>`;
+                dnsInstructions.style.display = 'none';
+                sslStatus.style.display = 'none';
+                return;
+            }
+
+            // Validate domain format
+            const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
+            if (!domainRegex.test(domain)) {
+                statusEl.innerHTML = `<span class="status-badge inactive" style="margin-top:8px;">Invalid domain format</span>`;
+                dnsInstructions.style.display = 'none';
+                sslStatus.style.display = 'none';
+                return;
+            }
+
+            statusEl.innerHTML = `<span style="color:var(--text-secondary);margin-top:8px;display:block;">Checking verification...</span>`;
+
+            try {
+                const resp = await fetch(`/api/branding/domain/verify?domain=${encodeURIComponent(domain)}&workspace_id=default`);
+                const result = await resp.json();
+
+                // Update DNS instruction values
+                const subdomain = domain.split('.')[0];
+                document.getElementById('dns-cname-name').textContent = subdomain;
+                document.getElementById('dns-txt-name').textContent = subdomain;
+                document.getElementById('dns-txt-value').textContent = result.verification_token || `wrn-verify-${Math.random().toString(36).substring(2, 10)}`;
+
+                dnsInstructions.style.display = 'block';
+
+                if (result.verified) {
+                    statusEl.innerHTML = `
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                            <span class="status-dot healthy"></span>
+                            <span style="color:var(--color-healthy);font-weight:600;">Domain verified</span>
+                        </div>`;
+                    sslStatus.style.display = 'block';
+                    document.getElementById('ssl-indicator').className = result.ssl_active ? 'status-dot healthy' : 'status-dot warning';
+                    document.getElementById('ssl-status-text').textContent = result.ssl_active ? 'Active' : 'Provisioning...';
+                } else {
+                    statusEl.innerHTML = `
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                            <span class="status-dot warning"></span>
+                            <span style="color:var(--color-warning);font-weight:600;">Pending verification</span>
+                        </div>`;
+                    sslStatus.style.display = 'none';
+                }
+            } catch (e) {
+                statusEl.innerHTML = `<span class="status-badge inactive" style="margin-top:8px;">Verification check failed: ${e.message}</span>`;
+                dnsInstructions.style.display = 'block';
+                sslStatus.style.display = 'none';
+            }
+        }
+
+        // Sync color pickers with hex inputs and update preview
+        document.querySelectorAll('input[type="color"]').forEach(picker => {
+            const hexInput = document.getElementById(picker.id + '-hex');
+            if (hexInput) {
+                picker.addEventListener('input', () => {
+                    hexInput.value = picker.value;
+                    updateBrandingPreview();
+                    checkColorContrast();
+                });
+                hexInput.addEventListener('input', () => {
+                    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
+                        picker.value = hexInput.value;
+                        updateBrandingPreview();
+                        checkColorContrast();
+                    }
+                });
+            }
+        });
+
+        // Color contrast calculation (WCAG AA)
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function getLuminance(hex) {
+            const rgb = hexToRgb(hex);
+            if (!rgb) return 0;
+            const [rs, gs, bs] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map(c =>
+                c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+            );
+            return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+        }
+
+        function getContrastRatio(color1, color2) {
+            const l1 = getLuminance(color1);
+            const l2 = getLuminance(color2);
+            const lighter = Math.max(l1, l2);
+            const darker = Math.min(l1, l2);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        function checkColorContrast() {
+            const textColor = document.getElementById('branding-text').value;
+            const bgColor = document.getElementById('branding-bg').value;
+            const ratio = getContrastRatio(textColor, bgColor);
+            const indicator = document.getElementById('contrast-indicator');
+
+            if (ratio >= 7) {
+                indicator.className = 'contrast-indicator pass';
+                indicator.innerHTML = `<span>✓</span> Excellent contrast: ${ratio.toFixed(1)}:1 (AAA)`;
+            } else if (ratio >= 4.5) {
+                indicator.className = 'contrast-indicator pass';
+                indicator.innerHTML = `<span>✓</span> Good contrast: ${ratio.toFixed(1)}:1 (AA)`;
+            } else if (ratio >= 3) {
+                indicator.className = 'contrast-indicator warn';
+                indicator.innerHTML = `<span>⚠</span> Low contrast: ${ratio.toFixed(1)}:1 (AA Large text only)`;
+            } else {
+                indicator.className = 'contrast-indicator fail';
+                indicator.innerHTML = `<span>✗</span> Poor contrast: ${ratio.toFixed(1)}:1 (Fails WCAG AA - min 4.5:1 required)`;
+            }
+        }
+
+        function updateBrandingPreview() {
+            const primary = document.getElementById('branding-primary').value;
+            const secondary = document.getElementById('branding-secondary').value;
+            const bg = document.getElementById('branding-bg').value;
+            const text = document.getElementById('branding-text').value;
+
+            const preview = document.getElementById('branding-preview');
+            if (preview) {
+                preview.style.backgroundColor = bg;
+                preview.style.color = text;
+                const primaryBtn = preview.querySelector('.preview-btn-primary');
+                const secondaryBtn = preview.querySelector('.preview-btn-secondary');
+                if (primaryBtn) primaryBtn.style.backgroundColor = primary;
+                if (secondaryBtn) {
+                    secondaryBtn.style.borderColor = secondary;
+                    secondaryBtn.style.color = secondary;
+                }
+            }
+        }
+
+        // Initialize preview on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                updateBrandingPreview();
+                checkColorContrast();
+            }, 100);
+        });
+
+        // ========== ADMIN ==========
+        async function loadAdminDashboard(period) {
+            document.querySelectorAll('#settings-admin .period-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase().replace(' ', '_') === period);
+            });
+
+            try {
+                const resp = await fetch(`/api/admin/dashboard?workspace_id=default&period=${period}`);
+                if (!resp.ok) throw new Error('Admin API not available');
+                const data = await resp.json();
+
+                document.getElementById('admin-documents').textContent = (data.documents?.created || 0).toLocaleString();
+                document.getElementById('admin-views').textContent = (data.documents?.viewed || 0).toLocaleString();
+                document.getElementById('admin-downloads').textContent = (data.documents?.downloaded || 0).toLocaleString();
+
+                if (data.recent_activity?.length) {
+                    document.getElementById('admin-activity-feed').innerHTML = data.recent_activity.map(a => `
+                        <div class="activity-item">
+                            <span class="activity-time">${new Date(a.created_at).toLocaleTimeString()}</span>
+                            <span class="activity-desc">${a.description || a.activity_type}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('admin-activity-feed').innerHTML = '<div class="empty-state"><p>No recent activity</p></div>';
+                }
+            } catch (e) {
+                document.getElementById('admin-documents').textContent = '-';
+                document.getElementById('admin-views').textContent = '-';
+                document.getElementById('admin-downloads').textContent = '-';
+                document.getElementById('admin-activity-feed').innerHTML = '<div class="empty-state"><p>Admin dashboard requires API routes</p></div>';
+            }
+        }
+
+        // ========== GDPR ==========
+        async function loadGdprStatus() {
+            // Load existing export jobs and deletion status if available
+            document.getElementById('gdpr-export-status').innerHTML = '';
+            document.getElementById('gdpr-deletion-status').innerHTML = '';
+        }
+
+        let exportPollInterval = null;
+
+        async function requestDataExport() {
+            try {
+                const resp = await fetch('/api/gdpr/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: 'current_user' })
+                });
+                const result = await resp.json();
+                updateExportStatus(result);
+
+                // Start polling for completion
+                if (exportPollInterval) clearInterval(exportPollInterval);
+                exportPollInterval = setInterval(() => checkExportStatus(result.job_id), 2000);
+            } catch (e) {
+                alert('Export request failed: ' + e.message);
+            }
+        }
+
+        async function checkExportStatus(jobId) {
+            try {
+                const resp = await fetch(`/api/gdpr/export/${jobId}`);
+                const job = await resp.json();
+                updateExportStatus(job);
+
+                if (job.status === 'completed' || job.status === 'failed') {
+                    clearInterval(exportPollInterval);
+                    exportPollInterval = null;
+                }
+            } catch (e) {
+                console.error('[GDPR] Export status check failed:', e);
+            }
+        }
+
+        function updateExportStatus(job) {
+            const statusEl = document.getElementById('gdpr-export-status');
+            const statusClass = job.status === 'completed' ? 'active' : (job.status === 'failed' ? 'inactive' : 'pending');
+            const statusText = job.status || 'pending';
+
+            let content = `
+                <div class="status-badge ${statusClass}" style="margin-bottom:12px;">Export ${statusText}</div>
+                <p style="font-size:12px;color:var(--text-secondary);">Job ID: ${job.job_id}</p>
+            `;
+
+            if (job.status === 'completed' && job.file_path) {
+                const fileSize = job.file_size ? `(${(job.file_size / 1024).toFixed(1)} KB)` : '';
+                content += `
+                    <div style="margin-top:12px;">
+                        <a href="/api/gdpr/export/${job.job_id}/download" class="btn-primary" style="text-decoration:none;display:inline-block;">
+                            Download Export ${fileSize}
+                        </a>
+                    </div>
+                    <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;">
+                        Expires: ${new Date(job.expires_at).toLocaleDateString()}
+                    </p>
+                `;
+            } else if (job.status === 'failed') {
+                content += `<p style="color:var(--violet-500);font-size:12px;margin-top:8px;">Error: ${job.error || 'Unknown error'}</p>`;
+            } else if (job.status === 'processing' || job.status === 'pending') {
+                content += `<p style="font-size:11px;color:var(--text-secondary);margin-top:8px;">Generating export file...</p>`;
+            }
+
+            statusEl.innerHTML = content;
+        }
+
+        async function updateConsent(type, consented) {
+            try {
+                await fetch('/api/gdpr/consent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: 'current_user', consent_type: type, consented })
+                });
+            } catch (e) {
+                console.error('[GDPR] Consent update failed:', e);
+            }
+        }
+
+        async function requestAccountDeletion() {
+            if (!confirm('Are you sure you want to delete your account? This starts a 30-day grace period.')) return;
+
+            try {
+                const reason = document.getElementById('gdpr-deletion-reason').value;
+                const resp = await fetch('/api/gdpr/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: 'current_user', reason })
+                });
+                const result = await resp.json();
+                document.getElementById('gdpr-deletion-status').innerHTML = `
+                    <div class="status-badge pending" style="margin-bottom:12px;">Deletion scheduled</div>
+                    <p style="font-size:12px;color:var(--text-secondary);">
+                        Grace period ends: ${new Date(result.grace_period_ends).toLocaleDateString()}<br>
+                        ${result.days_remaining} days remaining
+                    </p>
+                    <button class="btn-secondary btn-secondary--sm" onclick="cancelDeletion()" style="margin-top:8px;">Cancel Deletion</button>
+                `;
+            } catch (e) {
+                alert('Deletion request failed: ' + e.message);
+            }
+        }
+
+        async function cancelDeletion() {
+            try {
+                await fetch('/api/gdpr/delete/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: 'current_user' })
+                });
+                document.getElementById('gdpr-deletion-status').innerHTML = '';
+                alert('Deletion request cancelled');
+            } catch (e) {
+                alert('Cancel failed: ' + e.message);
+            }
+        }
+
+        // ========== USERS / RBAC ==========
+        async function loadUsers() {
+            try {
+                const resp = await fetch('/api/workspace/default/users');
+                if (!resp.ok) return;
+                const users = await resp.json();
+
+                document.getElementById('users-table-body').innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.email}</td>
+                        <td><span class="status-badge ${u.role === 'owner' ? 'active' : ''}">${u.role}</span></td>
+                        <td>${new Date(u.joined_at).toLocaleDateString()}</td>
+                        <td>${u.role === 'owner' ? '-' : `
+                            <select onchange="changeUserRole('${u.user_id}', this.value)" style="padding:4px;border-radius:4px;border:1px solid var(--border-subtle);">
+                                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                <option value="member" ${u.role === 'member' ? 'selected' : ''}>Member</option>
+                                <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+                            </select>
+                            <button class="btn-secondary btn-secondary--sm" onclick="removeUser('${u.user_id}')" style="margin-left:8px;">Remove</button>
+                        `}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('[USERS] Load error:', e);
+            }
+        }
+
+        async function inviteUser() {
+            const email = document.getElementById('invite-email').value;
+            const role = document.getElementById('invite-role').value;
+
+            if (!email) {
+                alert('Email is required');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/workspace/default/invite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, role })
+                });
+                const result = await resp.json();
+                alert(result.success ? 'Invitation sent!' : 'Error: ' + result.message);
+                document.getElementById('invite-email').value = '';
+                loadUsers();
+            } catch (e) {
+                alert('Invite failed: ' + e.message);
+            }
+        }
+
+        async function changeUserRole(userId, newRole) {
+            try {
+                await fetch(`/api/users/${userId}/role`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workspace_id: 'default', new_role: newRole })
+                });
+            } catch (e) {
+                alert('Role change failed: ' + e.message);
+                loadUsers();
+            }
+        }
+
+        async function removeUser(userId) {
+            if (!confirm('Remove this user from the workspace?')) return;
+            try {
+                await fetch(`/api/workspace/default/users/${userId}`, { method: 'DELETE' });
+                loadUsers();
+            } catch (e) {
+                alert('Remove failed: ' + e.message);
+            }
+        }
+
+        // Close settings modal on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const settingsModal = document.getElementById('settings-modal');
+                if (settingsModal.classList.contains('open')) {
+                    closeSettingsModal();
+                    return;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,266 @@
+/* ==========================================================================
+   Wranngle Design System — Colors & Type
+   Single source of truth for the marketing surface (wranngle.com).
+   Email transactional palette diverges intentionally — see README.md.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;500;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ---------- Color Scales ---------- */
+
+  /* Sunset — primary action / CTA */
+  --sunset-50:  #fff3e7;
+  --sunset-100: #ffe0bf;
+  --sunset-200: #ffc179;
+  --sunset-300: #ff9e33;  /* warning amber */
+  --sunset-400: #ff7f00;
+  --sunset-500: #ff5f00;  /* primary brand orange */
+  --sunset-600: #ef4b00;  /* hover */
+  --sunset-700: #c73a00;
+  --sunset-800: #9f3000;
+  --sunset-900: #7d2700;
+  --sunset-950: #431300;
+
+  /* Violet — secondary / security / premium */
+  --violet-50:  #fdf1f5;
+  --violet-100: #f9dce5;
+  --violet-200: #f2b6c6;
+  --violet-300: #ea8aa6;
+  --violet-400: #dd6186;
+  --violet-500: #cf3c69;  /* secondary brand magenta */
+  --violet-600: #b92a56;
+  --violet-700: #972144;
+  --violet-800: #741a36;
+  --violet-900: #561329;
+  --violet-950: #2d0914;  /* dark page radial */
+
+  /* Sand — neutral / background */
+  --sand-50:  #fcfaf5;  /* light page */
+  --sand-100: #f6f1e7;
+  --sand-200: #ebdfc8;
+  --sand-300: #dac39f;
+  --sand-400: #c2a677;
+  --sand-500: #ab8c5b;
+  --sand-600: #957850;
+  --sand-700: #7a6343;
+  --sand-800: #625137;
+  --sand-900: #4f412d;
+  --sand-950: #292218;
+
+  /* Night — text / dark surfaces */
+  --night-50:  #f2f0f3;
+  --night-100: #e4e1e7;
+  --night-200: #cbc7d3;
+  --night-300: #aaa4b8;
+  --night-400: #847d9a;  /* text-muted */
+  --night-500: #6a6380;  /* text-secondary */
+  --night-600: #57516a;
+  --night-700: #464055;
+  --night-800: #393444;
+  --night-900: #201e28;
+  --night-950: #12111a;  /* primary text / dark page */
+
+  /* Legacy Wranngle aliases (still used in the codebase) */
+  --s500: var(--sunset-500);
+  --v500: var(--violet-500);
+  --n950: var(--night-950);
+
+  /* ---------- Semantic colors (web/marketing) ---------- */
+  --color-action:        var(--sunset-500);
+  --color-action-hover:  var(--sunset-600);
+  --color-action-glow:   rgba(255, 95, 0, 0.25);
+  --color-critical:      var(--violet-500);
+  --color-warning:       var(--sunset-300);
+  --color-healthy:       #5D8C61;     /* cactus green */
+  --color-info:          #3b82f6;
+
+  /* Email-only semantic palette (higher saturation for client compatibility) */
+  --email-success: #10b981;
+  --email-warning: #f59e0b;
+  --email-danger:  #ef4444;
+  --email-bg-page: #f3f4f6;
+  --email-bg-subtle: #f9fafb;
+  --email-border: #e5e7eb;
+
+  /* Status indicators (in-app presence) */
+  --status-online:  #22c55e;
+  --status-away:    #f59e0b;
+  --status-busy:    #ef4444;
+  --status-offline: #9ca3af;
+
+  /* ---------- Surfaces ---------- */
+  --surface-page:     var(--sand-50);
+  --surface-card:     #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted:    var(--sand-100);
+  --surface-glass:    rgba(255, 255, 255, 0.7);
+  --surface-console:  #1a1a1e;       /* dark console panel */
+
+  /* ---------- Text ---------- */
+  --text-primary:   var(--night-950);
+  --text-secondary: var(--night-500);
+  --text-muted:     var(--night-400);
+  --text-inverse:   var(--sand-50);
+
+  /* ---------- Borders ---------- */
+  --border-subtle:  var(--sand-200);
+  --border-default: var(--sand-300);
+  --border-strong:  var(--sand-400);
+
+  /* ---------- Page background gradients ---------- */
+  --bg-page-light: linear-gradient(to bottom, #fcfaf5, #ebdfc8);
+  --bg-page-dark:  radial-gradient(circle at 50% 0%, #2d0914 0%, #12111a 60%);
+  --bg-showcase:   linear-gradient(180deg, var(--sand-50) 0%, var(--sand-100) 50%, var(--violet-100) 100%);
+  --bg-hero-email: linear-gradient(135deg, #12111a 0%, #2d0914 100%);
+
+  /* ---------- Typography ---------- */
+  --font-display: 'Bricolage Grotesque', 'Outfit', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  --text-xs:   0.6875rem; /* 11px */
+  --text-sm:   0.75rem;   /* 12px */
+  --text-base: 0.875rem;  /* 14px */
+  --text-lg:   1rem;      /* 16px */
+  --text-xl:   1.25rem;   /* 20px */
+  --text-2xl:  1.5rem;    /* 24px */
+  --text-3xl:  2rem;      /* 32px */
+  --text-hero: 3rem;      /* 48px — hero md */
+  --text-hero-xl: 4.5rem; /* 72px — hero desktop */
+
+  /* ---------- Spacing (8px base) ---------- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* ---------- Radii ---------- */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  24px;
+  --radius-pill: 9999px;
+  --radius-lasso: 24px 4px 24px 4px;       /* signature asymmetric */
+
+  /* ---------- Shadows ---------- */
+  --shadow-xs:    0 1px 2px rgba(18,17,26,.04);
+  --shadow-sm:    0 2px 4px rgba(18,17,26,.04), 0 1px 2px rgba(18,17,26,.02);
+  --shadow-md:    0 4px 12px rgba(18,17,26,.06), 0 2px 4px rgba(18,17,26,.04);
+  --shadow-lg:    0 8px 24px rgba(18,17,26,.08), 0 4px 8px rgba(18,17,26,.04);
+  --shadow-xl:    0 16px 48px rgba(18,17,26,.12), 0 8px 16px rgba(18,17,26,.06);
+  --shadow-glow:  0 0 24px var(--color-action-glow);
+  --shadow-inner: inset 0 2px 4px rgba(18,17,26,.06);
+  --shadow-card-light: 0 6px 16px rgba(18,17,26,.08);
+  --shadow-card-dark:  0 6px 16px rgba(0,0,0,.4);
+
+  /* ---------- Motion ---------- */
+  --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:     cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast:   150ms;
+  --duration-normal: 250ms;
+  --duration-slow:   400ms;
+}
+
+/* ==========================================================================
+   Semantic element styles — drop-in for body / h1 / h2 / code / etc.
+   ========================================================================== */
+
+html, body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-primary);
+  background: var(--surface-page);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+h1 { font-size: var(--text-3xl); }      /* 32px on doc; hero overrides go larger */
+h2 { font-size: var(--text-xl); font-weight: 700; line-height: 1.2; }
+h3 { font-size: var(--text-lg); font-weight: 700; }
+h4, h5, h6 { font-size: var(--text-base); font-weight: 700; }
+
+p { margin: 0 0 var(--space-4) 0; line-height: 1.6; }
+small { font-size: var(--text-sm); color: var(--text-secondary); }
+
+a {
+  color: var(--color-action);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+a:hover { color: var(--color-action-hover); }
+
+code, kbd, pre, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+code {
+  background: var(--surface-muted);
+  border: 1px dotted var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.35em;
+  color: var(--text-primary);
+}
+
+/* Console label — bracketed, monospace, ALL CAPS */
+.console-label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: var(--text-sm);
+}
+.console-label--info  { color: var(--sunset-500); }
+.console-label--ready { color: var(--color-healthy); }
+.console-label--warn  { color: var(--color-warning); }
+.console-label--error { color: var(--email-danger); }
+
+/* Block label / meta-text utility */
+.label {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* Display-font utilities */
+.brand-font { font-family: var(--font-display); }
+.mono-font  { font-family: var(--font-mono); }
+.body-font  { font-family: var(--font-body); }
+
+/* iOS auto-zoom prevention */
+input, select, textarea { font-size: 16px; }
+
+input, textarea, select {
+  font-family: var(--font-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-action);
+  box-shadow: 0 0 0 3px var(--color-action-glow);
+}
