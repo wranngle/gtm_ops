@@ -7,24 +7,28 @@ This repo is the unified runtime for a voice-AI-led GTM motion. Contributions sh
 
 ## Local Setup
 
-To get your local environment set up, clone the repository and run the current validation:
-
-    git clone <repo-url>
-    cd <repo-dir>
-    scripts/validate-knowledge-base.sh
+```bash
+git clone <repo-url>
+cd <repo-dir>
+bun install                                # or `npm install`
+bash scripts/validate-knowledge-base.sh    # smoke check
+```
 
 ## Running Tests
 
 Before submitting changes, run the checks that exist for the surfaces you touched.
 
-Current baseline:
+```bash
+bash scripts/validate-knowledge-base.sh    # required-files + AGENTS.md size guard
+bash scripts/lint-layered-architecture.sh  # forward-only import direction
+bash scripts/gardener.sh                   # markdown staleness + broken links
+bun run typecheck                          # tsc --noEmit
+bun run test:run                           # vitest unit (~10s, 2,366 tests)
+bun run test:console                       # Playwright UI suite (100+ tests)
+bun run test:e2e                           # Playwright PDF / report suite
+```
 
-    scripts/validate-knowledge-base.sh
-
-Future runnable surfaces should add and document their own checks, such as:
-
-    bun test
-    pytest
+CI runs `static`, `unit`, and `console-e2e` jobs on every PR — see `.github/workflows/test.yml`. The doc gardener also runs as a non-blocking check via `.github/workflows/knowledge-base.yml`.
 
 ## Code Style
 
