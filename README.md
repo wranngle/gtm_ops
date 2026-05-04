@@ -4,13 +4,15 @@ Voice-AI-led GTM motion runtime. An inbound voice agent enriches the lead from C
 
 ## What's in here
 
-- **`apps/ops-console/`** — operator UI (vanilla HTML/JS) for proposal review, eval-run triage, and audit-log inspection. Same code runs static (`DEMO_MODE`) or against the live backend.
+- **`apps/ops-console/`** — operator UI: React (loaded via UMD + babel-standalone, no build step) for the main `/console/`, plus static dashboards at `/evaluation/` and `/eval-runs/`. Same code runs static (`DEMO_MODE`) or against the live backend. Includes the **Agents** route — live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake agents wired to app context.
 - **`lib/`** — intake, CRM enrichment, post-call processing, LLM extraction, branded PDF generation, audit log surface, evaluation hooks.
-- **`server.js`** — Express `/api/*` surface (live mode).
+- **`server.js`** — Express `/api/*` surface (live mode, full Express backend).
+- **`functions/api/`** — Cloudflare Pages Functions mirror of the same `/api/*` surface so the Pages deploy is full-stack. Pages Functions read from D1 first and fall back to the bundled fixtures when D1 is empty or unbound.
 - **`cli.js`** — presales pipeline CLI.
 - **`templates/`** — branded PDF templates rendered with `tokens/`.
-- **`workflows/`** — three to five sanitized n8n example workflows; the full library lives at [`wranngle/n8n`](https://github.com/wranngle/n8n).
 - **`tokens/`** — machine-readable extracts of the brand system (`tokens.css`, `tokens.json`, `tokens.tailwind.js`); see [`DESIGN.md`](DESIGN.md) for the long-form spec.
+
+The n8n workflow library is the single source of truth at [`wranngle/n8n`](https://github.com/wranngle/n8n) — not duplicated here.
 
 ## Demo
 
@@ -27,7 +29,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the product layers (intake → enri
 
 ## Running it
 
-**Live mode** (full backend):
+**Live mode** (full Express backend):
 
 ```bash
 bun install
@@ -38,10 +40,23 @@ bun run start  # Express server on :3000
 
 ```bash
 cd apps/ops-console
-python -m http.server  # then open http://localhost:8000
+python3 -m http.server 4173   # then open http://localhost:4173/console/
 ```
 
-In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/fixtures/`. The same UI runs in both modes.
+In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/fixtures/`. The same UI runs in both modes. A small "demo data" pill appears in the topbar when the backend returns no historic runs.
+
+**ElevenLabs Sales Coach + Sarah Intake** mount as live ConvAI widgets when `unpkg.com/@elevenlabs/convai-widget-embed` is reachable. If the embed script can't load (corporate network, strict CSP), the widget container shows a fallback message + deep link to the agent on `elevenlabs.io`. Append `?admin=1` to the `/console/` URL to reveal admin-only agents.
+
+## Tests
+
+```bash
+bun run typecheck         # tsc --noEmit
+bun run test:run          # vitest unit tests (~10s)
+bun run test:console      # Playwright UI suite — 100+ tests
+bun run test:e2e          # Playwright PDF/report suite
+```
+
+CI runs `static`, `unit`, and `console-e2e` jobs on every PR (see `.github/workflows/test.yml`).
 
 ## Brand system
 
@@ -51,13 +66,13 @@ In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/f
 
 See [`LICENSE`](./LICENSE).
 
-## Deploy (Cloudflare Pages — DEMO_MODE only)
+## Deploy (Cloudflare Pages — full-stack)
 
-The static `apps/ops-console/` UI is deployable to Cloudflare Pages out of the
-box. The `server.js` Express runtime is NOT included in this deploy; the
-DEMO_MODE shim in each HTML page intercepts every `/api/*` call and resolves
-to `apps/ops-console/fixtures/*.json`, so the deployed site is fully
-interactive without a backend.
+`apps/ops-console/` deploys to Cloudflare Pages, and every `/api/*` route is
+served by a Pages Function under `functions/api/*` (D1-backed where bindings
+are configured, falling back to the bundled fixtures otherwise). The DEMO_MODE
+shim in each HTML page also intercepts `/api/*` client-side, so the site stays
+interactive even if no backend is wired.
 
 ### One-time setup
 
@@ -85,8 +100,10 @@ bun run pages:dev                                   # local CF Pages emulator
 - [`apps/ops-console/_headers`](apps/ops-console/_headers) — security + cache headers (X-Frame-Options, immutable tokens, fixture caching)
 - [`apps/ops-console/_redirects`](apps/ops-console/_redirects) — `/api/*` → `/fixtures/*.json` fallback for non-shim consumers
 
-### Live runtime (separate hosting)
+### Live Express alternative (separate hosting)
 
-The live Express runtime (`bun run start`) needs a different host since CF
-Pages is static + Workers Functions only. Options: Fly.io, Render, Railway.
-That deploy isn't set up yet; the Pages target is DEMO_MODE only.
+The full Express runtime (`bun run start`) is a node-friendlier alternative to
+the Pages Functions deploy when you need things Pages Functions can't easily
+do — long-running streams, native binary deps, big-memory PDF rendering.
+Options: Fly.io, Render, Railway. Pages Functions remain the canonical
+deploy target.
