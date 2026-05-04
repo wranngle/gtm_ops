@@ -232,13 +232,35 @@ globalThis.SalesCoachLauncher = function SalesCoachLauncher() {
   const [open, setOpen] = React.useState(false);
   const ctx = globalThis.useAppContext();
   const reg = globalThis.AGENT_REGISTRY.byKey('sales_coach');
+  const launcherRef = React.useRef(null);
+  const closeRef = React.useRef(null);
+  const previousFocusRef = React.useRef(null);
+  // Esc closes; focus moves into the dock close button on open and
+  // returns to the launcher on close — same focus-management pattern
+  // as the command palette + topbar popovers + lead-detail panel.
+  React.useEffect(() => {
+    if (!open) return undefined;
+    previousFocusRef.current = document.activeElement;
+    requestAnimationFrame(() => closeRef.current?.focus());
+    function onKey(e) { if (e.key === 'Escape') setOpen(false); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+  React.useEffect(() => {
+    if (!open && previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+      try { previousFocusRef.current.focus(); } catch (_) { /* unmounted */ }
+      previousFocusRef.current = null;
+    }
+  }, [open]);
   if (!reg) return null;
   return (
     React.createElement(React.Fragment, null,
       React.createElement('button', {
+        ref: launcherRef,
         className: 'coach-launcher',
         title: 'Open Sales Coach',
         'aria-label': 'Open Sales Coach',
+        'aria-expanded': open,
         onClick: () => setOpen(o => !o),
       },
       React.createElement('span', { className: 'coach-launcher__orb' }),
@@ -249,7 +271,7 @@ globalThis.SalesCoachLauncher = function SalesCoachLauncher() {
           React.createElement('span', null, 'Sales Coach'),
           React.createElement('span', { className: 'mono dim', style: { fontSize: 10 } },
             ctx.selection ? `${ctx.selection.type} · ${ctx.selection.id}` : 'no selection'),
-          React.createElement('button', { className: 'btn btn--ghost btn--icon', onClick: () => setOpen(false), 'aria-label': 'Close coach' },
+          React.createElement('button', { ref: closeRef, className: 'btn btn--ghost btn--icon', onClick: () => setOpen(false), 'aria-label': 'Close coach' },
             React.createElement(globalThis.Icon.Close, { size: 14 }))
         ),
         React.createElement('div', { className: 'coach-dock__body' },

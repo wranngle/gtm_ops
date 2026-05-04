@@ -415,4 +415,30 @@ test.describe('coach launcher', () => {
     await page.locator('.coach-dock__hd .btn--icon').click();
     await expect(page.locator('.coach-dock')).toHaveCount(0);
   });
+
+  test('coach dock has dialog semantics + focus management + Esc close', async ({ openConsole }) => {
+    const page = await openConsole();
+    const launcher = page.locator('.coach-launcher');
+    // aria-expanded reflects open state.
+    await expect(launcher).toHaveAttribute('aria-expanded', 'false');
+    await launcher.click();
+    await expect(launcher).toHaveAttribute('aria-expanded', 'true');
+    const dock = page.locator('.coach-dock');
+    await expect(dock).toHaveAttribute('role', 'dialog');
+    await expect(dock).toHaveAttribute('aria-label', /sales coach/i);
+    // Close button receives focus on open.
+    await page.waitForFunction(
+      () => document.activeElement?.getAttribute('aria-label') === 'Close coach',
+      null,
+      { timeout: 2000 },
+    );
+    // Escape closes.
+    await page.keyboard.press('Escape');
+    await expect(dock).toHaveCount(0);
+    // Focus restored to the launcher.
+    const restored = await page.evaluate(
+      () => document.activeElement?.classList.contains('coach-launcher') ?? false,
+    );
+    expect(restored, 'focus did not return to coach launcher').toBe(true);
+  });
 });
