@@ -9,12 +9,16 @@
  * - Cleanup of old versions
  */
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEST_FILES_DIR = path.join(__dirname, '..', '..', 'config', 'test_artifacts');
+// Test artifacts go in os.tmpdir(), never in config/ — the real config dir.
+// A crashed run with the old layout left binary SQLite blobs in `config/`
+// that risked accidental `git add -A` commits.
+const TEST_FILES_DIR = path.join(os.tmpdir(), 'gtm-ops-versioning-test', 'test_artifacts');
 
 let VersionManager: any;
 let HistoryManager: any;
@@ -22,8 +26,8 @@ let MAX_VERSIONS: any;
 let testDbPath: string;
 
 beforeEach(async () => {
-  // Create unique database path for each test
-  testDbPath = path.join(__dirname, '..', '..', 'config', `versioning_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`);
+  // Create unique database path for each test (in tmpdir — see note above).
+  testDbPath = path.join(os.tmpdir(), `versioning_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`);
 
   // Clean up test files
   if (fs.existsSync(TEST_FILES_DIR)) {
