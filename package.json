@@ -79,7 +79,7 @@
     "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.18",
     "arktype": "2.1.29",
-    "bun-types": "1.3.6",
+    "bun-types": "1.3.13",
     "eslint-config-xo-typescript": "^9.0.0",
     "tsx": "^4.7.0",
     "typescript": "5.9.3",
