@@ -576,17 +576,56 @@ function GeneratePage({ setRoute }) {
   const [inputText, setInputText] = React.useState('');
   const [isGenerating, setIsGenerating] = React.useState(false);
 
+  // Canned pipeline trace replayed in DEMO_MODE so visitors see the
+  // sequence actually run. Live mode lets the real backend stream.
+  const DEMO_STREAM = [
+    { delay: 100,  level: 'info', msg: 'intake.received: parsing brief…' },
+    { delay: 300,  level: 'info', msg: 'extract.client: Acme HVAC Services (regional)' },
+    { delay: 280,  level: 'info', msg: 'extract.signals: 22% after-hours voicemail · 40% no-callback · pilot approved' },
+    { delay: 260,  level: 'info', msg: 'enrichment.firmographic: ~30 employees · residential + light commercial · TX' },
+    { delay: 320,  level: 'ok',   msg: 'enrichment.icp: 0.82 · ICP fit confirmed' },
+    { delay: 360,  level: 'info', msg: 'pricing.model: 1q pilot · payback ≤ 6mo target · banded $1.5–2.5k/mo' },
+    { delay: 280,  level: 'info', msg: 'compliance.scan: TX two-party recording disclosure flagged' },
+    { delay: 320,  level: 'info', msg: 'scope.draft: phases 1–4 · SOW + AI risk report attached' },
+    { delay: 280,  level: 'info', msg: 'pdf.render: branded template · Wranngle livery · 7 pages' },
+    { delay: 180,  level: 'ok',   msg: 'audit.signed: artifact_id=run_acme_hvac · trace ok' },
+    { delay: 220,  level: 'ok',   msg: 'pipeline.done: proposal ready for review →' },
+  ];
+
   const handleGenerate = async () => {
     if (!inputText) return window.toast('Input required', { tone: 'critical' });
     setIsGenerating(true);
     window.toast('Sequence Initializing...', { tone: 'accent' });
     try {
+      // Always POST so live backends pick up the work.
       await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: inputText })
       });
-      // The EventSource in ConsolePanel will pick up the stream
+      // In DEMO_MODE the EventSource is shimmed to a no-op, so the
+      // console panel would otherwise stay empty. Replay a canned
+      // pipeline trace via the gtm:stream custom event the panel
+      // listens for, so the demo experience is convincing.
+      if (window.DEMO_MODE) {
+        let cumulative = 0;
+        for (const evt of DEMO_STREAM) {
+          cumulative += evt.delay;
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg: evt.msg, level: evt.level } }));
+          }, cumulative);
+        }
+        setTimeout(() => {
+          setIsGenerating(false);
+          window.toast('Proposal generated', { sub: 'Acme HVAC · 7 pages · ready to review', tone: 'accent' });
+        }, cumulative + 200);
+      } else {
+        // Live mode: assume the backend will keep the stream open.
+        // Reset the button after a short grace period so the user can
+        // start another run without reloading. (The console panel
+        // shows live progress regardless.)
+        setTimeout(() => setIsGenerating(false), 1500);
+      }
     } catch (e) {
       window.toast('Generation failed', { tone: 'critical' });
       setIsGenerating(false);

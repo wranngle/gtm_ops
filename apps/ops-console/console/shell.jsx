@@ -505,17 +505,29 @@ function ConsolePanel({ lines, title = 'live · agent.feed' }) {
   const [liveLines, setLiveLines] = React.useState([]);
   React.useEffect(() => {
     if (lines) return; // Use provided static lines if available
+    const append = (txt, level = 'info') => {
+      setLiveLines(prev => {
+        const next = [...prev, { t: new Date().toLocaleTimeString(), level, txt }];
+        return next.slice(-20); // Keep last 20
+      });
+    };
+    // Live mode: EventSource over /api/stream.
     const es = new EventSource('/api/stream');
     es.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.msg) {
-        setLiveLines(prev => {
-          const newLines = [...prev, { t: new Date().toLocaleTimeString(), level: 'info', txt: data.msg }];
-          return newLines.slice(-20); // Keep last 20
-        });
-      }
+      try {
+        const data = JSON.parse(e.data);
+        if (data.msg) append(data.msg, data.level);
+      } catch (_) { /* ignore malformed payloads */ }
     };
-    return () => es.close();
+    // Demo mode + manual fan-out: any code can dispatch
+    // window.dispatchEvent(new CustomEvent('gtm:stream', {detail: {msg, level}}))
+    // and the panel will append it. Used by GeneratePage in DEMO_MODE.
+    const onStream = (e) => {
+      const d = e.detail || {};
+      if (typeof d.msg === 'string') append(d.msg, d.level || 'info');
+    };
+    window.addEventListener('gtm:stream', onStream);
+    return () => { es.close(); window.removeEventListener('gtm:stream', onStream); };
   }, [lines]);
 
   const displayLines = lines || liveLines;

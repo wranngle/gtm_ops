@@ -57,3 +57,21 @@ test('Generate page · live console panel mounts', async ({ openConsole }) => {
   await expect(page.locator('.console-panel')).toBeVisible();
   await expect(page.locator('.console-panel__hd')).toContainText(/pipeline\.stream/);
 });
+
+test('Generate page · DEMO_MODE streams a canned pipeline trace and resets the button', async ({ openConsole }) => {
+  const page = await openConsole();
+  await page.locator('.sb__item:has-text("Generate")').first().click();
+  await page.locator('.btn:has-text("Auto-Sample")').click();
+  await page.waitForTimeout(150);
+  const initBtn = page.locator('.btn--primary:has-text("Initialize Sequence")');
+  await initBtn.click();
+  // Button switches to "Generating..." while the canned trace replays.
+  await expect(page.locator('.btn--primary:has-text("Generating")')).toBeVisible({ timeout: 1000 });
+  // The canned trace should produce visible OK lines in the console panel.
+  await expect(page.locator('.console-panel .cl-ok')).toHaveCount(3, { timeout: 10_000 });
+  await expect(page.locator('.console-panel')).toContainText(/pipeline\.done/i);
+  // Button resets so the user can launch another run.
+  await expect(page.locator('.btn--primary:has-text("Initialize Sequence")')).toBeVisible({ timeout: 5000 });
+  // Final confirmation toast.
+  await expect(page.locator('.toast').first()).toContainText(/Proposal generated/i);
+});
