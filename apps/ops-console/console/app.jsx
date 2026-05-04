@@ -20,6 +20,12 @@ function App() {
   const [tw, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
   const [dataLoaded, setDataLoaded] = useS(0);
 
+  // Publish route changes to the global AppContext so the ConvAI widget
+  // can pick them up as dynamic variables.
+  useE(() => {
+    window.AppContext.set({ route });
+  }, [route]);
+
   // Apply tweaks to the document
   useE(() => {
     document.documentElement.setAttribute('data-theme', tw.theme);
@@ -95,13 +101,15 @@ function App() {
             {route === 'calls' && <CallsPage/>}
             {route === 'evals' && <EvalsPage/>}
             {route === 'proposals' && <ProposalsPage setRoute={setRoute}/>}
-            {route === 'settings' && <SettingsPage/>}
+            {route === 'agents' && <AgentsPage setRoute={setRoute}/>}
+            {route === 'settings' && <SettingsPage setRoute={setRoute}/>}
           </div>
         </div>
       </div>
 
       <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} setRoute={setRoute}/>
       <window.ToastHost/>
+      <window.SalesCoachLauncher/>
 
       <window.TweaksPanel title="Tweaks">
         <window.TweakSection label="Appearance">

@@ -18,6 +18,8 @@ function EvalsPage() {
         title="Evals"
         sub="Every conversation is graded by a panel of judge models. Drill into a regression to see what changed."
         actions={<>
+          <a className="btn btn--ghost btn--sm" href="../eval-runs/" target="_blank" rel="noopener noreferrer"><I3.Doc size={12}/>Eval runs ↗</a>
+          <a className="btn btn--ghost btn--sm" href="../evaluation/" target="_blank" rel="noopener noreferrer"><I3.Beaker size={12}/>Eval dashboard ↗</a>
           <button className="btn btn--ghost btn--sm" onClick={() => window.toast('Re-running 6 suites', { sub:'~7 min · output streams to console', tone:'accent' })}><I3.Refresh size={12}/>Re-run all</button>
           <button className="btn btn--primary btn--sm" onClick={() => window.toast('New suite scaffolded', { sub:'edit prompts in eval policy →' })}><I3.Plus size={12}/>New suite</button>
         </>}
@@ -51,7 +53,7 @@ function EvalsPage() {
                 <div className={`mono num ${s.delta > 0 ? 'cl-ok' : s.delta < 0 ? 'cl-err' : 'dim'}`} style={{fontSize:12, fontWeight:600, textAlign:'right'}}>
                   {s.delta > 0 ? '▲' : s.delta < 0 ? '▼' : '·'} {(Math.abs(s.delta)*100).toFixed(1)}%
                 </div>
-                <button className="btn btn--ghost btn--icon" onClick={(e)=>{e.stopPropagation(); window.toast(`Re-running ${s.name}`, { sub:`${s.runs} cases · ~90s`, tone:'accent' });}}><I3.Play size={12}/></button>
+                <button className="btn btn--ghost btn--icon" aria-label={`Re-run ${s.name}`} onClick={(e)=>{e.stopPropagation(); window.toast(`Re-running ${s.name}`, { sub:`${s.runs} cases · ~90s`, tone:'accent' });}}><I3.Play size={12}/></button>
               </div>
             ))}
           </div>
@@ -133,16 +135,29 @@ function EvalsPage() {
 function ProposalsPage({ setRoute }) {
   const D = window.GTM;
   const [activeId, setActiveId] = useState('PR-2041');
+  const [filter, setFilter] = useState('all');
   const active = D.proposals.find(p => p.id === activeId) || D.proposals[0];
+  const filtered = D.proposals.filter(p => {
+    if (filter === 'all') return true;
+    if (filter === 'mine') return p.owner === 'agent-02';
+    if (filter === 'open') return p.stage !== 'signed';
+    return true;
+  });
+
+  // Publish active proposal so the sales coach can copilot it.
+  useEffect(() => {
+    window.AppContext.set({ selection: { type:'proposal', id: activeId }});
+    return () => { window.AppContext.set({ selection: null }); };
+  }, [activeId]);
 
   return (
     <div className="page">
       <PageHeader
-        eyebrow={`4 active · ${D.proposals.reduce((s,p) => s + parseInt((p.amount||'0').replace(/\D/g,'')), 0)}K total`}
+        eyebrow={`${filtered.length} active · $${D.proposals.reduce((s,p) => s + parseInt((p.amount||'0').replace(/\D/g,'')), 0)}K total`}
         title="Proposals"
         sub="Each proposal is auto-assembled from call signals, scoped, and tracked through redlines."
         actions={<>
-          <Segmented value="all" onChange={()=>{}} options={[
+          <Segmented value={filter} onChange={setFilter} options={[
             { value:'all', label:'All' },
             { value:'mine', label:'Mine' },
             { value:'open', label:'Open' },
@@ -152,10 +167,15 @@ function ProposalsPage({ setRoute }) {
       />
 
       <div className="split split--2">
-        <Card title="active proposals" className="card--accent">
+        <Card title={`active proposals · ${filtered.length}`} className="card--accent">
           <div className="vstack" style={{gap:0}}>
-            {D.proposals.map(p => (
-              <div key={p.id} onClick={()=>setActiveId(p.id)}
+            {filtered.map(p => (
+              <div key={p.id}
+                   role="button"
+                   tabIndex={0}
+                   aria-pressed={activeId === p.id}
+                   onClick={()=>setActiveId(p.id)}
+                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(p.id); } }}
                    style={{padding:'14px 4px', borderBottom:'1px dashed var(--border)', display:'grid', gridTemplateColumns:'1fr auto', gap:12, cursor:'pointer', borderLeft: activeId === p.id ? '2px solid var(--sunset-500)' : '2px solid transparent', paddingLeft: activeId === p.id ? 10 : 4}}>
                 <div>
                   <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
@@ -248,10 +268,9 @@ function ProposalsPage({ setRoute }) {
 /* ------------------------------------------------------------ */
 /* SETTINGS */
 /* ------------------------------------------------------------ */
-function SettingsPage() {
-  const [tab, setTab] = useState('agents');
+function SettingsPage({ setRoute }) {
+  const [tab, setTab] = useState('integrations');
   const tabs = [
-    { id:'agents',    label:'Agents' },
     { id:'integrations', label:'Integrations' },
     { id:'evals',     label:'Eval policy' },
     { id:'team',      label:'Team' },
@@ -262,19 +281,30 @@ function SettingsPage() {
   return (
     <div className="page">
       <PageHeader eyebrow="workspace · helix" title="Settings"
-        sub="The controls behind the autonomy."/>
+        sub="The controls behind the autonomy."
+        actions={
+          <button className="btn btn--ghost btn--sm" onClick={() => setRoute && setRoute('agents')}>
+            <I3.Bot size={12}/>Manage agents →
+          </button>
+        }/>
 
       <div className="settings-grid">
-        <div className="settings-nav">
+        <div className="settings-nav" role="tablist" aria-label="Settings sections">
           {tabs.map(t => (
-            <div key={t.id} className="settings-nav__item" data-active={tab === t.id} onClick={()=>setTab(t.id)}>
+            <div key={t.id}
+                 className="settings-nav__item"
+                 role="tab"
+                 tabIndex={0}
+                 aria-selected={tab === t.id}
+                 data-active={tab === t.id}
+                 onClick={()=>setTab(t.id)}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTab(t.id); } }}>
               {t.label}
             </div>
           ))}
         </div>
 
         <div>
-          {tab === 'agents' && <AgentsSettings/>}
           {tab === 'integrations' && <IntegrationsSettings/>}
           {tab === 'evals' && <EvalPolicySettings/>}
           {tab === 'team' && <TeamSettings/>}
@@ -380,9 +410,18 @@ function IntegrationsSettings() {
 function EvalPolicySettings() {
   return (
     <Card title="eval · policy">
+      <EvalPolicyForm/>
+    </Card>
+  );
+}
+
+function EvalPolicyForm() {
+  const [freq, setFreq] = useState('hourly');
+  return (
+    <>
       <div className="field">
         <div className="field__label">Run frequency</div>
-        <Segmented value="hourly" onChange={()=>{}} options={[
+        <Segmented value={freq} onChange={setFreq} options={[
           { value:'realtime', label:'Real-time' }, { value:'hourly', label:'Hourly' }, { value:'daily', label:'Daily' },
         ]}/>
       </div>
@@ -399,7 +438,11 @@ function EvalPolicySettings() {
         <div className="field__label">Failure → pager</div>
         <input className="input" defaultValue="#gtm-ops · pagerduty: gtm-oncall"/>
       </div>
-    </Card>
+      <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:14}}>
+        <button className="btn btn--ghost btn--sm" onClick={() => window.toast('Policy reverted')}>Revert</button>
+        <button className="btn btn--primary btn--sm" onClick={() => window.toast('Eval policy saved', { sub:`frequency · ${freq}`, tone:'accent' })}>Save policy</button>
+      </div>
+    </>
   );
 }
 
@@ -543,7 +586,7 @@ function GeneratePage({ setRoute }) {
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             placeholder="Paste raw text here..."
-            style={{ width: '100%', height: 300, background: 'var(--bg-inset)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 12, color: 'var(--text-1)', fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'none', marginBottom: 12 }}
+            style={{ width: '100%', height: 300, background: 'var(--bg-inset)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'none', marginBottom: 12 }}
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn--ghost" onClick={autoSample}>Auto-Sample</button>

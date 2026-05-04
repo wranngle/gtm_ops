@@ -25,7 +25,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
-    "test:all": "vitest run && playwright test",
+    "test:console": "playwright test -c playwright.console.config.ts",
+    "test:console:ui": "playwright test -c playwright.console.config.ts --ui",
+    "test:all": "vitest run && playwright test && playwright test -c playwright.console.config.ts",
     "deploy": "wrangler pages deploy apps/ops-console --project-name=gtm-ops",
     "deploy:preview": "wrangler pages deploy apps/ops-console --project-name=gtm-ops --branch=preview",
     "pages:dev": "wrangler pages dev apps/ops-console",
@@ -44,7 +46,7 @@
     "design-tokens"
   ],
   "author": "Wranngle Systems LLC",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "engines": {
     "node": ">=18.0.0"
@@ -67,6 +69,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.3",
     "@faker-js/faker": "^10.2.0",
     "@playwright/test": "^1.57.0",
     "@types/express": "^4.17.21",

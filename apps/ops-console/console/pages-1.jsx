@@ -12,6 +12,7 @@ function HomePage({ setRoute }) {
   const { stats, sparks, feed, agents, companies, evalSuites } = D;
   const liveCalls = D.calls.slice(0, 3);
   const hotLeads = [...companies].sort((a, b) => b.score - a.score).slice(0, 5);
+  const [range, setRange] = useState('today');
 
   return (
     <div className="page">
@@ -19,7 +20,7 @@ function HomePage({ setRoute }) {
         title="Mission Control"
         sub="Three agents. Forty-seven open tasks. One thing wants your attention."
         actions={<>
-          <Segmented value="today" onChange={()=>{}} options={[
+          <Segmented value={range} onChange={(v) => { setRange(v); window.toast(`Range · ${v}`, { sub:'mission control re-scoped' }); }} options={[
             { value:'today', label:'Today' },
             { value:'week', label:'7d' },
             { value:'month', label:'30d' },
@@ -117,7 +118,7 @@ function HomePage({ setRoute }) {
                       <div className="progress"><div className={`progress__fill progress__fill--${c.score >= 80 ? 'healthy' : c.score >= 70 ? 'accent' : 'warn'}`} style={{width:`${c.score}%`}}/></div>
                       <div className="mono num" style={{fontSize:10, color:'var(--text-3)', textAlign:'right', marginTop:2}}>{c.score}/100</div>
                     </div>
-                    <button className="btn btn--ghost btn--icon" onClick={()=>setRoute('pipeline')}><I2.ArrowRight size={12}/></button>
+                    <button className="btn btn--ghost btn--icon" aria-label={`Open ${c.name} in pipeline`} onClick={()=>setRoute('pipeline')}><I2.ArrowRight size={12}/></button>
                   </div>
                 ))}
               </div>
@@ -182,6 +183,12 @@ function PipelinePage({ setRoute }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState('all');
 
+  // Publish the selection to AppContext so the sales coach + intake agents
+  // see it as a dynamic variable.
+  useEffect(() => {
+    window.AppContext.set({ selection: selected ? { type:'lead', id: selected } : null });
+  }, [selected]);
+
   const filtered = D.companies.filter(c => {
     if (filter === 'all') return true;
     if (filter === 'mine') return c.owner === 'agent-01';
@@ -213,6 +220,7 @@ function PipelinePage({ setRoute }) {
       {view === 'table' && <PipelineTable companies={filtered} onSelect={setSelected} selected={selected}/>}
 
       {selected && <LeadDetail company={D.companies.find(c=>c.id===selected)} onClose={()=>setSelected(null)} setRoute={setRoute}/>}
+      {selected && <IntakeAgentPanel company={D.companies.find(c=>c.id===selected)} />}
     </div>
   );
 }
@@ -322,7 +330,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
           <div className="eyebrow eyebrow--accent">{c.industry}</div>
           <div style={{fontSize:18, fontWeight:700, fontFamily:'var(--font-display)', marginTop:2}}>{c.name}</div>
         </div>
-        <button className="btn btn--ghost btn--icon" onClick={onClose}><I2.Close size={14}/></button>
+        <button className="btn btn--ghost btn--icon" aria-label="Close lead detail" onClick={onClose}><I2.Close size={14}/></button>
       </div>
       <div className="scroll" style={{flex:1, padding:18}}>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16}}>
@@ -367,11 +375,41 @@ function LeadDetail({ company: c, onClose, setRoute }) {
       </div>
       <div style={{padding:12, borderTop:'1px solid var(--border)', display:'flex', gap:8}}>
         {c.artifacts && c.artifacts.find(a => a.type === 'json') && (
-          <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={() => window.open(c.artifacts.find(a => a.type === 'json').webPath || '#', '_blank')}><I2.Code size={12}/>JSON Schema</button>
+          <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={() => window.open(c.artifacts.find(a => a.type === 'json').webPath || '#', '_blank')}><I2.Doc size={12}/>JSON Schema</button>
         )}
         <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={()=>setRoute('calls')}><I2.Phone size={12}/>Calls</button>
         <button className="btn btn--primary btn--sm" style={{flex:1}} onClick={() => { window.toast(`Opening proposal`, { tone:'accent' }); setRoute('proposals'); onClose(); }}>Proposals <I2.ArrowRight size={12}/></button>
       </div>
+    </div>
+  );
+}
+
+function IntakeAgentPanel({ company }) {
+  const reg = window.AGENT_REGISTRY?.byKey('intake');
+  if (!reg) return null;
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{position:'fixed', right:454, top:74, bottom:18, width:380, background:'var(--bg-elev)', border:'1px solid var(--border-strong)', borderRadius:'var(--r-lg)', boxShadow:'var(--shadow-lg)', zIndex:49, display:'flex', flexDirection:'column', overflow:'hidden'}} role="region" aria-label="Intake agent panel">
+      <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10}}>
+        <span aria-hidden="true" style={{width:28, height:28, borderRadius:'50%', background:`radial-gradient(circle at 30% 30%, ${reg.avatar_color_1}, ${reg.avatar_color_2})`}}/>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13, fontWeight:700}}>{reg.display_name}</div>
+          <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{reg.role} · loaded with {company?.name || 'no lead'}</div>
+        </div>
+        <button className="btn btn--ghost btn--xs" onClick={()=>setOpen(o=>!o)} aria-expanded={open}>
+          {open ? 'Collapse' : 'Talk to Sarah'}
+        </button>
+      </div>
+      {open && (
+        <div style={{flex:1, padding:0, minHeight:0, display:'flex', flexDirection:'column'}}>
+          <window.ConvaiWidget agentKey="intake" textOnly={true} expanded={true} height="100%" width="100%"/>
+        </div>
+      )}
+      {!open && (
+        <div style={{padding:'14px 18px', fontSize:12, color:'var(--text-2)', lineHeight:1.5}}>
+          Click <strong>Talk to Sarah</strong> to qualify this lead with the live ElevenLabs intake agent. She sees the selected company as ground truth and can book the discovery call.
+        </div>
+      )}
     </div>
   );
 }
@@ -384,8 +422,14 @@ function CallsPage() {
   const [activeId, setActiveId] = useState('CALL-2419');
   const active = D.calls.find(c => c.id === activeId);
 
+  // Publish active call to AppContext for the sales coach.
+  useEffect(() => {
+    window.AppContext.set({ selection: { type:'call', id: activeId }});
+    return () => { window.AppContext.set({ selection: null }); };
+  }, [activeId]);
+
   return (
-    <div className="page" style={{maxWidth:'none', padding:'22px 24px 0'}}>
+    <div className="calls-page page" style={{maxWidth:'none', padding:'22px 24px 22px'}}>
       <PageHeader
         title="Calls"
         sub="Live transcripts, scored on a seven-axis rubric. Click a line to add a coaching note."
@@ -395,12 +439,17 @@ function CallsPage() {
         </>}
       />
 
-      <div style={{display:'grid', gridTemplateColumns:'320px 1fr 320px', gap:18, height:'calc(100vh - 200px)'}}>
+      <div className="calls-grid">
         {/* Call list */}
-        <Card title="recent · sorted by recency" className="card--accent" >
+        <Card title="recent · sorted by recency" className="card--accent calls-grid__list" >
           <div className="vstack" style={{gap:6}}>
             {D.calls.map(c => (
-              <div key={c.id} onClick={()=>setActiveId(c.id)}
+              <div key={c.id}
+                   role="button"
+                   tabIndex={0}
+                   aria-pressed={activeId === c.id}
+                   onClick={()=>setActiveId(c.id)}
+                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(c.id); } }}
                    style={{padding:10, borderRadius:8, cursor:'pointer', border:'1px solid', borderColor: activeId === c.id ? 'var(--sunset-500)' : 'transparent', background: activeId === c.id ? 'var(--bg-selected)' : 'transparent'}}>
                 <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
                   <span className="mono" style={{fontSize:11, color:'var(--sunset-500)', fontWeight:600}}>{c.id}</span>
@@ -422,14 +471,23 @@ function CallsPage() {
 
         {/* Transcript */}
         <Card title={`${active.id} · ${active.co} · ${active.who}`}
+              className="calls-grid__transcript"
               action={<div style={{display:'flex', gap:6, alignItems:'center'}}>
                 <span className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{active.duration}</span>
                 <button className="btn btn--ghost btn--xs" onClick={() => window.toast('Audio playback started', { sub:`${active.id} · ${active.duration}` })}><I2.Play size={10}/>play</button>
                 <button className="btn btn--ghost btn--xs" onClick={() => window.toast('Recap email drafted', { sub:'review before sending →', tone:'accent' })}><I2.Mail size={10}/>recap</button>
               </div>}>
-          <div className="trans" style={{maxHeight:'calc(100vh - 280px)', overflow:'auto', paddingRight:6}}>
+          <div className="trans calls-grid__trans-scroll" aria-label="Call transcript">
             {D.transcriptBanyan.map((l,i) => (
-              <div key={i} className="trans__line" data-flag={!!l.flag}>
+              <div key={i}
+                   className="trans__line"
+                   data-flag={!!l.flag}
+                   role="button"
+                   tabIndex={0}
+                   aria-label={`Add coaching note at ${l.t}`}
+                   onClick={() => window.toast(`Coaching note · ${l.t}`, { sub:`${l.who.toUpperCase()}: ${l.txt.slice(0,60)}…`, tone:'accent' })}
+                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.toast(`Coaching note · ${l.t}`, { sub:`${l.who.toUpperCase()}: ${l.txt.slice(0,60)}…`, tone:'accent' }); } }}
+                   style={{cursor:'pointer'}}>
                 <span className="trans__time">{l.t}</span>
                 <span className={`trans__who trans__who--${l.who}`}>
                   {l.who === 'agent' ? 'AGENT' : l.who === 'caller' ? 'PRIYA' : 'SYS'}
@@ -441,7 +499,7 @@ function CallsPage() {
         </Card>
 
         {/* Scorecard + actions */}
-        <div className="vstack" style={{gap:14, overflow:'auto'}}>
+        <div className="vstack calls-grid__side">
           <Card title="scorecard · 7 axes" accent="accent">
             <div style={{textAlign:'center', marginBottom:14, paddingBottom:14, borderBottom:'1px solid var(--border)'}}>
               <div className="eyebrow">overall</div>

@@ -83,13 +83,16 @@ function Sidebar({ route, setRoute, collapsed }) {
     { id:'calls',     label:'Calls',           icon:I.Phone,    count: counts.calls },
     { id:'proposals', label:'Proposals',       icon:I.Doc,      count: counts.proposals },
     { id:'evals',     label:'Evals',           icon:I.Beaker,   count: counts.evals || null },
+    { id:'agents',    label:'Agents',          icon:I.Bot },
     { id:'settings',  label:'Settings',        icon:I.Cog },
   ];
-  const agents = [
-    { id:'agent-01', label:'Hunter',  icon:I.Bot, status:'active' },
-    { id:'agent-02', label:'Closer',  icon:I.Bot, status:'active' },
-    { id:'agent-03', label:'Watcher', icon:I.Bot, status:'paused' },
-  ];
+  const agents = (window.AGENT_REGISTRY?.agents || []).map(a => ({
+    id: a.key,
+    label: a.display_name,
+    surface: a.surface,
+    color1: a.avatar_color_1,
+    color2: a.avatar_color_2,
+  }));
 
   return (
     <aside className="sb">
@@ -118,12 +121,18 @@ function Sidebar({ route, setRoute, collapsed }) {
       </nav>
 
       <div className="sb__section">agents</div>
-      <nav className="sb__nav">
+      <nav className="sb__nav" aria-label="ElevenLabs agents">
         {agents.map(a => (
-          <div key={a.id} className="sb__item">
-            <a.icon className="sb__icon" size={16} />
+          <div key={a.id}
+               className="sb__item"
+               role="button"
+               tabIndex={0}
+               onClick={() => setRoute('agents')}
+               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRoute('agents'); } }}>
+            <span className="sb__icon sb__agent-orb" aria-hidden="true"
+                  style={{background: `radial-gradient(circle at 30% 30%, ${a.color1}, ${a.color2})`, width: 16, height: 16, borderRadius: '50%'}}/>
             <span className="sb__label">{a.label}</span>
-            <span className={`dot dot--${a.status === 'active' ? 'accent' : 'idle'}`} />
+            <span className="mono dim" style={{fontSize: 9}}>{a.surface}</span>
           </div>
         ))}
       </nav>
@@ -144,8 +153,8 @@ function Sidebar({ route, setRoute, collapsed }) {
 /* ---------- Topbar ---------- */
 function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }) {
   const labels = {
-    home:'Mission Control', pipeline:'Pipeline', calls:'Calls',
-    proposals:'Proposals', evals:'Evals', settings:'Settings',
+    home:'Mission Control', generate:'Generate', pipeline:'Pipeline', calls:'Calls',
+    proposals:'Proposals', evals:'Evals', agents:'Agents', settings:'Settings',
   };
   const [notifOpen, setNotifOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
@@ -163,7 +172,7 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
 
   return (
     <header className="tb">
-      <button className="btn btn--ghost btn--icon" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar">
+      <button className="btn btn--ghost btn--icon" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar" aria-label="Toggle sidebar">
         <I.Menu size={16} />
       </button>
       <div className="tb__crumbs">
@@ -174,21 +183,23 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
         <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
       </div>
 
-      <div className="tb__search" onClick={openPalette}>
-        <span className="tb__search-icon"><I.Search size={14} /></span>
-        <input readOnly placeholder="Search leads, calls, proposals…" />
-        <span className="tb__kbd">⌘K</span>
-      </div>
+      <button type="button" className="tb__search" onClick={openPalette}
+              aria-label="Open command palette to search leads, calls, proposals">
+        <span className="tb__search-icon" aria-hidden="true"><I.Search size={14} /></span>
+        <span className="tb__search-placeholder">Search leads, calls, proposals…</span>
+        <span className="tb__kbd" aria-hidden="true">⌘K</span>
+      </button>
 
       <div className="tb__actions">
-        <button ref={notifRef} className="btn btn--ghost btn--icon tb__bell" title="Notifications"
+        <button ref={notifRef} className="btn btn--ghost btn--icon tb__bell" title="Notifications" aria-label="Notifications"
                 onClick={() => setNotifOpen(o => !o)}>
           <I.Bell size={16} />
           <span className="tb__bell-dot"/>
         </button>
         <button className="btn btn--ghost btn--icon"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                title="Toggle theme">
+                title="Toggle theme"
+                aria-label="Toggle color theme">
           {theme === 'dark' ? <I.Sun size={16} /> : <I.Moon size={16} />}
         </button>
         <button ref={runRef} className="btn btn--primary" onClick={() => setRunOpen(o => !o)}>
@@ -249,6 +260,8 @@ function CommandPalette({ open, setOpen, setRoute }) {
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
+  const dialogRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   const items = useMemo(() => {
     const base = [
@@ -257,23 +270,36 @@ function CommandPalette({ open, setOpen, setRoute }) {
       { group:'Navigation', icon:I.Phone,    label:'Go to Calls',           meta:'⏎', do: () => setRoute('calls') },
       { group:'Navigation', icon:I.Doc,      label:'Go to Proposals',       meta:'⏎', do: () => setRoute('proposals') },
       { group:'Navigation', icon:I.Beaker,   label:'Go to Evals',           meta:'⏎', do: () => setRoute('evals') },
-      { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'agent-01' },
-      { group:'Actions', icon:I.Bolt,    label:'Trigger eval suite',        meta:'⌘E' },
-      { group:'Actions', icon:I.Mail,    label:'Draft recap email',         meta:'agent-01' },
-      { group:'Actions', icon:I.Refresh, label:'Re-score stale leads',      meta:'24 candidates' },
-      { group:'Jump to', icon:I.Building, label:'Banyan Health',            meta:'co · proposal' },
-      { group:'Jump to', icon:I.Building, label:'Helix Robotics',           meta:'co · qualifying' },
-      { group:'Jump to', icon:I.Building, label:'Arcadia Insurance',        meta:'co · proposal' },
-      { group:'Jump to', icon:I.Phone,    label:'CALL-2419 · Banyan',       meta:'45m ago' },
-      { group:'Jump to', icon:I.Phone,    label:'CALL-2417 · Arcadia',      meta:'flagged ×2' },
+      { group:'Navigation', icon:I.Bot,      label:'Go to Agents',          meta:'⏎', do: () => setRoute('agents') },
+      { group:'Navigation', icon:I.Cog,      label:'Go to Settings',        meta:'⏎', do: () => setRoute('settings') },
+      { group:'Actions', icon:I.Mic,    label:'Talk to Sales Coach',       meta:'opens dock', do: () => { document.querySelector('.coach-launcher')?.click(); } },
+      { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'agent-01', do: () => window.toast('Outbound run queued', { sub:'agent-01 · 12 candidates · Hunter pass', tone:'accent' }) },
+      { group:'Actions', icon:I.Bolt,    label:'Trigger eval suite',        meta:'⌘E', do: () => { setRoute('evals'); window.toast('Eval suite queued', { tone:'accent' }); } },
+      { group:'Actions', icon:I.Mail,    label:'Draft recap email',         meta:'agent-01', do: () => window.toast('Recap email drafted', { sub:'review before sending →', tone:'accent' }) },
+      { group:'Actions', icon:I.Refresh, label:'Re-score stale leads',      meta:'24 candidates', do: () => window.toast('Re-scoring queued', { sub:'24 leads · ~3 min', tone:'accent' }) },
+      { group:'Jump to', icon:I.Building, label:'Banyan Health',            meta:'co · proposal', do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id:'banyan' }}); } },
+      { group:'Jump to', icon:I.Building, label:'Helix Robotics',           meta:'co · qualifying', do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id:'helix' }}); } },
+      { group:'Jump to', icon:I.Building, label:'Arcadia Insurance',        meta:'co · proposal', do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id:'arcadia' }}); } },
+      { group:'Jump to', icon:I.Phone,    label:'CALL-2419 · Banyan',       meta:'45m ago', do: () => { setRoute('calls'); window.AppContext.set({ selection: { type:'call', id:'CALL-2419' }}); } },
+      { group:'Jump to', icon:I.Phone,    label:'CALL-2417 · Arcadia',      meta:'flagged ×2', do: () => { setRoute('calls'); window.AppContext.set({ selection: { type:'call', id:'CALL-2417' }}); } },
     ];
     if (!q) return base;
     return base.filter(i => i.label.toLowerCase().includes(q.toLowerCase()));
   }, [q]);
 
+  // Focus management: when the palette opens, save the previously-focused
+  // element so we can restore it on close, and move focus into the input.
+  // When the palette closes (e.g. via Escape or backdrop click), restore.
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-    setActive(0); setQ('');
+    if (open) {
+      previousFocusRef.current = document.activeElement;
+      // Use a microtask so the input is in the DOM before we focus it.
+      requestAnimationFrame(() => inputRef.current?.focus());
+      setActive(0); setQ('');
+    } else if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+      try { previousFocusRef.current.focus(); } catch (_) { /* element may have unmounted */ }
+      previousFocusRef.current = null;
+    }
   }, [open]);
 
   useEffect(() => {
@@ -284,6 +310,22 @@ function CommandPalette({ open, setOpen, setRoute }) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(items.length - 1, a + 1)); }
       if (e.key === 'ArrowUp')   { e.preventDefault(); setActive(a => Math.max(0, a - 1)); }
       if (e.key === 'Enter')     { items[active]?.do?.(); setOpen(false); }
+      // Trap Tab inside the dialog so focus cannot escape to the page behind.
+      if (e.key === 'Tab') {
+        const root = dialogRef.current;
+        if (!root) return;
+        const focusables = root.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) { e.preventDefault(); return; }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -297,8 +339,10 @@ function CommandPalette({ open, setOpen, setRoute }) {
   let idx = -1;
   return (
     <div className="cp-overlay" onClick={() => setOpen(false)}>
-      <div className="cp" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} className="cp" role="dialog" aria-modal="true" aria-label="Command palette"
+           onClick={e => e.stopPropagation()}>
         <input ref={inputRef} className="cp__input" placeholder="Type a command, lead, or call ID…"
+               aria-label="Search commands, leads, or call IDs"
                value={q} onChange={e => setQ(e.target.value)} />
         <div className="cp__list">
           {Object.entries(groups).map(([g, list]) => (
