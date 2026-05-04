@@ -156,7 +156,11 @@ function Sidebar({ route, setRoute, collapsed }) {
           <div key={it.id}
                className="sb__item"
                data-active={route === it.id}
-               onClick={() => setRoute(it.id)}>
+               role="button"
+               tabIndex={0}
+               aria-current={route === it.id ? 'page' : undefined}
+               onClick={() => setRoute(it.id)}
+               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRoute(it.id); } }}>
             <it.icon className="sb__icon" size={16} />
             <span className="sb__label">{it.label}</span>
             {it.count != null && <span className="sb__count">{it.count}</span>}
