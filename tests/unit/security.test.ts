@@ -74,7 +74,7 @@ describe('[P0] maskApiKeysInText - Text Sanitization', () => {
 
   it('[P0] should mask Groq API keys in text', () => {
     // GIVEN: Text containing a Groq API key
-    const text = 'Using key: REDACTED_API_KEY_FIXTURE_1234567890';
+    const text = 'Using key: gsk_mockKeyThatIsNotRealButValidates123';
 
     // WHEN: Masking keys in text
     const masked = maskApiKeysInText(text);
