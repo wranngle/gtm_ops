@@ -46,6 +46,12 @@ function findOutputPairs(): Array<{ html: string; schema: any; clientSlug: strin
     }
   }
 
+  // output/ is gitignored — only present after the operator runs the
+  // generation pipeline locally. Bail gracefully so `bun run test:e2e`
+  // doesn't crash with ENOENT on a fresh clone.
+  if (!fs.existsSync(outputDir)) {
+    return pairs;
+  }
   const clientDirs = fs.readdirSync(outputDir).filter(d =>
     fs.statSync(path.join(outputDir, d)).isDirectory()
   );

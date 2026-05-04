@@ -20,6 +20,11 @@ function loadAllSchemas(): Array<{ schema: any; file: string }> {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
+        // Skip operator-local scratch dirs (eval temp output, hidden dirs).
+        // These can contain in-flight or intentionally-pathological schemas
+        // (e.g. eval stress tests with Infinity values) that aren't meant
+        // as production examples.
+        if (entry.name.startsWith('.') || entry.name === 'output_test') continue;
         if (entry.isDirectory()) {
           findSchemas(fullPath);
         } else if (entry.name.includes('_schema_') && entry.name.endsWith('.json')) {

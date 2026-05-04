@@ -25,6 +25,12 @@ function loadTestPairs(): Array<{ input: string; schema: any; inputFile: string 
   const outputDir = path.join(process.cwd(), 'output');
   const pairs: Array<{ input: string; schema: any; inputFile: string }> = [];
 
+  // Both dirs are gitignored — only present when the operator has run the
+  // generation pipeline locally. Bail gracefully so `bun run test:e2e`
+  // doesn't crash with ENOENT on a fresh clone; the test list is just empty.
+  if (!fs.existsSync(inputDir) || !fs.existsSync(outputDir)) {
+    return pairs;
+  }
   const inputFiles = fs.readdirSync(inputDir).filter(f => f.endsWith('.txt'));
 
   for (const inputFile of inputFiles) {
