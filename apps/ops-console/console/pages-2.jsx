@@ -342,69 +342,6 @@ function SettingsPage({ setRoute }) {
   );
 }
 
-function AgentsSettings() {
-  const [aggressive, setAggressive] = useState(true);
-  const [autoCall, setAutoCall] = useState(false);
-  return (
-    <Card title="agent · hunter" className="card--accent" action={<Badge tone="healthy"><span className="dot dot--accent" style={{width:5,height:5}}/>active</Badge>}>
-      <div className="field">
-        <div className="field__label">Display name</div>
-        <input className="input" defaultValue="Hunter" />
-      </div>
-      <div className="field">
-        <div className="field__label">Role</div>
-        <select className="select" defaultValue="outbound-discovery">
-          <option value="outbound-discovery">Outbound + Discovery</option>
-          <option>Inbound qualification</option>
-          <option>Multi-thread engagement</option>
-        </select>
-      </div>
-      <div className="field">
-        <div className="field__label">Model</div>
-        <select className="select" defaultValue="claude-sonnet-4.5">
-          <option>claude-sonnet-4.5</option>
-          <option>claude-haiku-4.5</option>
-          <option>claude-opus-4.1</option>
-        </select>
-        <div className="field__hint">Sonnet recommended for discovery; Haiku for high-volume sequencing.</div>
-      </div>
-      <div className="field">
-        <div className="field__label">System prompt · 4,127 chars</div>
-        <textarea className="textarea" rows={5} defaultValue="You are Hunter, a senior SDR. Prioritize quantifying pain over feature pitching. Always close with a named next step and a named stakeholder. Refuse to discuss pricing on the first call unless the prospect explicitly asks twice — defer to the proposal." />
-      </div>
-
-      <div className="divider"/>
-
-      <div className="field" style={{display:'grid', gridTemplateColumns:'1fr auto', gap:12, marginBottom:14}}>
-        <div>
-          <div style={{fontSize:13, fontWeight:600}}>Aggressive multi-thread</div>
-          <div className="field__hint">Reach 3+ stakeholders before the discovery call. May reduce reply rate by ~6% but doubles deal size.</div>
-        </div>
-        <div className="switch" data-on={aggressive} onClick={()=>setAggressive(!aggressive)}/>
-      </div>
-      <div className="field" style={{display:'grid', gridTemplateColumns:'1fr auto', gap:12, marginBottom:14}}>
-        <div>
-          <div style={{fontSize:13, fontWeight:600}}>Auto-place outbound calls</div>
-          <div className="field__hint">Allow agent to dial without human approval. Recommended off until trust score &gt;90%.</div>
-        </div>
-        <div className="switch" data-on={autoCall} onClick={()=>setAutoCall(!autoCall)}/>
-      </div>
-
-      <div className="divider"/>
-
-      <div className="field">
-        <div className="field__label">Daily task budget</div>
-        <input className="input" type="text" defaultValue="120 tasks · $35 spend cap" />
-      </div>
-
-      <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:18}}>
-        <button className="btn btn--ghost btn--sm" onClick={() => window.toast('Changes discarded')}>Discard</button>
-        <button className="btn btn--primary btn--sm" onClick={() => window.toast('Settings saved', { sub:'agent policy v14 · live', tone:'accent' })}>Save changes</button>
-      </div>
-    </Card>
-  );
-}
-
 function IntegrationsSettings() {
   const conns = [
     { name:'Salesforce', status:'connected', sub:'helix.my.salesforce.com · OAuth · 4d ago', icon:'SF' },
