@@ -299,8 +299,6 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
   });
 
   it('[P0] should transition to HALF_OPEN after reset timeout', async () => {
-    vi.useRealTimers();
-
     // GIVEN: An open circuit breaker with short reset timeout
     const cb = new CircuitBreaker({
       failureThreshold: 1,
@@ -317,7 +315,7 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
     expect(cb.getState()).toBe(CircuitState.OPEN);
 
     // WHEN: Waiting for reset timeout
-    await new Promise(resolve => setTimeout(resolve, 150));
+    vi.advanceTimersByTime(150);
 
     // THEN: Should be half-open
     expect(cb.getState()).toBe(CircuitState.HALF_OPEN);
@@ -325,8 +323,6 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
   });
 
   it('[P0] should close on success in HALF_OPEN', async () => {
-    vi.useRealTimers();
-
     // GIVEN: A half-open circuit breaker
     const cb = new CircuitBreaker({
       failureThreshold: 1,
@@ -337,7 +333,7 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
       await cb.execute(async () => { throw new Error('fail'); });
     } catch {}
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    vi.advanceTimersByTime(100);
     expect(cb.getState()).toBe(CircuitState.HALF_OPEN);
 
     // WHEN: Successful request
@@ -348,8 +344,6 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
   });
 
   it('[P0] should reopen on failure in HALF_OPEN', async () => {
-    vi.useRealTimers();
-
     // GIVEN: A half-open circuit breaker
     const cb = new CircuitBreaker({
       failureThreshold: 1,
@@ -360,7 +354,7 @@ describe('[P0] CircuitBreaker - Circuit Breaker Pattern', () => {
       await cb.execute(async () => { throw new Error('fail'); });
     } catch {}
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    vi.advanceTimersByTime(100);
     expect(cb.getState()).toBe(CircuitState.HALF_OPEN);
 
     // WHEN: Failed request
