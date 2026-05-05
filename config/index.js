@@ -23,6 +23,57 @@ const DB_PATH = join(__dirname, 'presales.db');
 let _config = null;
 let _initPromise = null;
 
+function tableExists(db, tableName) {
+  const stmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?");
+  stmt.bind([tableName]);
+  const exists = stmt.step();
+  stmt.free();
+  return exists;
+}
+
+function defaultBrandAssets() {
+  return {
+    colors: {
+      primary: { value: '#4F46E5', context: 'default primary brand color', fallback: '#4F46E5' },
+      secondary: { value: '#10B981', context: 'default secondary brand color', fallback: '#10B981' },
+      accent: { value: '#F59E0B', context: 'default accent brand color', fallback: '#F59E0B' },
+    },
+    identity: {
+      company_name: { value: 'Wranngle Systems LLC', context: 'default company name', fallback: 'Wranngle Systems LLC' },
+      tagline: { value: '', context: 'default tagline', fallback: '' },
+    },
+    imagery: {
+      primary_logo: { value: '', context: 'default logo URL', fallback: '' },
+    },
+  };
+}
+
+function defaultDocumentTypes() {
+  return {
+    audit: {
+      label: 'Phase 1: AI Process Audit',
+      headerTitle: 'AI Process Audit',
+      phase: 'audit',
+      template: null,
+      cssVariant: null,
+    },
+    project_plan: {
+      label: 'Phase 2: Project Plan',
+      headerTitle: 'Project Plan',
+      phase: 'stabilize',
+      template: null,
+      cssVariant: null,
+    },
+    proposal: {
+      label: 'Phase 2: Stabilize Proposal',
+      headerTitle: 'Stabilize Proposal',
+      phase: 'stabilize',
+      template: null,
+      cssVariant: null,
+    },
+  };
+}
+
 /**
  * Initialize sql.js and load configuration
  */
@@ -602,7 +653,14 @@ export async function getGenerationPrinciples() {
  */
 export async function getEngagementPhases() {
   const db = await getDatabase();
-  
+  if (
+    !tableExists(db, 'engagement_phases') ||
+    !tableExists(db, 'phase_milestones') ||
+    !tableExists(db, 'milestone_deliverables')
+  ) {
+    return [];
+  }
+
   // Get phases
   const phaseStmt = db.prepare(`
     SELECT phase_number, phase_key, phase_label, default_state, 
@@ -667,6 +725,10 @@ export async function getEngagementPhases() {
  */
 export async function getBrandAssets() {
   const db = await getDatabase();
+  if (!tableExists(db, 'brand_assets')) {
+    return defaultBrandAssets();
+  }
+
   const stmt = db.prepare(`
     SELECT asset_key, asset_category, asset_value, context, fallback_value
     FROM brand_assets
@@ -696,6 +758,10 @@ export async function getBrandAssets() {
  */
 export async function getDocumentTypes() {
   const db = await getDatabase();
+  if (!tableExists(db, 'document_types')) {
+    return defaultDocumentTypes();
+  }
+
   const stmt = db.prepare(`
     SELECT type_key, type_label, header_title, phase_association, template_file, css_variant
     FROM document_types
