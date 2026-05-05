@@ -17,7 +17,20 @@ function AgentsPage({ setRoute }) {
     () => globalThis.AGENT_REGISTRY.agents.filter(a => isAdmin || a.surface !== 'admin-only'),
     [isAdmin],
   );
-  const [activeKey, setActiveKey] = React.useState(visibleAgents[0]?.key);
+  const resolveVisibleKey = React.useCallback((key) => (
+    visibleAgents.some(a => a.key === key) ? key : visibleAgents[0]?.key
+  ), [visibleAgents]);
+  const [activeKey, setActiveKey] = React.useState(() => resolveVisibleKey(
+    globalThis.AppContext.get().extra?.selected_agent_key,
+  ));
+  React.useEffect(() => {
+    const applySelection = (ctx) => {
+      const nextKey = resolveVisibleKey(ctx.extra?.selected_agent_key);
+      if (nextKey) setActiveKey(nextKey);
+    };
+    applySelection(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applySelection);
+  }, [resolveVisibleKey]);
   const active = globalThis.AGENT_REGISTRY.byKey(activeKey) || visibleAgents[0];
   if (!active) {
     return (

@@ -34,7 +34,8 @@
     "eval:import": "bun --env-file=.env cli.js eval:import",
     "eval:quick": "bun --env-file=.env cli.js eval:batch --limit 5",
     "eval:full": "bun --env-file=.env cli.js eval:batch",
-    "eval:report": "bun --env-file=.env cli.js eval:report --verbose"
+    "eval:report": "bun --env-file=.env cli.js eval:report --verbose",
+    "eval:harness": "bun ../voice_ai_agent_evals/scripts/run-gtm-ops-adapter.ts --root ."
   },
   "keywords": [
     "gtm",

@@ -56,9 +56,11 @@ Accepts inbound forms and inbound voice calls. Normalizes both into a single `Le
 
 Pulls account context from Pipedrive / HubSpot / Salesforce-shaped adapters. Normalized into `EnrichedLead`. The voice agent prompt incorporates this context server-side before its first turn — the caller is greeted by name, not asked to identify themselves.
 
-### 3. Voice agent — external (ElevenLabs) + `voice_ai_agent_evals`
+### 3. Voice agent and eval harness — external (ElevenLabs) + `voice_ai_agent_evals`
 
-The live voice agent runs on ElevenLabs; this repo doesn't host the agent runtime. What this repo owns is the integration surface: the prompt schema feeding `agent.prompt` shape, the tool definitions exposed via webhook (`server.js` `/tools/*`), and the regression hooks that wire `voice_ai_agent_evals` to the live agent for CI gating. Prompt versioning, tool-call evaluation, and methodology live in the satellite — `gtm_ops` references the satellite's `tests/runs/` output via the ops-console eval-runs page.
+The live voice agent runs on ElevenLabs; this repo doesn't host the agent runtime. What this repo owns is the integration surface: the prompt schema feeding `agent.prompt` shape, the tool definitions exposed via webhook (`server.js` `/tools/*`), and the regression hooks that wire `voice_ai_agent_evals` to the live agent for CI gating.
+
+For app-wide evals, `gtm_ops` owns the tests and fixtures because it knows the UI semantics, domain corpus, and artifact locations. `voice_ai_agent_evals` consumes [`eval-harness.manifest.json`](eval-harness.manifest.json) through its `gtm_ops` adapter and normalizes the results. Prompt versioning, tool-call evaluation, command orchestration, and cross-run reporting live in the satellite; this repo surfaces harness output via the ops-console eval-runs page.
 
 ### 4. Post-call — `lib/post_call/` + `server.js` webhooks
 
@@ -106,7 +108,7 @@ No n8n workflows ship in this repo — the canonical library lives at [`wranngle
 
 ### Eval harness
 
-The eval harness lives at `wranngle/voice_ai_agent_evals` — referenced, not duplicated. The ops-console `eval-runs/` page is the only thing in this repo that surfaces eval output.
+The eval harness lives at `wranngle/voice_ai_agent_evals` — referenced, not duplicated. This repo publishes its app-owned command contract in [`eval-harness.manifest.json`](eval-harness.manifest.json); the ops-console `eval-runs/` page surfaces harness output.
 
 ## Layered import rule
 

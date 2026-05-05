@@ -137,6 +137,17 @@ function Sidebar({ route, setRoute, collapsed }) {
     color1: a.avatar_color_1,
     color2: a.avatar_color_2,
   }));
+  const selectAgent = (agentKey) => {
+    const ctx = window.AppContext?.get?.() || {};
+    window.AppContext?.set?.({
+      extra: {
+        ...(ctx.extra || {}),
+        selected_agent_key: agentKey,
+        triggered_from: 'sidebar-agent-nav',
+      },
+    });
+    setRoute('agents');
+  };
 
   return (
     <aside className="sb">
@@ -175,8 +186,8 @@ function Sidebar({ route, setRoute, collapsed }) {
                className="sb__item"
                role="button"
                tabIndex={0}
-               onClick={() => setRoute('agents')}
-               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRoute('agents'); } }}>
+               onClick={() => selectAgent(a.id)}
+               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectAgent(a.id); } }}>
             <span className="sb__icon sb__agent-orb" aria-hidden="true"
                   style={{background: `radial-gradient(circle at 30% 30%, ${a.color1}, ${a.color2})`, width: 16, height: 16, borderRadius: '50%'}}/>
             <span className="sb__label">{a.label}</span>

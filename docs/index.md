@@ -8,6 +8,7 @@ Product runtime documentation. The system of record is here, in this repo — if
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — product layers (intake → enrichment → voice → post-call → presales → ops-console)
 - [`DESIGN.md`](../DESIGN.md) — brand system (long-form)
 - [`AGENTS.md`](../AGENTS.md) — agent operating map
+- [`eval-harness-contract.md`](eval-harness-contract.md) — boundary between this app and `voice_ai_agent_evals`
 
 ## Subdirectories
 

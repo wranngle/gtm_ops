@@ -25,6 +25,11 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the product layers (intake → enri
 - [`wranngle/voice_ai_agent_evals`](https://github.com/wranngle/voice_ai_agent_evals) — eval harness wired to the live ElevenLabs agent
 - [`wranngle/n8n`](https://github.com/wranngle/n8n) — full sanitized n8n workflow library
 
+The app-to-harness boundary is encoded in [`eval-harness.manifest.json`](eval-harness.manifest.json)
+and documented in [`docs/eval-harness-contract.md`](docs/eval-harness-contract.md).
+`gtm_ops` owns app fixtures and Playwright/Vitest semantics; the harness consumes
+the manifest and normalizes results.
+
 ## Running it
 
 **Live mode** (full Express backend):
@@ -52,6 +57,7 @@ bun run typecheck         # tsc --noEmit
 bun run test:run          # vitest unit tests (~10s)
 bun run test:console      # Playwright UI suite — 100+ tests
 bun run test:e2e          # Playwright PDF/report suite
+bun run eval:harness      # optional: run this repo through voice_ai_agent_evals
 ```
 
 CI runs `static`, `unit`, and `console-e2e` jobs on every PR (see `.github/workflows/test.yml`).
