@@ -26,7 +26,10 @@
     "required": [
       "shell-lint",
       "yaml-lint",
-      "test"
+      "test",
+      "gitleaks",
+      "actionlint",
+      "zizmor"
     ],
     "lint": "auto_fix_then_block_if_failed",
     "tests": "run_detected_stack",

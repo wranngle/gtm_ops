@@ -1,30 +1,44 @@
 version: 2
 updates:
-  # GitHub Actions used by .github/workflows/*.yml.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
     commit-message:
       prefix: "ci"
-    open-pull-requests-limit: 5
-
-  # npm / Bun deps in the root package.json (Express, vitest, playwright,
-  # @anthropic-ai/sdk, ajv, etc.). Bun reads the same package.json so this
-  # covers the whole repo's JS surface.
+      include: "scope"
+    groups:
+      github-actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
     commit-message:
       prefix: "deps"
-    open-pull-requests-limit: 5
-    # Group runtime + dev deps so the PR list stays readable. Major bumps
-    # remain individual PRs so reviewers can decide them deliberately.
+      include: "scope"
     groups:
-      runtime:
-        dependency-type: "production"
-        update-types: ["minor", "patch"]
-      dev:
-        dependency-type: "development"
+      npm--minor-patch:
+        patterns: ["*"]
         update-types: ["minor", "patch"]

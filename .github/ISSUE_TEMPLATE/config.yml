@@ -4,5 +4,5 @@ contact_links:
     url: "https://github.com/wranngle/gtm_ops/security/advisories/new"
     about: "Privately report a security vulnerability."
   - name: "💬 Question or discussion"
-    url: "https://github.com/wranngle/gtm_ops/issues/new/choose"
-    about: "Choose the closest public issue template. Do not include sensitive operational details."
+    url: "https://github.com/wranngle/gtm_ops/discussions"
+    about: "Open a discussion instead of an issue."

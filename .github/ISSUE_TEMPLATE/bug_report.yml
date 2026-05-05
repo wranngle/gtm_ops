@@ -1,85 +1,51 @@
-name: "Bug report"
-description: "Report a reproducible problem so an agent or human can fix it."
-title: "bug: <one-line summary>"
-labels: ["bug"]
+name: 🐞 Bug
+description: Existing behavior is wrong
+title: "bug: "
+labels: [t.bug, triage]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for filing a bug. This template is shaped for both human and agent consumption.
-
-        - Add a `priority:N` label (lower = higher priority) to influence dispatch ordering.
-        - To declare a blocker, write `Blocked-by: #123` on its own line in the description.
-        - Do not paste secrets, live customer data, production webhook URLs, or phone numbers. This repo is public.
-
+        Tip: paste this prompt to Claude / Codex / Gemini to fill the form for you →
+        > "Open a bug issue. Symptom: <one sentence>. Use my recent shell history and code context to fill all fields."
   - type: textarea
-    id: what-happened
+    id: what
     attributes:
-      label: What happened?
-      description: One- to three-sentence summary of the broken behavior.
-      placeholder: When I open /console/agents on the deployed Pages site, the playground panel renders empty.
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected behavior
-      description: What should have happened instead?
-      placeholder: The ConvAI widget should mount and let me chat with the active agent.
-    validations:
-      required: true
-
-  - type: textarea
-    id: repro
-    attributes:
-      label: Reproduction steps
-      description: Minimal recipe an agent can replay verbatim. Prefer commands runnable from the repo root.
+      label: What & how to reproduce
+      description: Symptom in 1–2 lines, then exact steps. Include error messages verbatim.
       placeholder: |
-        1. `bun install`
-        2. `bun run start` (or open https://gtm-ops.pages.dev/console/)
-        3. Click "Agents" in the sidebar
-        4. Observe error: ...
+        Symptom: ...
+        Reproduce:
+        1. ...
+        2. ...
+        3. ...
+        Expected: ...
+        Actual: ...
     validations:
       required: true
-
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Drives the a/<area> label automatically via the issue-triage workflow.
+      options:
+        - core
+        - cli
+        - api
+        - docs
+        - ci
+        - infra
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Versions, OS, runtime. Paste `node -v && npm -v && uname -a` or equivalent.
+      render: shell
   - type: textarea
     id: logs
     attributes:
-      label: Relevant logs / output
-      description: Paste raw stderr, stdout, or browser console errors. Use a fenced block.
+      label: Logs / traceback
       render: shell
-
-  - type: input
-    id: environment
-    attributes:
-      label: Environment
-      description: OS, shell, browser, and tool versions (output of `bash --version`, `bun --version`, browser version as relevant).
-      placeholder: WSL2 Ubuntu 24.04, bash 5.2, bun 1.3, Chrome 132
-
-  - type: input
-    id: commit
-    attributes:
-      label: Commit
-      description: Output of `git rev-parse --short HEAD`.
-      placeholder: a1b2c3d
-
-  - type: dropdown
-    id: surface
-    attributes:
-      label: Affected surface
-      description: Which area is broken? Pick the closest match; agents use this to scope their work.
-      multiple: true
-      options:
-        - "ops-console (apps/ops-console/console/) — main React UI"
-        - "ops-console subapps (apps/ops-console/evaluation/, eval-runs/)"
-        - "ElevenLabs ConvAI integration (Sales Coach / Sarah Intake)"
-        - "Express runtime (server.js, lib/)"
-        - "Cloudflare Pages Functions (functions/api/)"
-        - "Presales pipeline / proposal generation (lib/, cli.js)"
-        - "PDF templates / brand tokens (templates/, tokens/, DESIGN.md)"
-        - "Knowledge-base validators (scripts/validate-knowledge-base.sh, scripts/lint-layered-architecture.sh, scripts/gardener.sh)"
-        - "CI workflows (.github/workflows/)"
-        - "Documentation only"
-    validations:
-      required: true

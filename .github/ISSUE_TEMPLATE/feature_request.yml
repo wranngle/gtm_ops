@@ -1,75 +1,42 @@
-name: "Feature request"
-description: "Suggest an enhancement so an agent or human can pick it up."
-title: "feat: <one-line summary>"
-labels: ["enhancement"]
+name: ✨ Feature
+description: Something new
+title: "feat: "
+labels: [t.feat, triage]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for proposing an idea. This template is shaped for both human and agent consumption.
-
-        - Add a `priority:N` label (lower = higher priority) to influence dispatch ordering.
-        - For multi-step work, an agent should produce an execution plan under `docs/exec-plans/active/` first.
-        - Do not include private operational details, customer identifiers, or live URLs. This repo is public.
-
+        Tip: state the problem before the solution. "Wouldn't it be cool if…" requests get deprioritized.
   - type: textarea
     id: problem
     attributes:
-      label: Problem statement
-      description: What pain point or use case motivates this? Be concrete.
-      placeholder: Today, operators reviewing a proposal cannot ...
+      label: Problem & Why now
+      description: What's the user pain? What changed that makes this matter?
     validations:
       required: true
-
   - type: textarea
-    id: solution
+    id: proposal
     attributes:
-      label: Proposed solution
-      description: Sketch the desired behavior. APIs, CLI surface, file layout, or repo conventions.
-      placeholder: Add a `scripts/foo.sh` that does ...
-
-  - type: textarea
-    id: acceptance
-    attributes:
-      label: Acceptance criteria
-      description: Bulleted, mechanically checkable conditions. An agent should be able to verify each one.
-      placeholder: |
-        - `scripts/foo.sh --help` prints usage.
-        - `scripts/validate-knowledge-base.sh` still passes.
-        - New behavior is covered by tests under `tests/` (vitest unit, console-e2e, or e2e).
-        - Docs updated under `docs/` if a new command or boundary is introduced.
+      label: Proposed approach
+      description: Sketch the API / UX. Code snippets welcome. If you don't know yet, file a research issue instead.
     validations:
       required: true
-
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - core
+        - cli
+        - api
+        - docs
+        - ci
+        - infra
+        - other
+    validations:
+      required: true
   - type: textarea
     id: alternatives
     attributes:
       label: Alternatives considered
-      description: What else did you consider? Why is the proposed solution better?
-
-  - type: dropdown
-    id: surface
-    attributes:
-      label: Affected surface
-      description: Which area would change? Agents use this to scope their work.
-      multiple: true
-      options:
-        - "ops-console (apps/ops-console/console/) — main React UI"
-        - "ops-console subapps (apps/ops-console/evaluation/, eval-runs/)"
-        - "ElevenLabs ConvAI integration (Sales Coach / Sarah Intake)"
-        - "Express runtime (server.js, lib/)"
-        - "Cloudflare Pages Functions (functions/api/)"
-        - "Presales pipeline / proposal generation (lib/, cli.js)"
-        - "PDF templates / brand tokens (templates/, tokens/, DESIGN.md)"
-        - "Knowledge-base validators (scripts/validate-knowledge-base.sh, scripts/lint-layered-architecture.sh, scripts/gardener.sh)"
-        - "CI workflows (.github/workflows/)"
-        - "Documentation only"
-    validations:
-      required: true
-
-  - type: textarea
-    id: blocked-by
-    attributes:
-      label: Blocked-by (optional)
-      description: "If this depends on another open issue, write `Blocked-by: #N` on a single line so the dependency is machine-detectable."
-      placeholder: "Blocked-by: #42"
+      description: What else did you think about? Why not those?

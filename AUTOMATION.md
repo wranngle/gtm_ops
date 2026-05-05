@@ -1,34 +1,26 @@
 # Automation Contract
 
-`.automation/policy.json` is this repo's machine-readable input to the
-maintainer's **local** autosync tooling — checked in so labels, branch-
-protection settings, dependabot grouping, and the in-loop guardrails
-converge on a single source of truth across hosts.
+This repo is dotfiles-managed. The primitive contract lives in
+`.automation/policy.json`; generated workflows, labels, repo settings, and local
+autosync behavior should converge on that file.
 
-External contributors do **not** need to run any local automation —
-the GitHub Actions workflows in `.github/workflows/` are the only
-gates a PR has to clear. This file exists for transparency about how
-the maintainer keeps the local working trees in sync.
-
-## Maintainer loop (informational)
+## Loop
 
 1. Observe local Git state without reading secrets or large diffs.
-2. Checkpoint dirty work to a host-scoped `wip/<host>/<branch>` ref.
+2. Checkpoint dirty work to a neutral `wip/local/<branch>` ref, or an explicit `wip/<namespace>/<branch>` ref.
 3. Integrate only after the tree is quiet and required checks are green.
 4. Prefer GitHub auto-merge with squash and branch deletion.
 5. Repair tree-equivalent local divergence after squash merges.
 6. Stop on semantic conflicts, active leases, unsafe Git states, or secrets.
 
-The driver (`repo-automation.sh observe / doctor / policy`) lives in
-the maintainer's dotfiles environment, not in this repo. Optional
-per-repo overrides — `.autosync/policy.env`, `.autosync/pause`,
-`.autosync/lease.json` — are gitignored when present, and the
-checked-in `.automation/policy.json` is the default.
+## Local Commands
 
-## What contributors run
+```bash
+repo-automation.sh observe
+repo-automation.sh doctor
+repo-automation.sh policy
+```
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full validation matrix
-(`scripts/validate-knowledge-base.sh`, `bun run typecheck`,
-`bun run test:run`, `bun run test:console`, etc.). CI mirrors that
-matrix in [`.github/workflows/test.yml`](.github/workflows/test.yml)
-and [`.github/workflows/knowledge-base.yml`](.github/workflows/knowledge-base.yml).
+`.autosync/policy.env`, `.autosync/pause`, and `.autosync/lease.json` are
+per-repo overrides. The generated contract is the default; local overrides are
+for explicit temporary exceptions.
