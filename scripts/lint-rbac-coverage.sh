@@ -42,8 +42,9 @@ fi
 allow_path_regex='^$'  # default: nothing allowlisted
 
 # Sensitive read-path prefixes — GETs under these need requireRole because
-# they expose admin or audit data. Add new prefixes here as the API grows.
-sensitive_get_prefix_re='^/api/(audit-logs|admin)(/|$)'
+# they expose admin, audit, billing, GDPR, or workspace-config data.
+# Add new prefixes here as the API grows.
+sensitive_get_prefix_re='^/api/(audit-logs|admin|usage|gdpr/export|branding/domain)(/|$)'
 
 unprotected=()
 
