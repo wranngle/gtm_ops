@@ -19,3 +19,4 @@ Product runtime documentation. The system of record is here, in this repo — if
 ## References
 
 - [`references/layered-domain-architecture.md`](references/layered-domain-architecture.md) — per-domain import-direction rule, enforced by `scripts/lint-layered-architecture.sh`
+- [`references/sqlite-query-stability.md`](references/sqlite-query-stability.md) — `ORDER BY` tiebreaker rule, range-end +1ms fix, retry-shim convention for the residual `node-sqlite3` cache-visibility race, and the planned `better-sqlite3` migration
