@@ -133,6 +133,45 @@ describe('[P0] scripts/lint-rbac-coverage.sh - RBAC coverage lint', () => {
     expect(code).toBe(0);
   });
 
+  it('[P0] should flag unprotected GETs under /api/usage/*, /api/gdpr/export/*, /api/branding/domain/*', () => {
+    const target = writeScratch([
+      "app.get('/api/usage/summary', generalLimiter, async (req, res) => {});",
+      "app.get('/api/usage/costs', generalLimiter, async (req, res) => {});",
+      "app.get('/api/gdpr/export/:jobId', generalLimiter, async (req, res) => {});",
+      "app.get('/api/gdpr/export/:jobId/download', generalLimiter, async (req, res) => {});",
+      "app.get('/api/branding/domain/verify', generalLimiter, async (req, res) => {});",
+    ].join('\n'));
+
+    const { code, stderr } = runLint(target);
+    expect(code).toBe(1);
+    expect(stderr).toContain('/api/usage/summary');
+    expect(stderr).toContain('/api/usage/costs');
+    expect(stderr).toContain('/api/gdpr/export/:jobId');
+    expect(stderr).toContain('/api/gdpr/export/:jobId/download');
+    expect(stderr).toContain('/api/branding/domain/verify');
+  });
+
+  it('[P1] should NOT flag /api/gdpr/consent (self-service, intentionally unguarded read)', () => {
+    // The sensitive-prefix list is /api/gdpr/export/, not /api/gdpr/.
+    // Boundary check: sibling GDPR routes that are intentionally
+    // self-service (consent) must remain ignored by the lint.
+    const target = writeScratch([
+      "app.get('/api/gdpr/consent', generalLimiter, async (req, res) => {});",
+    ].join('\n'));
+
+    const { code } = runLint(target);
+    expect(code).toBe(0);
+  });
+
+  it('[P1] should NOT flag /api/branding (root) — only /api/branding/domain/ is sensitive', () => {
+    const target = writeScratch([
+      "app.get('/api/branding', generalLimiter, async (req, res) => {});",
+    ].join('\n'));
+
+    const { code } = runLint(target);
+    expect(code).toBe(0);
+  });
+
   it('[P1] should not flag GETs whose path starts with the prefix-as-substring (boundary check)', () => {
     // /api/admin-thingy is not /api/admin/* — boundary check on the
     // sensitive-prefix regex. Prevents false positives on accidentally

@@ -275,7 +275,7 @@ app.get('/api/artifacts/:executionId', (req, res) => {
 });
 
 // Usage tracking endpoints
-app.get('/api/usage/summary', generalLimiter, async (req, res) => {
+app.get('/api/usage/summary', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, start_date, end_date } = req.query;
     const options = {};
@@ -292,7 +292,7 @@ app.get('/api/usage/summary', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/usage/detail', generalLimiter, async (req, res) => {
+app.get('/api/usage/detail', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, event_type, start_date, end_date, limit, offset } = req.query;
     const options = {};
@@ -312,7 +312,7 @@ app.get('/api/usage/detail', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/usage/costs', generalLimiter, async (req, res) => {
+app.get('/api/usage/costs', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, start_date, end_date } = req.query;
     const options = {};
@@ -727,7 +727,7 @@ app.post('/api/branding/logo', requireRole(Role.OWNER, Role.ADMIN), generalLimit
   }
 });
 
-app.get('/api/branding/domain/verify', generalLimiter, async (req, res) => {
+app.get('/api/branding/domain/verify', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { domain, workspace_id } = req.query;
 
@@ -867,7 +867,7 @@ app.post('/api/gdpr/export', requireRole(Role.OWNER, Role.ADMIN, Role.MEMBER, Ro
   }
 });
 
-app.get('/api/gdpr/export/:jobId', generalLimiter, async (req, res) => {
+app.get('/api/gdpr/export/:jobId', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const job = await getGdprManager().getExportJob(req.params.jobId);
     if (!job) return res.status(404).json({ error: 'Export job not found' });
@@ -878,7 +878,7 @@ app.get('/api/gdpr/export/:jobId', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/gdpr/export/:jobId/download', generalLimiter, async (req, res) => {
+app.get('/api/gdpr/export/:jobId/download', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const job = await getGdprManager().getExportJob(req.params.jobId);
     if (!job) return res.status(404).json({ error: 'Export job not found' });
@@ -935,7 +935,7 @@ app.get('/api/roles', generalLimiter, (req, res) => {
   res.json(roles);
 });
 
-app.get('/api/workspace/:id/users', generalLimiter, async (req, res) => {
+app.get('/api/workspace/:id/users', requireRole(Role.OWNER, Role.ADMIN, Role.MEMBER), generalLimiter, async (req, res) => {
   try {
     const userManager = getUserManager();
     // Ensure default workspace has an owner
