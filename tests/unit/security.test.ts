@@ -19,6 +19,7 @@ let historyLimiter: any;
 let securityHeadersMiddleware: any;
 let apiNoStoreMiddleware: any;
 let redactSecretsDeep: any;
+let _resetCorsWarningForTests: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -33,6 +34,8 @@ beforeEach(async () => {
   securityHeadersMiddleware = module.securityHeadersMiddleware;
   apiNoStoreMiddleware = module.apiNoStoreMiddleware;
   redactSecretsDeep = module.redactSecretsDeep;
+  _resetCorsWarningForTests = module._resetCorsWarningForTests;
+  _resetCorsWarningForTests();
 });
 
 afterEach(() => {
@@ -316,6 +319,69 @@ describe('[P1] getCorsOptions - CORS Configuration', () => {
   it('[P1] should expose X-Request-Id so clients can read it for log correlation', () => {
     const options = getCorsOptions();
     expect(options.exposedHeaders).toContain('X-Request-Id');
+  });
+
+  it('[P0] should warn when ALLOWED_ORIGINS is unset in production (silent allow-all footgun)', () => {
+    // Same shape as the WRANNGLE_AUTH_DEFAULT_ROLE trap that #110
+    // closed: an unset env var silently flips a security default to
+    // "allow all". Behavior is unchanged (so existing deploys aren't
+    // broken), but the warning makes the misconfiguration visible.
+    const originalEnv = process.env.NODE_ENV;
+    const originalOrigins = process.env.ALLOWED_ORIGINS;
+    process.env.NODE_ENV = 'production';
+    delete process.env.ALLOWED_ORIGINS;
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    getCorsOptions();
+    expect(warn).toHaveBeenCalled();
+    expect(warn.mock.calls[0][0]).toContain('ALLOWED_ORIGINS');
+    warn.mockRestore();
+
+    process.env.NODE_ENV = originalEnv;
+    if (originalOrigins) process.env.ALLOWED_ORIGINS = originalOrigins;
+  });
+
+  it('[P1] should warn only once per process for repeat invocations', () => {
+    const originalEnv = process.env.NODE_ENV;
+    const originalOrigins = process.env.ALLOWED_ORIGINS;
+    process.env.NODE_ENV = 'production';
+    delete process.env.ALLOWED_ORIGINS;
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    getCorsOptions();
+    getCorsOptions();
+    getCorsOptions();
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+
+    process.env.NODE_ENV = originalEnv;
+    if (originalOrigins) process.env.ALLOWED_ORIGINS = originalOrigins;
+  });
+
+  it('[P1] should NOT warn when ALLOWED_ORIGINS is set, or when not in production', () => {
+    const originalEnv = process.env.NODE_ENV;
+    const originalOrigins = process.env.ALLOWED_ORIGINS;
+
+    // Case 1: production with ALLOWED_ORIGINS — no warning.
+    process.env.NODE_ENV = 'production';
+    process.env.ALLOWED_ORIGINS = 'https://example.com';
+    let warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    getCorsOptions();
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+
+    // Case 2: dev / unset NODE_ENV — no warning regardless of allowlist.
+    _resetCorsWarningForTests();
+    process.env.NODE_ENV = 'development';
+    delete process.env.ALLOWED_ORIGINS;
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    getCorsOptions();
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+
+    process.env.NODE_ENV = originalEnv;
+    if (originalOrigins) process.env.ALLOWED_ORIGINS = originalOrigins;
+    else delete process.env.ALLOWED_ORIGINS;
   });
 });
 
