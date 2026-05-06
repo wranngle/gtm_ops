@@ -86,6 +86,37 @@ app.use((req, res, next) => {
   next();
 });
 
+// Structured request-finish log. One JSON line per request — id, method,
+// path, status, duration. Emitted via process.stdout.write so log shippers
+// (Vector / fluent-bit / Cloudflare logpush) see it as a single record.
+// Skips the high-volume probes (/health, /ready, /api/health) so the
+// signal isn't drowned by the kubelet's polling. Errors in route handlers
+// still console.error directly; this middleware is the always-on
+// access-log surface.
+app.use((req, res, next) => {
+  if (req.path === '/health' || req.path === '/ready' || req.path === '/api/health') {
+    return next();
+  }
+
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    const duration_ms = Number((process.hrtime.bigint() - start) / 1_000_000n);
+    process.stdout.write(JSON.stringify({
+      ts: new Date().toISOString(),
+      level: 'info',
+      kind: 'request',
+      id: req.id,
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration_ms,
+      ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0] || null,
+      ua: req.headers['user-agent'] || null,
+    }) + '\n');
+  });
+  next();
+});
+
 const history = new HistoryManager();
 
 // Initialize enterprise module managers
