@@ -428,6 +428,50 @@ describe('[P1] AuditLogger - Retention Cleanup', () => {
     expect(RetentionPolicy.pro).toBe(90);
     expect(RetentionPolicy.enterprise).toBe(730);
   });
+
+  it('[P0] should delete only rows older than the retention cutoff', async () => {
+    // Backdate two of three rows via direct SQL UPDATE so cleanup has
+    // a real cutoff to enforce. The previous test only asserted
+    // `deleted >= 0`, which is trivially true even when cleanup is
+    // a no-op — this one fails if the WHERE clause regresses.
+    const logger = new AuditLogger(testDbPath);
+    const fortyDaysAgo = Date.now() - 40 * 24 * 60 * 60 * 1000;
+
+    const old1 = await logger.log(AuditAction.USER_LOGIN, 'user', 'u1', {});
+    const old2 = await logger.log(AuditAction.USER_LOGIN, 'user', 'u2', {});
+    const fresh = await logger.log(AuditAction.USER_LOGIN, 'user', 'u3', {});
+    await logger.close();
+
+    const sqlite = await import('sqlite3');
+    await new Promise<void>((resolve, reject) => {
+      const db = new sqlite.default.Database(testDbPath);
+      db.run(
+        'UPDATE audit_logs SET timestamp = CASE log_id WHEN ? THEN ? WHEN ? THEN ? ELSE timestamp END',
+        [old1.log_id, fortyDaysAgo, old2.log_id, fortyDaysAgo],
+        (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          db.close((closeErr) => {
+            if (closeErr) reject(closeErr);
+            else resolve();
+          });
+        },
+      );
+    });
+
+    // 30-day retention: the 40-day-old rows go, the just-now row stays.
+    const cleanupRunner = new AuditLogger(testDbPath);
+    const result = await cleanupRunner.cleanup(30);
+    expect(result.deleted).toBe(2);
+
+    const remaining = await cleanupRunner.query({});
+    expect(remaining.logs).toHaveLength(1);
+    expect(remaining.logs[0].log_id).toBe(fresh.log_id);
+    await cleanupRunner.close();
+  });
 });
 
 describe('[P1] AuditLogger - CSV Export', () => {
