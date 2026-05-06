@@ -210,6 +210,7 @@ window.GTM = (function () {
   const sparks = {
     pipeline:[42,48,46,52,55,58,62,60,68,71,76,84],
     calls:[3,5,4,7,6,8,11,9,10,12,8,11],
+    qualified:[1,2,1,3,2,4,3,5,4,6,5,3],
     score:[6.8,7.0,7.2,7.1,7.3,7.4,7.2,7.5,7.3,7.6,7.7,7.6],
     evalPass:[.78,.79,.80,.79,.81,.82,.83,.82,.84,.83,.85,.847],
   };
@@ -227,8 +228,28 @@ window.GTM = (function () {
       runtime:'4d 12h', tasks:312, success:0.764 },
   ];
 
+  // Shared regression predicate. The sidebar count, the Mission Control
+  // regressions card, the EvalsPage filter, and the regression-count
+  // Stat tile all need to agree on what "regressing" means — without
+  // a shared helper, the sidebar was using `delta < 0` while everywhere
+  // else used `delta < 0 || pass < 0.75`, undercounting the badge.
+  const isEvalRegressing = (s) => (
+    s != null &&
+    ((Number(s.delta) < 0) || (Number(s.pass) < 0.75))
+  );
+
+  // Shared "active pipeline company" predicate. The sidebar Pipeline
+  // count counts non-closed / non-lost; the Pipeline saved-view popout
+  // labels its "all" filter as "All active" but actually returned all
+  // companies including closed/lost. Make the predicate live in one
+  // place so labels and counts can't drift.
+  const isActivePipelineCompany = (c) => (
+    c != null && !['closed', 'lost'].includes(String(c.stage || '').toLowerCase())
+  );
+
   return {
     companies, stages, calls, transcriptBanyan, callScores,
     evalSuites, proposals, feed, stats, sparks, agents,
+    isEvalRegressing, isActivePipelineCompany,
   };
 })();

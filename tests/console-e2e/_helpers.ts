@@ -24,7 +24,11 @@ export const test = base.extend<ConsoleFixtures>({
     await use(async () => {
       await page.goto('/console/', { waitUntil: 'domcontentloaded' });
       // Babel-standalone needs a beat to transpile + render the React tree.
-      await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
+      // 30s headroom rather than 15s because under 4-worker parallel load the
+      // shared static server's per-tab transpile can blow past the lower
+      // ceiling — this is a CPU-contention budget, not a real product
+      // signal. Alone, mount lands in ~3s.
+      await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
       return page;
     });
   },

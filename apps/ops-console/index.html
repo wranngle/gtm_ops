@@ -7,24 +7,25 @@
     <meta name="description" content="Open-source AI presales pipeline for service businesses. Inbound leads enrich themselves, generate branded PDF proposals, and feed your CRM — without a single Salesforce admin.">
     <meta name="author" content="Wranngle">
     <meta name="theme-color" content="#12111a">
-    <link rel="canonical" href="https://gtm-ops.pages.dev/">
+    <link rel="canonical" href="https://gtm-ops.wranngle.com/">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="Wranngle GTM Ops — Lead in, branded proposal out.">
     <meta property="og:description" content="Open-source AI presales pipeline. Inbound leads → enrichment → branded PDF proposal, in minutes.">
-    <meta property="og:image" content="https://gtm-ops.pages.dev/assets/og-card.png">
+    <meta property="og:image" content="https://gtm-ops.wranngle.com/assets/og-card.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:url" content="https://gtm-ops.pages.dev/">
+    <meta property="og:url" content="https://gtm-ops.wranngle.com/">
     <meta property="og:site_name" content="Wranngle GTM Ops">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Wranngle GTM Ops — Lead in, branded proposal out.">
     <meta name="twitter:description" content="Open-source AI presales pipeline. Inbound leads → enrichment → branded PDF proposal, in minutes.">
-    <meta name="twitter:image" content="https://gtm-ops.pages.dev/assets/og-card.png">
+    <meta name="twitter:image" content="https://gtm-ops.wranngle.com/assets/og-card.png">
     <meta name="twitter:image:alt" content="Wranngle GTM Ops — open-source AI presales pipeline">
 
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,7 +71,16 @@
             font-family: var(--font-display); font-weight: 700; font-size: 16px;
             color: var(--sand-50); letter-spacing: -0.01em;
         }
-        .nav-brand svg { display: block; }
+        .nav-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255, 95, 0, 0.65);
+            box-shadow: 0 0 0 3px rgba(255, 95, 0, 0.12);
+            background: var(--night-950);
+            flex-shrink: 0;
+        }
         .nav-links {
             display: flex; gap: 28px; align-items: center; font-size: 14px;
         }
@@ -321,6 +331,43 @@
         }
         .demo-card p { color: var(--sand-300); font-size: 15px; }
         .demo-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        .screenshot-carousel {
+            margin: 36px 0 28px;
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(320px, 82%);
+            gap: 18px;
+            overflow-x: auto;
+            overscroll-behavior-inline: contain;
+            scroll-snap-type: inline mandatory;
+            padding: 4px 2px 18px;
+        }
+        .screenshot-carousel figure {
+            scroll-snap-align: start;
+            background: var(--night-900);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .screenshot-carousel img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            object-position: top left;
+            background: var(--night-950);
+        }
+        .screenshot-carousel figcaption {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--sand-300);
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+        }
 
         /* ── Lead form ── */
         .contact-grid {
@@ -442,22 +489,13 @@
 <header class="nav">
     <div class="nav-inner">
         <a href="/" class="nav-brand" aria-label="Wranngle GTM Ops home">
-            <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true">
-                <defs>
-                    <linearGradient id="navg" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="#ff5f00"/>
-                        <stop offset="100%" stop-color="#cf3c69"/>
-                    </linearGradient>
-                </defs>
-                <rect width="64" height="64" rx="14" fill="#12111a"/>
-                <path d="M14 44 L24 20 L32 38 L40 20 L50 44" fill="none" stroke="url(#navg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <img class="nav-logo" src="/assets/wranngle-square.png" alt="" aria-hidden="true">
             <span>Wranngle GTM Ops</span>
         </a>
         <nav class="nav-links" aria-label="Primary">
             <a href="#how">How it works</a>
             <a href="#demo">Live demo</a>
-            <a href="/evaluation/">Evals</a>
+            <a href="/console/?route=evals">Evals</a>
             <a class="source-link" href="https://github.com/wranngle/gtm_ops" target="_blank" rel="noopener">GitHub</a>
             <a href="#contact" class="nav-cta">Get a real run</a>
         </nav>
@@ -603,17 +641,32 @@
             <div class="demo-card">
                 <div class="demo-card-text">
                     <h3>Sample proposal</h3>
-                    <p>A real seven-page branded PDF rendered by the same pipeline we'd run on your lead. Generated from the synthetic Acme HVAC scenario and baked into this deploy.</p>
+                    <p>A real seven-page branded PDF rendered by the same pipeline we'd run on your lead. Open it as a console review packet so the PDF, source evidence, and approval gate stay together.</p>
                 </div>
                 <div class="demo-actions">
-                    <a href="/assets/sample-proposal.pdf" class="btn-primary" download="wranngle-sample-proposal.pdf">Download sample proposal</a>
+                    <a href="/console/?route=generate&amp;artifact=pdf" class="btn-primary">Review sample proposal packet</a>
                     <a href="/console/" class="btn-ghost">Open operator console</a>
                 </div>
             </div>
 
+            <div class="screenshot-carousel" aria-label="Real console screenshots">
+                <figure>
+                    <img src="/assets/screenshots/console-evals.png" alt="GTM Ops evals console with harness runs and ElevenLabs agent lab" loading="lazy">
+                    <figcaption><span>Evals</span><span>harness + agent lab</span></figcaption>
+                </figure>
+                <figure>
+                    <img src="/assets/screenshots/console-generate.png" alt="GTM Ops proposal generator with buyer brief and live sequence trace" loading="lazy">
+                    <figcaption><span>Generate</span><span>review draft gate</span></figcaption>
+                </figure>
+                <figure>
+                    <img src="/assets/screenshots/console-settings.png" alt="GTM Ops account settings console with SMS and email alert consent" loading="lazy">
+                    <figcaption><span>Settings</span><span>alert consent + parity</span></figcaption>
+                </figure>
+            </div>
+
             <p class="section-lead" style="margin-top: 32px; margin-bottom: 16px; font-size: 14px;">The console runs against twelve synthetic case studies served from immutable JSON fixtures. Drill into any execution for logs, schema, and phase breakdowns. Mutations are no-ops &mdash; safe to poke.</p>
             <div class="demo-actions">
-                <a href="/evaluation/" class="btn-ghost">Evaluation dashboard</a>
+                <a href="/console/?route=evals" class="btn-ghost">Evals dashboard</a>
                 <a href="#contact" class="btn-ghost">Submit your own lead</a>
             </div>
         </div>
@@ -690,7 +743,7 @@
             <a href="https://github.com/wranngle/gtm_ops/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
             <a href="https://github.com/wranngle/gtm_ops/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a>
             <a href="/console/">Console</a>
-            <a href="/evaluation/">Evals</a>
+            <a href="/console/?route=evals">Evals</a>
         </div>
     </div>
 </footer>

@@ -29,7 +29,7 @@ test('perf · /console/ stays under transfer budget', async ({ page }) => {
   });
   await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
   await page.goto('/console/', { waitUntil: 'load' });
-  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
+  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
 
   const totalKb = Math.round(transfers.reduce((s, t) => s + t.size, 0) / 1024);
   expect(totalKb, `console total transfer ${totalKb} KB exceeds budget`).toBeLessThan(BUDGETS.totalKbCeiling);

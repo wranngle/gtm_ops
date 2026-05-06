@@ -59,3 +59,40 @@ test('mobile · stats grid does not overflow its container at 375px', async ({ o
   });
   expect(stats.ok, `stats overflow: ${JSON.stringify(stats)}`).toBe(true);
 });
+
+test('mobile · attention banner actions stay inside the viewport', async ({ openConsole }) => {
+  const page = await openConsole();
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.waitForTimeout(200);
+
+  const banner = page.locator('[data-testid="attention-banner"]');
+  await expect(banner).toBeVisible();
+  await expect(page.locator('[data-testid="attention-review-now"]')).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const viewportW = document.documentElement.clientWidth;
+    const bannerEl = document.querySelector('[data-testid="attention-banner"]') as HTMLElement | null;
+    const buttons = [...document.querySelectorAll('[data-testid="attention-snooze-1h"], [data-testid="attention-review-now"]')]
+      .map((el) => {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        return {
+          text: (el.textContent || '').trim(),
+          left: r.left,
+          right: r.right,
+          width: r.width,
+        };
+      });
+    const bannerRect = bannerEl?.getBoundingClientRect();
+    return {
+      viewportW,
+      bannerRight: bannerRect?.right ?? 0,
+      buttons,
+      contained: buttons.every((r) => r.left >= 0 && r.right <= viewportW + 1 && r.width > 0),
+    };
+  });
+
+  expect(
+    geometry.contained,
+    `attention actions clipped: ${JSON.stringify(geometry)}`,
+  ).toBe(true);
+});

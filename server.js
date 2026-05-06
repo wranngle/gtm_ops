@@ -1309,7 +1309,7 @@ const server = app.listen(port, () => {
   serverState.isReady = true;
   console.log(`Server running at http://localhost:${port}`);
   console.log(`  Dashboard:  http://localhost:${port}/`);
-  console.log(`  Eval:       http://localhost:${port}/evaluation/`);
+  console.log(`  Eval:       http://localhost:${port}/console/?route=evals`);
 });
 
 // Graceful shutdown handling

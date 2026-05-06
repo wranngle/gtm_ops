@@ -6,8 +6,8 @@ by the same fixture / Pages-Functions / Express live-mode contract:
 | Path | Surface | Stack |
 |---|---|---|
 | `index.html` | Public landing page (Get-a-real-run lead form) | Vanilla HTML + inline JS |
-| `console/` | Main operator UI — home, pipeline, calls, proposals, evals, **agents** (live ElevenLabs ConvAI playgrounds for Sales Coach + Sarah Intake), settings, generate | React 18 (UMD + babel-standalone, no build step) |
-| `evaluation/` | Evaluation Dashboard — corpus stats, flaw distribution, per-run drill-in | Vanilla HTML + inline JS |
+| `console/` | Main operator UI — home, pipeline, calls, proposals, evals with a contextual ElevenLabs regression lab, **agents** (live ElevenLabs ConvAI playgrounds for Sales Coach + Sarah Intake), settings, generate | React 18 (UMD + babel-standalone, no build step) |
+| `evaluation/` | Compatibility redirect into `/console/?route=evals` so evals stay inside the console shell | HTML bridge |
 | `eval-runs/` | Per-run harness output surface | Vanilla HTML + inline JS |
 
 A 404.html ships at the root. Every entrypoint pulls brand colors and
@@ -55,9 +55,10 @@ big-memory PDF rendering that Pages Functions can't easily host.
 
 ## ElevenLabs ConvAI integration
 
-The `/console/agents` route mounts live ElevenLabs ConvAI widgets for the
-Sales Coach and Sarah Intake agents. Agent IDs and surface bindings live
-in `console/agents-registry.js`. The widget script is loaded lazily from
+The coach launcher, `/console/agents`, and `/console/evals` regression lab
+mount live ElevenLabs ConvAI widgets for the Sales Coach and Sarah Intake
+agents. Agent IDs and surface bindings live in `console/agents-registry.js`.
+The widget script is loaded lazily from
 `unpkg.com/@elevenlabs/convai-widget-embed`; if that load is blocked
 (strict CSP, corporate firewall) the widget container renders a fallback
 message + deep link to the agent on `elevenlabs.io`.

@@ -31,11 +31,42 @@ globalThis.useAppContext = function useAppContext() {
 };
 
 /* buildContextDump — serialize current app state for the agent.
-   Output is the markdown blob that lands inside the {{context_dump}}
+   Output is the markdown blob that lands inside the {{context}}
    placeholder in the agent's system prompt. Keep human-readable. */
 globalThis.buildContextDump = function buildContextDump(ctx) {
   const D = globalThis.GTM || {};
   const lines = [];
+  const serializeExtraValue = (value) => {
+    if (value == null) return '';
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    try { return JSON.stringify(value); }
+    catch (_) { return String(value); }
+  };
+  const numericScore = (value) => {
+    const next = Number(value);
+    return Number.isFinite(next) ? next : null;
+  };
+  const evalRunScore = (run) => (
+    numericScore(run?.score?.weighted) ??
+    numericScore(run?.score) ??
+    numericScore(run?.aggregate_score) ??
+    numericScore(run?.weighted)
+  );
+  const evalRunFailedAxes = (run) => {
+    if (Array.isArray(run?.failed_axes)) return run.failed_axes.join(', ') || 'none';
+    if (typeof run?.failed_axes === 'string' && run.failed_axes.trim()) return run.failed_axes;
+    const axes = Array.isArray(run?.score?.axes)
+      ? run.score.axes
+      : Array.isArray(run?.axes)
+        ? run.axes
+        : [];
+    return axes
+      .filter(axis => axis && axis.pass === false)
+      .map(axis => axis.name || axis.id || 'unnamed_axis')
+      .join(', ') || 'none';
+  };
   lines.push(`active_route: ${ctx.route}`);
   if (ctx.selection) {
     const { type, id } = ctx.selection;
@@ -90,14 +121,52 @@ globalThis.buildContextDump = function buildContextDump(ctx) {
   if (ctx.extra && Object.keys(ctx.extra).length > 0) {
     lines.push('');
     lines.push('## extra');
-    for (const k of Object.keys(ctx.extra)) lines.push(`${k}: ${ctx.extra[k]}`);
+    for (const k of Object.keys(ctx.extra)) {
+      const value = ctx.extra[k];
+      const isEvalRun = k === 'eval_run' && value && typeof value === 'object';
+      lines.push(`${k}: ${isEvalRun ? '[see active_eval_run.*]' : serializeExtraValue(value)}`);
+      if (isEvalRun) {
+        const score = evalRunScore(value);
+        lines.push(`active_eval_run.scenario: ${value.scenario_id || value.id || 'unknown'}`);
+        lines.push(`active_eval_run.verdict: ${value.verdict || value.status || 'unknown'}`);
+        if (score != null) lines.push(`active_eval_run.score: ${Math.round(score * 100)}%`);
+        lines.push(`active_eval_run.failed_axes: ${evalRunFailedAxes(value)}`);
+      }
+    }
   }
   return lines.join('\n') || '(no selection — generic console session)';
 };
 
 /* Lazy-load the official ConvAI web component, exactly once. */
 let _widgetLoaded = false;
+const _convaiConfigErrors = new Map();
+function convaiErrorText(args) {
+  return args.map(arg => {
+    if (typeof arg === 'string') return arg;
+    if (arg && typeof arg.message === 'string') return arg.message;
+    try { return JSON.stringify(arg); }
+    catch (_) { return String(arg); }
+  }).join(' ');
+}
+
+function installConvaiErrorBridge() {
+  if (globalThis.__gtmConvaiErrorBridgeInstalled) return;
+  globalThis.__gtmConvaiErrorBridgeInstalled = true;
+  const originalError = console.error.bind(console);
+  console.error = (...args) => {
+    const text = convaiErrorText(args);
+    const match = text.match(/Cannot fetch config for agent\s+([a-zA-Z0-9_-]+)/i);
+    if (match) {
+      const detail = { agentId: match[1], message: text };
+      _convaiConfigErrors.set(match[1], detail);
+      globalThis.dispatchEvent(new CustomEvent('gtm:convai-config-error', { detail }));
+    }
+    originalError(...args);
+  };
+}
+
 function loadConvaiWidget() {
+  installConvaiErrorBridge();
   if (_widgetLoaded) return;
   _widgetLoaded = true;
   const s = document.createElement('script');
@@ -115,6 +184,45 @@ function isConvaiReady() {
     !!customElements.get('elevenlabs-convai');
 }
 
+function installConvaiEscapeHatchGuard(el) {
+  let raf = null;
+  let observer = null;
+  const scrub = () => {
+    const root = el?.shadowRoot;
+    if (!root) return false;
+    root.querySelectorAll('a[href*="elevenlabs.io"], a[href*="elevenlabs.com"]').forEach(link => {
+      if (!link.dataset.gtmOriginalHref) link.dataset.gtmOriginalHref = link.getAttribute('href') || '';
+      link.removeAttribute('href');
+      link.setAttribute('aria-hidden', 'true');
+      link.setAttribute('tabindex', '-1');
+      link.dataset.gtmSuppressedExternalLink = 'true';
+      const banner = link.closest('p') || link;
+      banner.setAttribute('aria-hidden', 'true');
+      banner.dataset.gtmSuppressedExternalBanner = 'true';
+      banner.style.setProperty('display', 'none', 'important');
+    });
+    return true;
+  };
+  const arm = () => {
+    if (scrub() && el.shadowRoot && !observer) {
+      observer = new MutationObserver(scrub);
+      observer.observe(el.shadowRoot, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['href'],
+      });
+      return;
+    }
+    raf = requestAnimationFrame(arm);
+  };
+  arm();
+  return () => {
+    if (raf != null) cancelAnimationFrame(raf);
+    observer?.disconnect();
+  };
+}
+
 /* ConvaiWidget — declarative React wrapper around <elevenlabs-convai>.
    Updates dynamic-variables JSON whenever the app context changes. */
 globalThis.ConvaiWidget = function ConvaiWidget({
@@ -123,6 +231,20 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   textOnly = true,
   expanded = false,
   variant,
+  dismissible,
+  actionText,
+  startCallText,
+  endCallText,
+  expandText,
+  listeningText,
+  speakingText,
+	  firstMessage,
+	  prompt,
+	  voiceId,
+	  serverLocation,
+	  markdownLinkAllowedHosts = 'elevenlabs.io,wranngle.com',
+	  syntaxHighlightTheme,
+	  widgetAttrs = {},
   height = 560,
   width,
   onMount,
@@ -131,11 +253,55 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   const containerRef = React.useRef(null);
   const widgetRef = React.useRef(null);
   const reg = globalThis.AGENT_REGISTRY.byKey(agentKey);
+  const widgetDefaults = reg?.widget || {};
   const agent_id = agentIdProp || (reg && reg.agent_id);
+  const effectiveActionText = actionText ?? widgetDefaults.actionText;
+  const effectiveStartCallText = startCallText ?? widgetDefaults.startCallText;
+  const effectiveEndCallText = endCallText ?? widgetDefaults.endCallText;
+  const effectiveExpandText = expandText ?? widgetDefaults.expandText;
+  const effectiveListeningText = listeningText ?? widgetDefaults.listeningText;
+  const effectiveSpeakingText = speakingText ?? widgetDefaults.speakingText;
+  const effectiveFirstMessage = firstMessage ?? reg?.first_message;
+  const effectivePrompt = prompt ?? reg?.system_prompt;
+  const effectiveVoiceId = voiceId ?? reg?.voice_id;
   const [ready, setReady] = React.useState(isConvaiReady());
   const [unreachable, setUnreachable] = React.useState(false);
+  const [configError, setConfigError] = React.useState(() => (
+    agent_id ? _convaiConfigErrors.get(agent_id)?.message || null : null
+  ));
+  const openLocalAgentAdmin = (triggeredFrom, panel = 'context') => {
+    const ctxExtra = globalThis.AppContext?.get?.().extra || {};
+    globalThis.AppContext?.set?.({
+      extra: {
+        ...ctxExtra,
+        selected_agent_key: reg?.key || agentKey,
+        agent_admin_panel: panel,
+        triggered_from: triggeredFrom,
+      },
+    });
+    globalThis.dispatchEvent(new CustomEvent('gtm:route', { detail: { route: 'agents' } }));
+  };
 
   React.useEffect(() => { loadConvaiWidget(); }, []);
+
+  React.useEffect(() => {
+    installConvaiErrorBridge();
+    if (!agent_id) return undefined;
+    // ALWAYS sync configError to the current agent's cached error (or clear
+    // it). The previous version only set on hit, never cleared, so an error
+    // for a prior agent stayed sticky across agent-picker switches and
+    // misrendered the new agent's widget as a config failure.
+    const existing = _convaiConfigErrors.get(agent_id);
+    setConfigError(existing?.message || null);
+    const onConfigError = (event) => {
+      const detail = event.detail || {};
+      if (detail.agentId === agent_id) {
+        setConfigError(detail.message || 'ElevenLabs widget config did not load.');
+      }
+    };
+    globalThis.addEventListener('gtm:convai-config-error', onConfigError);
+    return () => globalThis.removeEventListener('gtm:convai-config-error', onConfigError);
+  }, [agent_id]);
 
   /* Poll for the custom-element registration; flip to "unreachable" if
      it's still not registered after 5 seconds — that's the signal a
@@ -155,32 +321,113 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   }, [ready]);
 
   React.useEffect(() => {
-    if (!agent_id || !ready) return;
+    if (!agent_id || !ready) return undefined;
     const el = document.createElement('elevenlabs-convai');
+    el.classList.add('convai-widget-host');
     el.setAttribute('agent-id', agent_id);
-    if (variant) el.setAttribute('variant', variant);
-    if (expanded) el.setAttribute('expanded', '');
-    el.style.display = 'block';
-    if (width) el.style.width = typeof width === 'number' ? `${width}px` : width;
-    if (height) el.style.height = typeof height === 'number' ? `${height}px` : height;
+    if (agentKey) el.setAttribute('data-agent-key', agentKey);
+    if (reg?.display_name) el.setAttribute('data-agent-name', reg.display_name);
+    if (reg?.role) el.setAttribute('data-agent-role', reg.role);
+    const displayVariant = variant || (expanded ? 'expanded' : '');
+    if (displayVariant) el.setAttribute('variant', displayVariant);
+    const attrs = {
+      'avatar-orb-color-1': reg && reg.avatar_color_1,
+      'avatar-orb-color-2': reg && reg.avatar_color_2,
+      'server-location': serverLocation,
+      'action-text': effectiveActionText,
+      'start-call-text': effectiveStartCallText,
+      'end-call-text': effectiveEndCallText,
+      'expand-text': effectiveExpandText,
+      'listening-text': effectiveListeningText,
+      'speaking-text': effectiveSpeakingText,
+      'override-first-message': effectiveFirstMessage,
+      'override-prompt': effectivePrompt,
+      'override-voice-id': effectiveVoiceId,
+      'markdown-link-allowed-hosts': markdownLinkAllowedHosts,
+      'syntax-highlight-theme': syntaxHighlightTheme,
+      dismissible: dismissible === true ? 'true' : undefined,
+      ...widgetAttrs,
+    };
+    for (const [name, value] of Object.entries(attrs)) {
+      if (value == null || value === '') continue;
+      el.setAttribute(name, String(value));
+    }
+    // The embed stylesheet can promote the host to a fixed viewport widget;
+    // the console wraps it as an in-panel tool instead.
+    const applyContainedHostLayout = () => {
+      const resolvedWidth = width ? (typeof width === 'number' ? `${width}px` : width) : '100%';
+      const resolvedHeight = height ? (typeof height === 'number' ? `${height}px` : height) : '100%';
+      for (const [name, value] of Object.entries({
+        display: 'block',
+        position: 'relative',
+        inset: 'auto',
+        top: 'auto',
+        right: 'auto',
+        bottom: 'auto',
+        left: 'auto',
+        width: resolvedWidth,
+        height: resolvedHeight,
+        'max-width': '100%',
+        'max-height': '100%',
+        'z-index': 'auto',
+        transform: 'none',
+      })) {
+        el.style.setProperty(name, value, 'important');
+      }
+    };
+    applyContainedHostLayout();
+    const onCall = (event) => {
+      if (!event.detail) return;
+      event.detail.config = event.detail.config || {};
+      event.detail.config.clientTools = {
+        ...(event.detail.config.clientTools || {}),
+        openConsoleRoute: ({ route }) => {
+          if (typeof route === 'string') {
+            globalThis.dispatchEvent(new CustomEvent('gtm:route', { detail: { route } }));
+          }
+        },
+        showToast: ({ title, sub, tone }) => {
+          globalThis.toast(String(title || 'ElevenLabs agent'), { sub, tone: tone || 'accent' });
+        },
+      };
+    };
+    el.addEventListener('elevenlabs-convai:call', onCall);
     widgetRef.current = el;
     if (containerRef.current) {
       containerRef.current.innerHTML = '';
       containerRef.current.append(el);
     }
+    const stopEscapeHatchGuard = installConvaiEscapeHatchGuard(el);
+    applyContainedHostLayout();
+    const hostLayoutRaf = requestAnimationFrame(applyContainedHostLayout);
+    customElements.whenDefined('elevenlabs-convai')
+      .then(applyContainedHostLayout)
+      .catch(() => {});
     onMount && onMount(el);
     return () => {
+      cancelAnimationFrame(hostLayoutRaf);
+      stopEscapeHatchGuard();
+      el.removeEventListener('elevenlabs-convai:call', onCall);
       try { el.remove(); } catch (_) {}
       widgetRef.current = null;
     };
-  }, [agent_id, variant, expanded, height, width, ready]);
+  }, [
+    agent_id, variant, expanded, dismissible, actionText, startCallText,
+    endCallText, expandText, listeningText, speakingText, firstMessage,
+    prompt, voiceId, effectiveActionText, effectiveStartCallText,
+    effectiveEndCallText, effectiveExpandText, effectiveListeningText,
+    effectiveSpeakingText, effectiveFirstMessage, effectivePrompt,
+    effectiveVoiceId, serverLocation,
+    markdownLinkAllowedHosts, syntaxHighlightTheme, JSON.stringify(widgetAttrs),
+    height, width, ready, agentKey,
+  ]);
 
   /* Push dynamic variables + override config every time context changes. */
   React.useEffect(() => {
     const el = widgetRef.current;
     if (!el) return;
     const dump = globalThis.buildContextDump(ctx);
-    const dyn = { context_dump: dump };
+    const dyn = { context: dump };
     el.setAttribute('dynamic-variables', JSON.stringify(dyn));
     if (textOnly) {
       el.setAttribute('override-config', JSON.stringify({
@@ -190,9 +437,6 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   }, [ctx, textOnly]);
 
   if (unreachable) {
-    const fallbackHref = agent_id
-      ? `https://elevenlabs.io/app/conversational-ai/agents/${agent_id}`
-      : 'https://elevenlabs.io/app/conversational-ai/agents';
     return React.createElement('div', {
       className: 'convai-mount convai-mount--unreachable',
       role: 'alert',
@@ -204,15 +448,13 @@ globalThis.ConvaiWidget = function ConvaiWidget({
           'The ElevenLabs embed script (',
           React.createElement('code', null, 'unpkg.com/@elevenlabs/convai-widget-embed'),
           ') did not load. This is usually a corporate-network or CSP block. ',
-          reg ? `You can still talk to ${reg.display_name} directly on ElevenLabs:` : 'Open the agent on ElevenLabs:'
+          reg ? `${reg.display_name} settings are still available inside the console.` : 'Open the in-console agent admin.'
         ),
-        React.createElement('a', {
+        React.createElement('button', {
           className: 'btn btn--primary btn--sm',
-          href: fallbackHref,
-          target: '_blank',
-          rel: 'noopener noreferrer',
           style: { marginTop: 12, display: 'inline-flex' },
-        }, 'Open on ElevenLabs ↗')
+          onClick: () => openLocalAgentAdmin('convai-fallback', 'context'),
+        }, 'Open local admin')
       )
     );
   }
@@ -224,7 +466,34 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       )
     );
   }
-  return React.createElement('div', { ref: containerRef, className: 'convai-mount' });
+  // The convai-mount holds the imperative <elevenlabs-convai> element
+  // (the create-effect calls innerHTML='' on it to swap the embed in/out,
+  // so it cannot host React children). When configError is set, render
+  // the fallback as a SIBLING overlay positioned over the mount via the
+  // .convai-host wrapper — keeps the mount alive for inspection while
+  // surfacing the unconfigured-agent recovery affordance.
+  return React.createElement('div', { className: 'convai-host' },
+    React.createElement('div', { ref: containerRef, className: 'convai-mount' }),
+    configError && React.createElement('div', {
+      className: 'convai-fallback convai-fallback--overlay',
+      role: 'alert',
+      'aria-live': 'polite',
+      'data-testid': 'convai-config-error',
+    },
+      React.createElement('div', { className: 'convai-fallback__title' }, 'ElevenLabs config unavailable'),
+      React.createElement('div', { className: 'convai-fallback__body' },
+        reg ? `${reg.display_name} is wired into the console, but the official widget did not return a ` : 'The official widget did not return a ',
+        React.createElement('code', null, 'widget_config'),
+        agent_id ? ` for ${agent_id}. ` : '. ',
+        'Use the local agent admin while the embed binding is repaired.'
+      ),
+      React.createElement('button', {
+        className: 'btn btn--primary btn--sm',
+        style: { marginTop: 12, display: 'inline-flex' },
+        onClick: () => openLocalAgentAdmin('convai-config-error', 'context'),
+      }, 'Open local admin')
+    )
+  );
 };
 
 /* Floating sales-coach launcher — rendered once at the app root. */
@@ -232,9 +501,14 @@ globalThis.SalesCoachLauncher = function SalesCoachLauncher() {
   const [open, setOpen] = React.useState(false);
   const ctx = globalThis.useAppContext();
   const reg = globalThis.AGENT_REGISTRY.byKey('sales_coach');
+  const widget = reg?.widget || {};
   const launcherRef = React.useRef(null);
   const closeRef = React.useRef(null);
   const previousFocusRef = React.useRef(null);
+  React.useEffect(() => {
+    document.documentElement.toggleAttribute('data-coach-open', open);
+    return () => document.documentElement.removeAttribute('data-coach-open');
+  }, [open]);
   // Esc closes; focus moves into the dock close button on open and
   // returns to the launcher on close — same focus-management pattern
   // as the command palette + topbar popovers + lead-detail panel.
@@ -266,23 +540,37 @@ globalThis.SalesCoachLauncher = function SalesCoachLauncher() {
       React.createElement('span', { className: 'coach-launcher__orb' }),
       React.createElement('span', { className: 'coach-launcher__label' }, open ? 'Hide coach' : 'Coach')
       ),
-      open && React.createElement('div', { className: 'coach-dock', role: 'dialog', 'aria-label': 'Sales Coach chat' },
-        React.createElement('div', { className: 'coach-dock__hd' },
-          React.createElement('span', null, 'Sales Coach'),
-          React.createElement('span', { className: 'mono dim', style: { fontSize: 10 } },
-            ctx.selection ? `${ctx.selection.type} · ${ctx.selection.id}` : 'no selection'),
-          React.createElement('button', { ref: closeRef, className: 'btn btn--ghost btn--icon', onClick: () => setOpen(false), 'aria-label': 'Close coach' },
-            React.createElement(globalThis.Icon.Close, { size: 14 }))
-        ),
-        React.createElement('div', { className: 'coach-dock__body' },
-          React.createElement(globalThis.ConvaiWidget, {
-            agentKey: 'sales_coach',
-            textOnly: true,
-            expanded: true,
-            height: '100%',
-            width: '100%',
-          })
-        )
+      open && React.createElement('div', { className: 'coach-dock', role: 'dialog', 'aria-label': `${reg.display_name} chat` },
+        // The dock is intentionally just the ElevenLabs ConvAI widget plus
+        // a single floating close affordance — no custom header, no
+        // context-strip chrome. The widget already renders its own agent
+        // identity, status, and controls; duplicating them here just made
+        // the surface louder than the conversation.
+        React.createElement('button', {
+          ref: closeRef,
+          className: 'coach-dock__close',
+          onClick: () => setOpen(false),
+          'aria-label': 'Close coach',
+          type: 'button',
+        }, React.createElement(globalThis.Icon.Close, { size: 14 })),
+        React.createElement(globalThis.ConvaiWidget, {
+          agentKey: 'sales_coach',
+          textOnly: false,
+          expanded: true,
+          dismissible: false,
+          actionText: widget.actionText,
+          startCallText: widget.startCallText,
+          endCallText: widget.endCallText,
+          expandText: widget.expandText,
+          listeningText: widget.listeningText,
+          speakingText: widget.speakingText,
+          firstMessage: reg.first_message,
+          prompt: reg.system_prompt,
+          voiceId: reg.voice_id,
+          syntaxHighlightTheme: 'dark',
+          height: '100%',
+          width: '100%',
+        })
       )
     )
   );
