@@ -159,8 +159,30 @@ describe('[P0] AuditLogger - Query and Filtering', () => {
     // WHEN: Filtering by workspace
     const result = await logger.query({ workspace_id: 'ws-1' });
 
-    // THEN: Should return only ws-1 logs
+    // THEN: Should return only ws-1 logs (and they really are ws-1)
     expect(result.logs).toHaveLength(2);
+    expect(result.logs.every((l: any) => l.workspace_id === 'ws-1')).toBe(true);
+
+    await logger.close();
+  });
+
+  it('[P0] should filter by user_id (cross-user isolation)', async () => {
+    // The query path supports a user_id filter. Audit dashboards use it
+    // to scope a "what did THIS user touch" view; a regression that
+    // drops the user_id branch from the WHERE clause would silently
+    // cross-contaminate that view, leaking activity across users.
+    const logger = new AuditLogger(testDbPath);
+    await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd1', {}, { user_id: 'u-alice', workspace_id: 'ws-1' });
+    await logger.log(AuditAction.DOCUMENT_VIEWED, 'doc', 'd2', {}, { user_id: 'u-alice', workspace_id: 'ws-1' });
+    await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd3', {}, { user_id: 'u-bob', workspace_id: 'ws-1' });
+
+    const aliceOnly = await logger.query({ user_id: 'u-alice' });
+    expect(aliceOnly.logs).toHaveLength(2);
+    expect(aliceOnly.logs.every((l: any) => l.user_id === 'u-alice')).toBe(true);
+
+    const bobOnly = await logger.query({ user_id: 'u-bob' });
+    expect(bobOnly.logs).toHaveLength(1);
+    expect(bobOnly.logs[0].user_id).toBe('u-bob');
 
     await logger.close();
   });
