@@ -16,6 +16,7 @@ let validateInputSize: any;
 let getCorsOptions: any;
 let generateLimiter: any;
 let historyLimiter: any;
+let securityHeadersMiddleware: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -27,6 +28,7 @@ beforeEach(async () => {
   getCorsOptions = module.getCorsOptions;
   generateLimiter = module.generateLimiter;
   historyLimiter = module.historyLimiter;
+  securityHeadersMiddleware = module.securityHeadersMiddleware;
 });
 
 afterEach(() => {
@@ -305,5 +307,73 @@ describe('[P1] Rate Limiters - Configuration', () => {
   it('[P1] should have historyLimiter configured for 100 req/hour', () => {
     // THEN: History limiter should exist
     expect(historyLimiter).toBeDefined();
+  });
+});
+
+describe('[P0] securityHeadersMiddleware - Response Headers', () => {
+  function runMiddleware() {
+    const headers: Record<string, string> = {};
+    const req: any = {};
+    const res: any = {
+      setHeader(name: string, value: string) {
+        headers[name] = value;
+      },
+    };
+    const next = vi.fn();
+    securityHeadersMiddleware(req, res, next);
+    return { headers, next };
+  }
+
+  it('[P0] should set X-Frame-Options to DENY', () => {
+    const { headers } = runMiddleware();
+    expect(headers['X-Frame-Options']).toBe('DENY');
+  });
+
+  it('[P0] should set X-Content-Type-Options to nosniff', () => {
+    const { headers } = runMiddleware();
+    expect(headers['X-Content-Type-Options']).toBe('nosniff');
+  });
+
+  it('[P0] should disable legacy XSS auditor (X-XSS-Protection: 0)', () => {
+    // Modern OWASP guidance: `1; mode=block` re-introduces cross-site
+    // leaks on browsers that still parse the header — the only safe
+    // value is `0` (or omit entirely).
+    const { headers } = runMiddleware();
+    expect(headers['X-XSS-Protection']).toBe('0');
+  });
+
+  it('[P0] should set Strict-Transport-Security with 2-year max-age + includeSubDomains', () => {
+    const { headers } = runMiddleware();
+    expect(headers['Strict-Transport-Security']).toMatch(/max-age=63072000/);
+    expect(headers['Strict-Transport-Security']).toMatch(/includeSubDomains/);
+  });
+
+  it('[P0] should deny camera/microphone/geolocation via Permissions-Policy', () => {
+    const { headers } = runMiddleware();
+    const pp = headers['Permissions-Policy'];
+    expect(pp).toBeDefined();
+    expect(pp).toMatch(/camera=\(\)/);
+    expect(pp).toMatch(/microphone=\(\)/);
+    expect(pp).toMatch(/geolocation=\(\)/);
+  });
+
+  it('[P1] should set Cross-Origin-Opener-Policy to same-origin', () => {
+    const { headers } = runMiddleware();
+    expect(headers['Cross-Origin-Opener-Policy']).toBe('same-origin');
+  });
+
+  it('[P1] should set Cross-Origin-Resource-Policy to same-site', () => {
+    const { headers } = runMiddleware();
+    expect(headers['Cross-Origin-Resource-Policy']).toBe('same-site');
+  });
+
+  it('[P0] should set strict Referrer-Policy', () => {
+    const { headers } = runMiddleware();
+    expect(headers['Referrer-Policy']).toBe('strict-origin-when-cross-origin');
+  });
+
+  it('[P0] should call next() exactly once', () => {
+    const { next } = runMiddleware();
+    expect(next).toHaveBeenCalledTimes(1);
   });
 });
