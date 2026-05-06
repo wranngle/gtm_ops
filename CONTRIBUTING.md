@@ -40,6 +40,16 @@ Keep the repo legible to future agents:
 - Do not copy private repo history or live operational details.
 - Parse data at boundaries instead of relying on guessed shapes.
 
+## Stack-specific conventions
+
+Stack-specific rules live in `docs/references/` so the doc is co-located with what enforces it. Read these before touching the relevant surface:
+
+- [`docs/references/layered-domain-architecture.md`](docs/references/layered-domain-architecture.md) — per-domain import-direction rule (enforced by `scripts/lint-layered-architecture.sh`).
+- [`docs/references/sqlite-query-stability.md`](docs/references/sqlite-query-stability.md) — every `ORDER BY <ts> DESC` needs `, rowid DESC`; range builders use `Date.now() + 1`; `node-sqlite3` cache-visibility race + retry-shim convention.
+- [`apps/ops-console/_headers`](apps/ops-console/_headers) — CSP discipline. New external script/style/font/image/media/connect destinations must be added to the explicit allowlists. `connect-src` and `media-src` are deliberately scoped (no `https:` wildcards). CSP violations log to `/api/csp-report`.
+- [`lib/security.js#maskApiKeysInText`](lib/security.js) — extend the prefix list when adopting a new API provider. Test fixtures use synthetic placeholders that don't trip GitHub Push Protection.
+- [`tests/unit/audit.test.ts > Hash Chain Integrity`](tests/unit/audit.test.ts) — three negative-path tests (UPDATE / DELETE / hash-mutate) cover every realistic tamper vector. Add a new test if you change `lib/audit.js#computeHash` or the chain shape.
+
 ## Filing a Pull Request
 
 1. Create a branch from `main`.
