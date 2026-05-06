@@ -20,6 +20,7 @@ let securityHeadersMiddleware: any;
 let apiNoStoreMiddleware: any;
 let redactSecretsDeep: any;
 let _resetCorsWarningForTests: any;
+let inputValidationMiddleware: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -36,6 +37,7 @@ beforeEach(async () => {
   redactSecretsDeep = module.redactSecretsDeep;
   _resetCorsWarningForTests = module._resetCorsWarningForTests;
   _resetCorsWarningForTests();
+  inputValidationMiddleware = module.inputValidationMiddleware;
 });
 
 afterEach(() => {
@@ -239,6 +241,85 @@ describe('[P0] validateInputSize - Size Validation', () => {
     // THEN: Should be invalid
     expect(result.valid).toBe(false);
     expect(result.error).toContain('required');
+  });
+});
+
+describe('[P0] inputValidationMiddleware - end-to-end request validation', () => {
+  function buildRes() {
+    const res: any = {
+      statusCode: 200,
+      jsonPayload: undefined,
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      json(payload: any) {
+        this.jsonPayload = payload;
+        return this;
+      },
+    };
+    return res;
+  }
+
+  it('[P0] should pass GET requests through unchanged', () => {
+    const req: any = { method: 'GET', headers: {}, body: { input: '<script>alert(1)</script>' } };
+    const res = buildRes();
+    const next = vi.fn();
+    inputValidationMiddleware(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(200); // unchanged
+    // GET bodies are not sanitized — the route either ignores body or
+    // pulls it from query.
+    expect(req.body.input).toBe('<script>alert(1)</script>');
+  });
+
+  it('[P0] should reject POST when Content-Length exceeds 10MB with 413', () => {
+    const overLimit = String(11 * 1024 * 1024);
+    const req: any = { method: 'POST', headers: { 'content-length': overLimit }, body: {} };
+    const res = buildRes();
+    const next = vi.fn();
+    inputValidationMiddleware(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(413);
+    expect(res.jsonPayload.error).toMatch(/too large/i);
+    expect(res.jsonPayload.maxSize).toContain('MB');
+  });
+
+  it('[P0] should sanitize POST body input field (XSS strip)', () => {
+    const req: any = {
+      method: 'POST',
+      headers: { 'content-length': '100' },
+      body: { input: 'Hello <script>alert(1)</script> world' },
+    };
+    const res = buildRes();
+    const next = vi.fn();
+    inputValidationMiddleware(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.body.input).toBe('Hello  world');
+    expect(req.body.input).not.toContain('script');
+  });
+
+  it('[P1] should pass POST through cleanly when there is no body.input', () => {
+    const req: any = {
+      method: 'POST',
+      headers: { 'content-length': '10' },
+      body: { name: 'webhook', url: 'https://example.com' },
+    };
+    const res = buildRes();
+    const next = vi.fn();
+    inputValidationMiddleware(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(200);
+    expect(req.body.name).toBe('webhook');
+  });
+
+  it('[P1] should treat missing Content-Length as 0 (no rejection)', () => {
+    const req: any = { method: 'POST', headers: {}, body: { input: 'hi' } };
+    const res = buildRes();
+    const next = vi.fn();
+    inputValidationMiddleware(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(200);
   });
 });
 
