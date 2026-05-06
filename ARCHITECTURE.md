@@ -82,8 +82,8 @@ Structured LLM extraction over the post-call payload produces a typed proposal. 
 Internal operational UI for non-technical operators. Three surfaces:
 
 - `index.html` — public landing page (Get-a-real-run lead form)
-- `console/` — main React (UMD + babel-standalone, no build step) operator UI; routes home / pipeline / calls / proposals / evals / **agents** (live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake) / settings / generate
-- `evaluation/` — Evaluation Dashboard (eval-runs aggregate stats + flaw distribution)
+- `console/` — main React (UMD + babel-standalone, no build step) operator UI; routes home / pipeline / calls / proposals / evals (harness workbench + contextual ElevenLabs regression lab) / **agents** (live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake) / settings / generate
+- `evaluation/` — compatibility redirect into `/console/?route=evals`; the eval dashboard is native to the console shell
 - `eval-runs/` — per-run harness output surface
 
 Three deploy modes serve the same UI:
@@ -142,7 +142,7 @@ gtm_ops/
 ├── SECURITY.md
 ├── LICENSE
 ├── apps/ops-console/        # operator UI — React (UMD + babel-standalone)
-│                            # main /console/ + static /evaluation/ + /eval-runs/
+│                            # main /console/ + /evaluation/ redirect + static /eval-runs/
 ├── lib/                     # intake, enrichment, post_call, extraction, pdf,
 │                            # branding, pricing, audit, evaluation
 ├── prompts/                 # LLM extraction prompts (versioned)

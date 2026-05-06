@@ -10,7 +10,7 @@ import AxeBuilderImport from '@axe-core/playwright';
 
 const AxeBuilder = (AxeBuilderImport as any).default ?? AxeBuilderImport;
 
-const TABS = ['Integrations', 'Eval policy', 'Team', 'Billing', 'Security'] as const;
+const TABS = ['Integrations', 'Eval policy', 'Team', 'Billing', 'Account', 'Security'] as const;
 
 for (const tab of TABS) {
   test(`settings · ${tab} tab has zero blocking a11y violations`, async ({ openConsole }) => {

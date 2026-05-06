@@ -23,7 +23,13 @@ for (const route of ROUTES) {
     await expect(page.locator('.page').first()).toBeVisible({ timeout: 5000 });
     // Page header title is the strongest signal the route mounted.
     if (route.titleHint) {
-      await expect(page.locator('.ph__title').first()).toContainText(route.titleHint, { timeout: 5000 });
+      const main = page.locator('main[aria-labelledby="console-page-title"]');
+      await expect(main, `${route.id} should expose the route content as the main landmark`).toHaveCount(1);
+
+      const h1 = page.getByRole('heading', { level: 1 });
+      await expect(h1, `${route.id} should expose its visual page title as the single h1`).toHaveCount(1);
+      await expect(h1).toHaveAttribute('id', 'console-page-title');
+      await expect(h1).toContainText(route.titleHint, { timeout: 5000 });
     }
     // Topbar breadcrumb reflects the route.
     await expect(page.locator('.tb__crumb--active')).toContainText(route.label, { timeout: 5000 });
@@ -34,5 +40,51 @@ for (const route of ROUTES) {
         violations.map((v: { id: string; impact?: string; nodes: unknown[] }) => `${v.id} (${v.impact}) — ${v.nodes.length} nodes`));
     }
     expect(violations).toEqual([]);
+  });
+}
+
+/* Page wrapper margin/padding consistency.
+ *
+ * Every route's `.page` wrapper must use the canonical token-driven padding
+ * — no inline `style="padding: ..."` overrides — so the left edge of content
+ * lines up identically across the whole console regardless of which page
+ * the operator lands on. `.page--evals` and `.page--generate` are wide-canvas
+ * variants that intentionally bump padding, so we accept either canonical
+ * value but reject anything in between (which is always drift).
+ */
+const CANONICAL_LEFT_PADS = new Set(['28px', '34px']);
+for (const route of ROUTES) {
+  test(`route · ${route.id} uses the canonical .page padding (no inline overrides)`, async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator(`.sb__item:has-text("${route.label}")`).first().click();
+    const wrapper = page.locator('.page').first();
+    await expect(wrapper).toBeVisible({ timeout: 5000 });
+
+    const inlinePad = await wrapper.evaluate((el) => (el as HTMLElement).style.padding);
+    expect(inlinePad, `${route.id} has an inline padding override on .page`).toBe('');
+
+    const inlineMaxWidth = await wrapper.evaluate((el) => (el as HTMLElement).style.maxWidth);
+    expect(inlineMaxWidth, `${route.id} has an inline max-width override on .page`).toBe('');
+
+    const leftPad = await wrapper.evaluate((el) => getComputedStyle(el).paddingLeft);
+    expect(CANONICAL_LEFT_PADS.has(leftPad), `${route.id} computed paddingLeft=${leftPad}; expected one of ${[...CANONICAL_LEFT_PADS].join(', ')}`).toBe(true);
+  });
+}
+
+for (const route of ROUTES) {
+  test(`route · ${route.id} keeps horizontal scroll inside local widgets`, async ({ page, openConsole }) => {
+    await page.setViewportSize({ width: 1366, height: 850 });
+    const consolePage = await openConsole();
+    await consolePage.locator(`.sb__item:has-text("${route.label}")`).first().click();
+    await expect(consolePage.locator('.page').first()).toBeVisible({ timeout: 5000 });
+
+    const overflow = await consolePage.locator('.scroll').first().evaluate((el) => ({
+      clientWidth: el.clientWidth,
+      scrollWidth: el.scrollWidth,
+    }));
+    expect(
+      overflow.scrollWidth,
+      `${route.id} leaked horizontal scroll to the page scroller`,
+    ).toBeLessThanOrEqual(overflow.clientWidth + 1);
   });
 }
