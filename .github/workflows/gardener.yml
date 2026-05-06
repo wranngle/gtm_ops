@@ -1,5 +1,8 @@
 name: gardener
 
+permissions:
+  contents: read
+
 on:
   schedule:
     # Monday 09:17 UTC — off-the-hour to avoid the GitHub fleet's :00 stampede.
@@ -13,7 +16,9 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
 
       - name: Run doc gardener
         id: gardener
@@ -29,7 +34,7 @@ jobs:
 
       - name: Upload findings artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: gardener-findings-${{ github.run_id }}
           path: |
