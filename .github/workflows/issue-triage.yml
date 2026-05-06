@@ -9,6 +9,7 @@ permissions:
 jobs:
   apply-area-label:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'issues'
     permissions:
       contents: read
@@ -37,6 +38,7 @@ jobs:
 
   add-to-triage-project:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event.action == 'opened'
     permissions:
       contents: read
