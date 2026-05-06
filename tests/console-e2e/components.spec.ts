@@ -240,7 +240,7 @@ test.describe('topbar', () => {
     await expect(page.locator('.tb__crumb--active')).toContainText('Calls');
   });
 
-  test('command palette Jump-to entries derive from live fixture (top companies by score, top calls by flags+deflections) — not hardcoded literals', async ({ openConsole }) => {
+  test('command palette Jump-to entries derive from live fixture (top companies, calls, and proposals) — not hardcoded literals', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.tb__search').click();
     await expect(page.locator('.cp')).toBeVisible();
@@ -260,14 +260,49 @@ test.describe('topbar', () => {
           .sort((a: any, b: any) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0)))
           .slice(0, 3)
           .map((c: any) => `${c.id} · ${c.co}`);
+        const toK = (amount: string) => {
+          const raw = String(amount || '').replace(/[$,\s]/g, '').toLowerCase();
+          const value = Number.parseFloat(raw);
+          if (!Number.isFinite(value)) return 0;
+          if (raw.endsWith('m')) return value * 1000;
+          return raw.endsWith('k') ? value : value / 1000;
+        };
+        const isOpen = (stage: string) => ['draft', 'review', 'redlines', 'legal', 'sent', 'viewed', 'proposal'].includes(String(stage || '').toLowerCase());
+        const topProposal = [...(D.proposals || [])]
+          .sort((a: any, b: any) => ((isOpen(b.stage) ? 1 : 0) - (isOpen(a.stage) ? 1 : 0)) || (toK(b.amount) - toK(a.amount)))
+          .slice(0, 3)
+          .map((p: any) => `${p.id} · ${p.co}`);
         const rowText = Array.from(document.querySelectorAll('.cp .cp__row'))
           .map(r => (r.textContent || '').replace(/\s+/g, ' ').trim());
-        const allPresent = [...topCo, ...topCall].every(label =>
+        const allPresent = [...topCo, ...topCall, ...topProposal].every(label =>
           rowText.some(t => t.includes(label))
         );
         return allPresent;
       });
     }).toBe(true);
+  });
+
+  test('command palette searches proposals and opens the selected proposal review', async ({ openConsole }) => {
+    const page = await openConsole();
+    const target = await page.evaluate(() => {
+      const proposals = ((globalThis as any).GTM.proposals || []) as Array<{ id: string; co: string }>;
+      return proposals.find(p => p.id === 'PR-2039') || proposals[proposals.length - 1];
+    });
+    expect(target, 'fixture should include at least one proposal').toBeTruthy();
+
+    await page.locator('.tb__search').click();
+    const cp = page.locator('.cp');
+    await expect(cp).toBeVisible();
+    await cp.locator('input').fill(target!.id);
+    const row = cp.locator('.cp__row').filter({ hasText: `${target!.id} · ${target!.co}` });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText(/proposal/i);
+    await row.click();
+
+    await expect(page.locator('.tb__crumb--active')).toContainText('Proposals');
+    const activeRow = page.locator('[data-testid="proposal-row"][data-active="true"]');
+    await expect(activeRow).toContainText(target!.id);
+    await expect(activeRow).toContainText(target!.co);
   });
 
   test('command palette traps Tab and restores focus on close', async ({ openConsole }) => {
