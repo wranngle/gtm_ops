@@ -483,9 +483,9 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
       )}
 
       <button type="button" className="tb__search" onClick={openPalette}
-              aria-label="Open command palette to search leads, calls, proposals">
+              aria-label="Open command palette to search commands, leads, calls, proposals">
         <span className="tb__search-icon" aria-hidden="true"><I.Search size={14} /></span>
-        <span className="tb__search-placeholder">Search leads, calls, proposals…</span>
+        <span className="tb__search-placeholder">Search commands, leads, calls, proposals…</span>
         <span className="tb__kbd" aria-hidden="true">⌘K</span>
       </button>
 
@@ -649,9 +649,11 @@ function CommandPalette({ open, setOpen, setRoute }) {
     // the fixture has 12 companies and 7 calls, and the literal meta
     // strings would silently lie if the fixture state shifted.
     const D = window.GTM || {};
+    const normalizedQuery = q.trim().toLowerCase();
     const topCompanies = [...(D.companies || [])]
       .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))
-      .slice(0, 3)
+      .filter(c => !normalizedQuery || `${c.name} ${c.stage} ${c.id || ''}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, normalizedQuery ? 8 : 3)
       .map(c => ({
         group: 'Jump to',
         icon: I.Building,
@@ -661,7 +663,8 @@ function CommandPalette({ open, setOpen, setRoute }) {
       }));
     const topCalls = [...(D.calls || [])]
       .sort((a, b) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0)))
-      .slice(0, 3)
+      .filter(c => !normalizedQuery || `${c.id} ${c.co} ${c.who || ''}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, normalizedQuery ? 8 : 3)
       .map(c => ({
         group: 'Jump to',
         icon: I.Phone,
@@ -669,7 +672,25 @@ function CommandPalette({ open, setOpen, setRoute }) {
         meta: c.flags > 0 ? `flagged ×${c.flags}` : c.when,
         do: () => { setRoute('calls'); window.AppContext.set({ selection: { type:'call', id: c.id } }); },
       }));
-    base.push(...topCompanies, ...topCalls);
+    const topProposals = [...(D.proposals || [])]
+      .sort((a, b) => {
+        const stageRank = (p) => isOpenProposalStage(p.stage) ? 1 : 0;
+        const amount = (p) => proposalAmountToThousands(p.amount);
+        return (stageRank(b) - stageRank(a)) || (amount(b) - amount(a));
+      })
+      .filter(p => !normalizedQuery || `${p.id} ${p.co} ${p.stage}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, normalizedQuery ? 8 : 3)
+      .map(p => ({
+        group: 'Jump to',
+        icon: I.Doc,
+        label: `${p.id} · ${p.co}`,
+        meta: `proposal · ${p.stage}`,
+        do: () => {
+          setRoute('proposals');
+          window.AppContext.set({ selection: { type:'proposal', id: p.id } });
+        },
+      }));
+    base.push(...topCompanies, ...topCalls, ...topProposals);
     if (!q) return base;
     return base.filter(i => i.label.toLowerCase().includes(q.toLowerCase()));
     // `open` belongs in deps so each palette open re-derives the Jump-to
