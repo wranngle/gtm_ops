@@ -299,7 +299,7 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
             reject(err);
             return;
           }
-          db.close((closeErr) => closeErr ? reject(closeErr) : resolve());
+          db.close((closeErr) => { closeErr ? reject(closeErr) : resolve(); });
         },
       );
     });
@@ -336,7 +336,7 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
             reject(err);
             return;
           }
-          db.close((closeErr) => closeErr ? reject(closeErr) : resolve());
+          db.close((closeErr) => { closeErr ? reject(closeErr) : resolve(); });
         },
       );
     });
@@ -378,7 +378,7 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
             reject(err);
             return;
           }
-          db.close((closeErr) => closeErr ? reject(closeErr) : resolve());
+          db.close((closeErr) => { closeErr ? reject(closeErr) : resolve(); });
         },
       );
     });
@@ -448,6 +448,61 @@ describe('[P1] AuditLogger - CSV Export', () => {
 
     // THEN: Should escape properly
     expect(csv).toContain('""'); // Escaped quotes
+
+    await logger.close();
+  });
+});
+
+describe('[P0] AuditLogger - Metadata secret redaction', () => {
+  it('[P0] should redact secret-shaped strings before persisting metadata', async () => {
+    // GIVEN: A caller that accidentally sends an Anthropic key in metadata
+    const logger = new AuditLogger(testDbPath);
+    const result = await logger.log(
+      AuditAction.PIPELINE_STARTED,
+      'pipeline',
+      'pip-1',
+      {
+        request: {
+          authorization: 'Bearer sk-ant-api03-mockKeyMaterial1234567890abcdef',
+        },
+      },
+      { user_id: 'user-1', workspace_id: 'ws-1' },
+    );
+
+    // WHEN: Reading the log back
+    const stored = await logger.getLog(result.log_id);
+
+    // THEN: The stored metadata must not contain the secret material
+    const serialized = JSON.stringify(stored.metadata);
+    expect(serialized).toContain('sk-ant-...');
+    expect(serialized).not.toContain('mockKeyMaterial1234567890abcdef');
+
+    await logger.close();
+  });
+
+  it('[P0] should keep verifyIntegrity green after redaction', async () => {
+    // The hash chain must hash the redacted payload, not the raw one,
+    // otherwise verifyIntegrity would always report tampering on logs
+    // that contained any masked string.
+    const logger = new AuditLogger(testDbPath);
+    await logger.log(
+      AuditAction.PIPELINE_STARTED,
+      'pipeline',
+      'pip-1',
+      { token: 'ghp_mockClassicTokenMaterial12345' },
+      { user_id: 'user-1', workspace_id: 'ws-1' },
+    );
+    await logger.log(
+      AuditAction.PIPELINE_COMPLETED,
+      'pipeline',
+      'pip-1',
+      { result: 'ok' },
+      { user_id: 'user-1', workspace_id: 'ws-1' },
+    );
+
+    const integrity = await logger.verifyIntegrity();
+    expect(integrity.valid).toBe(true);
+    expect(integrity.checked).toBe(2);
 
     await logger.close();
   });

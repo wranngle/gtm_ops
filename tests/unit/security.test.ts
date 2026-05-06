@@ -18,6 +18,7 @@ let generateLimiter: any;
 let historyLimiter: any;
 let securityHeadersMiddleware: any;
 let apiNoStoreMiddleware: any;
+let redactSecretsDeep: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -31,6 +32,7 @@ beforeEach(async () => {
   historyLimiter = module.historyLimiter;
   securityHeadersMiddleware = module.securityHeadersMiddleware;
   apiNoStoreMiddleware = module.apiNoStoreMiddleware;
+  redactSecretsDeep = module.redactSecretsDeep;
 });
 
 afterEach(() => {
@@ -424,5 +426,61 @@ describe('[P0] apiNoStoreMiddleware - Cache-Control on /api/*', () => {
     expect(headers['Cache-Control']).toBe('no-store');
     res.setHeader('Cache-Control', 'no-cache');
     expect(headers['Cache-Control']).toBe('no-cache');
+  });
+});
+
+describe('[P0] redactSecretsDeep - structural secret redaction', () => {
+  it('[P0] should redact secret-shaped strings inside nested objects', () => {
+    // Synthetic key shapes mirror the masker contract — anything we
+    // wouldn't trust in a log shouldn't survive a redaction pass.
+    const input = {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer sk-ant-api03-mockKeyMaterial1234567890abcdef',
+      },
+      body: {
+        nested: {
+          aws: 'AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE',
+        },
+      },
+    };
+
+    const out = redactSecretsDeep(input);
+    expect(out.headers.authorization).toContain('sk-ant-...');
+    expect(out.headers.authorization).not.toContain('mockKeyMaterial1234567890abcdef');
+    expect(out.body.nested.aws).toContain('AKIA...');
+    expect(out.body.nested.aws).not.toContain('IOSFODNN7EXAMPLE');
+  });
+
+  it('[P0] should walk arrays of objects', () => {
+    const input = [
+      { token: 'ghp_mockClassicTokenMaterial12345' },
+      { token: 'xai-mock1234567890abcdefghijklmno' },
+    ];
+    const out = redactSecretsDeep(input);
+    expect(out[0].token).toContain('ghp_...');
+    expect(out[1].token).toContain('xai-...');
+  });
+
+  it('[P1] should pass through non-string scalars unchanged', () => {
+    const input = {
+      retries: 3,
+      enabled: true,
+      cursor: null,
+      ratio: 1.5,
+    };
+    const out = redactSecretsDeep(input);
+    expect(out).toEqual(input);
+  });
+
+  it('[P1] should not mutate the input object', () => {
+    const input = {
+      headers: {
+        authorization: 'Bearer sk-ant-api03-mockKeyMaterial1234567890abcdef',
+      },
+    };
+    const before = JSON.stringify(input);
+    redactSecretsDeep(input);
+    expect(JSON.stringify(input)).toBe(before);
   });
 });
