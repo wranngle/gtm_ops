@@ -11,6 +11,7 @@
     "start": "bun --env-file=.env server.js",
     "generate": "bun --env-file=.env cli.js generate",
     "verify": "bun --env-file=.env scripts/verify_output.js",
+    "audit:verify": "bun scripts/audit-verify.mjs",
     "dev": "bun --env-file=.env --watch server.js",
     "typecheck": "tsc --noEmit",
     "lint": "xo",
