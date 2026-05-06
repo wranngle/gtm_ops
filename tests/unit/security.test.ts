@@ -88,6 +88,58 @@ describe('[P0] maskApiKeysInText - Text Sanitization', () => {
     expect(maskApiKeysInText(null)).toBe(null);
     expect(maskApiKeysInText(undefined)).toBe(undefined);
   });
+
+  it('[P0] should mask Anthropic sk-ant-* keys', () => {
+    // GIVEN: Text containing an Anthropic key
+    const text = 'using sk-ant-api03-mockKeyMaterial1234567890abcdef in the request';
+    const masked = maskApiKeysInText(text);
+    expect(masked).toContain('sk-ant-...');
+    expect(masked).not.toContain('mockKeyMaterial1234567890abcdef');
+    // The shorter sk-* matcher must NOT have run first and produced "sk-..." instead.
+    expect(masked).not.toMatch(/sk-(?!ant)/);
+  });
+
+  it('[P0] should mask xAI keys (xai-*)', () => {
+    const text = 'XAI_API_KEY=xai-mock1234567890abcdefghijklmno';
+    const masked = maskApiKeysInText(text);
+    expect(masked).toContain('xai-...');
+    expect(masked).not.toContain('mock1234567890abcdefghijklmno');
+  });
+
+  it('[P0] should mask Stripe keys (sk_live_* and sk_test_*) before generic sk-*', () => {
+    // Synthetic placeholder pattern (EXAMPLE marker + all-z) so GitHub
+    // Push Protection doesn't flag the test fixture as a real key.
+    const live = maskApiKeysInText('STRIPE=sk_live_NotAReal_FAKE_KEY_dummy123');
+    const test = maskApiKeysInText('STRIPE=sk_test_NotAReal_FAKE_KEY_dummy123');
+    expect(live).toContain('sk_live_...');
+    expect(test).toContain('sk_test_...');
+    expect(live).not.toContain('NotAReal_FAKE_KEY');
+    expect(test).not.toContain('NotAReal_FAKE_KEY');
+  });
+
+  it('[P0] should mask GitHub PATs (ghp_* and github_pat_*)', () => {
+    const classic = maskApiKeysInText('TOKEN=ghp_mockClassicTokenMaterial12345');
+    const fineGrained = maskApiKeysInText('TOKEN=github_pat_mockFineGrainedToken_with_underscores_12345');
+    expect(classic).toContain('ghp_...');
+    expect(fineGrained).toContain('github_pat_...');
+  });
+
+  it('[P0] should mask Slack tokens (xoxb-/xoxp-/xoxa-)', () => {
+    // Synthetic placeholder shape — neither GitHub Push Protection nor
+    // gitleaks should flag these as real tokens because the body has no
+    // realistic team-id / user-id segments and the entropy is trivially low.
+    const bot = maskApiKeysInText('SLACK=xoxb-EXAMPLE-zzzzzzzzzzzzzzzzzzzzz');
+    const user = maskApiKeysInText('SLACK=xoxp-EXAMPLE-zzzzzzzzzzzzzzzzzzzzz');
+    expect(bot).toContain('xoxb-...');
+    expect(user).toContain('xoxp-...');
+  });
+
+  it('[P0] should mask AWS access key IDs (AKIA*)', () => {
+    const text = 'AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE,SECRET=...';
+    const masked = maskApiKeysInText(text);
+    expect(masked).toContain('AKIA...');
+    expect(masked).not.toContain('IOSFODNN7EXAMPLE');
+  });
 });
 
 describe('[P0] sanitizeInput - Input Sanitization', () => {
