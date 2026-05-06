@@ -18,7 +18,8 @@ import {
   generateLimiter,
   historyLimiter,
   generalLimiter,
-  safeFilenameForHeader
+  safeFilenameForHeader,
+  resolveRequestId
 } from './lib/security.js';
 import { getUsageTracker } from './lib/usage.js';
 import { getWebhookManager, ALL_WEBHOOK_EVENTS } from './lib/webhooks.js';
@@ -96,10 +97,7 @@ app.use((req, res, next) => {
 // Route handlers should include `req.id` in their console.error lines
 // when something goes wrong — that's the correlation surface.
 app.use((req, res, next) => {
-  const upstream = req.headers['x-request-id'];
-  req.id = (typeof upstream === 'string' && /^[\w-]{1,64}$/.test(upstream))
-    ? upstream
-    : crypto.randomUUID();
+  req.id = resolveRequestId(req.headers, () => crypto.randomUUID());
   res.setHeader('X-Request-Id', req.id);
   next();
 });

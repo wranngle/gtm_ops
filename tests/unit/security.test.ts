@@ -23,6 +23,7 @@ let _resetCorsWarningForTests: any;
 let inputValidationMiddleware: any;
 let safeFilenameForHeader: any;
 let createSafeLogger: any;
+let resolveRequestId: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -42,6 +43,7 @@ beforeEach(async () => {
   inputValidationMiddleware = module.inputValidationMiddleware;
   safeFilenameForHeader = module.safeFilenameForHeader;
   createSafeLogger = module.createSafeLogger;
+  resolveRequestId = module.resolveRequestId;
 });
 
 afterEach(() => {
@@ -755,5 +757,55 @@ describe('[P1] createSafeLogger - logger wrapper', () => {
     expect(() => wrapped(cyclic)).not.toThrow();
     // The fallback returns the original arg, so identity is preserved.
     expect(captured[0][0]).toBe(cyclic);
+  });
+});
+
+describe('[P0] resolveRequestId - upstream X-Request-Id validation', () => {
+  it('[P0] should accept a well-formed UUID from upstream', () => {
+    const uuid = '01999999-9999-7999-9999-999999999999';
+    const fallback = vi.fn(() => 'GENERATED');
+    expect(resolveRequestId({ 'x-request-id': uuid }, fallback)).toBe(uuid);
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it('[P0] should accept a Cloudflare ray-id-shaped value', () => {
+    const ray = 'abc1234567890def-IAD';
+    const fallback = vi.fn(() => 'GENERATED');
+    expect(resolveRequestId({ 'x-request-id': ray }, fallback)).toBe(ray);
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it('[P0] should reject upstream with CRLF (header-injection vector)', () => {
+    const evil = 'abc\r\nX-Cache: poisoned';
+    const fallback = vi.fn(() => 'GENERATED');
+    expect(resolveRequestId({ 'x-request-id': evil }, fallback)).toBe('GENERATED');
+    expect(fallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('[P0] should reject upstream with whitespace or special chars', () => {
+    const fallback = vi.fn(() => 'GENERATED');
+    expect(resolveRequestId({ 'x-request-id': 'foo bar' }, fallback)).toBe('GENERATED');
+    expect(resolveRequestId({ 'x-request-id': 'foo<bar>' }, fallback)).toBe('GENERATED');
+    expect(resolveRequestId({ 'x-request-id': 'foo;bar' }, fallback)).toBe('GENERATED');
+  });
+
+  it('[P0] should reject upstream longer than 64 chars', () => {
+    const long = 'a'.repeat(65);
+    const fallback = vi.fn(() => 'GENERATED');
+    expect(resolveRequestId({ 'x-request-id': long }, fallback)).toBe('GENERATED');
+  });
+
+  it('[P0] should accept upstream of exactly 64 chars (boundary)', () => {
+    const max = 'a'.repeat(64);
+    const fallback = vi.fn(() => 'GENERATED');
+    expect(resolveRequestId({ 'x-request-id': max }, fallback)).toBe(max);
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it('[P1] should fall back when header is empty / missing / non-string', () => {
+    const fallback = vi.fn(() => 'GENERATED');
+    expect(resolveRequestId({ 'x-request-id': '' }, fallback)).toBe('GENERATED');
+    expect(resolveRequestId({}, fallback)).toBe('GENERATED');
+    expect(resolveRequestId({ 'x-request-id': ['a', 'b'] as any }, fallback)).toBe('GENERATED');
   });
 });
