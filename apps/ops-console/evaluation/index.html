@@ -1,523 +1,77 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evals Console // Wranngle</title>
-    <link rel="canonical" href="/console/?route=evals">
-    <meta http-equiv="refresh" content="0; url=/console/?route=evals">
-    <script>
-      (function () {
-        var target = window.location.protocol === 'file:'
-          ? '../console/?route=evals'
-          : '/console/?route=evals';
-        window.location.replace(target);
-      })();
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="/assets/favicon.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-    <meta name="theme-color" content="#12111a">
-    <link rel="stylesheet" href="../tokens/tokens.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evals Redirect // Wranngle</title>
+  <link rel="canonical" href="/console/?route=evals">
+  <meta http-equiv="refresh" content="0; url=/console/?route=evals">
+  <meta name="robots" content="noindex">
+  <!-- Brand assets — even on a redirect page, browsers can fetch favicon
+       and fonts before the refresh fires; the public-assets/font-fallback
+       test suites enforce these invariants on every HTML entrypoint. -->
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      var target = window.location.protocol === 'file:'
+        ? '../console/?route=evals'
+        : '/console/?route=evals';
+      window.location.replace(target);
+    })();
+  </script>
+  <style>
+    :root {
+      --night-950: #12111a;
+      --sand-50: #fcfaf5;
+      --sunset-500: #ff5f00;
+      --text-muted: #aaa4b8;
+    }
 
-    <!-- DEMO_MODE: file://, *.pages.dev host, or window.DEMO_MODE = true → fixtures from ../fixtures/ -->
-    <script>
-      (function () {
-        var host = (window.location.hostname || '').toLowerCase();
-        var isPagesDemo = /\.pages\.dev$/.test(host);
-        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo;
-        window.DEMO_MODE = DEMO_MODE;
-        if (!DEMO_MODE) return;
-        var nativeFetch = window.fetch.bind(window);
-        window.fetch = function (input, init) {
-          var url = typeof input === 'string' ? input : (input && input.url) || '';
-          var method = ((init && init.method) || 'GET').toUpperCase();
-          if (url.indexOf('/api') === -1) return nativeFetch(input, init);
-          if (method !== 'GET' && method !== 'HEAD') {
-            return Promise.resolve(new Response(JSON.stringify({ ok: true, demo: true }), {
-              status: 200, headers: { 'Content-Type': 'application/json' }
-            }));
-          }
-          var u = url.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
-          if (!u.indexOf('/api')) u = u.slice(4);
-          u = u.replace(/\/(?:\d+|[a-z]+_[\w-]+)(\/|$)/gi, '/default$1');
-          return nativeFetch('../fixtures' + u + '.json').then(function (r) {
-            if (r.ok) return r;
-            return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
-          }).catch(function () {
-            return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
-          });
-        };
-      })();
-    </script>
+    * { box-sizing: border-box; }
 
-    <style>
-        :root {
-            --violet-500: #cf3c69;
-            --sunset-500: #ff5f00; --sunset-600: #ef4b00;
-            --sand-50: #fcfaf5; --sand-200: #ebdfc8;
-            --night-800: #393444; --night-900: #201e28; --night-950: #12111a;
-            --color-healthy: #5D8C61;
-            --font-display: 'Outfit', sans-serif;
-            --font-body: 'Inter', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: var(--font-body);
-            background: var(--night-950);
-            color: #e0dce8;
-            min-height: 100vh;
-            padding: 24px;
-        }
-        h1, h2, h3 { font-family: var(--font-display); }
-        a { color: var(--sunset-500); text-decoration: none; }
-        a:hover { text-decoration: underline; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: var(--night-950);
+      color: var(--sand-50);
+      font: 16px/1.5 Inter, system-ui, sans-serif;
+    }
 
-        .header {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 32px; padding-bottom: 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-        .header h1 { font-size: 22px; font-weight: 700; }
-        .header .back { font-size: 13px; color: #847d9a; }
+    main {
+      width: min(520px, calc(100vw - 32px));
+      border-left: 4px solid var(--sunset-500);
+      padding: 20px 24px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 4px 8px 8px 4px;
+    }
 
-        .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px; margin-bottom: 32px;
-        }
-        .stat-card {
-            background: var(--night-900);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px; padding: 20px;
-        }
-        /* .label was #847d9a (4.21:1, fails AA on dark bg). Lifted to #aaa4b8 for ~7:1. */
-        .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa4b8; margin-bottom: 8px; }
-        .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; padding: 0; margin: -1px; }
-        .stat-card .value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; }
-        .stat-card .value.good { color: var(--color-healthy); }
-        .stat-card .value.warn { color: #e8a735; }
-        .stat-card .value.bad { color: var(--violet-500); }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      line-height: 1.2;
+    }
 
-        .section { margin-bottom: 32px; }
-        .section h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #b5afc4; }
+    p { margin: 0; color: var(--text-muted); }
 
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { text-align: left; padding: 10px 12px; color: #847d9a; font-weight: 500;
-             border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-        td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-        tr:hover td { background: rgba(255,255,255,0.02); }
-        .mono { font-family: var(--font-mono); font-size: 12px; }
+    a {
+      color: var(--sunset-500);
+      font-weight: 700;
+      text-decoration: none;
+    }
 
-        .badge {
-            display: inline-block; padding: 2px 8px; border-radius: 9999px;
-            font-size: 11px; font-weight: 500;
-        }
-        .badge.completed,
-        .badge.passed { background: rgba(93,140,97,0.15); color: var(--color-healthy); }
-        .badge.failed { background: rgba(207,60,105,0.15); color: var(--violet-500); }
-        .badge.running { background: rgba(232,167,53,0.15); color: #e8a735; }
-        .badge.holdout { background: rgba(255,95,0,0.15); color: var(--sunset-500); }
-
-        .score-bar {
-            display: inline-block; height: 6px; border-radius: 3px;
-            background: rgba(255,255,255,0.06); width: 80px; vertical-align: middle;
-        }
-        .score-bar .fill { height: 100%; border-radius: 3px; }
-
-        .flaw-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-        .flaw-bar .bar { height: 14px; border-radius: 3px; background: var(--violet-500); min-width: 2px; }
-        .flaw-bar .flaw-label { font-size: 12px; color: #b5afc4; min-width: 180px; }
-        .flaw-bar .flaw-count { font-family: var(--font-mono); font-size: 12px; color: #847d9a; }
-
-        .detail-panel {
-            display: none; position: fixed; top: 0; right: 0; width: 480px; height: 100vh;
-            background: var(--night-900); border-left: 1px solid rgba(255,255,255,0.08);
-            padding: 24px; overflow-y: auto; z-index: 100;
-        }
-        .detail-panel.open { display: block; }
-        .detail-panel h3 { margin-bottom: 16px; }
-        .detail-panel .close-btn { cursor: pointer; float: right; color: #847d9a; font-size: 18px; }
-        .detail-panel pre {
-            background: var(--night-950); border-radius: 8px; padding: 12px;
-            font-family: var(--font-mono); font-size: 11px; overflow-x: auto;
-            max-height: 400px; overflow-y: auto; color: #b5afc4;
-        }
-
-        .filter-bar {
-            display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
-        }
-        .filter-bar select, .filter-bar input {
-            background: var(--night-800); border: 1px solid rgba(255,255,255,0.1);
-            color: #e0dce8; padding: 6px 10px; border-radius: 6px; font-size: 12px;
-            font-family: var(--font-body);
-        }
-        .empty { color: #847d9a; font-style: italic; padding: 24px; text-align: center; }
-        .trend { font-size: 11px; margin-top: 4px; }
-        .trend.up { color: var(--color-healthy); }
-        .trend.down { color: var(--violet-500); }
-
-        .overview-grid {
-            display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
-            gap: 24px; margin-bottom: 32px;
-        }
-        .agent-readiness { display: flex; flex-direction: column; gap: 10px; }
-        .agent-card {
-            background: var(--night-900);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-left: 3px solid var(--sunset-500);
-            border-radius: 10px; padding: 14px 16px;
-        }
-        .agent-card.failed { border-left-color: var(--violet-500); }
-        .agent-card.passed { border-left-color: var(--color-healthy); }
-        .agent-card__head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
-        .agent-card__name { font-family: var(--font-display); font-size: 14px; font-weight: 700; }
-        .agent-card__meta { font-family: var(--font-mono); font-size: 11px; color: #aaa4b8; }
-        .agent-card__bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; }
-        .agent-card__fill { height: 100%; border-radius: 999px; background: var(--color-healthy); }
-        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
-        .detail-metric {
-            background: var(--night-950); border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px; padding: 10px 12px;
-        }
-        .detail-metric .label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #aaa4b8; }
-        .detail-metric .value { font-family: var(--font-mono); font-size: 16px; font-weight: 700; margin-top: 4px; }
-        .axis-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-        .axis-row {
-            display: grid; grid-template-columns: 1fr 58px; gap: 10px; align-items: center;
-            background: var(--night-950); border: 1px solid rgba(255,255,255,0.06);
-            border-left: 3px solid var(--color-healthy); border-radius: 8px; padding: 9px 10px;
-        }
-        .axis-row.warn { border-left-color: #e8a735; }
-        .axis-row.bad { border-left-color: var(--violet-500); background: rgba(207,60,105,0.08); }
-        .axis-name { font-family: var(--font-mono); font-size: 12px; color: #e0dce8; }
-        .axis-score { font-family: var(--font-mono); font-size: 12px; text-align: right; color: #aaa4b8; }
-        @media (max-width: 980px) {
-            .overview-grid { grid-template-columns: 1fr; }
-            .detail-panel { width: min(100vw, 480px); }
-        }
-    </style>
+    a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-    <header class="header">
-        <h1>Evaluation Dashboard</h1>
-        <nav class="back-nav" aria-label="Cross-app navigation">
-            <a class="back" href="/console/">&#8592; Console</a>
-            <a class="back" href="/eval-runs/">Eval Runs</a>
-        </nav>
-    </header>
-
-    <main>
-
-    <div class="stats-grid" id="stats-grid">
-        <div class="stat-card"><div class="label">Loading...</div><div class="value">--</div></div>
-    </div>
-
-    <div class="overview-grid">
-        <section class="section">
-            <h2>Flaw Distribution</h2>
-            <div id="flaw-chart"><div class="empty">No evaluation data yet</div></div>
-        </section>
-
-        <section class="section">
-            <h2>ElevenLabs Agent Readiness</h2>
-            <div id="agent-readiness" class="agent-readiness"><div class="empty">Loading...</div></div>
-        </section>
-    </div>
-
-    <div class="section">
-        <h2>Evaluation Runs</h2>
-        <div class="filter-bar">
-            <label for="filter-status" class="visually-hidden">Filter by status</label>
-            <select id="filter-status" aria-label="Filter by status">
-                <option value="">All statuses</option>
-                <option value="passed">Passed</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
-            </select>
-            <label for="filter-version" class="visually-hidden">Filter by version</label>
-            <select id="filter-version" aria-label="Filter by version">
-                <option value="">All versions</option>
-            </select>
-            <label for="filter-search" class="visually-hidden">Search case study</label>
-            <input type="search" id="filter-search" placeholder="Search case study..." aria-label="Search case study">
-        </div>
-        <table>
-            <thead><tr>
-                <th>ID</th><th>Case Study</th><th>Status</th><th>Score</th><th>Flaws</th><th>Version</th><th>Date</th>
-            </tr></thead>
-            <tbody id="runs-table"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
-        </table>
-    </div>
-
-    <div class="section">
-        <h2>Case Study Corpus</h2>
-        <table>
-            <thead><tr>
-                <th>ID</th><th>Industry</th><th>Company Type</th><th>Tier</th><th>Agent Type</th><th>Holdout</th><th>Quality</th>
-            </tr></thead>
-            <tbody id="cases-table"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
-        </table>
-    </div>
-
-    <div class="detail-panel" id="detail-panel" role="dialog" aria-modal="true" aria-label="Evaluation run detail">
-        <button class="close-btn" onclick="closeDetail()" aria-label="Close run detail" style="background:transparent;border:0">&times;</button>
-        <h3 id="detail-title">Run Detail</h3>
-        <div id="detail-content"></div>
-    </div>
-
-    <script>
-        const API = '';
-
-        async function fetchJSON(url) {
-            const r = await fetch(API + url);
-            if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-            return r.json();
-        }
-
-        function escapeHtml(s) {
-            return String(s ?? '').replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-        }
-
-        function scoreColor(score) {
-            if (score == null) return '';
-            if (score >= 0.7) return 'good';
-            if (score >= 0.4) return 'warn';
-            return 'bad';
-        }
-
-        function renderScoreBar(score) {
-            if (score == null) return '<span class="mono" style="color:#847d9a">--</span>';
-            const pct = Math.round(score * 100);
-            const color = score >= 0.7 ? 'var(--color-healthy)' : score >= 0.4 ? '#e8a735' : 'var(--violet-500)';
-            return `<span class="score-bar"><span class="fill" style="width:${pct}%;background:${color}"></span></span> <span class="mono">${pct}%</span>`;
-        }
-
-        let allRuns = [];
-
-        async function loadStats() {
-            try {
-                const data = await fetchJSON('/api/eval/stats');
-                const c = data.corpus || {};
-                const e = data.evaluations || {};
-                const scores = data.scores || {};
-                const mean = e.mean_score ?? scores.mean;
-                const latest = e.latest_score ?? scores.max;
-                const best = e.best_score ?? scores.max;
-                document.getElementById('stats-grid').innerHTML = `
-                    <div class="stat-card">
-                        <div class="label">Corpus Size</div>
-                        <div class="value">${c.total ?? 0}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">Holdout Cases</div>
-                        <div class="value">${c.holdout ?? 0}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">Eval Runs</div>
-                        <div class="value">${e.total ?? 0}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">Mean Score</div>
-                        <div class="value ${scoreColor(mean)}">${mean != null ? Math.round(mean * 100) + '%' : '--'}</div>
-                        ${latest != null ? `<div class="trend">Latest: ${Math.round(latest * 100)}%</div>` : ''}
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">Best Score</div>
-                        <div class="value good">${best != null ? Math.round(best * 100) + '%' : '--'}</div>
-                    </div>
-                `;
-            } catch (err) {
-                document.getElementById('stats-grid').innerHTML = `<div class="stat-card"><div class="label">Error</div><div class="value bad">${err.message}</div></div>`;
-            }
-        }
-
-        async function loadRuns() {
-            try {
-                allRuns = await fetchJSON('/api/eval/runs?limit=200');
-                const versions = [...new Set(allRuns.map(r => r.pipeline_version).filter(Boolean))];
-                const sel = document.getElementById('filter-version');
-                versions.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
-                renderRuns(allRuns);
-            } catch (err) {
-                document.getElementById('runs-table').innerHTML = `<tr><td colspan="7" class="empty">${err.message}</td></tr>`;
-            }
-        }
-
-        function renderRuns(runs) {
-            if (!runs.length) {
-                document.getElementById('runs-table').innerHTML = '<tr><td colspan="7" class="empty">No evaluation runs yet. Run <code>npm run eval:quick</code> to generate data.</td></tr>';
-                document.getElementById('agent-readiness').innerHTML = '<div class="empty">No runs available.</div>';
-                return;
-            }
-            document.getElementById('runs-table').innerHTML = runs.map(r => `
-                <tr style="cursor:pointer" onclick="showDetail(${r.id})">
-                    <td class="mono">${r.id}</td>
-                    <td>${escapeHtml(r.case_study_id || '--')}</td>
-                    <td><span class="badge ${escapeHtml(r.status)}">${escapeHtml(r.status)}</span></td>
-                    <td>${renderScoreBar(r.aggregate_score)}</td>
-                    <td class="mono">${r.flaw_count ?? '--'}</td>
-                    <td class="mono">${escapeHtml(r.pipeline_version || '--')}</td>
-                    <td class="mono">${r.created_at ? new Date(r.created_at).toLocaleDateString() : '--'}</td>
-                </tr>
-            `).join('');
-
-            // Flaw chart
-            const flawMap = {};
-            runs.forEach(r => {
-                (r.flaws || []).forEach(f => {
-                    flawMap[f] = (flawMap[f] || 0) + 1;
-                });
-            });
-            const sorted = Object.entries(flawMap).sort((a, b) => b[1] - a[1]);
-            if (sorted.length) {
-                const max = sorted[0][1];
-                document.getElementById('flaw-chart').innerHTML = sorted.map(([name, count]) =>
-                    `<div class="flaw-bar">
-                        <span class="flaw-label">${escapeHtml(name)}</span>
-                        <span class="bar" style="width:${Math.max(count / max * 200, 2)}px"></span>
-                        <span class="flaw-count">${count}</span>
-                    </div>`
-                ).join('');
-            } else {
-                document.getElementById('flaw-chart').innerHTML = '<div class="empty">No flaws in the current run set.</div>';
-            }
-            renderAgentReadiness(runs);
-        }
-
-        function renderAgentReadiness(runs) {
-            const versions = {};
-            runs.forEach(r => {
-                const key = r.pipeline_version || 'unknown';
-                if (!versions[key]) versions[key] = { total: 0, passed: 0, failed: 0, score: 0, scored: 0 };
-                versions[key].total += 1;
-                if (r.status === 'passed' || r.status === 'completed') versions[key].passed += 1;
-                if (r.status === 'failed') versions[key].failed += 1;
-                if (typeof r.aggregate_score === 'number') {
-                    versions[key].score += r.aggregate_score;
-                    versions[key].scored += 1;
-                }
-            });
-            const rows = Object.entries(versions).sort((a, b) => b[1].total - a[1].total);
-            document.getElementById('agent-readiness').innerHTML = rows.map(([version, row]) => {
-                const passRate = row.total ? row.passed / row.total : 0;
-                const mean = row.scored ? row.score / row.scored : null;
-                const tone = row.failed > 0 ? 'failed' : 'passed';
-                return `
-                    <div class="agent-card ${tone}">
-                        <div class="agent-card__head">
-                            <div>
-                                <div class="agent-card__name">${escapeHtml(version)}</div>
-                                <div class="agent-card__meta">${row.total} runs · ${row.failed} regressions · mean ${mean == null ? '--' : Math.round(mean * 100) + '%'}</div>
-                            </div>
-                            <span class="badge ${tone}">${Math.round(passRate * 100)}%</span>
-                        </div>
-                        <div class="agent-card__bar"><div class="agent-card__fill" style="width:${Math.round(passRate * 100)}%;${row.failed > 0 ? 'background:var(--violet-500)' : ''}"></div></div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function applyFilters() {
-            const status = document.getElementById('filter-status').value;
-            const version = document.getElementById('filter-version').value;
-            const search = document.getElementById('filter-search').value.toLowerCase();
-            const filtered = allRuns.filter(r => {
-                if (status && r.status !== status && !(status === 'completed' && r.status === 'passed')) return false;
-                if (version && r.pipeline_version !== version) return false;
-                if (search && !(r.case_study_id || '').toLowerCase().includes(search)) return false;
-                return true;
-            });
-            renderRuns(filtered);
-        }
-
-        document.getElementById('filter-status').addEventListener('change', applyFilters);
-        document.getElementById('filter-version').addEventListener('change', applyFilters);
-        document.getElementById('filter-search').addEventListener('input', applyFilters);
-
-        async function showDetail(id) {
-            const panel = document.getElementById('detail-panel');
-            panel.classList.add('open');
-            document.getElementById('detail-title').textContent = `Run #${id}`;
-            document.getElementById('detail-content').innerHTML = '<div class="empty">Loading...</div>';
-            try {
-                const run = await fetchJSON(`/api/eval/runs/${id}`);
-                const scores = typeof run.scores_json === 'string' ? JSON.parse(run.scores_json) : run.scores_json;
-                const flaws = typeof run.flaws_json === 'string' ? JSON.parse(run.flaws_json) : run.flaws_json;
-                const axisEntries = scores && typeof scores === 'object'
-                    ? Object.entries(scores).filter(([name, value]) => typeof value === 'number' && name !== 'aggregate_score')
-                    : [];
-                let html = `
-                    <p><strong>Case:</strong> ${escapeHtml(run.case_study_id || '--')}</p>
-                    <p><strong>Status:</strong> <span class="badge ${escapeHtml(run.status)}">${escapeHtml(run.status)}</span></p>
-                    <div class="detail-grid">
-                        <div class="detail-metric"><div class="label">Version</div><div class="value">${escapeHtml(run.pipeline_version || '--')}</div></div>
-                        <div class="detail-metric"><div class="label">Aggregate</div><div class="value">${run.aggregate_score == null ? '--' : Math.round(run.aggregate_score * 100) + '%'}</div></div>
-                        <div class="detail-metric"><div class="label">Flaws</div><div class="value">${run.flaw_count ?? (flaws ? flaws.length : 0)}</div></div>
-                        <div class="detail-metric"><div class="label">Date</div><div class="value" style="font-size:12px">${run.created_at ? new Date(run.created_at).toLocaleString() : '--'}</div></div>
-                    </div>
-                `;
-                if (axisEntries.length) {
-                    html += `<h3 style="margin-top:16px">Score Axes</h3><div class="axis-list">`;
-                    html += axisEntries.map(([name, value]) => {
-                        const tone = value >= 0.7 ? '' : value >= 0.4 ? 'warn' : 'bad';
-                        return `<div class="axis-row ${tone}">
-                            <div class="axis-name">${escapeHtml(name)}</div>
-                            <div class="axis-score">${Math.round(value * 100)}%</div>
-                        </div>`;
-                    }).join('');
-                    html += `</div>`;
-                }
-                if (flaws && flaws.length) {
-                    html += `<h3 style="margin-top:16px">Flaws (${flaws.length})</h3>`;
-                    html += `<ul style="padding-left:16px;font-size:13px">${flaws.map(f => `<li style="margin-bottom:4px">${escapeHtml(f)}</li>`).join('')}</ul>`;
-                }
-                if (run.transcript_summary && run.transcript_summary.length) {
-                    html += `<h3 style="margin-top:16px">Transcript Summary</h3>`;
-                    html += `<pre>${escapeHtml(JSON.stringify(run.transcript_summary, null, 2))}</pre>`;
-                }
-                document.getElementById('detail-content').innerHTML = html;
-            } catch (err) {
-                document.getElementById('detail-content').innerHTML = `<div class="empty">${err.message}</div>`;
-            }
-        }
-
-        function closeDetail() {
-            document.getElementById('detail-panel').classList.remove('open');
-        }
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
-
-        async function loadCases() {
-            try {
-                const cases = await fetchJSON('/api/eval/cases');
-                if (!cases.length) {
-                    document.getElementById('cases-table').innerHTML = '<tr><td colspan="7" class="empty">No case studies imported yet.</td></tr>';
-                    return;
-                }
-                document.getElementById('cases-table').innerHTML = cases.map(c => `
-                    <tr>
-                        <td class="mono">${escapeHtml(c.id)}</td>
-                        <td>${escapeHtml(c.industry || '--')}</td>
-                        <td>${escapeHtml(c.company_type || '--')}</td>
-                        <td class="mono">${escapeHtml(c.tier || '--')}</td>
-                        <td>${escapeHtml(c.agent_type || '--')}</td>
-                        <td>${c.holdout ? '<span class="badge holdout">holdout</span>' : ''}</td>
-                        <td class="mono">${c.quality_score ?? '--'}</td>
-                    </tr>
-                `).join('');
-            } catch (err) {
-                document.getElementById('cases-table').innerHTML = `<tr><td colspan="7" class="empty">${err.message}</td></tr>`;
-            }
-        }
-
-        // Load everything
-        Promise.all([loadStats(), loadRuns(), loadCases()]);
-    </script>
-
-    </main>
+  <main aria-labelledby="bridge-title">
+    <h1 id="bridge-title">Opening the native Evals console</h1>
+    <p>This compatibility route now hands off to <a href="/console/?route=evals">/console/?route=evals</a>.</p>
+  </main>
 </body>
 </html>

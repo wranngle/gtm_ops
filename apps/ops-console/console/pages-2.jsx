@@ -1244,9 +1244,9 @@ function EvalsPage({ setRoute }) {
                     onClick={(e) => { e.stopPropagation(); setActiveRunId(r.scenario_id); }}
                   >
                     <div>
-                      <div className="eval-run-row__title">{r.scenario_id}</div>
+                      <div className="eval-run-row__title">{evalScenarioTitle(r.scenario_id)}</div>
                       <div className="mono dim" style={{fontSize:10}}>
-                        {r.agent_id} · {r.prompt_tag}
+                        <span data-testid="eval-run-row-scenario-id">scenario {r.scenario_id}</span> · {r.agent_id} · {r.prompt_tag}
                       </div>
                     </div>
                     <Badge tone={r.verdict === 'pass' ? 'healthy' : r.verdict === 'fail' ? 'critical' : 'neutral'}>{r.verdict}</Badge>
@@ -1271,7 +1271,7 @@ function EvalsPage({ setRoute }) {
             </div>
           </Card>
 
-          <Card title={`run detail · ${activeRun?.scenario_id || 'none'}`} accent={activeRun?.verdict === 'fail' ? 'violet' : 'accent'}>
+          <Card title={`run detail · ${activeRun ? evalScenarioTitle(activeRun.scenario_id) : 'none'}`} accent={activeRun?.verdict === 'fail' ? 'violet' : 'accent'}>
             {!activeRun && <div className="empty" style={{padding:18}}>No harness run selected.</div>}
             {activeRun && (
               <div className="eval-detail-grid">
@@ -1279,7 +1279,9 @@ function EvalsPage({ setRoute }) {
                   <div className="eval-meta-strip">
                     <Badge tone={activeRun.verdict === 'pass' ? 'healthy' : 'critical'}>{activeRun.verdict}</Badge>
                     <span className="mono">{evalPct(activeRun.score.weighted)}</span>
-                    <span className="mono">{activeRun.harness_version}</span>
+                    <span className="mono"><span className="eval-meta-strip__label">scenario</span>{activeRun.scenario_id}</span>
+                    <span className="mono"><span className="eval-meta-strip__label">prompt</span>{activeRun.prompt_tag}</span>
+                    <span className="mono"><span className="eval-meta-strip__label">harness</span>{activeRun.harness_version}</span>
                     <span className="mono">{evalDate(activeRun.started_at)}</span>
                   </div>
                   <div className="eval-axis-stack">

@@ -11,6 +11,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
+  // CI uses 1 worker per shard. Tested workers=2 on a 2-vCPU runner: zero
+  // wall-clock improvement (chromium is itself multi-threaded; two browsers
+  // contend for the 2 cores). Real parallelism comes from `--shard=N/M` in
+  // the workflow matrix, not in-process workers. Local runs default half-CPU.
   workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['list'],
