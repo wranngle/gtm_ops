@@ -22,7 +22,7 @@
   # connect-src + media-src narrowed from `https: wss:` (any origin) to
   # explicit ElevenLabs hosts — the console only talks to itself + the
   # Convai widget. Tightens the post-XSS exfiltration surface.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://elevenlabs.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://elevenlabs.io https://*.elevenlabs.io wss://elevenlabs.io wss://*.elevenlabs.io; media-src 'self' blob: https://elevenlabs.io https://*.elevenlabs.io; worker-src 'self' blob:; frame-src https://elevenlabs.io https://*.elevenlabs.io; frame-ancestors 'self'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://elevenlabs.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://elevenlabs.io https://*.elevenlabs.io wss://elevenlabs.io wss://*.elevenlabs.io; media-src 'self' blob: https://elevenlabs.io https://*.elevenlabs.io; worker-src 'self' blob:; frame-src https://elevenlabs.io https://*.elevenlabs.io; frame-ancestors 'self'; base-uri 'self'; form-action 'self'
 
 # Long-cache the immutable token assets
 /tokens/*
