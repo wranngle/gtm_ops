@@ -26,7 +26,7 @@ import { getAuditLogger, auditContextMiddleware, RetentionPolicy } from './lib/a
 import { BrandingManager } from './lib/branding.js';
 import { AdminManager } from './lib/admin.js';
 import { GdprManager } from './lib/gdpr.js';
-import { Role, getPermissionSummary, getUserManager, requireRole } from './lib/rbac.js';
+import { Role, getPermissionSummary, getUserManager, requireRole, resolveDevAuthRole } from './lib/rbac.js';
 
 // =============================================================================
 // Evaluation API endpoints
@@ -558,20 +558,17 @@ app.get('/api/documents/:executionId/diff/:v1/:v2', generalLimiter, async (req, 
 // Dev-mode auth shim. lib/rbac.js#requireRole reads `req.user_role` and
 // 401s if it's missing. Production is expected to wire this through a
 // real auth flow (session cookie, JWT, OAuth) that populates user_role
-// before route handlers run. For the local dev server we accept an
-// X-User-Role header — operator can simulate any role via curl/Postman.
+// before route handlers run. The shim accepts an X-User-Role header so
+// curl/Postman can simulate any role without standing up an OAuth flow.
 //
-// Default role when header is absent: `owner` (full access). The dev
-// server is bound to 127.0.0.1 (PR #92) so external attackers can't
-// hit it; the role default just keeps the local-curl flow trivial.
-//
-// Production override: set `WRANNGLE_AUTH_DEFAULT_ROLE=viewer` (or any
-// role below admin) so unauthenticated requests can't reach the
-// admin-only routes even if this shim is the only auth layer.
+// Default behavior (see lib/rbac.js#resolveDevAuthRole):
+//   - X-User-Role header wins when present
+//   - WRANNGLE_AUTH_DEFAULT_ROLE env var is the operator-set override
+//   - Otherwise: production → 'viewer' (least privilege; mutation
+//     routes 403 unless a role is explicit — fail-closed). Dev/test
+//     → 'owner' so the local curl workflow stays friction-free.
 app.use((req, res, next) => {
-  const headerRole = req.headers['x-user-role'];
-  const fallback = process.env.WRANNGLE_AUTH_DEFAULT_ROLE || Role.OWNER;
-  req.user_role = (typeof headerRole === 'string' && headerRole) ? headerRole : fallback;
+  req.user_role = resolveDevAuthRole(req.headers, process.env);
   next();
 });
 
