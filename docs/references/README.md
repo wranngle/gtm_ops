@@ -6,6 +6,7 @@ Current:
 
 - [`layered-domain-architecture.md`](layered-domain-architecture.md) — per-domain import-direction rule, enforced by `scripts/lint-layered-architecture.sh`
 - [`sqlite-query-stability.md`](sqlite-query-stability.md) — `ORDER BY` tiebreaker, range-end +1ms, retry shim for the `node-sqlite3` cache-visibility race, planned `better-sqlite3` migration
+- [`security-tooling.md`](security-tooling.md) — RBAC coverage lint, audit-chain CLI, audit metadata redaction, dev auth shim, CSP report Pages Function, response-header middleware
 
 Policy for adding new references:
 
