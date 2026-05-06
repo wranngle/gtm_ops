@@ -44,6 +44,14 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const port = process.env.PORT || 3000;
+// Bind to loopback by default so the local dev server isn't reachable
+// from other hosts on a shared LAN / dev VM. Several routes (notably
+// /api/restart, /api/users/:id/role, /api/audit-logs/cleanup) have no
+// auth check yet — exposing them to 0.0.0.0 makes the dev box trivially
+// abusable from anywhere on the network. Override with HOST=0.0.0.0 if
+// the deployment genuinely needs broader binding (e.g. Docker container
+// where 0.0.0.0 is the only reachable interface).
+const host = process.env.HOST || '127.0.0.1';
 // eslint-disable-next-line unicorn/prefer-event-target -- need Node EventEmitter API (.on/.off/.emit) used by SSE handlers below
 const logEmitter = new EventEmitter();
 
@@ -1359,11 +1367,14 @@ app.get('/api/eval/cases', generalLimiter, async (req, res) => {
   }
 });
 
-const server = app.listen(port, () => {
+const server = app.listen(port, host, () => {
   serverState.isReady = true;
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server running at http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
   console.log(`  Dashboard:  http://localhost:${port}/`);
   console.log(`  Eval:       http://localhost:${port}/console/?route=evals`);
+  if (host !== '127.0.0.1' && host !== 'localhost') {
+    console.warn(`  WARNING: bound to ${host} — exposed to other hosts. Auth checks on unprotected POST routes are NOT YET in place.`);
+  }
 });
 
 // Graceful shutdown handling
