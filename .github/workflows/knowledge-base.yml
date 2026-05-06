@@ -1,5 +1,8 @@
 name: knowledge-base
 
+permissions:
+  contents: read
+
 # Lightweight per-PR doc-hygiene + shell-syntax sanity. The heavier
 # unit / typecheck / console-e2e suites live in test.yml; this workflow
 # only runs the doc-shaped checks that don't need bun / playwright /
@@ -16,8 +19,9 @@ jobs:
     name: Validators (knowledge base + lints + doc gardener)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Bash syntax check on shell entrypoints
         run: bash -n scripts/*.sh
