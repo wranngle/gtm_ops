@@ -11,6 +11,7 @@ jobs:
   test:
     name: static checks
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     env:
       CI: 'true'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
@@ -35,6 +36,7 @@ jobs:
   unit:
     name: unit (vitest)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       CI: 'true'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
@@ -122,6 +124,7 @@ jobs:
   pdf-e2e-collect:
     name: pdf e2e (collect-only)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       CI: 'true'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
