@@ -12,6 +12,10 @@ export default defineConfig({
       exclude: ['node_modules', 'tests']
     },
     testTimeout: 10_000,
-    hookTimeout: 10_000
+    hookTimeout: 10_000,
+    // Bun's worker_threads RPC can deadlock vitest's default `threads` pool
+    // (CI saw "Closing rpc while onUserConsoleLog was pending" with no exit).
+    // `forks` uses child_process — clean teardown, no hang.
+    pool: 'forks'
   }
 });
