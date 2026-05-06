@@ -288,16 +288,34 @@ describe('[P1] getCorsOptions - CORS Configuration', () => {
     else delete process.env.ALLOWED_ORIGINS;
   });
 
-  it('[P1] should only allow GET, POST, OPTIONS methods', () => {
-    // WHEN: Getting CORS options
+  it('[P0] should allow every HTTP method that server.js routes use', () => {
+    // server.js exposes GET/HEAD/POST/PUT/PATCH/DELETE routes. If any of
+    // them is missing here, the browser preflight OPTIONS for that method
+    // would be rejected and the static console couldn't call the route at
+    // all. Pin the full set so a regression is loud.
     const options = getCorsOptions();
+    for (const method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+      expect(options.methods).toContain(method);
+    }
+  });
 
-    // THEN: Should have correct methods
-    expect(options.methods).toContain('GET');
-    expect(options.methods).toContain('POST');
-    expect(options.methods).toContain('OPTIONS');
-    expect(options.methods).not.toContain('DELETE');
-    expect(options.methods).not.toContain('PUT');
+  it('[P0] should allow X-User-Role / X-User-Id / X-Request-Id / X-Workspace-Id headers', () => {
+    // The dev auth shim reads X-User-Role; the request-id middleware reads
+    // X-Request-Id from upstream proxies. Without these on the allowlist,
+    // browsers strip them on cross-origin requests and the API never sees
+    // the role token, so every requireRole(...) returns 401/403.
+    const options = getCorsOptions();
+    expect(options.allowedHeaders).toContain('X-User-Role');
+    expect(options.allowedHeaders).toContain('X-User-Id');
+    expect(options.allowedHeaders).toContain('X-Request-Id');
+    expect(options.allowedHeaders).toContain('X-Workspace-Id');
+    expect(options.allowedHeaders).toContain('Content-Type');
+    expect(options.allowedHeaders).toContain('Authorization');
+  });
+
+  it('[P1] should expose X-Request-Id so clients can read it for log correlation', () => {
+    const options = getCorsOptions();
+    expect(options.exposedHeaders).toContain('X-Request-Id');
   });
 });
 
