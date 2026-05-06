@@ -26,6 +26,7 @@ let canTransferOwnership: any;
 let requireRole: any;
 let requirePermission: any;
 let getPermissionSummary: any;
+let resolveDevAuthRole: any;
 
 beforeEach(async () => {
   const module = await import('../../lib/rbac.js');
@@ -45,6 +46,7 @@ beforeEach(async () => {
   requireRole = module.requireRole;
   requirePermission = module.requirePermission;
   getPermissionSummary = module.getPermissionSummary;
+  resolveDevAuthRole = module.resolveDevAuthRole;
 });
 
 describe('[P0] Role Constants', () => {
@@ -592,6 +594,53 @@ describe('[P1] Middleware - requireRole', () => {
     middleware(req, res, next);
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(401);
+  });
+});
+
+describe('[P0] Dev auth shim - resolveDevAuthRole', () => {
+  it('[P0] should prefer X-User-Role header over every fallback', () => {
+    expect(
+      resolveDevAuthRole({ 'x-user-role': 'admin' }, { NODE_ENV: 'production' }),
+    ).toBe('admin');
+    expect(
+      resolveDevAuthRole(
+        { 'x-user-role': 'member' },
+        { NODE_ENV: 'development', WRANNGLE_AUTH_DEFAULT_ROLE: 'viewer' },
+      ),
+    ).toBe('member');
+  });
+
+  it('[P0] should fall through to WRANNGLE_AUTH_DEFAULT_ROLE when header is absent', () => {
+    expect(
+      resolveDevAuthRole({}, { NODE_ENV: 'production', WRANNGLE_AUTH_DEFAULT_ROLE: 'admin' }),
+    ).toBe('admin');
+  });
+
+  it('[P0] should default to VIEWER in production (fail-closed)', () => {
+    // Regression guard: prior implementation defaulted to OWNER, which
+    // turned every requireRole guard into a no-op for any caller that
+    // forgot the X-User-Role header. Production must fail-closed.
+    expect(resolveDevAuthRole({}, { NODE_ENV: 'production' })).toBe('viewer');
+  });
+
+  it('[P0] should default to OWNER in development for ergonomics', () => {
+    // Dev DX: local curl/Postman calls should "just work" without
+    // needing to set an env var or header. The dev server is bound to
+    // 127.0.0.1 (PR #92) so this is not a network attack surface.
+    expect(resolveDevAuthRole({}, { NODE_ENV: 'development' })).toBe('owner');
+    expect(resolveDevAuthRole({}, {})).toBe('owner');
+  });
+
+  it('[P1] should ignore an empty-string header', () => {
+    // Some HTTP clients send empty headers; treat that as "no header"
+    // rather than letting an empty string propagate as a role token.
+    expect(resolveDevAuthRole({ 'x-user-role': '' }, { NODE_ENV: 'production' })).toBe('viewer');
+  });
+
+  it('[P1] should ignore a non-string header value (defensive)', () => {
+    expect(
+      resolveDevAuthRole({ 'x-user-role': ['admin', 'owner'] as any }, { NODE_ENV: 'production' }),
+    ).toBe('viewer');
   });
 });
 
