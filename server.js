@@ -324,7 +324,7 @@ app.get('/api/usage/costs', generalLimiter, async (req, res) => {
 });
 
 // Webhook management endpoints
-app.post('/api/webhooks', generalLimiter, async (req, res) => {
+app.post('/api/webhooks', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { name, url, events, workspace_id } = req.body;
 
@@ -379,7 +379,7 @@ app.get('/api/webhooks/:id', generalLimiter, async (req, res) => {
   }
 });
 
-app.patch('/api/webhooks/:id', generalLimiter, async (req, res) => {
+app.patch('/api/webhooks/:id', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { name, url, events, enabled } = req.body;
 
@@ -395,7 +395,7 @@ app.patch('/api/webhooks/:id', generalLimiter, async (req, res) => {
   }
 });
 
-app.delete('/api/webhooks/:id', generalLimiter, async (req, res) => {
+app.delete('/api/webhooks/:id', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const deleted = await getWebhookManager().deleteWebhook(Number.parseInt(req.params.id, 10));
 
@@ -410,7 +410,7 @@ app.delete('/api/webhooks/:id', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/webhooks/:id/test', generalLimiter, async (req, res) => {
+app.post('/api/webhooks/:id/test', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const result = await getWebhookManager().testWebhook(Number.parseInt(req.params.id, 10));
     res.json(result);
@@ -497,7 +497,7 @@ app.get('/api/documents/:executionId/versions/:version', generalLimiter, async (
   }
 });
 
-app.post('/api/documents/:executionId/rollback/:version', generalLimiter, async (req, res) => {
+app.post('/api/documents/:executionId/rollback/:version', requireRole(Role.OWNER, Role.ADMIN, Role.MEMBER), generalLimiter, async (req, res) => {
   try {
     const { executionId, version } = req.params;
     const { type } = req.body;
@@ -664,7 +664,7 @@ app.get('/api/branding', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/branding', generalLimiter, async (req, res) => {
+app.post('/api/branding', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, ...updates } = req.body;
     const result = await getBrandingManager().setBranding(workspace_id || 'default', updates);
@@ -675,7 +675,7 @@ app.post('/api/branding', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/branding/logo', generalLimiter, async (req, res) => {
+app.post('/api/branding/logo', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, filename, mimetype, data } = req.body;
 
@@ -825,7 +825,7 @@ app.get('/api/gdpr/consent', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/gdpr/consent', generalLimiter, async (req, res) => {
+app.post('/api/gdpr/consent', requireRole(Role.OWNER, Role.ADMIN, Role.MEMBER, Role.VIEWER), generalLimiter, async (req, res) => {
   try {
     const { user_id, consent_type, consented } = req.body;
     if (!user_id || !consent_type) {
@@ -844,7 +844,7 @@ app.post('/api/gdpr/consent', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/gdpr/export', generalLimiter, async (req, res) => {
+app.post('/api/gdpr/export', requireRole(Role.OWNER, Role.ADMIN, Role.MEMBER, Role.VIEWER), generalLimiter, async (req, res) => {
   try {
     const { user_id } = req.body;
     if (!user_id) return res.status(400).json({ error: 'user_id required' });
@@ -909,7 +909,7 @@ app.post('/api/gdpr/delete', requireRole(Role.OWNER, Role.ADMIN), generalLimiter
   }
 });
 
-app.post('/api/gdpr/delete/cancel', generalLimiter, async (req, res) => {
+app.post('/api/gdpr/delete/cancel', requireRole(Role.OWNER, Role.ADMIN, Role.MEMBER, Role.VIEWER), generalLimiter, async (req, res) => {
   try {
     const { user_id } = req.body;
     if (!user_id) return res.status(400).json({ error: 'user_id required' });
@@ -991,7 +991,7 @@ app.post('/api/workspace/:id/invite', requireRole(Role.OWNER, Role.ADMIN), gener
   }
 });
 
-app.delete('/api/workspace/:wid/users/:uid', generalLimiter, async (req, res) => {
+app.delete('/api/workspace/:wid/users/:uid', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { wid: workspaceId, uid: userId } = req.params;
     const userManager = getUserManager();
@@ -1166,7 +1166,7 @@ Keep it between 150-300 words. Do not use markdown formatting - plain text only.
 // dev server with `curl -X POST localhost:3000/api/restart`). Use
 // `kill <pid>` or `pkill -HUP -f 'node server.js'` instead.
 
-app.post('/api/generate', generateLimiter, async (req, res) => {
+app.post('/api/generate', requireRole(Role.OWNER, Role.ADMIN, Role.MEMBER), generateLimiter, async (req, res) => {
   const { input, structured, async: asyncMode, business_profile } = req.body;
   if (!input) return res.status(400).json({ error: 'Input required' });
 
