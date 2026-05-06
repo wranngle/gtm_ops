@@ -56,6 +56,13 @@ jobs:
           restore-keys: bun-deps-${{ runner.os }}-
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Audit (bun audit, fails on high+ severity only)
+        # `bun audit --audit-level=high` exits 1 if any high or critical
+        # CVE is reachable in the install graph. Dependabot covers
+        # vulnerable-dep alerts asynchronously; this gate fires on every
+        # PR so a regression doesn't slip through between Dependabot scans.
+        # Low/moderate findings still print to the log but don't fail.
+        run: bun audit --audit-level=high
       - name: Typecheck
         run: bun run typecheck
       - name: Run vitest
