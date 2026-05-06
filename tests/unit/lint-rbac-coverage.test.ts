@@ -58,7 +58,7 @@ describe('[P0] scripts/lint-rbac-coverage.sh - RBAC coverage lint', () => {
 
     const { code, stdout } = runLint(target);
     expect(code).toBe(0);
-    expect(stdout).toContain('all mutation routes');
+    expect(stdout).toContain('all flagged routes');
   });
 
   it('[P0] should exit 1 and name the offending path when requireRole is missing', () => {
@@ -87,10 +87,59 @@ describe('[P0] scripts/lint-rbac-coverage.sh - RBAC coverage lint', () => {
     expect(stderr).toContain('/api/exposed-put');
   });
 
-  it('[P0] should ignore GET routes (read-only, role checks not required by this lint)', () => {
+  it('[P0] should ignore non-sensitive GET routes (read-only)', () => {
     const target = writeScratch([
       "app.get('/api/list', generalLimiter, async (req, res) => {});",
       "app.get('/api/item/:id', generalLimiter, async (req, res) => {});",
+    ].join('\n'));
+
+    const { code } = runLint(target);
+    expect(code).toBe(0);
+  });
+
+  it('[P0] should flag unprotected GETs under /api/audit-logs/*', () => {
+    const target = writeScratch([
+      "app.get('/api/audit-logs', generalLimiter, async (req, res) => {});",
+      "app.get('/api/audit-logs/:logId', generalLimiter, async (req, res) => {});",
+      "app.get('/api/audit-logs/export', generalLimiter, async (req, res) => {});",
+    ].join('\n'));
+
+    const { code, stderr } = runLint(target);
+    expect(code).toBe(1);
+    expect(stderr).toContain('/api/audit-logs');
+    expect(stderr).toContain('/api/audit-logs/:logId');
+    expect(stderr).toContain('/api/audit-logs/export');
+  });
+
+  it('[P0] should flag unprotected GETs under /api/admin/*', () => {
+    const target = writeScratch([
+      "app.get('/api/admin/dashboard', generalLimiter, async (req, res) => {});",
+      "app.get('/api/admin/health', generalLimiter, async (req, res) => {});",
+    ].join('\n'));
+
+    const { code, stderr } = runLint(target);
+    expect(code).toBe(1);
+    expect(stderr).toContain('/api/admin/dashboard');
+    expect(stderr).toContain('/api/admin/health');
+  });
+
+  it('[P1] should accept sensitive GETs once requireRole is added', () => {
+    const target = writeScratch([
+      "app.get('/api/audit-logs', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {});",
+      "app.get('/api/admin/dashboard', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {});",
+    ].join('\n'));
+
+    const { code } = runLint(target);
+    expect(code).toBe(0);
+  });
+
+  it('[P1] should not flag GETs whose path starts with the prefix-as-substring (boundary check)', () => {
+    // /api/admin-thingy is not /api/admin/* — boundary check on the
+    // sensitive-prefix regex. Prevents false positives on accidentally
+    // similarly-named public endpoints.
+    const target = writeScratch([
+      "app.get('/api/admin-thingy', generalLimiter, async (req, res) => {});",
+      "app.get('/api/audit-logs-public', generalLimiter, async (req, res) => {});",
     ].join('\n'));
 
     const { code } = runLint(target);
@@ -111,6 +160,6 @@ describe('[P0] scripts/lint-rbac-coverage.sh - RBAC coverage lint', () => {
     const stdout = execFileSync('bash', [lintPath, path.join(repoRoot, 'server.js')], {
       encoding: 'utf8',
     });
-    expect(stdout).toContain('all mutation routes');
+    expect(stdout).toContain('all flagged routes');
   });
 });
