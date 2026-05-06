@@ -22,5 +22,18 @@
     { "turn": 3, "role": "agent", "tool_call": { "name": "lookup_record", "arguments": { "id": "+15550100" } } },
     { "turn": 3, "role": "tool_response", "result": { "name": "John Doe", "company": "Acme HVAC", "tier": "gold" } },
     { "turn": 4, "role": "agent", "text": "Hi John, great to hear from you again. I see you're a gold-tier customer — how can I help today?" }
+  ],
+  "latency_breakdown_ms": {
+    "ttfb": [602, 590, 612, 615, 620],
+    "end_to_first_audio": [1150, 1175, 1180, 1185, 1195],
+    "total_turn": [2580, 2600, 2640, 2655, 2680]
+  },
+  "tool_calls": [
+    {
+      "name": "lookup_record",
+      "schema_pass": true,
+      "round_trip_ms": 410,
+      "response_consumed_in_next_turn": true
+    }
   ]
 }

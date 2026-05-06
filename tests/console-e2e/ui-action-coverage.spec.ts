@@ -72,7 +72,18 @@ async function goToRoute(page: Page, route: (typeof ROUTES)[number]) {
 
   const currentRoute = await page.evaluate(() => (globalThis as any).AppContext?.get?.().route || 'home');
   if (currentRoute !== route) {
-    await page.locator(`.sb__item:has-text("${ROUTE_LABELS[route]}")`).first().click();
+    const label = ROUTE_LABELS[route].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const routeButton = page.getByRole('button', { name: new RegExp(`^${label}(?:\\s+\\d+)?$`, 'i') }).first();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await routeButton.click({ timeout: 5_000 });
+        break;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await page.waitForTimeout(150);
+      }
+    }
+    await expect.poll(async () => page.evaluate(() => (globalThis as any).AppContext?.get?.().route || 'home')).toBe(route);
   }
 
   await page.waitForTimeout(150);

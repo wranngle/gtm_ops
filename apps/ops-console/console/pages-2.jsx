@@ -229,6 +229,27 @@ function normalizeEvalRun(raw) {
         : weighted != null
           ? 'pass'
           : 'unknown';
+  // Preserve voice_ai_agent_evals run-result fields the previous
+  // normalizer dropped: per-tool round trips + schema-pass flags, plus
+  // the latency_breakdown_ms sample arrays the harness produces for
+  // ttfb / end-to-first-audio / total-turn. Lets the EvalsPage surface
+  // tool-call latency aggregation + the live TTFB / first-audio split
+  // that the punch-list called out as missing.
+  const latencyBreakdown = raw.latency_breakdown_ms && typeof raw.latency_breakdown_ms === 'object'
+    ? {
+        ttfb: Array.isArray(raw.latency_breakdown_ms.ttfb) ? raw.latency_breakdown_ms.ttfb.map(Number).filter(Number.isFinite) : [],
+        end_to_first_audio: Array.isArray(raw.latency_breakdown_ms.end_to_first_audio) ? raw.latency_breakdown_ms.end_to_first_audio.map(Number).filter(Number.isFinite) : [],
+        total_turn: Array.isArray(raw.latency_breakdown_ms.total_turn) ? raw.latency_breakdown_ms.total_turn.map(Number).filter(Number.isFinite) : [],
+      }
+    : null;
+  const toolCalls = Array.isArray(raw.tool_calls)
+    ? raw.tool_calls.map(tc => ({
+        name: String(tc?.name || 'unknown'),
+        schema_pass: tc?.schema_pass === true,
+        round_trip_ms: Number.isFinite(Number(tc?.round_trip_ms)) ? Number(tc.round_trip_ms) : null,
+        response_consumed_in_next_turn: tc?.response_consumed_in_next_turn === true,
+      }))
+    : [];
   return {
     id: raw.id || raw.scenario_id || raw.case_study_id,
     scenario_id: raw.scenario_id || raw.case_study_id || `run-${raw.id || 'unknown'}`,
@@ -240,6 +261,8 @@ function normalizeEvalRun(raw) {
     verdict,
     score: { weighted, axes },
     flaws,
+    latency_breakdown: latencyBreakdown,
+    tool_calls: toolCalls,
     result_path: raw.result_path || null,
   };
 }
@@ -340,6 +363,13 @@ function EvalsPage({ setRoute }) {
   const activeRun = normalizedRuns.find(r => r.scenario_id === activeRunId) || visibleRuns[0] || normalizedRuns[0] || null;
   const activeAxes = activeRun?.score?.axes || [];
   const failedAxes = activeAxes.filter(axis => axis.pass === false);
+  const artifactPayload = runDetail || activeRun || {};
+  const artifactAxes = Array.isArray(artifactPayload?.score?.axes) ? artifactPayload.score.axes : activeAxes;
+  const artifactFailedAxes = artifactAxes.filter(axis => axis.pass === false);
+  const artifactScenario = artifactPayload.scenario_id || activeRun?.scenario_id || 'selected run';
+  const artifactVerdict = artifactPayload.verdict || activeRun?.verdict || 'unknown';
+  const artifactScore = artifactPayload.score?.weighted ?? activeRun?.score?.weighted;
+  const artifactDuration = artifactPayload.duration_ms ?? activeRun?.duration_ms;
   const activeAgentKey = active?.draft && active.agentKey ? active.agentKey : evalAgentKeyForRun(activeRun, active);
   const activeAgent = window.AGENT_REGISTRY.byKey(activeAgentKey) || window.AGENT_REGISTRY.byKey('sales_coach');
   const passCount = normalizedRuns.filter(r => r.verdict === 'pass').length;
@@ -1029,15 +1059,56 @@ function EvalsPage({ setRoute }) {
           tabIndex={-1}
         >
           <div className="workflow-popout__pane">
-            <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
+            <div className="eval-artifact-panel__head">
               <div>
-                <div className="eyebrow eyebrow--accent">local artifact</div>
-                <div className="workflow-popout__title">{artifactPath}</div>
-                <div className="muted" style={{fontSize:12}}>Loaded inside the console so the eval workflow stays in one place. Raw JSON remains available from the fixture path for debugging.</div>
+                <div className="eyebrow eyebrow--accent">artifact review packet</div>
+                <div className="workflow-popout__title">{evalScenarioTitle(artifactScenario)}</div>
+                <div className="muted" style={{fontSize:12}}>Evidence is loaded inside the console first. The raw payload stays below as supporting detail, not the primary review surface.</div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close artifact panel" onClick={() => setArtifactPath(null)}><I3.Close size={14}/></button>
             </div>
-            <pre className="mono eval-artifact-json">{JSON.stringify(runDetail || activeRun || {}, null, 2)}</pre>
+            <div className="eval-artifact-review" data-testid="eval-artifact-review">
+              <div className="eval-artifact-review__summary">
+                <Badge tone={artifactVerdict === 'fail' ? 'critical' : artifactVerdict === 'pass' ? 'healthy' : 'neutral'}>{artifactVerdict}</Badge>
+                <strong>{evalScenarioTitle(artifactScenario)} · review evidence</strong>
+                <p>{artifactFailedAxes.length ? `${artifactFailedAxes.length} failed judge axis${artifactFailedAxes.length === 1 ? '' : 'es'} require operator review before prompt changes ship.` : 'No failed judge axes in this artifact; verify the pass evidence and latency budget before closing the run.'}</p>
+              </div>
+              <div className="artifact-drawer__facts" aria-label="Evaluation artifact metadata">
+                <div>
+                  <span className="eyebrow">scenario</span>
+                  <code className="mono" data-testid="eval-artifact-scenario">{artifactScenario}</code>
+                </div>
+                <div>
+                  <span className="eyebrow">score</span>
+                  <code className="mono" data-testid="eval-artifact-score">{evalPct(artifactScore)}</code>
+                </div>
+                <div>
+                  <span className="eyebrow">latency</span>
+                  <code className="mono">{evalDuration(artifactDuration)}</code>
+                </div>
+                <div>
+                  <span className="eyebrow">local path</span>
+                  <code className="mono" data-testid="eval-artifact-path">{artifactPath}</code>
+                </div>
+              </div>
+              <div className="eval-artifact-review__axes" aria-label="Judge axis evidence">
+                {artifactAxes.length ? artifactAxes.map(axis => (
+                  <div key={axis.name} className="eval-artifact-review__axis" data-testid="eval-artifact-axis" data-status={axis.pass === false ? 'fail' : axis.pass === true ? 'pass' : 'unknown'}>
+                    <div>
+                      <strong>{axis.name}</strong>
+                      <p>{axis.detail || 'No judge detail supplied.'}</p>
+                    </div>
+                    <Badge tone={axis.pass === false ? 'critical' : axis.pass === true ? 'healthy' : 'neutral'}>{axis.pass === false ? 'fail' : axis.pass === true ? 'pass' : 'unknown'}</Badge>
+                  </div>
+                )) : (
+                  <div className="lead-artifact-empty">No judge axis evidence was attached to this artifact.</div>
+                )}
+              </div>
+              <div>
+                <div className="eyebrow">normalized payload</div>
+                <pre className="mono eval-artifact-json">{JSON.stringify(artifactPayload || {}, null, 2)}</pre>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1227,6 +1298,64 @@ function EvalsPage({ setRoute }) {
                     ))}
                     {activeAxes.length === 0 && <div className="empty">No per-axis scores were emitted by this run.</div>}
                   </div>
+
+                  {/* Latency breakdown — voice_ai_agent_evals harness emits
+                      ttfb / end_to_first_audio / total_turn sample arrays
+                      per run. Surface mean + p95 + sample count so the
+                      console isn't lying about coverage. */}
+                  {activeRun.latency_breakdown && (() => {
+                    const rows = [
+                      { key: 'ttfb', label: 'TTFB', samples: activeRun.latency_breakdown.ttfb || [], budget: LATENCY_BUDGET.ttfb_p95_ms },
+                      { key: 'end_to_first_audio', label: 'First-audio', samples: activeRun.latency_breakdown.end_to_first_audio || [], budget: LATENCY_BUDGET.end_to_first_audio_p95_ms },
+                      { key: 'total_turn', label: 'Total turn', samples: activeRun.latency_breakdown.total_turn || [], budget: LATENCY_BUDGET.total_turn_p95_ms },
+                    ].filter(r => r.samples.length > 0);
+                    if (rows.length === 0) return null;
+                    return (
+                      <div className="eval-latency-breakdown" data-testid="eval-latency-breakdown" style={{marginTop:12, padding:'10px 12px', background:'var(--bg-inset)', borderRadius:'var(--r-md)'}}>
+                        <div className="eyebrow eyebrow--accent" style={{marginBottom:6}}>latency breakdown · live samples</div>
+                        <div style={{display:'grid', gap:6}}>
+                          {rows.map(r => {
+                            const mean = r.samples.reduce((s, v) => s + v, 0) / r.samples.length;
+                            const p95 = evalPercentile(r.samples, 95);
+                            const tone = p95 > r.budget ? 'cl-err' : p95 > r.budget * 0.85 ? 'cl-warn' : 'cl-ok';
+                            return (
+                              <div key={r.key} data-testid="eval-latency-row" data-axis={r.key} data-tone={tone} style={{display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12}}>
+                                <span className="mono">{r.label}</span>
+                                <span className="mono dim" style={{flex:1, textAlign:'center'}}>n={r.samples.length} · mean {evalDuration(Math.round(mean))}</span>
+                                <span className={`mono num ${tone}`}>p95 {evalDuration(Math.round(p95))} <span className="dim">/ {evalDuration(r.budget)}</span></span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Tool-call latency aggregation — the harness records each
+                      tool call with round_trip_ms + schema_pass; surface them
+                      so the operator can spot a slow tool-call before it
+                      blows the total-turn budget. */}
+                  {activeRun.tool_calls?.length > 0 && (
+                    <div className="eval-tool-calls" data-testid="eval-tool-calls" style={{marginTop:12, padding:'10px 12px', background:'var(--bg-inset)', borderRadius:'var(--r-md)'}}>
+                      <div className="eyebrow eyebrow--accent" style={{marginBottom:6}}>tool calls · {activeRun.tool_calls.length}</div>
+                      <div style={{display:'grid', gap:6}}>
+                        {activeRun.tool_calls.map((tc, i) => {
+                          const tone = !tc.schema_pass ? 'cl-err' : (tc.round_trip_ms != null && tc.round_trip_ms > 1500) ? 'cl-warn' : 'cl-ok';
+                          return (
+                            <div key={`${tc.name}-${i}`} data-testid="eval-tool-call-row" data-tool-name={tc.name} data-schema-pass={tc.schema_pass ? 'true' : 'false'} style={{display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12}}>
+                              <span className="mono">{tc.name}</span>
+                              <span className="mono dim" style={{flex:1, textAlign:'center'}}>
+                                schema {tc.schema_pass ? 'pass' : 'fail'}{tc.response_consumed_in_next_turn ? ' · response consumed' : ' · response orphan'}
+                              </span>
+                              <span className={`mono num ${tone}`}>
+                                {tc.round_trip_ms != null ? `${tc.round_trip_ms}ms` : '—'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <window.ElevenUI.TranscriptViewer

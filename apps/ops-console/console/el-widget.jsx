@@ -26,7 +26,10 @@ globalThis.AppContext = (function () {
 /* useAppContext — subscribe to global app context. */
 globalThis.useAppContext = function useAppContext() {
   const [s, setS] = React.useState(globalThis.AppContext.get());
-  React.useEffect(() => globalThis.AppContext.subscribe(setS), []);
+  React.useEffect(() => {
+    setS(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(setS);
+  }, []);
   return s;
 };
 
