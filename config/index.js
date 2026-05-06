@@ -11,7 +11,7 @@
  *   const rate = config.laborRates.solutions_architect.unit_rate;
  */
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import initSqlJs from 'sql.js';
@@ -79,8 +79,20 @@ function defaultDocumentTypes() {
  */
 async function initializeConfig() {
   const SQL = await initSqlJs();
-  const buffer = readFileSync(DB_PATH);
-  const db = new SQL.Database(buffer);
+  let db;
+  if (existsSync(DB_PATH)) {
+    const buffer = readFileSync(DB_PATH);
+    db = new SQL.Database(buffer);
+  } else {
+    db = new SQL.Database();
+    for (const filename of ['schema_v3.sql', 'seed_presales.sql']) {
+      const sqlPath = join(__dirname, filename);
+      if (!existsSync(sqlPath)) {
+        throw new Error(`Config database missing and ${filename} was not found`);
+      }
+      db.run(readFileSync(sqlPath, 'utf8'));
+    }
+  }
 
   const config = {};
 
