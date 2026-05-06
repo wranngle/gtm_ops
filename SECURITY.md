@@ -7,4 +7,3 @@ https://github.com/wranngle/gtm_ops/security/advisories/new
 If that link is unavailable, email cody@wranngle.com.
 
 Expected response: best-effort acknowledgement, typically within 7 days.
-

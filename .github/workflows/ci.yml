@@ -42,7 +42,7 @@ jobs:
       - name: yamllint
         run: |
           pip install --quiet yamllint
-          yamllint -d "{extends: default, rules: {line-length: disable, document-start: disable, truthy: {check-keys: false}}}" .
+          yamllint -c .yamllint.yml .
 
   test:
     runs-on: ubuntu-latest
