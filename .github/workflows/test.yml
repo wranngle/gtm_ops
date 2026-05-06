@@ -28,6 +28,8 @@ jobs:
         run: bash scripts/validate-knowledge-base.sh
       - name: Lint layered architecture
         run: bash scripts/lint-layered-architecture.sh
+      - name: Lint RBAC coverage on Express mutation routes
+        run: bash scripts/lint-rbac-coverage.sh
       - name: Gitleaks scan
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2
         env:
