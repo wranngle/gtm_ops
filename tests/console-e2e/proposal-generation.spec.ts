@@ -97,7 +97,53 @@ test('Generate proposal flow explains the review gate and destination before exe
   await expect(page.locator('[data-testid="generate-step-03"]')).toContainText(/open Proposals/);
   await expect(page.locator('.generate-review-card .artifact-review__packet')).toContainText(/local artifact previews/i);
   await expect(page.locator('.generate-review-card .artifact-review__packet')).toContainText(/Proposals/i);
+  await expect(page.locator('[data-testid="generate-review-path"]')).toContainText(/Artifact/i);
+  await expect(page.locator('[data-testid="generate-review-path"]')).toContainText(/Local sample preview/i);
+  await expect(page.locator('[data-testid="generate-review-path"]')).toContainText(/Review/i);
+  await expect(page.locator('[data-testid="generate-review-path"]')).toContainText(/Draft gate locked/i);
+  await expect(page.locator('[data-testid="generate-review-path"]')).toContainText(/Send/i);
+  await expect(page.locator('[data-testid="generate-review-path"]')).toContainText(/Buyer send blocked until approved/i);
+  const reviewPathLayout = await page.locator('[data-testid="generate-review-path"]').evaluate((el) => {
+    const pathBox = el.getBoundingClientRect();
+    const stepBoxes = Array.from(el.children).map(child => child.getBoundingClientRect());
+    return {
+      stepCount: stepBoxes.length,
+      allStepsShareRow: stepBoxes.every(box => Math.abs(box.top - stepBoxes[0].top) < 2),
+      allStepsReadable: stepBoxes.every(box => box.width >= pathBox.width * 0.28),
+    };
+  });
+  expect(reviewPathLayout).toEqual({
+    stepCount: 3,
+    allStepsShareRow: true,
+    allStepsReadable: true,
+  });
   await expect(page.locator('.generate-review-card').getByRole('button', { name: /^Review in Proposals$/i })).toBeDisabled();
+});
+
+test('Generate page · demo trace names the active buyer handoff instead of the canned sample', async ({ openConsole }) => {
+  const page = await openConsole();
+  await page.locator('.sb__item:has-text("Generate")').first().click();
+
+  await page.locator('.tb__actions').getByRole('button', { name: /New run/i }).click();
+  await page.locator('.pop__row').filter({ hasText: /^Generate proposal/ }).click();
+  await expect(page.locator('[data-testid="generate-new-run-banner"]')).toContainText(/Banyan Health/i);
+
+  await page.locator('.ph__actions').getByRole('button', { name: /^Generate review draft$/i }).click();
+  const panel = page.locator('.console-panel');
+  await expect(panel).toContainText(/extract\.client: Banyan Health/i, { timeout: 20_000 });
+  await expect(panel).toContainText(/CALL-2419/i);
+  await expect(panel).not.toContainText(/extract\.client: Acme HVAC Services/i);
+
+  await page.locator('.generate-review-card').getByRole('button', { name: /Inspect draft source/i }).click();
+  const drawer = page.getByRole('region', { name: /Proposal artifact review drawer/i });
+  await expect(drawer).toContainText(/Banyan Health source evidence bundle/i);
+  await expect(drawer).toContainText(/Banyan Health review metadata/i);
+  await expect(drawer).not.toContainText(/bundled Acme fixture/i);
+  const sourceJson = drawer.locator('[data-testid="generate-artifact-source-json"]');
+  await expect(sourceJson).toContainText(/"buyer": "Banyan Health"/i);
+  await expect(sourceJson).toContainText(/CALL-2419/i);
+  await expect(sourceJson).toContainText(/handoff_review_source/i);
+  await expect(sourceJson).not.toContainText(/Acme HVAC/i);
 });
 
 test('Generate page · sequence rail reflects the real review gate state', async ({ openConsole }) => {
@@ -266,11 +312,15 @@ test('Generate page · review packet is visible and opens local artifact drawers
     async () => (await drawer.boundingBox())?.y ?? 9999,
     { timeout: 5_000 },
   ).toBeLessThan(160);
-  await expect(drawer).toContainText(/Acme HVAC proposal draft/i);
+  await expect(drawer).toContainText(/Acme HVAC sample proposal packet/i);
+  await expect(drawer.locator('.workflow-popout__title')).not.toContainText(/proposal draft/i);
   await expect(drawer.locator('iframe[title="Sample proposal PDF review preview"]')).toBeVisible();
   await expect(drawer).toContainText(/review packet id/i);
   await expect(drawer.locator('[data-testid="generate-artifact-id"]')).toContainText(/run_acme_hvac/);
   await expect(drawer.locator('[data-testid="generate-artifact-mode"]')).toContainText(/demo sequence/i);
+  await expect(drawer.locator('[data-testid="generate-artifact-review-path"]')).toContainText(/Artifact/i);
+  await expect(drawer.locator('[data-testid="generate-artifact-review-path"]')).toContainText(/Review/i);
+  await expect(drawer.locator('[data-testid="generate-artifact-review-path"]')).toContainText(/Send/i);
   await expect(drawer).toContainText(/Synthetic Acme HVAC review packet/i);
   await expect(drawer).toContainText(/sequence_required/i);
   await expect(drawer.locator('.artifact-drawer__path')).toContainText(/sample-proposal\.pdf/);
@@ -278,7 +328,7 @@ test('Generate page · review packet is visible and opens local artifact drawers
   await expect(drawer.getByRole('button', { name: /Copy review packet ID/i })).toBeVisible();
 
   await reviewCard.getByRole('button', { name: /source/i }).click();
-  await expect(drawer).toContainText(/Source evidence bundle/i);
+  await expect(drawer).toContainText(/sample source evidence packet/i);
   const sourceJson = drawer.locator('[data-testid="generate-artifact-source-json"]');
   await expect(sourceJson).toContainText(/blocked_until_operator_review/i);
   await expect(sourceJson).toContainText(/prop_demo_001/i);
@@ -296,7 +346,8 @@ test('Generate page · artifact query opens the sample packet inside the console
 
   const drawer = page.getByRole('region', { name: /Proposal artifact review drawer/i });
   await expect(drawer).toBeVisible();
-  await expect(drawer).toContainText(/Acme HVAC proposal draft/i);
+  await expect(drawer).toContainText(/Acme HVAC sample proposal packet/i);
+  await expect(drawer.locator('.workflow-popout__title')).not.toContainText(/proposal draft/i);
   await expect(drawer).toContainText(/sample packet/i);
   await expect(drawer).toContainText(/sequence_required/i);
   await expect(drawer.locator('iframe[title="Sample proposal PDF review preview"]')).toBeVisible();
@@ -389,17 +440,23 @@ test('Generate page · artifact inspection controls stay visible before the chec
   await page.locator('.sb__item:has-text("Generate")').first().click();
 
   const reviewCard = page.locator('.generate-review-card');
+  const reviewPath = reviewCard.locator('[data-testid="generate-review-path"]');
   const links = reviewCard.locator('.artifact-review__links');
   const quality = reviewCard.locator('.artifact-review__quality');
   await expect(reviewCard.getByRole('button', { name: /Review PDF sample/i })).toBeVisible();
   await expect(reviewCard.getByRole('button', { name: /Inspect sample source/i })).toBeVisible();
+  await expect(reviewPath).toContainText(/Local sample preview/i);
 
-  const [linksBox, qualityBox] = await Promise.all([
+  const [reviewPathBox, linksBox, qualityBox] = await Promise.all([
+    reviewPath.boundingBox(),
     links.boundingBox(),
     quality.boundingBox(),
   ]);
+  expect(reviewPathBox, 'proposal review path should render').not.toBeNull();
   expect(linksBox, 'artifact inspection row should render').not.toBeNull();
   expect(qualityBox, 'artifact quality checklist should render').not.toBeNull();
+  expect(reviewPathBox!.y, 'proposal review path should be visible before artifact inspection').toBeLessThan(linksBox!.y);
+  expect(reviewPathBox!.y + reviewPathBox!.height, 'proposal review path should stay above the first laptop fold').toBeLessThan(720);
   expect(linksBox!.y, 'PDF/source inspection should appear before the checklist').toBeLessThan(qualityBox!.y);
   expect(linksBox!.y + linksBox!.height, 'artifact inspection row should fit in the first laptop viewport').toBeLessThan(720);
 });
@@ -534,10 +591,57 @@ test('Generate page · DEMO_MODE streams a canned pipeline trace and resets the 
   await expect(page.locator('.console-panel')).toContainText(/request\.response: HTTP 200/i);
   await expect(page.locator('.console-panel')).toContainText(/request\.posting: POST \/api\/generate/i);
   await expect(page.locator('.console-panel__status')).toContainText(/complete/i, { timeout: 20_000 });
-  // Button resets so the user can launch another run.
-  await expect(page.locator('.ph__actions').getByRole('button', { name: /^Generate review draft$/i })).toBeVisible({ timeout: 5000 });
+  // Button resets with honest copy: the next click replaces the ready draft.
+  await expect(page.locator('.ph__actions').getByRole('button', { name: /^Regenerate review draft$/i })).toBeVisible({ timeout: 5000 });
   // Final confirmation toast.
   await expect(page.locator('.toast').first()).toContainText(/Proposal generated/i);
+});
+
+test('Generate page · regenerating closes stale artifact drawers while the new sequence runs', async ({ openConsole }) => {
+  const page = await openConsole();
+  await page.locator('.sb__item:has-text("Generate")').first().click();
+  await page.getByRole('button', { name: /Use sample brief/i }).click();
+
+  await page.locator('.ph__actions').getByRole('button', { name: /^Generate review draft$/i }).click();
+  await expect(page.locator('.console-panel')).toContainText(/pipeline\.done/i, { timeout: 10_000 });
+  await expect(page.locator('.ph__actions').getByRole('button', { name: /^Regenerate review draft$/i })).toBeVisible();
+
+  await page.locator('.generate-review-card').getByRole('button', { name: /Inspect draft source/i }).click();
+  await expect(page.getByRole('region', { name: /Proposal artifact review drawer/i })).toBeVisible();
+
+  await page.locator('.ph__actions').getByRole('button', { name: /^Regenerate review draft$/i }).click();
+
+  await expect(page.getByRole('region', { name: /Proposal artifact review drawer/i })).toHaveCount(0);
+  await expect(page.locator('.generate-review-card')).toContainText(/Run the sequence to unlock the proposal review gate/i);
+  await expect(page.locator('.generate-review-card').getByRole('button', { name: /^Review in Proposals$/i })).toBeDisabled();
+  await expect(page.locator('.ph__actions').getByRole('button', { name: /^Generating draft$/i })).toBeVisible();
+  await expect(page.locator('.console-panel')).toContainText(/pipeline\.start/i);
+});
+
+test('Generate page · editing buyer proof after draft ready locks stale review artifacts', async ({ openConsole }) => {
+  const page = await openConsole();
+  await page.locator('.sb__item:has-text("Generate")').first().click();
+  await page.getByRole('button', { name: /Use sample brief/i }).click();
+
+  const reviewCard = page.locator('.generate-review-card');
+  const reviewButton = reviewCard.getByRole('button', { name: /^Review in Proposals$/i });
+  await page.locator('.ph__actions').getByRole('button', { name: /^Generate review draft$/i }).click();
+  await expect(page.locator('.console-panel')).toContainText(/pipeline\.done/i, { timeout: 10_000 });
+  await expect(reviewButton).toBeEnabled({ timeout: 5_000 });
+
+  await reviewCard.getByRole('button', { name: /Inspect draft source/i }).click();
+  await expect(page.getByRole('region', { name: /Proposal artifact review drawer/i })).toBeVisible();
+
+  const textarea = page.locator('.generate-brief').first();
+  const existingBrief = await textarea.inputValue();
+  await textarea.fill(`${existingBrief}\n\nNEW BUYER PROOF: CFO requested a revised security appendix before approval.`);
+
+  await expect(page.getByRole('region', { name: /Proposal artifact review drawer/i })).toHaveCount(0);
+  await expect(reviewButton).toBeDisabled();
+  await expect(reviewCard).toContainText(/Run the sequence to unlock the proposal review gate/i);
+  await expect(reviewCard.getByRole('button', { name: /Review PDF sample/i })).toBeVisible();
+  await expect(page.locator('.ph__actions').getByRole('button', { name: /^Generate review draft$/i })).toBeVisible();
+  await expect(page.locator('.toast').first()).toContainText(/Draft review reset/i);
 });
 
 test('Generate page · completed draft routes to proposal review', async ({ openConsole }) => {

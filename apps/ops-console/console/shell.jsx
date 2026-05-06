@@ -6,6 +6,26 @@
 const { useState, useEffect, useRef, useMemo } = React;
 const I = window.Icon;
 
+const EVAL_ADMIN_HANDOFF_EXTRA_KEYS = [
+  'eval_admin_return_route',
+  'eval_run',
+  'selected_eval_suite',
+  'selected_eval_suite_id',
+  'selected_eval_context',
+  'selected_eval_run',
+  'selected_eval_verdict',
+  'selected_eval_score',
+  'eval_failed_axes',
+  'eval_evidence_path',
+  'agent_admin_panel',
+];
+
+function clearEvalAdminHandoffExtra(extra = {}) {
+  const next = { ...extra };
+  EVAL_ADMIN_HANDOFF_EXTRA_KEYS.forEach(key => { delete next[key]; });
+  return next;
+}
+
 /* ---------- Toast / notification system ---------- */
 const __toastListeners = new Set();
 window.toast = function toast(msg, opts = {}) {
@@ -297,9 +317,10 @@ function Sidebar({ route, setRoute, collapsed }) {
     }));
   const selectAgent = (agentKey) => {
     const ctx = window.AppContext?.get?.() || {};
+    const baseExtra = clearEvalAdminHandoffExtra(ctx.extra || {});
     window.AppContext?.set?.({
       extra: {
-        ...(ctx.extra || {}),
+        ...baseExtra,
         selected_agent_key: agentKey,
         triggered_from: 'sidebar-agent-nav',
       },
@@ -314,7 +335,10 @@ function Sidebar({ route, setRoute, collapsed }) {
           <img src="../assets/wranngle-lasso.png" alt=""/>
         </div>
         {!collapsed && (
-          <img className="sb__wordmark" src="../assets/wranngle-wordmark.png" alt="Wranngle"/>
+          <div>
+            <img className="sb__wordmark" src="../assets/wranngle-wordmark.png" alt="Wranngle"/>
+            <div className="sb__brand-sub">gtm_ops console</div>
+          </div>
         )}
       </div>
 
@@ -800,7 +824,9 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
   const latest = data[data.length - 1];
   const first = data[0];
   const delta = latest - first;
-  const isPercentSeries = data.every(v => Number.isFinite(v) && Math.abs(v) <= 1);
+  const labelText = String(label || '');
+  const percentLabeled = /(?:%|percent|pct|rate|pass-rate|conversion)/i.test(labelText);
+  const isPercentSeries = percentLabeled && data.every(v => Number.isFinite(v) && Math.abs(v) <= 1);
   const rounded = (value, places = 2) => {
     if (!Number.isFinite(value)) return value;
     const factor = 10 ** places;
@@ -815,7 +841,7 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
     const next = rounded(value, isPercentSeries ? 4 : 2);
     return `${next > 0 ? '+' : ''}${fmt(next)}`;
   };
-  const seriesLabel = String(label || 'Trend').split(':')[0].trim() || 'Trend';
+  const seriesLabel = labelText.split(':')[0].trim() || 'Trend';
   const summary = label || `${seriesLabel}: ${data.length} periods, ${fmt(first)} to ${fmt(latest)}; range ${fmt(min)} to ${fmt(max)}; delta ${deltaLabel(delta)}`;
   const detailedLabels = Array.isArray(pointLabels)
     ? pointLabels

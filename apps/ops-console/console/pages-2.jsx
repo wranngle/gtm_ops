@@ -64,6 +64,13 @@ function evalScenarioTitle(value) {
   }).join(' ');
 }
 
+function evalReviewContextLabel(run, suite) {
+  if (run?.scenario_id) {
+    return `${evalScenarioTitle(run.scenario_id)} · ${run.prompt_tag || 'prompt/latest'}`;
+  }
+  return suite?.name || suite?.id || 'Selected eval context';
+}
+
 /* The bridge to voice_ai_agent_evals is sourced live from
    /api/eval-harness-manifest, which serves the root
    eval-harness.manifest.json (also read by voice_ai_agent_evals
@@ -360,18 +367,26 @@ function EvalsPage({ setRoute }) {
     : null;
   const normalizedRuns = useMemo(() => runs.map(normalizeEvalRun), [runs]);
   const visibleRuns = useMemo(() => normalizedRuns.filter(r => runFilter === 'all' || r.verdict === runFilter), [normalizedRuns, runFilter]);
-  const activeRun = normalizedRuns.find(r => r.scenario_id === activeRunId) || visibleRuns[0] || normalizedRuns[0] || null;
+  const defaultActiveRun = visibleRuns.find(r => r.verdict === 'fail') || visibleRuns[0] || normalizedRuns.find(r => r.verdict === 'fail') || normalizedRuns[0] || null;
+  const activeRun = normalizedRuns.find(r => r.scenario_id === activeRunId) || defaultActiveRun;
   const activeAxes = activeRun?.score?.axes || [];
   const failedAxes = activeAxes.filter(axis => axis.pass === false);
+  const failedAxesReviewCopy = failedAxes.length
+    ? `${failedAxes.length} failed judge ${failedAxes.length === 1 ? 'axis needs' : 'axes need'} review before this prompt ships.`
+    : 'No failed axes selected; use the fail filter to inspect the risk surface.';
   const artifactPayload = runDetail || activeRun || {};
   const artifactAxes = Array.isArray(artifactPayload?.score?.axes) ? artifactPayload.score.axes : activeAxes;
   const artifactFailedAxes = artifactAxes.filter(axis => axis.pass === false);
+  const artifactFailedAxesReviewCopy = artifactFailedAxes.length
+    ? `${artifactFailedAxes.length} failed judge ${artifactFailedAxes.length === 1 ? 'axis needs' : 'axes need'} operator review before prompt changes ship.`
+    : 'No failed judge axes in this artifact; verify the pass evidence and latency budget before closing the run.';
   const artifactScenario = artifactPayload.scenario_id || activeRun?.scenario_id || 'selected run';
   const artifactVerdict = artifactPayload.verdict || activeRun?.verdict || 'unknown';
   const artifactScore = artifactPayload.score?.weighted ?? activeRun?.score?.weighted;
   const artifactDuration = artifactPayload.duration_ms ?? activeRun?.duration_ms;
   const activeAgentKey = active?.draft && active.agentKey ? active.agentKey : evalAgentKeyForRun(activeRun, active);
   const activeAgent = window.AGENT_REGISTRY.byKey(activeAgentKey) || window.AGENT_REGISTRY.byKey('sales_coach');
+  const activeEvalReviewContext = evalReviewContextLabel(activeRun, active);
   const passCount = normalizedRuns.filter(r => r.verdict === 'pass').length;
   const failCount = normalizedRuns.filter(r => r.verdict === 'fail').length;
   const scoredRuns = normalizedRuns.filter(r => typeof r.score.weighted === 'number');
@@ -593,6 +608,80 @@ function EvalsPage({ setRoute }) {
       window.toast('Could not copy command', { tone:'critical' });
     }
   };
+  const openEvalAgentAdmin = () => {
+    if (!activeRun) {
+      window.toast('Load a harness run first', {
+        sub: 'Local agent admin needs a selected eval run, not suite-level placeholder context.',
+        tone: 'warn',
+      });
+      return;
+    }
+    const prevExtra = window.AppContext.get().extra || {};
+    const activeRunScore = activeRun?.score?.weighted;
+    window.AppContext.set({
+      selection: { type: 'eval', id: activeId },
+      extra: {
+        ...prevExtra,
+        selected_agent_key: activeAgentKey,
+        agent_admin_panel: 'context',
+        eval_run: activeRun || null,
+        selected_eval_suite: activeEvalReviewContext,
+        selected_eval_suite_id: active?.id || activeId,
+        selected_eval_context: activeEvalReviewContext,
+        selected_eval_run: activeRun?.scenario_id || 'none',
+        selected_eval_verdict: activeRun?.verdict || 'unknown',
+        selected_eval_score: typeof activeRunScore === 'number' ? evalPct(activeRunScore) : '--',
+        eval_failed_axes: failedAxes.map(axis => axis.name || axis.id || 'unnamed_axis').join(', ') || 'none',
+        eval_evidence_path: activeRun?.result_path || '../fixtures/eval-runs.json',
+        eval_admin_return_route: 'evals',
+        triggered_from: 'eval-agent-admin',
+      },
+    });
+    setRoute?.('agents');
+  };
+  const hasActiveEvalRun = Boolean(activeRun);
+  const canOpenEvalAgentAdmin = hasActiveEvalRun;
+  const canSyncEvalEvidence = hasActiveEvalRun;
+  const evalLabReadiness = hasActiveEvalRun
+    ? {
+        tone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
+        label: 'run context armed',
+        title: activeRun?.scenario_id || 'selected harness run',
+        body: `${activeEvalReviewContext} is ready for local admin review and evidence sync.`,
+        badge: activeRun?.verdict || 'ready',
+      }
+    : {
+        tone: runsState === 'error' ? 'critical' : 'neutral',
+        label: runsState === 'error' ? 'harness load failed' : 'waiting on harness run',
+        title: runsState === 'error' ? 'Harness run evidence did not load' : 'Waiting for harness run evidence',
+        body: runsState === 'error'
+          ? 'Retry the harness runs panel before opening local agent admin or syncing evidence.'
+          : 'Local admin and evidence sync unlock only after a concrete run loads inside this console.',
+        badge: runsState,
+      };
+  const evalAgentSession = hasActiveEvalRun
+    ? {
+        orbState: activeRun?.verdict === 'fail' ? 'alert' : 'idle',
+        subtitle: `${activeAgent?.role || 'ConvAI'} · ${activeRun?.agent_id || activeRun?.scenario_id || 'selected run'}`,
+        barActive: activeRun?.verdict === 'fail',
+        barTone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
+        bars: activeAxes.length ? activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.85) : [.28,.34,.3,.36,.32],
+        status: activeRun?.verdict === 'fail' ? 'Regression context armed' : 'Baseline context armed',
+        badge: activeRun?.verdict || 'ready',
+        badgeTone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
+      }
+    : {
+        orbState: 'idle',
+        subtitle: `${activeAgent?.role || 'ConvAI'} · harness run pending`,
+        barActive: false,
+        barTone: runsState === 'error' ? 'critical' : 'neutral',
+        bars: [.18,.22,.2,.24,.19],
+        status: runsState === 'error'
+          ? 'Harness evidence failed; local context is not armed'
+          : 'Harness run required before local context is armed',
+        badge: runsState === 'error' ? 'blocked' : 'pending',
+        badgeTone: runsState === 'error' ? 'critical' : 'neutral',
+      };
 
   const [runsError, setRunsError] = useState(null);
   const [runsReloadToken, setRunsReloadToken] = useState(0);
@@ -712,14 +801,16 @@ function EvalsPage({ setRoute }) {
       extra: {
         ...(ctx.extra || {}),
         selected_agent_key: activeAgentKey,
-        selected_eval_suite: active?.name || activeId,
+        selected_eval_suite: activeEvalReviewContext,
+        selected_eval_suite_id: active?.id || activeId,
+        selected_eval_context: activeEvalReviewContext,
         selected_eval_run: activeRun?.scenario_id || 'none',
         selected_eval_verdict: activeRun?.verdict || 'unknown',
         selected_eval_score: evalPct(activeRun?.score?.weighted),
         eval_failed_axes: failedAxes.map(a => a.name).join(', ') || 'none',
       },
     });
-  }, [activeId, active?.name, activeAgentKey, activeRun?.scenario_id, activeRun?.verdict, activeRun?.score?.weighted, failedAxes.map(a => a.name).join('|')]);
+  }, [activeId, active?.id, activeEvalReviewContext, activeAgentKey, activeRun?.scenario_id, activeRun?.verdict, activeRun?.score?.weighted, failedAxes.map(a => a.name).join('|')]);
 
   useEffect(() => () => {
     const latest = window.AppContext.get();
@@ -858,7 +949,7 @@ function EvalsPage({ setRoute }) {
         <div className="eval-command-center__copy">
           <div className="eyebrow eyebrow--accent">active regression</div>
           <h2 data-testid="eval-active-scenario-title">{evalScenarioTitle(activeRun?.scenario_id || active.name)}</h2>
-          <p>{failedAxes.length ? `${failedAxes.length} failed judge axis${failedAxes.length === 1 ? '' : 'es'} need review before this prompt ships.` : 'No failed axes selected; use the fail filter to inspect the risk surface.'}</p>
+          <p data-testid="eval-active-regression-review-copy">{failedAxesReviewCopy}</p>
           <div className="eval-command-center__meta">
             <Badge tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}>{activeRun?.verdict || 'ready'}</Badge>
             <span className="mono">{evalPct(activeRun?.score?.weighted)}</span>
@@ -1071,7 +1162,7 @@ function EvalsPage({ setRoute }) {
               <div className="eval-artifact-review__summary">
                 <Badge tone={artifactVerdict === 'fail' ? 'critical' : artifactVerdict === 'pass' ? 'healthy' : 'neutral'}>{artifactVerdict}</Badge>
                 <strong>{evalScenarioTitle(artifactScenario)} · review evidence</strong>
-                <p>{artifactFailedAxes.length ? `${artifactFailedAxes.length} failed judge axis${artifactFailedAxes.length === 1 ? '' : 'es'} require operator review before prompt changes ship.` : 'No failed judge axes in this artifact; verify the pass evidence and latency budget before closing the run.'}</p>
+                <p data-testid="eval-artifact-review-copy">{artifactFailedAxesReviewCopy}</p>
               </div>
               <div className="artifact-drawer__facts" aria-label="Evaluation artifact metadata">
                 <div>
@@ -1374,43 +1465,75 @@ function EvalsPage({ setRoute }) {
         {/* ElevenLabs lab */}
         <div className="vstack eval-agent-column" style={{gap:18, minWidth:0}}>
           <Card title="elevenlabs ui · live agent lab" accent="accent" action={
-            <button className="btn btn--ghost btn--xs" onClick={() => { window.AppContext.set({ extra: { ...(window.AppContext.get().extra || {}), selected_agent_key: activeAgentKey, triggered_from:'eval-agent-admin' } }); setRoute?.('agents'); }}><I3.Bot size={10}/>agent admin</button>
+            <button
+              className="btn btn--ghost btn--xs"
+              data-testid="eval-local-agent-admin"
+              disabled={!canOpenEvalAgentAdmin}
+              title={canOpenEvalAgentAdmin ? 'Open this eval run in local agent admin' : 'Load a harness run before opening local agent admin'}
+              aria-label={canOpenEvalAgentAdmin ? 'Open selected eval run in local agent admin' : 'Local agent admin unavailable until a harness run loads'}
+              onClick={openEvalAgentAdmin}
+            ><I3.Bot size={10}/>local admin</button>
           }>
+            <div
+              className="eval-agent-readiness"
+              data-testid="eval-agent-readiness"
+              data-tone={evalLabReadiness.tone}
+              role="status"
+              aria-live="polite"
+            >
+              <div>
+                <div className="eyebrow eyebrow--accent">{evalLabReadiness.label}</div>
+                <strong>{evalLabReadiness.title}</strong>
+                <p>{evalLabReadiness.body}</p>
+              </div>
+              <Badge tone={evalLabReadiness.tone === 'critical' ? 'critical' : evalLabReadiness.tone === 'healthy' ? 'healthy' : 'neutral'}>{evalLabReadiness.badge}</Badge>
+            </div>
             <div className="el-agent-panel">
               <div className="el-agent-panel__head">
                 <window.ElevenUI.Orb
-                  state={activeRun?.verdict === 'fail' ? 'alert' : 'idle'}
+                  state={evalAgentSession.orbState}
                   color1={activeAgent?.avatar_color_1}
                   color2={activeAgent?.avatar_color_2}
                   label={`${activeAgent?.display_name || 'ElevenLabs'} eval agent`}
                 />
                 <div>
                   <div style={{fontWeight:700, fontSize:15}}>{activeAgent?.display_name || 'ElevenLabs agent'}</div>
-                  <div className="mono dim" style={{fontSize:10}}>{activeAgent?.role || 'ConvAI'} · {activeRun?.agent_id || 'selected run'}</div>
+                  <div className="mono dim" style={{fontSize:10}}>{evalAgentSession.subtitle}</div>
                 </div>
               </div>
               <window.ElevenUI.BarVisualizer
-                active={activeRun?.verdict === 'fail'}
-                tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}
-                bars={activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.85)}
+                active={evalAgentSession.barActive}
+                tone={evalAgentSession.barTone}
+                bars={evalAgentSession.bars}
               />
               <div className="el-conversation-bar" role="status" aria-live="polite">
                 <I3.Mic size={14}/>
-                <span>{activeRun?.verdict === 'fail' ? 'Regression context armed' : 'Baseline context armed'}</span>
-                <Badge tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}>{activeRun?.verdict || 'ready'}</Badge>
+                <span>{evalAgentSession.status}</span>
+                <Badge tone={evalAgentSession.badgeTone}>{evalAgentSession.badge}</Badge>
               </div>
               <div className="eval-sync-bar" style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
                 <button
                   className="btn btn--primary btn--sm"
                   data-testid="eval-sync-context-evidence"
+                  disabled={!canSyncEvalEvidence}
+                  title={canSyncEvalEvidence ? 'Sync this harness run into agent context and open its evidence drawer' : 'Load a harness run before syncing context and evidence'}
+                  aria-label={canSyncEvalEvidence ? 'Sync selected eval run context and evidence' : 'Context and evidence sync unavailable until a harness run loads'}
                   onClick={() => {
+                    if (!activeRun) return;
                     const prevExtra = window.AppContext.get().extra || {};
                     window.AppContext.set({
                       extra: {
                         ...prevExtra,
                         selected_agent_key: activeAgentKey,
                         eval_run: activeRun || null,
+                        selected_eval_suite: activeEvalReviewContext,
+                        selected_eval_suite_id: active?.id || activeId,
+                        selected_eval_context: activeEvalReviewContext,
                         selected_eval_run: activeRun?.scenario_id || 'none',
+                        selected_eval_verdict: activeRun?.verdict || 'unknown',
+                        selected_eval_score: evalPct(activeRun?.score?.weighted),
+                        eval_failed_axes: failedAxes.map(axis => axis.name || axis.id || 'unnamed_axis').join(', ') || 'none',
+                        eval_evidence_path: activeRun?.result_path || '../fixtures/eval-runs.json',
                         triggered_from: 'evals-sync',
                       },
                     });
@@ -3388,6 +3511,7 @@ function GeneratePage({ setRoute }) {
   // the moment a draft was produced and would silently fall back to the
   // Acme/Banyan default.
   const lastHandoffRef = React.useRef(null);
+  const generationIdRef = React.useRef(0);
   const briefRef = React.useRef(null);
   const artifactPanelRef = React.useRef(null);
   const artifactIdSlug = (value) => {
@@ -3404,6 +3528,26 @@ function GeneratePage({ setRoute }) {
     if (activeHandoff.kind === 'proposal-v3' || activeHandoff.kind === 'new-run') return activeHandoff.callCo || activeHandoff.callId || 'Proposal';
     return 'Acme HVAC';
   })();
+  const reviewSignal = (() => {
+    if (activeHandoff.kind === 'address-blockers') {
+      const blockers = Array.isArray(activeHandoff.blockers) ? activeHandoff.blockers.length : 0;
+      return blockers
+        ? `${blockers} buyer ${blockers === 1 ? 'blocker' : 'blockers'} carried from proposal review`
+        : 'proposal review requested without blocker detail';
+    }
+    if (activeHandoff.kind === 'proposal-v3' || activeHandoff.kind === 'new-run') {
+      const parts = [
+        activeHandoff.callId,
+        activeHandoff.callOutcome,
+        typeof activeHandoff.callScore === 'number' ? `${activeHandoff.callScore.toFixed(1)}/10 call score` : null,
+      ].filter(Boolean);
+      return parts.length ? parts.join(' · ') : 'qualified call context carried from the console';
+    }
+    return '22% after-hours voicemail · 40% no-callback · pilot approved';
+  })();
+  const reviewContextSource = activeHandoff.kind
+    ? 'console handoff · selected buyer context'
+    : 'sample brief · regional HVAC contractor · TX';
   const reviewPacketId = activeHandoff.kind ? `run_${artifactIdSlug(reviewSubject)}` : 'run_acme_hvac';
   const focusBuyerBrief = React.useCallback(() => {
     requestAnimationFrame(() => {
@@ -3411,6 +3555,19 @@ function GeneratePage({ setRoute }) {
       briefRef.current?.focus();
     });
   }, []);
+  const invalidateDraftForBriefChange = React.useCallback(() => {
+    if (!reviewReady && !isGenerating && !artifactPanel) return;
+    generationIdRef.current += 1;
+    setIsGenerating(false);
+    setReviewReady(false);
+    setArtifactPanel(null);
+    setArtifactPayload(null);
+    setArtifactState('idle');
+    window.toast('Draft review reset', {
+      sub: 'Buyer proof changed. Regenerate before opening Proposals.',
+      tone: 'warn',
+    });
+  }, [artifactPanel, isGenerating, reviewReady]);
 
   // Clear handoff banners as soon as the operator successfully generates
   // a review draft. The banners exist to label "this brief came from a
@@ -3574,7 +3731,7 @@ function GeneratePage({ setRoute }) {
   const artifacts = {
     pdf: {
       kind: 'PDF',
-      title: `${reviewSubject} proposal draft`,
+      title: reviewReady ? `${reviewSubject} proposal draft` : `${reviewSubject} sample proposal packet`,
       path: '../assets/sample-proposal.pdf',
       artifactId: reviewPacketId,
       sourceLabel: 'branded PDF renderer',
@@ -3590,7 +3747,7 @@ function GeneratePage({ setRoute }) {
     },
     json: {
       kind: 'JSON',
-      title: `${reviewSubject} source evidence bundle`,
+      title: reviewReady ? `${reviewSubject} source evidence bundle` : `${reviewSubject} sample source evidence packet`,
       path: '../fixtures/transcripts/sample-proposal.json',
       artifactId: reviewPacketId,
       sourceLabel: 'buyer evidence bundle',
@@ -3599,12 +3756,53 @@ function GeneratePage({ setRoute }) {
       mode: artifactMode,
       summary: reviewReady
         ? (isDemoArtifactMode
-          ? 'Demo evidence bundle replayed from the bundled Acme fixture. Use it to inspect the review path; live runs replace this with backend-generated source evidence.'
+          ? `Demo evidence bundle replayed through the local fixture with ${reviewSubject} review metadata. Use it to inspect the review path; live runs replace this with backend-generated source evidence.`
           : 'Transcript, extracted buyer context, pricing inputs, and checks bound to the generated proposal draft.')
         : 'Synthetic transcript and buyer context used to preview the source evidence packet before generation.',
     },
   };
   const activeArtifact = artifactPanel ? artifacts[artifactPanel] : null;
+  const artifactSourcePreview = (() => {
+    if (!activeArtifact) return null;
+    const base = {
+      artifact_id: activeArtifact.artifactId,
+      review_subject: reviewSubject,
+      source_path: activeArtifact.path,
+      gate: activeArtifact.gate,
+      buyer_send: 'blocked_until_operator_review',
+    };
+    if (!activeHandoff.kind) {
+      return {
+        ...base,
+        evidence: artifactPayload || {},
+      };
+    }
+    const loadedPayload = artifactPayload && typeof artifactPayload === 'object' ? artifactPayload : {};
+    return {
+      ...base,
+      evidence: {
+        packet_type: 'handoff_review_source',
+        buyer: reviewSubject,
+        signal: reviewSignal,
+        context_source: reviewContextSource,
+        carried_handoff: {
+          kind: activeHandoff.kind,
+          call_id: activeHandoff.callId || null,
+          call_outcome: activeHandoff.callOutcome || null,
+          call_score: typeof activeHandoff.callScore === 'number' ? activeHandoff.callScore : null,
+          proposal_id: activeHandoff.proposalId || null,
+          blockers: Array.isArray(activeHandoff.blockers) ? activeHandoff.blockers : [],
+        },
+        synthetic_fixture_shape: {
+          source_path: activeArtifact.path,
+          proposal_id: loadedPayload.proposal_id || 'prop_demo_001',
+          revision: loadedPayload.revision || null,
+          sections: loadedPayload.sections ? Object.keys(loadedPayload.sections) : [],
+          note: loadedPayload._demo_note || 'Synthetic fixture used only for local preview shape.',
+        },
+      },
+    };
+  })();
   React.useEffect(() => {
     if (!artifactPanel) return undefined;
     const frame = requestAnimationFrame(() => {
@@ -3644,14 +3842,18 @@ function GeneratePage({ setRoute }) {
   const hasBrief = Boolean(inputText.trim());
   const draftButtonLabel = isGenerating
     ? 'Generating draft'
-    : hasBrief
-      ? 'Generate review draft'
-      : 'Add buyer proof first';
+    : reviewReady
+      ? 'Regenerate review draft'
+      : hasBrief
+        ? 'Generate review draft'
+        : 'Add buyer proof first';
   const lowerDraftButtonLabel = isGenerating
     ? 'Sequence running...'
-    : hasBrief
-      ? 'Generate review draft'
-      : 'Add buyer proof first';
+    : reviewReady
+      ? 'Regenerate review draft'
+      : hasBrief
+        ? 'Generate review draft'
+        : 'Add buyer proof first';
   const sequenceSteps = [
     {
       n: '01',
@@ -3673,6 +3875,23 @@ function GeneratePage({ setRoute }) {
       sub: 'Review packet locally, then open Proposals for operator approval before buyer send.',
       state: reviewReady ? 'ready' : 'locked',
       tone: reviewReady ? 'accent' : 'neutral',
+    },
+  ];
+  const reviewPathSteps = [
+    {
+      label: 'Artifact',
+      detail: reviewReady ? `${reviewPacketId} local preview.` : 'Local sample preview.',
+      state: activeArtifact ? 'active' : reviewReady ? 'ready' : 'available',
+    },
+    {
+      label: 'Review',
+      detail: reviewReady ? 'Operator approval in Proposals.' : 'Draft gate locked.',
+      state: reviewReady ? 'ready' : 'locked',
+    },
+    {
+      label: 'Send',
+      detail: 'Buyer send blocked until approved.',
+      state: 'blocked',
     },
   ];
 
@@ -3734,9 +3953,9 @@ function GeneratePage({ setRoute }) {
   // sequence actually run. Live mode lets the real backend stream.
   const DEMO_STREAM = [
     { delay: 100,  level: 'info', msg: 'intake.received: parsing brief…' },
-    { delay: 300,  level: 'info', msg: 'extract.client: Acme HVAC Services (regional)' },
-    { delay: 280,  level: 'info', msg: 'extract.signals: 22% after-hours voicemail · 40% no-callback · pilot approved' },
-    { delay: 260,  level: 'info', msg: 'enrichment.firmographic: ~30 employees · residential + light commercial · TX' },
+    { delay: 300,  level: 'info', msg: `extract.client: ${reviewSubject}` },
+    { delay: 280,  level: 'info', msg: `extract.signals: ${reviewSignal}` },
+    { delay: 260,  level: 'info', msg: `enrichment.context: ${reviewContextSource}` },
     { delay: 320,  level: 'ok',   msg: 'enrichment.icp: 0.82 · ICP fit confirmed' },
     { delay: 360,  level: 'info', msg: 'pricing.model: 1q pilot · payback ≤ 6mo target · banded $1.5–2.5k/mo' },
     { delay: 280,  level: 'info', msg: 'compliance.scan: TX two-party recording disclosure flagged' },
@@ -3756,9 +3975,14 @@ function GeneratePage({ setRoute }) {
       focusBuyerBrief();
       return window.toast('Input required', { sub: 'Buyer proof is required before the draft engine runs.', tone: 'critical' });
     }
+    const generationId = generationIdRef.current + 1;
+    generationIdRef.current = generationId;
     setBriefError('');
     setIsGenerating(true);
     setReviewReady(false);
+    setArtifactPanel(null);
+    setArtifactPayload(null);
+    setArtifactState('idle');
     window.dispatchEvent(new CustomEvent('gtm:stream-reset'));
     stream('pipeline.start: review draft requested · validating buyer brief');
     const payload = JSON.stringify({ input: inputText });
@@ -3774,10 +3998,12 @@ function GeneratePage({ setRoute }) {
       for (const evt of DEMO_STREAM) {
         cumulative += evt.delay;
         setTimeout(() => {
+          if (generationIdRef.current !== generationId) return;
           window.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg: evt.msg, level: evt.level } }));
         }, cumulative);
       }
       setTimeout(() => {
+        if (generationIdRef.current !== generationId) return;
         stream(`pipeline.complete: artifact_id=${reviewPacketId} · 7 pages · ready for review`, 'ok');
         setIsGenerating(false);
         setReviewReady(true);
@@ -3810,8 +4036,11 @@ function GeneratePage({ setRoute }) {
       // still unlocks the review surface after a short grace period so the
       // operator is not trapped behind transport latency.
       stream('pipeline.live: backend stream open — events will appear above', 'info');
-      setTimeout(() => setIsGenerating(false), 1500);
-      setTimeout(() => setReviewReady(true), 1500);
+      setTimeout(() => {
+        if (generationIdRef.current !== generationId) return;
+        setIsGenerating(false);
+        setReviewReady(true);
+      }, 1500);
     } catch (e) {
       const msg = (e && (e.message || String(e))) || 'unknown error';
       stream(`pipeline.error: ${msg}`, 'err');
@@ -3825,11 +4054,13 @@ function GeneratePage({ setRoute }) {
       const res = await fetch('/fixtures/sample.json');
       const data = await res.json();
       if (data && data.text) {
+        invalidateDraftForBriefChange();
         setInputText(data.text);
         setBriefError('');
         focusBuyerBrief();
       }
     } catch (e) {
+      invalidateDraftForBriefChange();
       setInputText("CLIENT: Acme HVAC Services\n\nCONTEXT: Regional HVAC contractor (~30 employees, residential + light commercial). 22% of after-hours calls go to voicemail; 40% of those callers do not call back the next day.\n\nGOAL: Voice agent that answers after-hours, gathers caller details (name, address, urgency, problem class), and SMS-routes urgency-tagged dispatches to the on-call tech.\n\nSTACK: HouseCallPro for dispatch, Twilio for inbound SMS, Outlook 365 calendars. No current AI surface.\n\nBUDGET SIGNAL: Comparable peers spending $1.5–2.5k/mo on dispatch tooling. Owner has approved 1 quarter pilot if ROI math holds (target payback < 6 months).\n\nCOMPLIANCE: No PHI. Standard call-recording disclosure required (TX two-party).\n\nDEMO ASK: Generate proposal + SOW + AI risk report.");
       setBriefError('');
       focusBuyerBrief();
@@ -3959,6 +4190,7 @@ function GeneratePage({ setRoute }) {
             value={inputText}
             onChange={e => {
               setInputText(e.target.value);
+              invalidateDraftForBriefChange();
               if (briefError && e.target.value.trim()) setBriefError('');
             }}
             placeholder="Paste buyer context: pain, stack, budget signal, compliance constraints, and the ask."
@@ -4005,6 +4237,17 @@ function GeneratePage({ setRoute }) {
                   {hasBrief ? 'Edit buyer proof' : 'Add buyer proof'}
                 </button>
               )}
+            </div>
+            <div className="artifact-review__path" aria-label="Proposal review path" data-testid="generate-review-path">
+              {reviewPathSteps.map((step, idx) => (
+                <div key={step.label} data-state={step.state}>
+                  <span className="artifact-review__path-index">{idx + 1}</span>
+                  <div>
+                    <strong>{step.label}</strong>
+                    <p>{step.detail}</p>
+                  </div>
+                </div>
+              ))}
             </div>
             <div className="artifact-review__links">
               <button className="btn btn--ghost btn--sm" onClick={() => openArtifact('pdf')}><I3.Doc size={12}/>{reviewReady ? 'Preview draft PDF' : 'Review PDF sample'}</button>
@@ -4069,6 +4312,14 @@ function GeneratePage({ setRoute }) {
                   <span className="eyebrow">local source path</span>
                   <code className="artifact-drawer__path">{activeArtifact.path}</code>
                 </div>
+                <div className="artifact-drawer__pathway" data-testid="generate-artifact-review-path">
+                  {reviewPathSteps.map((step, idx) => (
+                    <div key={step.label} data-state={step.state}>
+                      <span className="artifact-review__path-index">{idx + 1}</span>
+                      <strong>{step.label}</strong>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="artifact-drawer__review">
                 {activeArtifact.kind === 'PDF' ? (
@@ -4076,13 +4327,7 @@ function GeneratePage({ setRoute }) {
                 ) : artifactState === 'loading' ? (
                   <div className="lead-artifact-empty">Loading source evidence...</div>
                 ) : (
-                  <pre className="mono" data-testid="generate-artifact-source-json" data-state={artifactState}>{JSON.stringify({
-                    artifact_id: activeArtifact.artifactId,
-                    source_path: activeArtifact.path,
-                    gate: activeArtifact.gate,
-                    buyer_send: 'blocked_until_operator_review',
-                    evidence: artifactPayload || {},
-                  }, null, 2)}</pre>
+                  <pre className="mono" data-testid="generate-artifact-source-json" data-state={artifactState}>{JSON.stringify(artifactSourcePreview, null, 2)}</pre>
                 )}
               </div>
               <div className="artifact-drawer__actions">

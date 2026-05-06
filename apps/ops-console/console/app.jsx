@@ -56,10 +56,29 @@ function routeFromLocation() {
 }
 
 function App() {
-  const [route, setRoute] = useS(routeFromLocation);
+  const scrollRef = React.useRef(null);
+  const [route, setRoute] = useS(() => {
+    const initialRoute = routeFromLocation();
+    window.AppContext.set({ route: initialRoute });
+    return initialRoute;
+  });
   const [paletteOpen, setPaletteOpen] = useS(false);
   const [tw, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
   const [dataLoaded, setDataLoaded] = useS(0);
+  const setConsoleRoute = React.useCallback((next) => {
+    if (typeof next === 'function') {
+      setRoute(prev => {
+        const resolved = next(prev);
+        const safeRoute = ROUTES.includes(resolved) ? resolved : 'home';
+        window.AppContext.set({ route: safeRoute });
+        return safeRoute;
+      });
+      return;
+    }
+    const safeRoute = ROUTES.includes(next) ? next : 'home';
+    window.AppContext.set({ route: safeRoute });
+    setRoute(safeRoute);
+  }, []);
 
   // Publish route changes to the global AppContext so the ConvAI widget
   // can pick them up as dynamic variables.
@@ -77,20 +96,26 @@ function App() {
     } catch (_) { /* URL API unavailable */ }
   }, [route]);
 
+  React.useLayoutEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+    node.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [route]);
+
   useE(() => {
-    const onPop = () => setRoute(routeFromLocation());
+    const onPop = () => setConsoleRoute(routeFromLocation());
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [setConsoleRoute]);
 
   useE(() => {
     const onRoute = (event) => {
       const next = event.detail?.route;
-      if (typeof next === 'string') setRoute(next);
+      if (typeof next === 'string') setConsoleRoute(next);
     };
     window.addEventListener('gtm:route', onRoute);
     return () => window.removeEventListener('gtm:route', onRoute);
-  }, []);
+  }, [setConsoleRoute]);
 
   // Apply tweaks to the document
   useE(() => {
@@ -214,25 +239,25 @@ function App() {
   return (
     <>
       <div className="app" data-collapsed={collapsed}>
-        <Sidebar route={route} setRoute={setRoute} collapsed={collapsed}/>
+        <Sidebar route={route} setRoute={setConsoleRoute} collapsed={collapsed}/>
         <div className="main">
-          <Topbar route={route} setRoute={setRoute} openPalette={()=>setPaletteOpen(true)}
+          <Topbar route={route} setRoute={setConsoleRoute} openPalette={()=>setPaletteOpen(true)}
                   theme={tw.theme} setTheme={(v) => setTweak('theme', v)}
                   collapsed={collapsed} setCollapsed={setCollapsed}/>
-          <main className="scroll" key={route} aria-labelledby="console-page-title">
-            {route === 'home' && <HomePage setRoute={setRoute}/>}
-            {route === 'generate' && <GeneratePage setRoute={setRoute}/>}
-            {route === 'pipeline' && <PipelinePage setRoute={setRoute}/>}
-            {route === 'calls' && <CallsPage setRoute={setRoute}/>}
-            {route === 'evals' && <EvalsPage setRoute={setRoute}/>}
-            {route === 'proposals' && <ProposalsPage setRoute={setRoute}/>}
-            {route === 'agents' && <AgentsPage setRoute={setRoute}/>}
-            {route === 'settings' && <SettingsPage setRoute={setRoute}/>}
+          <main ref={scrollRef} className="scroll" key={route} aria-labelledby="console-page-title">
+            {route === 'home' && <HomePage setRoute={setConsoleRoute}/>}
+            {route === 'generate' && <GeneratePage setRoute={setConsoleRoute}/>}
+            {route === 'pipeline' && <PipelinePage setRoute={setConsoleRoute}/>}
+            {route === 'calls' && <CallsPage setRoute={setConsoleRoute}/>}
+            {route === 'evals' && <EvalsPage setRoute={setConsoleRoute}/>}
+            {route === 'proposals' && <ProposalsPage setRoute={setConsoleRoute}/>}
+            {route === 'agents' && <AgentsPage setRoute={setConsoleRoute}/>}
+            {route === 'settings' && <SettingsPage setRoute={setConsoleRoute}/>}
           </main>
         </div>
       </div>
 
-      <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} setRoute={setRoute}/>
+      <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} setRoute={setConsoleRoute}/>
       <window.ToastHost/>
       <window.SalesCoachLauncher/>
 
