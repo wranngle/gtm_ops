@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /fixtures/
 
-Sitemap: https://gtm-ops.pages.dev/sitemap.xml
+Sitemap: https://app.wranngle.com/sitemap.xml
