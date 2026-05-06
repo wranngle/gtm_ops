@@ -255,6 +255,41 @@ export async function healthCheck(db: Database | undefined): Promise<HealthStatu
 }
 
 // =============================================================================
+// LIGHTWEIGHT HEALTH PAYLOAD
+// =============================================================================
+
+export type LightHealthPayload = {
+  status: 'ok';
+  timestamp: string;
+  version: string;
+  commit: string;
+  uptime_s: number;
+};
+
+/**
+ * Build the lightweight /api/health response payload. Pure function
+ * so the contract can be pinned by unit tests without spinning up
+ * an Express app or pulling server.js into the test process.
+ *
+ * NOTE: This module currently has both `health.js` and `health.ts`.
+ * server.js imports from `./lib/health.js` so the .js file is the
+ * runtime path; the .ts file is what tsc reads. Until the duplicate
+ * is collapsed, any new export needs to live in BOTH files.
+ */
+export function buildLightHealthPayload(
+  env: Record<string, string | undefined> = process.env,
+  proc: { uptime?: () => number } = process,
+): LightHealthPayload {
+  return {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: env?.npm_package_version || '1.0.0',
+    commit: (env?.GIT_SHA || 'unknown').slice(0, 7),
+    uptime_s: Math.floor(proc?.uptime?.() ?? 0),
+  };
+}
+
+// =============================================================================
 // SERVER STATE
 // =============================================================================
 

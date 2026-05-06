@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { UnifiedPipeline } from './lib/pipeline.js';
 import { HistoryManager } from './lib/history.js';
-import { healthCheck, serverState, trackRequest } from './lib/health.js';
+import { healthCheck, serverState, trackRequest, buildLightHealthPayload } from './lib/health.js';
 import {
   corsMiddleware,
   securityHeadersMiddleware,
@@ -810,13 +810,7 @@ app.get('/api/admin/health', requireRole(Role.OWNER, Role.ADMIN), generalLimiter
 // commit comes from GIT_SHA env (set by deploy pipelines) or falls back
 // to "unknown" when not provided.
 app.get('/api/health', generalLimiter, (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
-    commit: (process.env.GIT_SHA || 'unknown').slice(0, 7),
-    uptime_s: Math.floor(process.uptime()),
-  });
+  res.status(200).json(buildLightHealthPayload());
 });
 
 // GDPR endpoints

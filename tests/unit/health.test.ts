@@ -16,6 +16,7 @@ let checkFileSystem: any;
 let healthCheck: any;
 let serverState: any;
 let trackRequest: any;
+let buildLightHealthPayload: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -26,6 +27,7 @@ beforeEach(async () => {
   healthCheck = module.healthCheck;
   serverState = module.serverState;
   trackRequest = module.trackRequest;
+  buildLightHealthPayload = module.buildLightHealthPayload;
 });
 
 afterEach(() => {
@@ -228,5 +230,57 @@ describe('[P0] serverState - State Management', () => {
 
     // Cleanup
     done3();
+  });
+});
+
+describe('[P0] buildLightHealthPayload - /api/health response shape', () => {
+  it('[P0] should include status, timestamp, version, commit, uptime_s', () => {
+    const payload = buildLightHealthPayload({}, { uptime: () => 0 });
+    expect(payload).toHaveProperty('status', 'ok');
+    expect(payload).toHaveProperty('timestamp');
+    expect(payload).toHaveProperty('version');
+    expect(payload).toHaveProperty('commit');
+    expect(payload).toHaveProperty('uptime_s');
+  });
+
+  it('[P0] should emit ISO-8601 timestamp', () => {
+    const payload = buildLightHealthPayload({}, { uptime: () => 0 });
+    expect(() => new Date(payload.timestamp).toISOString()).not.toThrow();
+    expect(payload.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  });
+
+  it('[P0] should truncate GIT_SHA to 7 chars (downstream tooling expects short SHA)', () => {
+    const payload = buildLightHealthPayload(
+      { GIT_SHA: 'abcdef1234567890fedcba9876543210' },
+      { uptime: () => 0 },
+    );
+    expect(payload.commit).toBe('abcdef1');
+    expect(payload.commit).toHaveLength(7);
+  });
+
+  it('[P0] should fall back to "unknown" when GIT_SHA is missing', () => {
+    const payload = buildLightHealthPayload({}, { uptime: () => 0 });
+    expect(payload.commit).toBe('unknown');
+  });
+
+  it('[P0] should report uptime_s as a non-negative integer (no fractions)', () => {
+    const payload = buildLightHealthPayload({}, { uptime: () => 12.7 });
+    expect(payload.uptime_s).toBe(12);
+    expect(Number.isInteger(payload.uptime_s)).toBe(true);
+    expect(payload.uptime_s).toBeGreaterThanOrEqual(0);
+  });
+
+  it('[P1] should fall back to npm_package_version → "1.0.0"', () => {
+    const fromEnv = buildLightHealthPayload({ npm_package_version: '4.2.1' }, { uptime: () => 0 });
+    expect(fromEnv.version).toBe('4.2.1');
+
+    const fallback = buildLightHealthPayload({}, { uptime: () => 0 });
+    expect(fallback.version).toBe('1.0.0');
+  });
+
+  it('[P1] should not throw when proc.uptime is missing (defensive)', () => {
+    expect(() => buildLightHealthPayload({}, {})).not.toThrow();
+    const payload = buildLightHealthPayload({}, {});
+    expect(payload.uptime_s).toBe(0);
   });
 });
