@@ -13,43 +13,40 @@
 // want to feed back any state to the page that just violated CSP.
 
 import {type Env} from '../_lib/respond';
+import {
+  summarizeReport,
+  type CspReportLegacy,
+  type CspReportModern,
+} from '../../lib/csp-summary';
 
-type CspReportLegacy = {
-  'csp-report'?: {
-    'document-uri'?: string;
-    referrer?: string;
-    'violated-directive'?: string;
-    'effective-directive'?: string;
-    'original-policy'?: string;
-    disposition?: string;
-    'blocked-uri'?: string;
-    'line-number'?: number;
-    'column-number'?: number;
-    'source-file'?: string;
-    'status-code'?: number;
-    'script-sample'?: string;
-  };
-};
-
-type CspReportModern = {
-  type?: string;
-  url?: string;
-  body?: {
-    documentURL?: string;
-    referrer?: string;
-    blockedURL?: string;
-    effectiveDirective?: string;
-    originalPolicy?: string;
-    sourceFile?: string;
-    sample?: string;
-    disposition?: string;
-    statusCode?: number;
-    lineNumber?: number;
-    columnNumber?: number;
-  };
-};
+// Real CSP reports are tiny — a few hundred bytes for legacy
+// `csp-report` payloads, low single-digit KB even for the modern
+// reporting-API array shape. Anything over 16 KB is either a
+// misconfigured client or a flood attempt; reject early so we don't
+// burn Worker CPU parsing junk and don't write garbage into the log
+// stream.
+const MAX_CSP_REPORT_BYTES = 16 * 1024;
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
+  // Reject obviously oversized payloads before reading the body —
+  // Content-Length is advisory, but cheap to check and prunes the
+  // common flood-attempt shape. Reply 204 either way so the browser
+  // doesn't retry on its reporting back-off.
+  const declaredLength = Number.parseInt(
+    context.request.headers.get('content-length') ?? '0',
+    10,
+  );
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_CSP_REPORT_BYTES) {
+    console.log('[csp-violation]', JSON.stringify({
+      ts: new Date().toISOString(),
+      ua: context.request.headers.get('user-agent') ?? null,
+      ip: context.request.headers.get('cf-connecting-ip') ?? null,
+      summary: 'rejected-oversized',
+      declared_length: declaredLength,
+    }));
+    return new Response(null, {status: 204});
+  }
+
   let parsed: CspReportLegacy | CspReportModern[] | unknown;
   try {
     parsed = await context.request.json();
@@ -71,17 +68,3 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   return new Response(null, {status: 204});
 };
 
-function summarizeReport(report: unknown): string {
-  if (!report || typeof report !== 'object') return 'malformed';
-  if (Array.isArray(report)) {
-    const first = report[0] as CspReportModern | undefined;
-    const directive = first?.body?.effectiveDirective ?? 'unknown-directive';
-    const blocked = first?.body?.blockedURL ?? 'unknown-source';
-    return `${directive} blocked ${blocked}`;
-  }
-  const legacy = (report as CspReportLegacy)['csp-report'];
-  if (!legacy) return 'malformed';
-  const directive = legacy['effective-directive'] ?? legacy['violated-directive'] ?? 'unknown-directive';
-  const blocked = legacy['blocked-uri'] ?? 'unknown-source';
-  return `${directive} blocked ${blocked}`;
-}
