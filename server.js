@@ -1,6 +1,7 @@
 import path from 'path';
 import fsSync from 'fs';
 import fs from 'fs/promises';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { EventEmitter } from 'events';
 import { spawn } from 'child_process';
@@ -67,6 +68,21 @@ app.use((req, res, next) => {
   const done = trackRequest();
   res.on('finish', done);
   res.on('close', done);
+  next();
+});
+
+// Request-ID middleware. Tags every inbound request with a UUID via
+// `req.id`, mirrors it on the X-Request-Id response header, and accepts
+// an inbound X-Request-Id from upstream proxies (Cloudflare, n8n) so a
+// single request can be traced end-to-end through structured logs.
+// Route handlers should include `req.id` in their console.error lines
+// when something goes wrong — that's the correlation surface.
+app.use((req, res, next) => {
+  const upstream = req.headers['x-request-id'];
+  req.id = (typeof upstream === 'string' && /^[\w-]{1,64}$/.test(upstream))
+    ? upstream
+    : crypto.randomUUID();
+  res.setHeader('X-Request-Id', req.id);
   next();
 });
 
