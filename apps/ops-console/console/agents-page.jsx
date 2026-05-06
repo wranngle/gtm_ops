@@ -38,6 +38,7 @@ function AgentsPage({ setRoute }) {
   }, [activeKey]);
   const [adminPanel, setAdminPanel] = React.useState('prompt');
   const [contextSync, setContextSync] = React.useState(null);
+  const [adminFocusNotice, setAdminFocusNotice] = React.useState(null);
   const [newAgentPanelOpen, setNewAgentPanelOpen] = React.useState(Boolean(
     globalThis.AppContext.get().extra?.new_agent_intent,
   ));
@@ -45,13 +46,23 @@ function AgentsPage({ setRoute }) {
   const contextDump = globalThis.buildContextDump(appCtx);
   const contextLineCount = contextDump.split('\n').filter(Boolean).length;
   const adminCardRef = React.useRef(null);
+  const evalHandoffBannerRef = React.useRef(null);
+  const evalHandoffRef = React.useRef(null);
   React.useEffect(() => {
     const applySelection = (ctx) => {
       const nextKey = resolveVisibleKey(ctx.extra?.selected_agent_key);
       if (nextKey) setActiveKey(nextKey);
       if (['prompt', 'voice', 'tools', 'context', 'history', 'safety'].includes(ctx.extra?.agent_admin_panel)) {
+        const isEvalAgentHandoff = ctx.extra?.triggered_from === 'eval-agent-admin';
+        if (ctx.extra?.triggered_from !== 'agents-page') {
+          setContextSync(null);
+        }
         setAdminPanel(ctx.extra.agent_admin_panel);
         requestAnimationFrame(() => {
+          if (isEvalAgentHandoff) {
+            evalHandoffBannerRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+            return;
+          }
           adminCardRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
         });
       }
@@ -64,11 +75,70 @@ function AgentsPage({ setRoute }) {
     return globalThis.AppContext.subscribe(applySelection);
   }, [resolveVisibleKey]);
   const active = globalThis.AGENT_REGISTRY.byKey(activeKey) || visibleAgents[0];
-  const openAdminSection = (id) => {
-    setAdminPanel(id);
+  const appExtra = appCtx.extra || {};
+  const clearEvalHandoffExtra = (extra = {}) => {
+    const next = { ...extra };
+    [
+      'eval_admin_return_route',
+      'eval_run',
+      'selected_eval_suite',
+      'selected_eval_suite_id',
+      'selected_eval_context',
+      'selected_eval_run',
+      'selected_eval_verdict',
+      'selected_eval_score',
+      'eval_failed_axes',
+      'eval_evidence_path',
+      'agent_admin_panel',
+    ].forEach(key => { delete next[key]; });
+    return next;
+  };
+  const evalContextHandoff = appExtra.triggered_from === 'eval-agent-admin'
+    ? {
+        context: appExtra.selected_eval_context || appExtra.selected_eval_suite || appCtx.selection?.id || 'selected eval context',
+        scenario: appExtra.selected_eval_run || appExtra.eval_run?.scenario_id || 'selected run',
+        verdict: appExtra.selected_eval_verdict || appExtra.eval_run?.verdict || 'unknown',
+        score: appExtra.selected_eval_score || 'score unavailable',
+        failedAxes: appExtra.eval_failed_axes || 'none',
+        evidencePath: appExtra.eval_evidence_path || appExtra.eval_run?.result_path || '../fixtures/eval-runs.json',
+      }
+    : null;
+  React.useEffect(() => {
+    if (!evalContextHandoff || adminPanel !== 'context') return undefined;
+    const frame = requestAnimationFrame(() => {
+      evalHandoffBannerRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [appExtra.triggered_from, appExtra.selected_eval_run, adminPanel]);
+  const openAdminSection = (id, source = 'tab') => {
+    const nextPanel = id || 'prompt';
+    setAdminPanel(nextPanel);
+    if (source === 'shortcut') {
+      const label = {
+        prompt: 'Prompt',
+        voice: 'Voice',
+        tools: 'Tools',
+        context: 'Context',
+        history: 'History',
+        safety: 'Safety',
+      }[nextPanel] || 'Admin';
+      setAdminFocusNotice(`${active?.display_name || 'Agent'} local admin focused · ${label}`);
+    }
     requestAnimationFrame(() => {
       adminCardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      if (source === 'shortcut') adminCardRef.current?.focus?.({ preventScroll: true });
     });
+  };
+  const returnToEvalRun = () => {
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
+      selection: ctx.selection?.type === 'eval' ? ctx.selection : appCtx.selection,
+      extra: {
+        ...clearEvalHandoffExtra(ctx.extra || {}),
+        triggered_from: 'agents-return-to-eval',
+      },
+    });
+    setRoute?.('evals');
   };
   const openWorkspaceAgentSettings = () => {
     globalThis.AppContext.set({
@@ -170,10 +240,38 @@ function AgentsPage({ setRoute }) {
             href="https://elevenlabs.io/app/conversational-ai/agents"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Open ElevenLabs admin dashboard externally"
-          ><I3.ArrowUpRight size={12}/>ElevenLabs admin</a>
+            aria-label="External escape hatch: open ElevenLabs admin dashboard externally"
+          ><I3.ArrowUpRight size={12}/>External ElevenLabs admin</a>
         </>}
       />
+
+      {evalContextHandoff && (
+        <section
+          ref={evalHandoffBannerRef}
+          className="agent-eval-handoff agent-eval-handoff--banner"
+          data-testid="agent-eval-handoff-banner"
+          role="region"
+          aria-label="Eval run admin handoff"
+        >
+          <div>
+            <div className="eyebrow eyebrow--accent">eval run context</div>
+            <strong>{evalContextHandoff.scenario}</strong>
+            <p>
+              {evalContextHandoff.verdict} · {evalContextHandoff.score} · failed axes: {evalContextHandoff.failedAxes}
+            </p>
+          </div>
+          <div className="agent-eval-handoff__meta">
+            <span>review context <code className="mono">{evalContextHandoff.context}</code></span>
+            <span>run evidence <code className="mono">{evalContextHandoff.evidencePath}</code></span>
+          </div>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            data-testid="agent-return-to-eval-run-top"
+            onClick={returnToEvalRun}
+          ><I3.Beaker size={12}/>Back to Evals</button>
+        </section>
+      )}
 
       {newAgentPanelOpen && (
         <section
@@ -230,10 +328,13 @@ function AgentsPage({ setRoute }) {
       )}
 
       <div className="agents-grid">
-        <Card title={`agents · ${visibleAgents.length}`} className="card--accent">
+        <Card title={`agents · ${visibleAgents.length}`} className="card--accent agents-picker-card">
           <div className="vstack" style={{gap: 0}}>
             {visibleAgents.map(a => (
               <div key={a.key}
+                className="agent-row"
+                data-active={activeKey === a.key}
+                data-agent-key={a.key}
                 onClick={() => setActiveKey(a.key)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveKey(a.key); } }}
                 role="button"
@@ -290,9 +391,17 @@ function AgentsPage({ setRoute }) {
                 <Badge tone="accent">ready</Badge>
               </div>
               <div className="agent-admin-quick" aria-label="Local agent admin shortcuts">
-                <div>
-                  <div className="eyebrow eyebrow--accent">local admin</div>
-                  <strong>{active.key}</strong>
+                <div className="agent-admin-quick__head">
+                  <div>
+                    <div className="eyebrow eyebrow--accent">local admin</div>
+                    <strong>{active.key}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--xs"
+                    data-testid="agent-open-local-admin"
+                    onClick={() => openAdminSection(adminPanel || 'prompt', 'shortcut')}
+                  ><I3.Cog size={11}/>Open local admin</button>
                 </div>
                 <div className="agent-admin-quick__buttons">
                   {[
@@ -353,8 +462,16 @@ function AgentsPage({ setRoute }) {
             </div>
           </Card>
 
-          <div ref={adminCardRef}>
+          <div ref={adminCardRef} className="agent-admin-focus-target" tabIndex={-1}>
             <Card title={`admin · ${active.key}`} className="agent-admin-card">
+              {adminFocusNotice && (
+                <div
+                  className="agent-admin-focus-status"
+                  data-testid="agent-local-admin-focus-status"
+                  role="status"
+                  aria-live="polite"
+                >{adminFocusNotice}</div>
+              )}
               <div className="agent-admin-hero">
                 <window.ElevenUI.Orb size={76} state="talking" color1={active.avatar_color_1} color2={active.avatar_color_2} label={`${active.display_name} admin state`}/>
                 <div className="agent-admin-hero__copy">
@@ -466,6 +583,33 @@ function AgentsPage({ setRoute }) {
                 )}
                 {adminPanel === 'context' && (
                   <div className="agent-context-panel">
+                    {evalContextHandoff && (
+                      <section
+                        ref={evalHandoffRef}
+                        className="agent-eval-handoff"
+                        data-testid="agent-eval-handoff"
+                        role="region"
+                        aria-label="Eval run context handoff"
+                      >
+                        <div>
+                          <div className="eyebrow eyebrow--accent">eval run context</div>
+                          <strong>{evalContextHandoff.scenario}</strong>
+                          <p>
+                            {evalContextHandoff.verdict} · {evalContextHandoff.score} · failed axes: {evalContextHandoff.failedAxes}
+                          </p>
+                        </div>
+                        <div className="agent-eval-handoff__meta">
+                          <span>review context <code className="mono">{evalContextHandoff.context}</code></span>
+                          <span>run evidence <code className="mono">{evalContextHandoff.evidencePath}</code></span>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn--ghost btn--sm"
+                          data-testid="agent-return-to-eval-run"
+                          onClick={returnToEvalRun}
+                        ><I3.Beaker size={12}/>Back to Evals</button>
+                      </section>
+                    )}
                     {contextSync && (
                       <div className="agent-context-sync" data-testid="agent-context-sync" role="status">
                         <div>

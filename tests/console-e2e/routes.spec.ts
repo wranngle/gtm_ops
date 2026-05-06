@@ -43,6 +43,42 @@ for (const route of ROUTES) {
   });
 }
 
+test('route · Mission Control stat render does not leave navigation on a stale page body', async ({ openConsole }) => {
+  const page = await openConsole();
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Mission Control/i);
+
+  await page.evaluate(() => {
+    (window as any).proposalAmountToThousands = undefined;
+    (window as any).formatProposalTotal = undefined;
+  });
+  await page.getByRole('button', { name: /^7D$/i }).click();
+  await expect(page.locator('[data-testid="mission-stats"]')).toHaveAttribute('data-range', 'week');
+
+  await page.locator('.sb__item:has-text("Generate")').first().click();
+  await expect(page.locator('.tb__crumb--active')).toContainText('Generate');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Generate Proposal/i);
+  await expect(page.getByRole('heading', { level: 1 })).not.toContainText(/Mission Control/i);
+  expect(pageErrors).toEqual([]);
+});
+
+test('route · navigation resets the main scroller instead of landing mid-page', async ({ openConsole }) => {
+  const page = await openConsole();
+  const main = page.locator('main.scroll');
+
+  await page.locator('.sb__item:has-text("Evals")').first().click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Evals/i);
+  await main.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  await expect.poll(async () => main.evaluate((el) => el.scrollTop)).toBeGreaterThan(100);
+
+  await page.locator('.sb__item:has-text("Agents")').first().click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Agents/i);
+  await expect.poll(async () => main.evaluate((el) => el.scrollTop)).toBe(0);
+  await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+});
+
 /* Page wrapper margin/padding consistency.
  *
  * Every route's `.page` wrapper must use the canonical token-driven padding

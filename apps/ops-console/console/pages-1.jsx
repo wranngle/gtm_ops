@@ -4,6 +4,33 @@
 
 const I2 = window.Icon;
 
+function pageProposalAmountToThousands(amount) {
+  if (typeof window.proposalAmountToThousands === 'function') {
+    return window.proposalAmountToThousands(amount);
+  }
+  if (typeof amount === 'number' && Number.isFinite(amount)) return amount;
+  const match = String(amount || '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?\s*([kmb])?/i);
+  if (!match) return 0;
+  const value = Number.parseFloat(match[0]);
+  if (!Number.isFinite(value)) return 0;
+  const unit = (match[1] || 'k').toLowerCase();
+  if (unit === 'm') return value * 1000;
+  if (unit === 'b') return value * 1000000;
+  return value;
+}
+
+function pageFormatProposalTotal(totalK) {
+  if (typeof window.formatProposalTotal === 'function') {
+    return window.formatProposalTotal(totalK);
+  }
+  if (!Number.isFinite(totalK) || totalK === 0) return '$0K';
+  if (Math.abs(totalK) >= 1000) {
+    const millions = totalK / 1000;
+    return `$${millions.toFixed(Math.abs(millions) >= 10 ? 1 : 2).replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1')}M`;
+  }
+  return `$${totalK.toFixed(Math.abs(totalK) >= 100 ? 0 : 1).replace(/\.0$/, '')}K`;
+}
+
 /* ------------------------------------------------------------ */
 /* MISSION CONTROL (home) */
 /* ------------------------------------------------------------ */
@@ -285,8 +312,8 @@ function HomePage({ setRoute }) {
             const isActive = D.isActivePipelineCompany || (c => !['closed','lost'].includes(c.stage));
             const totalK = (D.companies || [])
               .filter(isActive)
-              .reduce((sum, c) => sum + window.proposalAmountToThousands(c.dealSize), 0);
-            return totalK > 0 ? window.formatProposalTotal(totalK) : stats.pipeline;
+              .reduce((sum, c) => sum + pageProposalAmountToThousands(c.dealSize), 0);
+            return totalK > 0 ? pageFormatProposalTotal(totalK) : stats.pipeline;
           })()}
           delta={stats.pipelineDelta}
           spark={sparks.pipeline}

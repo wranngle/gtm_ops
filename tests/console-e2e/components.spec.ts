@@ -149,12 +149,13 @@ test.describe('shell', () => {
     await expect(page.locator('.sb__nav[aria-label="ElevenLabs agents"] .sb__agent-orb')).toHaveCount(0);
   });
 
-  test('sidebar brand shows Wranngle wordmark + lasso without exposing a version', async ({ openConsole }) => {
+  test('sidebar brand shows Wranngle / gtm_ops console without exposing a version', async ({ openConsole }) => {
     const page = await openConsole();
     await expect(page).toHaveTitle(/Wranngle\s+\u00b7\s+gtm_ops console/i);
     await expect(page).not.toHaveTitle(/v\d/i);
     await expect(page.locator('.sb__brand .sb__wordmark')).toHaveAttribute('alt', /Wranngle/i);
     await expect(page.locator('.sb__brand .sb__logo--lasso img')).toHaveAttribute('src', /wranngle-lasso\.png/);
+    await expect(page.locator('.sb__brand')).toContainText(/gtm_ops console/i);
     await expect(page.locator('.sb__brand')).not.toContainText(/v\d/i);
     await expect(page.locator('.tb__crumbs')).toContainText(/Wranngle\s*\/\s*gtm_ops console/i);
     await expect(page.locator('.tb__crumbs')).not.toContainText(/v\d/i);
@@ -1248,6 +1249,29 @@ test.describe('mission control', () => {
     await expect(spark.locator('.spark-tooltip')).not.toContainText('-100%');
   });
 
+  test('sparkline hover does not format tiny absolute counts as percentages', async ({ openConsole }) => {
+    const page = await openConsole();
+
+    await page.evaluate(() => {
+      const host = document.createElement('div');
+      host.id = 'tiny-count-spark-host';
+      document.body.appendChild(host);
+      const root = (globalThis as any).ReactDOM.createRoot(host);
+      root.render((globalThis as any).React.createElement((globalThis as any).Sparkline, {
+        data: [0, 1, 0],
+        label: 'Tiny count trend',
+        pointLabels: ['first sample', 'single event', 'latest sample'],
+      }));
+    });
+
+    const spark = page.locator('#tiny-count-spark-host .spark-wrap');
+    await expect(spark).toBeVisible();
+    await spark.locator('.spark-point').nth(1).hover({ force: true });
+    await expect(spark.locator('.spark-tooltip')).toContainText('Tiny count trend · single event: 1 · +1 vs prior');
+    await expect(spark.locator('.spark-tooltip')).not.toContainText('100%');
+    await expect(spark.locator('.spark-tooltip')).not.toContainText('+100%');
+  });
+
   test('qualified KPI carries trend evidence instead of dead space', async ({ openConsole }) => {
     const page = await openConsole();
 
@@ -1338,6 +1362,29 @@ test.describe('pipeline', () => {
     await expect(panel.locator('[data-testid="agent-prompt-role"]')).toContainText(live.sarah.role);
     await expect(panel.locator('[data-testid="agent-prompt-system"]')).toContainText(live.sarah.sys.slice(0, 40));
     expect(live.sc.sys).not.toBe(live.sarah.sys);
+  });
+
+  test('Agents page has one explicit ElevenLabs escape hatch; recovery actions stay local', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+
+    const externalLinks = page.locator('a[href*="elevenlabs.io"], a[href*="elevenlabs.com"]');
+    await expect(externalLinks).toHaveCount(1);
+    const escape = page.locator('[data-testid="agents-elevenlabs-escape"]');
+    await expect(escape).toBeVisible();
+    await expect(escape).toHaveAttribute('href', 'https://elevenlabs.io/app/conversational-ai/agents');
+    await expect(escape).toHaveAttribute('target', '_blank');
+    await expect(escape).toHaveAttribute('rel', /noopener/);
+    await expect(escape).toHaveAttribute('aria-label', /External escape hatch/i);
+    await expect(escape).toContainText(/External ElevenLabs admin/i);
+    await expect(escape).not.toContainText(/^ElevenLabs admin$/i);
+
+    const localAdmin = page.getByRole('button', { name: /Open local admin/i }).first();
+    await expect(localAdmin).toBeVisible({ timeout: 10_000 });
+    await localAdmin.click();
+    await expect(page.locator('.agent-admin-card')).toBeInViewport();
+    await expect(page.locator('[data-testid="agent-local-admin-focus-status"]')).toContainText(/local admin focused/i);
+    await expect(page.locator('.convai-fallback a[href*="elevenlabs"]')).toHaveCount(0);
   });
 
   test('Agents admin "Safety" tab reflects each agent\'s settings block, not generic copy', async ({ openConsole }) => {
@@ -2461,6 +2508,8 @@ test.describe('evals', () => {
     const title = page.locator('[data-testid="eval-active-scenario-title"]');
     await expect(title).toContainText('Noisy Caller Transcription Stress');
     await expect(title).not.toContainText('noisy-caller-transcription-stress');
+    await expect(page.locator('[data-testid="eval-active-regression-review-copy"]')).toContainText('1 failed judge axis needs review before this prompt ships.');
+    await expect(page.locator('[data-testid="eval-active-regression-review-copy"]')).not.toContainText(/axis need review/i);
     await expect(page.locator('[data-testid="eval-active-scenario-id"]')).toContainText('scenario noisy-caller-transcription-stress');
     const titleFontPx = await title.evaluate(el => Number.parseFloat(getComputedStyle(el as HTMLElement).fontSize));
     expect(titleFontPx, 'mobile active-regression title should stay panel-scale, not hero-scale').toBeLessThanOrEqual(22);
@@ -2526,6 +2575,229 @@ test.describe('evals', () => {
     await expect(page.locator('[data-testid="eval-sync-stamp"]')).toContainText(/synced \d{1,2}:\d{2}/);
   });
 
+  test('Evals run-bound lab actions stay disabled until a harness run is loaded', async ({ openConsole, page }) => {
+    let releaseRuns!: () => void;
+    const runsGate = new Promise<void>(resolve => {
+      releaseRuns = resolve;
+    });
+    await page.route('**/fixtures/eval-runs.json', async (route) => {
+      await runsGate;
+      await route.continue();
+    });
+
+    await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+
+    const localAdmin = page.locator('[data-testid="eval-local-agent-admin"]');
+    const syncEvidence = page.locator('[data-testid="eval-sync-context-evidence"]');
+    const readiness = page.locator('[data-testid="eval-agent-readiness"]');
+    await expect(readiness).toBeVisible();
+    await expect(readiness).toHaveAttribute('data-tone', 'neutral');
+    await expect(readiness).toContainText(/Waiting for harness run evidence/i);
+    await expect(readiness).toContainText(/Local admin and evidence sync unlock/i);
+    await expect(readiness).not.toContainText(/ElevenLabs admin/i);
+    const evalAgentPanel = page.locator('.eval-agent-column .el-agent-panel');
+    await expect(evalAgentPanel).toContainText(/harness run pending/i);
+    await expect(evalAgentPanel).toContainText(/Harness run required before local context is armed/i);
+    await expect(evalAgentPanel).toContainText(/pending/i);
+    await expect(evalAgentPanel).not.toContainText(/Baseline context armed/i);
+    await expect(evalAgentPanel).not.toContainText(/selected run/i);
+    await expect(localAdmin).toBeVisible();
+    await expect(localAdmin).toBeDisabled();
+    await expect(localAdmin).toHaveAttribute('title', /Load a harness run/i);
+    await expect(syncEvidence).toBeVisible();
+    await expect(syncEvidence).toBeDisabled();
+    await expect(syncEvidence).toHaveAttribute('title', /Load a harness run before syncing/i);
+
+    releaseRuns();
+    await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
+    await expect(readiness).toContainText(/run context armed/i);
+    await expect(readiness).toContainText(/ready for local admin review and evidence sync/i);
+    await expect(readiness).toHaveAttribute('data-tone', /healthy|critical/);
+    await expect(evalAgentPanel).toContainText(/Baseline context armed|Regression context armed/i);
+    await expect(evalAgentPanel).not.toContainText(/harness run pending/i);
+    await expect(localAdmin).toBeEnabled();
+    await expect(localAdmin).toHaveAttribute('title', /Open this eval run/i);
+    await expect(syncEvidence).toBeEnabled();
+    await expect(syncEvidence).toHaveAttribute('title', /Sync this harness run/i);
+  });
+
+  test('Evals local agent admin carries the active run into the Agents context panel', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
+
+    const scenarioText = await page.locator('[data-testid="eval-active-scenario-id"]').textContent();
+    const scenario = (scenarioText || '').replace(/^scenario\s+/i, '').trim();
+    expect(scenario).toBeTruthy();
+    const readiness = page.locator('[data-testid="eval-agent-readiness"]');
+    await expect(readiness).toContainText(scenario);
+    await expect(readiness).toContainText(/prompt\/sewy\/v\d/i);
+    await expect(readiness).toContainText(/ready for local admin review and evidence sync/i);
+
+    await page.locator('[data-testid="eval-local-agent-admin"]').click();
+
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    await expect(page.locator('.agent-admin-tab:has-text("Context")')).toHaveAttribute('aria-selected', 'true');
+    const topHandoff = page.locator('[data-testid="agent-eval-handoff-banner"]');
+    await expect(topHandoff).toBeVisible();
+    await expect(topHandoff).toContainText(scenario);
+    await expect(topHandoff).toContainText(/review context/i);
+    await expect(topHandoff).toContainText(/prompt\/sewy\/v\d/i);
+    await expect(topHandoff).not.toContainText(/suite context/i);
+    await expect(topHandoff).not.toContainText(/Discovery — Pain Quantification/i);
+    await expect(topHandoff).toContainText(/run evidence/i);
+    const handoff = page.locator('[data-testid="agent-eval-handoff"]');
+    await expect(handoff).toContainText(scenario);
+    await expect(handoff).toContainText(/fail|pass|unknown/i);
+    await expect(handoff).toContainText(/review context/i);
+    await expect(handoff).toContainText(/prompt\/sewy\/v\d/i);
+    await expect(handoff).not.toContainText(/suite context/i);
+    await expect(handoff).not.toContainText(/Discovery — Pain Quantification/i);
+    await expect(handoff).toContainText(/run evidence/i);
+    await expect(handoff.getByRole('button', { name: /Back to Evals/i })).toBeVisible();
+    const topHandoffInViewport = await topHandoff.evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      return box.top >= 0 && box.bottom <= window.innerHeight;
+    });
+    expect(topHandoffInViewport).toBe(true);
+    const agentPickerLayout = await page.locator('.agents-grid').evaluate((grid) => {
+      const picker = grid.querySelector('.agents-picker-card');
+      const admin = grid.querySelector('.agent-admin-card');
+      const pickerBox = picker?.getBoundingClientRect();
+      const adminBox = admin?.getBoundingClientRect();
+      return {
+        pickerVisibleInViewport: Boolean(
+          pickerBox
+          && pickerBox.bottom > 0
+          && pickerBox.top < window.innerHeight
+          && pickerBox.width > 240,
+        ),
+        pickerStaysInLeftColumn: Boolean(pickerBox && adminBox && pickerBox.right <= adminBox.left),
+      };
+    });
+    expect(agentPickerLayout).toEqual({
+      pickerVisibleInViewport: true,
+      pickerStaysInLeftColumn: true,
+    });
+    const quickAdminKeyLines = await page.locator('.agent-admin-quick strong').first().evaluate((node) => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      return Array.from(range.getClientRects()).length;
+    });
+    expect(quickAdminKeyLines).toBe(1);
+    const contextDump = page.locator('[data-testid="agent-context-dump"]');
+    await expect(contextDump).toContainText(`active_eval_run.scenario: ${scenario}`);
+    await expect(contextDump).toContainText(/active_eval_run\.verdict: (pass|fail|unknown)/);
+    await expect(contextDump).toContainText(/active_eval_run\.score: \d+%/);
+    await expect(contextDump).toContainText(/selected_eval_score: \d+%|selected_eval_score: --/);
+    await expect(contextDump).toContainText(/eval_failed_axes: /);
+
+    const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
+    expect(ctx.extra.triggered_from).toBe('eval-agent-admin');
+    expect(ctx.extra.agent_admin_panel).toBe('context');
+    expect(ctx.extra.selected_eval_run).toBe(scenario);
+    expect(ctx.extra.selected_eval_context).toContain('prompt/sewy/v');
+    expect(ctx.extra.selected_eval_context).not.toContain('Discovery');
+    expect(ctx.extra.selected_eval_suite).toBe(ctx.extra.selected_eval_context);
+    expect(ctx.extra.selected_eval_suite_id).toBeTruthy();
+    expect(ctx.extra.selected_eval_verdict).toMatch(/pass|fail|unknown/);
+    expect(ctx.extra.selected_eval_score).toMatch(/\d+%|--/);
+    expect(ctx.extra.eval_failed_axes).toEqual(expect.any(String));
+    expect(ctx.extra.eval_admin_return_route).toBe('evals');
+    expect(ctx.extra.eval_evidence_path).toBeTruthy();
+    expect(ctx.extra.eval_run).toEqual(expect.any(Object));
+
+    await handoff.getByRole('button', { name: /Back to Evals/i }).click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Evals');
+    await expect(page.locator('[data-testid="eval-active-scenario-id"]')).toContainText(scenario);
+
+    const returnedCtx = await page.evaluate(() => (globalThis as any).AppContext.get());
+    expect(returnedCtx.extra.triggered_from).toBe('agents-return-to-eval');
+    expect(returnedCtx.extra.eval_admin_return_route).toBeUndefined();
+    expect(returnedCtx.extra.eval_run).toBeUndefined();
+
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    await expect(page.locator('[data-testid="agent-eval-handoff-banner"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="agent-eval-handoff"]')).toHaveCount(0);
+  });
+
+  test('Evals local agent admin replaces any sealed Agents context snapshot', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+    await page.locator('[data-testid="agent-refresh-context"]').click();
+    await expect(page.locator('.agent-admin-tab:has-text("Context")')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-testid="agent-context-dump"]')).toHaveAttribute('data-source', 'synced');
+    await expect(page.locator('[data-testid="agent-context-dump"]')).toContainText(/active_route: agents/i);
+
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
+    const scenarioText = await page.locator('[data-testid="eval-active-scenario-id"]').textContent();
+    const scenario = (scenarioText || '').replace(/^scenario\s+/i, '').trim();
+    expect(scenario).toBeTruthy();
+
+    await page.locator('[data-testid="eval-local-agent-admin"]').click();
+
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    const dump = page.locator('[data-testid="agent-context-dump"]');
+    await expect(dump).toHaveAttribute('data-source', 'live');
+    await expect(dump).toContainText(`active_eval_run.scenario: ${scenario}`);
+  });
+
+  test('Sidebar agent navigation clears eval-run admin handoff metadata', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
+    await page.locator('[data-testid="eval-local-agent-admin"]').click();
+    await expect(page.locator('[data-testid="agent-eval-handoff-banner"]')).toBeVisible();
+    await expect(page.locator('[data-testid="agent-context-dump"]')).toContainText(/active_eval_run\.scenario:/);
+
+    await page.locator('.sb__nav[aria-label="ElevenLabs agents"] .sb__item:has-text("Sarah")').first().click();
+
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    await expect(page.locator('[data-testid="agent-eval-handoff-banner"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="agent-eval-handoff"]')).toHaveCount(0);
+    await expect(page.locator('.agent-row[data-active="true"]')).toContainText(/Sarah/i);
+    await page.locator('.agent-admin-tab:has-text("Context")').click();
+    const dump = page.locator('[data-testid="agent-context-dump"]');
+    await expect(dump).not.toContainText(/active_eval_run\.scenario:/);
+    await expect(dump).not.toContainText(/selected_eval_run:/);
+    await expect(dump).not.toContainText(/eval_admin_return_route:/);
+
+    const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
+    expect(ctx.extra.triggered_from).toBe('sidebar-agent-nav');
+    expect(ctx.extra.selected_agent_key).toBe('intake');
+    expect(ctx.extra.eval_run).toBeUndefined();
+    expect(ctx.extra.selected_eval_run).toBeUndefined();
+    expect(ctx.extra.eval_admin_return_route).toBeUndefined();
+    expect(ctx.extra.agent_admin_panel).toBeUndefined();
+  });
+
+  test('Evals transcript replay progressively reveals the evaluated turns', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
+
+    const transcript = page.locator('.el-transcript').first();
+    const messages = transcript.locator('[data-testid="el-transcript-message"]');
+    const loadedTurns = await messages.count();
+    expect(loadedTurns, 'active eval should expose more than one turn for replay').toBeGreaterThan(1);
+    await expect(transcript.locator('[data-testid="eval-transcript-replay-status"]')).toContainText(`${loadedTurns} turns loaded`);
+
+    await transcript.getByRole('button', { name: /Replay evaluated path/i }).click();
+
+    await expect(transcript.getByRole('button', { name: /Stop voice replay/i })).toBeVisible();
+    await expect(transcript.locator('[data-testid="eval-transcript-replay-status"]')).toContainText(new RegExp(`replaying turn 1/${loadedTurns}`));
+    await expect(messages).toHaveCount(1);
+    await expect(transcript.locator('[data-testid="eval-transcript-replay-status"]')).toContainText(new RegExp(`replaying turn ${loadedTurns}/${loadedTurns}`), { timeout: loadedTurns * 800 });
+    await expect(messages).toHaveCount(loadedTurns);
+
+    await transcript.getByRole('button', { name: /Stop voice replay/i }).click();
+    await expect(transcript.locator('[data-testid="eval-transcript-replay-status"]')).toContainText(`${loadedTurns} turns loaded`);
+    await expect(messages).toHaveCount(loadedTurns);
+  });
+
   test('Evals artifacts action opens a focused in-viewport artifact drawer', async ({ openConsole, page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await openConsole();
@@ -2539,6 +2811,8 @@ test.describe('evals', () => {
     await expect(drawer).toBeFocused();
     await expect(drawer).toContainText(/artifact review packet/i);
     await expect(drawer.locator('[data-testid="eval-artifact-review"]')).toContainText(/review evidence/i);
+    await expect(drawer.locator('[data-testid="eval-artifact-review-copy"]')).toContainText(/failed judge (axis needs|axes need) operator review|No failed judge axes/i);
+    await expect(drawer.locator('[data-testid="eval-artifact-review-copy"]')).not.toContainText(/axis require|axes requires/i);
     await expect(drawer.locator('[data-testid="eval-artifact-scenario"]')).toContainText(/\S+/);
     await expect(drawer.locator('[data-testid="eval-artifact-score"]')).toContainText(/\d+%|--/);
     await expect(drawer.locator('[data-testid="eval-artifact-path"]')).toContainText(/fixtures\/runs|eval-runs\.json/i);
@@ -3210,6 +3484,23 @@ test.describe('agents page', () => {
     await expect(page.locator('.agent-session-strip')).toContainText(/route\s+agents/i);
     await page.locator('.agent-admin-tab:has-text("Context")').click();
     await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/active_route: agents/i);
+  });
+
+  test('Agents navigation publishes the current route before the local ConvAI wrapper renders', async ({ openConsole }) => {
+    const page = await openConsole();
+
+    await page.locator('.sb__item:has-text("Generate")').first().click();
+    await expect(page.locator('[data-testid="agent-context-bar"]')).toHaveCount(0);
+    await expect(page.locator('.tb__crumb--active')).toContainText('Generate');
+
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    await expect(page.locator('[data-testid="agent-context-bar"]')).toContainText(/from\s+agents/i);
+    await expect(page.locator('.agent-session-strip')).toContainText(/route\s+agents/i);
+    await page.locator('.agent-admin-tab:has-text("Context")').click();
+    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/active_route: agents/i);
+    await expect(page.getByRole('region', { name: /dynamic context dump/i })).not.toContainText(/active_route: generate/i);
   });
 
   test('agent Context tab reuses the shared app context without hook-order errors', async ({ openConsole }) => {

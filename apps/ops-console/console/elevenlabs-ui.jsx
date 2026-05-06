@@ -56,7 +56,7 @@ function ELVoiceButton({ active, disabled, onClick, children }) {
 function ELMessage({ role, children, meta }) {
   const from = role === 'caller' || role === 'user' ? 'user' : role === 'tool_response' || role === 'tool' ? 'tool' : 'assistant';
   return (
-    <div className={`el-message el-message--${from}`}>
+    <div className={`el-message el-message--${from}`} data-testid="el-transcript-message" data-role={from}>
       <div className="el-message__bubble">
         {meta && <div className="el-message__meta">{meta}</div>}
         <div className="el-response">{children}</div>
@@ -67,7 +67,7 @@ function ELMessage({ role, children, meta }) {
 
 function ELConversation({ messages = [], emptyTitle = 'No transcript available', emptySub = 'Select a run with transcript output.' }) {
   return (
-    <div className="el-conversation" role="log" tabIndex={0} aria-label="Evaluation conversation transcript">
+    <div className="el-conversation" role="log" tabIndex={0} aria-label="Evaluation conversation transcript" data-testid="el-transcript-log">
       {messages.length === 0 ? (
         <div className="el-conversation__empty">
           <ELOrb size={42} state="idle"/>
@@ -86,6 +86,7 @@ function ELConversation({ messages = [], emptyTitle = 'No transcript available',
 }
 
 function ELTranscriptViewer({ run, detail, replaying, onReplay }) {
+  const [replayCursor, setReplayCursor] = React.useState(null);
   const transcript = (detail && (detail.transcript_summary || detail.transcript || detail.messages)) || [];
   const axes = run?.score?.axes || [];
   const generated = transcript.length ? transcript : axes.map((axis, i) => ({
@@ -93,15 +94,44 @@ function ELTranscriptViewer({ run, detail, replaying, onReplay }) {
     role: axis.pass ? 'agent' : 'caller',
     text: `${axis.name}: ${axis.detail}`,
   }));
+  React.useEffect(() => {
+    if (!replaying || generated.length === 0) {
+      setReplayCursor(null);
+      return undefined;
+    }
+    setReplayCursor(0);
+    let nextIndex = 0;
+    const timer = setInterval(() => {
+      nextIndex += 1;
+      if (nextIndex >= generated.length) {
+        setReplayCursor(generated.length - 1);
+        clearInterval(timer);
+        return;
+      }
+      setReplayCursor(nextIndex);
+    }, 650);
+    return () => clearInterval(timer);
+  }, [replaying, generated.length, run?.scenario_id]);
+  const visibleMessages = replaying && replayCursor != null
+    ? generated.slice(0, replayCursor + 1)
+    : generated;
+  const progress = replaying && replayCursor != null
+    ? replayCursor + 1
+    : generated.length;
   return (
     <div className="el-transcript">
       <div className="el-transcript__toolbar">
-        <ELVoiceButton active={replaying} onClick={onReplay}>
+        <ELVoiceButton active={replaying} disabled={!generated.length} onClick={onReplay}>
           {replaying ? 'Stop voice replay' : 'Replay evaluated path'}
         </ELVoiceButton>
+        <div className="el-transcript__replay-status" data-testid="eval-transcript-replay-status" role="status" aria-live="polite">
+          {replaying && generated.length
+            ? `replaying turn ${progress}/${generated.length}`
+            : `${generated.length} ${generated.length === 1 ? 'turn' : 'turns'} loaded`}
+        </div>
         <ELBarVisualizer active={replaying} tone={run?.verdict === 'fail' ? 'critical' : 'healthy'}/>
       </div>
-      <ELConversation messages={generated}/>
+      <ELConversation messages={visibleMessages}/>
     </div>
   );
 }
