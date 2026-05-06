@@ -575,7 +575,7 @@ app.use((req, res, next) => {
 // Audit logging endpoints
 app.use(auditContextMiddleware);
 
-app.get('/api/audit-logs', generalLimiter, async (req, res) => {
+app.get('/api/audit-logs', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, user_id, action, resource_type, start_date, end_date, limit, offset } = req.query;
     const filters = {};
@@ -597,7 +597,7 @@ app.get('/api/audit-logs', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/audit-logs/export', generalLimiter, async (req, res) => {
+app.get('/api/audit-logs/export', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, user_id, action, start_date, end_date } = req.query;
     const filters = {};
@@ -618,7 +618,7 @@ app.get('/api/audit-logs/export', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/audit-logs/verify', generalLimiter, async (req, res) => {
+app.get('/api/audit-logs/verify', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const limit = req.query.limit ? Number.parseInt(req.query.limit, 10) : 1000;
     const result = await getAuditLogger().verifyIntegrity(limit);
@@ -629,7 +629,7 @@ app.get('/api/audit-logs/verify', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/audit-logs/:logId', generalLimiter, async (req, res) => {
+app.get('/api/audit-logs/:logId', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const log = await getAuditLogger().getLog(req.params.logId);
     if (!log) {
@@ -775,7 +775,7 @@ app.get('/api/branding/domain/verify', generalLimiter, async (req, res) => {
 });
 
 // Admin dashboard endpoints
-app.get('/api/admin/dashboard', generalLimiter, async (req, res) => {
+app.get('/api/admin/dashboard', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, period } = req.query;
     const metrics = await getAdminManager().getDashboardMetrics(workspace_id || 'default', period || 'this_month');
@@ -786,7 +786,7 @@ app.get('/api/admin/dashboard', generalLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/admin/health', generalLimiter, async (req, res) => {
+app.get('/api/admin/health', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const health = await getAdminManager().getSystemHealth();
     res.json(health);

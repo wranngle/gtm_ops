@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
-# lint-rbac-coverage.sh — enforce requireRole on every Express mutation route.
+# lint-rbac-coverage.sh — enforce requireRole on Express mutation routes
+# AND on sensitive read routes that expose admin/audit data.
 #
-# WHY: server.js historically grew several POST/PATCH/PUT/DELETE handlers with
-# no role check. The dev-mode auth shim (lib/rbac.js) defaults missing roles
-# to "viewer", so any unprotected mutation route silently accepts any caller
-# that can hit the API. PRs #98–#99 swept the existing surface; this lint
-# stops the regression.
+# WHY (mutations): server.js historically grew several POST/PATCH/PUT/DELETE
+# handlers with no role check. The dev-mode auth shim (lib/rbac.js) defaults
+# missing roles to "viewer" in production, so any unprotected mutation route
+# silently accepts any caller. PRs #98–#99 swept the surface; this lint stops
+# the regression.
+#
+# WHY (sensitive reads): /api/audit-logs/* exposes the full audit history
+# (workspace_id, user_id, ip_address, metadata). /api/admin/* exposes
+# operator dashboards. Letting a viewer-role caller read either one is a
+# data-leak surface, not just a missing-mutation problem.
 #
 # WHAT: walks every line of server.js (override with first arg) that calls
-# app.<method>('<path>', ...) where method ∈ {post, patch, put, delete} and
-# fails if the same line is missing requireRole(. Multi-line route signatures
+# app.<method>('<path>', ...) where:
+#   - method ∈ {post, patch, put, delete}                              (always)
+#   - method == get AND path starts with /api/audit-logs or /api/admin (sensitive)
+# Fails if the same line is missing requireRole(. Multi-line route signatures
 # are not supported — keep the route declaration on one line, which is the
 # convention already in use across server.js.
 #
-# EXIT: 0 when every mutation route is protected, 1 when any are not, 2 on
+# EXIT: 0 when every flagged route is protected, 1 when any are not, 2 on
 # misuse (target file missing).
 #
 # Usage:
@@ -33,33 +41,46 @@ fi
 # Edit with care — every entry should be justified in the comment.
 allow_path_regex='^$'  # default: nothing allowlisted
 
+# Sensitive read-path prefixes — GETs under these need requireRole because
+# they expose admin or audit data. Add new prefixes here as the API grows.
+sensitive_get_prefix_re='^/api/(audit-logs|admin)(/|$)'
+
 unprotected=()
 
-# Match `app.<method>(<args...>)` on a single line. The path argument is the
-# first quoted string after the open paren. We only need it for diagnostics.
-mutation_re='^[[:space:]]*app\.(post|patch|put|delete)\('
-while IFS= read -r line_with_no; do
-  lineno="${line_with_no%%:*}"
-  line="${line_with_no#*:}"
+scan_route() {
+  local line_with_no="$1"
+  local lineno="${line_with_no%%:*}"
+  local line="${line_with_no#*:}"
 
-  if [[ ! "$line" =~ $mutation_re ]]; then
-    continue
-  fi
-
-  # Pull the path arg out for the error message; tolerate either quote style.
+  # Pull the path arg for diagnostics (tolerate either quote style).
+  local route_path
   route_path=$(echo "$line" | sed -nE "s/.*app\.[a-z]+\(['\"]([^'\"]*)['\"].*/\1/p")
 
   if [[ -n "$allow_path_regex" && "$route_path" =~ $allow_path_regex ]]; then
-    continue
+    return
   fi
 
   if [[ "$line" != *"requireRole("* ]]; then
     unprotected+=("${target}:${lineno}: ${route_path}")
   fi
+}
+
+# Mutation routes: always require role.
+while IFS= read -r line_with_no; do
+  scan_route "$line_with_no"
 done < <(grep -nE "^[[:space:]]*app\.(post|patch|put|delete)\(" "$target" || true)
 
+# Sensitive GETs: require role only when path matches the prefix list.
+while IFS= read -r line_with_no; do
+  line="${line_with_no#*:}"
+  route_path=$(echo "$line" | sed -nE "s/.*app\.get\(['\"]([^'\"]*)['\"].*/\1/p")
+  if [[ "$route_path" =~ $sensitive_get_prefix_re ]]; then
+    scan_route "$line_with_no"
+  fi
+done < <(grep -nE "^[[:space:]]*app\.get\(" "$target" || true)
+
 if [[ ${#unprotected[@]} -gt 0 ]]; then
-  echo "lint-rbac-coverage: mutation routes missing requireRole():" >&2
+  echo "lint-rbac-coverage: routes missing requireRole():" >&2
   for entry in "${unprotected[@]}"; do
     echo "  $entry" >&2
   done
@@ -70,5 +91,5 @@ if [[ ${#unprotected[@]} -gt 0 ]]; then
   exit 1
 fi
 
-echo "lint-rbac-coverage: all mutation routes in $target are role-guarded."
+echo "lint-rbac-coverage: all flagged routes in $target are role-guarded."
 exit 0
