@@ -25,7 +25,7 @@ import { getAuditLogger, auditContextMiddleware, RetentionPolicy } from './lib/a
 import { BrandingManager } from './lib/branding.js';
 import { AdminManager } from './lib/admin.js';
 import { GdprManager } from './lib/gdpr.js';
-import { Role, getPermissionSummary, getUserManager } from './lib/rbac.js';
+import { Role, getPermissionSummary, getUserManager, requireRole } from './lib/rbac.js';
 
 // =============================================================================
 // Evaluation API endpoints
@@ -549,6 +549,26 @@ app.get('/api/documents/:executionId/diff/:v1/:v2', generalLimiter, async (req, 
   }
 });
 
+// Dev-mode auth shim. lib/rbac.js#requireRole reads `req.user_role` and
+// 401s if it's missing. Production is expected to wire this through a
+// real auth flow (session cookie, JWT, OAuth) that populates user_role
+// before route handlers run. For the local dev server we accept an
+// X-User-Role header — operator can simulate any role via curl/Postman.
+//
+// Default role when header is absent: `owner` (full access). The dev
+// server is bound to 127.0.0.1 (PR #92) so external attackers can't
+// hit it; the role default just keeps the local-curl flow trivial.
+//
+// Production override: set `WRANNGLE_AUTH_DEFAULT_ROLE=viewer` (or any
+// role below admin) so unauthenticated requests can't reach the
+// admin-only routes even if this shim is the only auth layer.
+app.use((req, res, next) => {
+  const headerRole = req.headers['x-user-role'];
+  const fallback = process.env.WRANNGLE_AUTH_DEFAULT_ROLE || Role.OWNER;
+  req.user_role = (typeof headerRole === 'string' && headerRole) ? headerRole : fallback;
+  next();
+});
+
 // Audit logging endpoints
 app.use(auditContextMiddleware);
 
@@ -620,7 +640,7 @@ app.get('/api/audit-logs/:logId', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/audit-logs/cleanup', generalLimiter, async (req, res) => {
+app.post('/api/audit-logs/cleanup', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const plan = req.body.plan || 'free';
     const retentionDays = RetentionPolicy[plan] || RetentionPolicy.free;
@@ -877,7 +897,7 @@ app.get('/api/gdpr/export/:jobId/download', generalLimiter, async (req, res) => 
   }
 });
 
-app.post('/api/gdpr/delete', generalLimiter, async (req, res) => {
+app.post('/api/gdpr/delete', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { user_id, reason } = req.body;
     if (!user_id) return res.status(400).json({ error: 'user_id required' });
@@ -925,7 +945,7 @@ app.get('/api/workspace/:id/users', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/users/:id/role', generalLimiter, async (req, res) => {
+app.post('/api/users/:id/role', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { workspace_id, new_role } = req.body;
     const userId = req.params.id;
@@ -950,7 +970,7 @@ app.post('/api/users/:id/role', generalLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/workspace/:id/invite', generalLimiter, async (req, res) => {
+app.post('/api/workspace/:id/invite', requireRole(Role.OWNER, Role.ADMIN), generalLimiter, async (req, res) => {
   try {
     const { email, role } = req.body;
     if (!email) return res.status(400).json({ error: 'email required' });
