@@ -270,11 +270,6 @@ export type LightHealthPayload = {
  * Build the lightweight /api/health response payload. Pure function
  * so the contract can be pinned by unit tests without spinning up
  * an Express app or pulling server.js into the test process.
- *
- * NOTE: This module currently has both `health.js` and `health.ts`.
- * server.js imports from `./lib/health.js` so the .js file is the
- * runtime path; the .ts file is what tsc reads. Until the duplicate
- * is collapsed, any new export needs to live in BOTH files.
  */
 export function buildLightHealthPayload(
   env: Record<string, string | undefined> = process.env,
