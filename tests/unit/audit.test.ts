@@ -282,7 +282,8 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
     await logger.log(AuditAction.USER_LOGIN, 'user', 'u1', {ip: '1.1.1.1'});
     await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd1', {title: 'Original'});
     await logger.log(AuditAction.DOCUMENT_UPDATED, 'doc', 'd1', {title: 'Edited'});
-    expect((await logger.verifyIntegrity()).valid).toBe(true);
+    const integrity = await logger.verifyIntegrity();
+    expect(integrity.valid).toBe(true);
     await logger.close();
 
     // WHEN: An attacker mutates the middle row's metadata directly via SQL
@@ -299,7 +300,10 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
             reject(err);
             return;
           }
-          db.close((closeErr) => { closeErr ? reject(closeErr) : resolve(); });
+          db.close((closeErr) => {
+            if (closeErr) reject(closeErr);
+            else resolve();
+          });
         },
       );
     });
@@ -322,7 +326,8 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
     await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd1', {});
     await logger.log(AuditAction.DOCUMENT_UPDATED, 'doc', 'd1', {});
     await logger.log(AuditAction.DOCUMENT_DOWNLOADED, 'doc', 'd1', {});
-    expect((await logger.verifyIntegrity()).valid).toBe(true);
+    const integrity = await logger.verifyIntegrity();
+    expect(integrity.valid).toBe(true);
     await logger.close();
 
     // WHEN: An attacker deletes row #2 directly (bypass the API).
@@ -336,7 +341,10 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
             reject(err);
             return;
           }
-          db.close((closeErr) => { closeErr ? reject(closeErr) : resolve(); });
+          db.close((closeErr) => {
+            if (closeErr) reject(closeErr);
+            else resolve();
+          });
         },
       );
     });
@@ -359,7 +367,8 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
     await logger.log(AuditAction.USER_LOGIN, 'user', 'u1', {});
     await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd1', {});
     await logger.log(AuditAction.DOCUMENT_UPDATED, 'doc', 'd1', {});
-    expect((await logger.verifyIntegrity()).valid).toBe(true);
+    const integrity = await logger.verifyIntegrity();
+    expect(integrity.valid).toBe(true);
     await logger.close();
 
     // WHEN: An attacker rewrites the stored hash on row #2 directly,
@@ -378,7 +387,10 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
             reject(err);
             return;
           }
-          db.close((closeErr) => { closeErr ? reject(closeErr) : resolve(); });
+          db.close((closeErr) => {
+            if (closeErr) reject(closeErr);
+            else resolve();
+          });
         },
       );
     });
