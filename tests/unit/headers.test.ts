@@ -54,4 +54,30 @@ describe('apps/ops-console/_headers', () => {
     expect(text).toMatch(/Referrer-Policy:/);
     expect(text).toMatch(/Strict-Transport-Security:/);
   });
+
+  it('wires CSP violation reporting to /api/csp-report (both legacy + modern)', () => {
+    // PR #102 added the /api/csp-report Pages Function and the
+    // Reporting-Endpoints + report-uri/report-to directives that
+    // route browser-issued violation reports to it. Without these
+    // directives the function gets no traffic and CSP misconfigs
+    // become invisible until a user complains. Pin both shapes so a
+    // future edit can't silently drop one and break the report flow.
+    expect(text, 'Reporting-Endpoints must define csp-violation pointing at /api/csp-report').toMatch(
+      /Reporting-Endpoints:\s*csp-violation="\/api\/csp-report"/,
+    );
+    expect(text, 'CSP must include report-uri (legacy fallback for browsers that haven\'t adopted Reporting API)').toMatch(
+      /report-uri\s+\/api\/csp-report/,
+    );
+    expect(text, 'CSP must include report-to csp-violation (modern Reporting API)').toMatch(
+      /report-to\s+csp-violation/,
+    );
+  });
+
+  it('does not allow unsafe-eval (only unsafe-inline for in-browser Babel)', () => {
+    // Closing #54 requires removing unsafe-inline too, but unsafe-eval
+    // should never appear — there's no legitimate consumer in this
+    // stack and it widely opens the door to malicious eval-based XSS.
+    const cspLine = text.split('\n').find((l) => l.includes('Content-Security-Policy:')) || '';
+    expect(cspLine).not.toMatch(/'unsafe-eval'/);
+  });
 });
