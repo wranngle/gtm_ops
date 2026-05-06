@@ -11,11 +11,143 @@ const __toastListeners = new Set();
 window.toast = function toast(msg, opts = {}) {
   __toastListeners.forEach(fn => fn({ id: Date.now() + Math.random(), msg, ...opts }));
 };
+
+function isOpenProposalStage(stage) {
+  const s = String(stage || '').trim().toLowerCase();
+  return !['signed', 'closed lost', 'closed-lost', 'closed', 'lost'].includes(s);
+}
+
+function proposalAmountToThousands(amount) {
+  if (typeof amount === 'number' && Number.isFinite(amount)) return amount;
+  const match = String(amount || '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?\s*([kmb])?/i);
+  if (!match) return 0;
+  const value = Number.parseFloat(match[0]);
+  if (!Number.isFinite(value)) return 0;
+  const unit = (match[1] || 'k').toLowerCase();
+  if (unit === 'm') return value * 1000;
+  if (unit === 'b') return value * 1000000;
+  return value;
+}
+
+function formatProposalTotal(totalK) {
+  if (!Number.isFinite(totalK) || totalK === 0) return '$0K';
+  if (Math.abs(totalK) >= 1000) {
+    const millions = totalK / 1000;
+    return `$${millions.toFixed(Math.abs(millions) >= 10 ? 1 : 2).replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1')}M`;
+  }
+  return `$${totalK.toFixed(Math.abs(totalK) >= 100 ? 0 : 1).replace(/\.0$/, '')}K`;
+}
+
+function pluralizeCount(n, singular, plural) {
+  return `${n} ${n === 1 ? singular : (plural || `${singular}s`)}`;
+}
+
+function buildTopbarNotifications(D) {
+  const data = D || {};
+  const notifications = [];
+  const calls = Array.isArray(data.calls) ? data.calls : [];
+  const agents = Array.isArray(data.agents) ? data.agents : [];
+  const companies = Array.isArray(data.companies) ? data.companies : [];
+  const evalSuites = Array.isArray(data.evalSuites) ? data.evalSuites : [];
+  const feed = Array.isArray(data.feed) ? data.feed : [];
+
+  const pausedAgent = agents.find(a => a.status === 'paused');
+  if (pausedAgent) {
+    const taskBlob = String(pausedAgent.currentTask || '').toLowerCase();
+    const matchedCall =
+      calls.find(c => c.co_id && taskBlob.includes(String(c.co_id).toLowerCase())) ||
+      calls.find(c => c.co && taskBlob.includes(String(c.co).toLowerCase().split(' ')[0])) ||
+      calls.slice().sort((a, b) => (Number(b.flags || 0) + Number(b.deflections || 0)) - (Number(a.flags || 0) + Number(a.deflections || 0)))[0];
+    notifications.push({
+      id: 'paused-agent',
+      t: matchedCall?.when || 'now',
+      tone: 'critical',
+      title: `${pausedAgent.id} paused${matchedCall?.co ? ` on ${matchedCall.co}` : ''}`,
+      sub: matchedCall
+        ? `${matchedCall.outcome || 'needs review'} · ${pluralizeCount(Number(matchedCall.deflections || 0), 'deflection')}`
+        : pausedAgent.currentTask || 'awaiting human review',
+      route: 'calls',
+      selection: matchedCall?.id ? { type:'call', id: matchedCall.id } : null,
+      extra: matchedCall?.id ? { call_workflow:'human-review', call_window:'flagged' } : {},
+      act: 'Review call',
+    });
+  }
+
+  const regressing = evalSuites
+    .filter(data.isEvalRegressing || (s => Number(s.delta) < 0 || Number(s.pass) < 0.75))
+    .slice()
+    .sort((a, b) => {
+      const severity = (s) => (Number(s.delta) < 0 ? Math.abs(Number(s.delta)) : 0) + (Number(s.pass) < 0.75 ? (0.75 - Number(s.pass)) : 0);
+      return severity(b) - severity(a);
+    })[0];
+  if (regressing) {
+    notifications.push({
+      id: 'eval-regression',
+      t: regressing.latest || 'recent',
+      tone: 'warn',
+      title: `${regressing.name} needs review`,
+      sub: `${(Number(regressing.pass || 0) * 100).toFixed(1)}% pass · ${Number(regressing.runs || 0).toLocaleString()} runs`,
+      route: 'evals',
+      selection: { type:'eval', id: regressing.id },
+      extra: { suite_filter:'regressions' },
+      act: 'Inspect eval',
+    });
+  }
+
+  const bookedCall = calls.find(c => c.outcome === 'meeting-booked') || calls.find(c => c.score >= 8);
+  if (bookedCall) {
+    notifications.push({
+      id: 'booked-call',
+      t: bookedCall.when || 'recent',
+      tone: 'accent',
+      title: `${bookedCall.co} ${bookedCall.outcome || 'call'} recorded`,
+      sub: `${bookedCall.who || 'stakeholder'} · score ${Number(bookedCall.score || 0).toFixed(1)}`,
+      route: 'calls',
+      selection: { type:'call', id: bookedCall.id },
+      extra: { call_workflow:'recap' },
+      act: 'Open call',
+    });
+  }
+
+  const hotLead = companies
+    .filter(c => (c.intent === 'high' || Number(c.score) >= 80) && (data.isActivePipelineCompany || (x => !['closed', 'lost'].includes(String(x.stage || '').toLowerCase())))(c))
+    .slice()
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0];
+  if (hotLead) {
+    notifications.push({
+      id: 'hot-lead',
+      t: hotLead.lastTouch || 'recent',
+      tone: 'accent',
+      title: `${hotLead.name} lead score ${hotLead.score}`,
+      sub: `${hotLead.stage} · ${hotLead.nextStep || 'review next step'}`,
+      route: 'pipeline',
+      selection: { type:'lead', id: hotLead.id },
+      act: 'Open lead',
+    });
+  }
+
+  const retryEvent = feed.find(f => /retry|502|error|failed/i.test(`${f.txt || ''}`));
+  if (retryEvent) {
+    notifications.push({
+      id: 'integration-retry',
+      t: retryEvent.t || 'recent',
+      tone: retryEvent.level === 'err' ? 'critical' : 'warn',
+      title: retryEvent.txt.split(' — ')[0] || 'Integration retry',
+      sub: retryEvent.txt.split(' — ').slice(1).join(' — ') || 'Open integration health',
+      route: 'settings',
+      extra: { settings_tab:'integrations' },
+      act: 'Open integration',
+    });
+  }
+
+  return notifications.slice(0, 5);
+}
+
 function ToastHost() {
   const [items, setItems] = useState([]);
   useEffect(() => {
     const fn = (t) => {
-      setItems(xs => [...xs, t]);
+      setItems(xs => [t, ...xs]);
       setTimeout(() => setItems(xs => xs.filter(x => x.id !== t.id)), t.duration || 3200);
     };
     __toastListeners.add(fn);
@@ -114,11 +246,35 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
 /* ---------- Sidebar ---------- */
 function Sidebar({ route, setRoute, collapsed }) {
   const D = window.GTM;
+  const isAdmin = (() => {
+    try { return new URLSearchParams(globalThis.location.search).has('admin'); }
+    catch (_) { return false; }
+  })();
+  // Mirror the active agent from AppContext so the sidebar agent rows can
+  // highlight which one is currently loaded in the playground. Without
+  // this, the sidebar listed all agents identically — operator on the
+  // Agents page had no visual cue from the sidebar about which agent the
+  // admin/playground panels were showing.
+  const [activeAgentKey, setActiveAgentKey] = useState(() => {
+    try { return globalThis.AppContext?.get?.()?.extra?.selected_agent_key || null; }
+    catch (_) { return null; }
+  });
+  useEffect(() => {
+    if (!globalThis.AppContext?.subscribe) return undefined;
+    return globalThis.AppContext.subscribe((ctx) => {
+      setActiveAgentKey(ctx?.extra?.selected_agent_key || null);
+    });
+  }, []);
   const counts = {
-    pipeline: D.companies.filter(c => !['closed','lost'].includes(c.stage)).length,
+    pipeline: D.companies.filter(D.isActivePipelineCompany || (c => !['closed','lost'].includes(c.stage))).length,
     calls: D.calls.filter(c => c.flags > 0).length,
-    proposals: D.proposals.filter(p => p.stage !== 'signed').length,
-    evals: D.evalSuites.filter(s => s.delta < 0).length,
+    proposals: D.proposals.filter(p => isOpenProposalStage(p.stage)).length,
+    // Use the shared regression predicate so the sidebar badge agrees
+    // with the EvalsPage filter, the regression Stat tile, and the
+    // Mission Control regressions card. Previously this was just
+    // `s.delta < 0` and undercounted suites whose pass dropped below
+    // 0.75 without a recent delta change.
+    evals: D.evalSuites.filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75)).length,
   };
   const items = [
     { id:'home',      label:'Mission Control', icon:I.Home },
@@ -130,13 +286,15 @@ function Sidebar({ route, setRoute, collapsed }) {
     { id:'agents',    label:'Agents',          icon:I.Bot },
     { id:'settings',  label:'Settings',        icon:I.Cog },
   ];
-  const agents = (window.AGENT_REGISTRY?.agents || []).map(a => ({
-    id: a.key,
-    label: a.display_name,
-    surface: a.surface,
-    color1: a.avatar_color_1,
-    color2: a.avatar_color_2,
-  }));
+  const agents = (window.AGENT_REGISTRY?.agents || [])
+    .filter(a => isAdmin || a.surface !== 'admin-only')
+    .map(a => ({
+      id: a.key,
+      label: a.display_name,
+      surface: a.surface,
+      color1: a.avatar_color_1,
+      color2: a.avatar_color_2,
+    }));
   const selectAgent = (agentKey) => {
     const ctx = window.AppContext?.get?.() || {};
     window.AppContext?.set?.({
@@ -152,51 +310,68 @@ function Sidebar({ route, setRoute, collapsed }) {
   return (
     <aside className="sb">
       <div className="sb__brand">
-        <div className="sb__logo">g</div>
+        <div className="sb__logo sb__logo--lasso" aria-hidden="true">
+          <img src="../assets/wranngle-lasso.png" alt=""/>
+        </div>
         {!collapsed && (
-          <div>
-            <div className="sb__brand-text">gtm_ops</div>
-            <div className="sb__brand-sub">console · v3.4</div>
-          </div>
+          <img className="sb__wordmark" src="../assets/wranngle-wordmark.png" alt="Wranngle"/>
         )}
       </div>
 
       <div className="sb__section">workspace</div>
       <nav className="sb__nav">
         {items.map(it => (
-          <div key={it.id}
+          <button key={it.id}
+               type="button"
                className="sb__item"
                data-active={route === it.id}
-               role="button"
-               tabIndex={0}
+               aria-label={`${it.label}${it.count != null ? ` ${it.count}` : ''}`}
                aria-current={route === it.id ? 'page' : undefined}
-               onClick={() => setRoute(it.id)}
-               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRoute(it.id); } }}>
+               onClick={() => setRoute(it.id)}>
             <it.icon className="sb__icon" size={16} />
             <span className="sb__label">{it.label}</span>
             {it.count != null && <span className="sb__count">{it.count}</span>}
-          </div>
+          </button>
         ))}
       </nav>
 
       <div className="sb__section">agents</div>
       <nav className="sb__nav" aria-label="ElevenLabs agents">
-        {agents.map(a => (
-          <div key={a.id}
-               className="sb__item"
-               role="button"
-               tabIndex={0}
-               onClick={() => selectAgent(a.id)}
-               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectAgent(a.id); } }}>
-            <span className="sb__icon sb__agent-orb" aria-hidden="true"
-                  style={{background: `radial-gradient(circle at 30% 30%, ${a.color1}, ${a.color2})`, width: 16, height: 16, borderRadius: '50%'}}/>
-            <span className="sb__label">{a.label}</span>
-            <span className="mono dim" style={{fontSize: 9}}>{a.surface}</span>
-          </div>
-        ))}
+        {agents.map(a => {
+          const isActive = route === 'agents' && activeAgentKey === a.id;
+          return (
+            <button key={a.id}
+                 type="button"
+                 className="sb__item"
+                 data-active={isActive}
+                 data-agent-key={a.id}
+                 aria-label={`${a.label} ${a.surface}${isActive ? ' (active in playground)' : ''}`}
+                 aria-current={isActive ? 'true' : undefined}
+                 onClick={() => selectAgent(a.id)}>
+              <span className="sb__icon" aria-hidden="true">
+                <window.ElevenUI.Orb
+                  size={16}
+                  state={isActive ? 'talking' : 'idle'}
+                  color1={a.color1}
+                  color2={a.color2}
+                  label={`${a.label} · ${isActive ? 'active' : 'idle'}`}
+                />
+              </span>
+              <span className="sb__label">{a.label}</span>
+              <span className="mono dim" style={{fontSize: 9}}>{a.surface}</span>
+            </button>
+          );
+        })}
       </nav>
 
-      <div className="sb__footer">
+      <button className="sb__footer"
+           type="button"
+           aria-label="Open My Account settings"
+           data-active={route === 'settings'}
+           onClick={() => {
+             setRoute('settings');
+             window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'account' } }));
+           }}>
         <div className="sb__avatar">RP</div>
         {!collapsed && (
           <div className="sb__user">
@@ -204,30 +379,89 @@ function Sidebar({ route, setRoute, collapsed }) {
             <div className="sb__user-org">helix · admin</div>
           </div>
         )}
-      </div>
+      </button>
     </aside>
   );
 }
 
 /* ---------- Topbar ---------- */
-function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }) {
+function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setCollapsed }) {
   const labels = {
-    home:'Mission Control', generate:'Generate', pipeline:'Pipeline', calls:'Calls',
+    home:'Mission Control', generate:'Generate Proposal', pipeline:'Pipeline', calls:'Calls',
     proposals:'Proposals', evals:'Evals', agents:'Agents', settings:'Settings',
   };
   const [notifOpen, setNotifOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
+  const [notificationsRead, setNotificationsRead] = useState(false);
   const notifRef = useRef(null);
   const runRef = useRef(null);
   const D = window.GTM;
+  const proposalRunCall = (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'meeting-booked')
+    || (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'qualified')
+    || (Array.isArray(D.calls) ? D.calls[0] : null);
+  const proposalRunExtra = proposalRunCall ? {
+    proposal_seed_source: 'topbar-new-run',
+    proposal_seed_call_id: proposalRunCall.id,
+    proposal_seed_call_co: proposalRunCall.co,
+    proposal_seed_call_who: proposalRunCall.who,
+    proposal_seed_call_outcome: proposalRunCall.outcome,
+    proposal_seed_call_score: proposalRunCall.score,
+    proposal_seed_call_duration: proposalRunCall.duration,
+  } : {};
 
-  const notifs = [
-    { id:1, t:'2m', tone:'critical', title:'agent-03 paused on Arcadia', sub:'pricing objection · 3 deflections', act:'Review' },
-    { id:2, t:'14m', tone:'warn', title:'eval.compliance regressed -3.2%', sub:'run #2104 · PHI quoted in summary', act:'Inspect' },
-    { id:3, t:'45m', tone:'accent', title:'Banyan procurement booked', sub:'Marcus, CFO · 3:30pm Thursday', act:'Open' },
-    { id:4, t:'1h',  tone:'accent', title:'Helix lead score 78 → 84', sub:'intent surge · pricing page ×3' },
-    { id:5, t:'2h',  tone:'neutral', title:'Outreach sync · 502 retry 3/5', sub:'sequence sync paused' },
+  const notifs = buildTopbarNotifications(D);
+  const runActions = [
+    { icon:I.Phone, label:'Outbound discovery', sub:'opens lead intake · agent-01 Hunter', route:'pipeline', toast:'Outbound discovery opened', intent:'outbound_discovery', extra:{ pipeline_panel:'new-lead' } },
+    { icon:I.Mail,  label:'Multi-thread sequence', sub:'opens high-intent saved view', route:'pipeline', toast:'Multi-thread sequence opened', intent:'multi_thread_sequence', extra:{ pipeline_panel:'filters', pipeline_filter:'high' } },
+    { icon:I.Doc,   label:'Generate proposal', sub:'prefills buyer proof from latest call', route:'generate', toast:'Proposal generator opened', intent:'proposal_generation', extra: proposalRunExtra },
+    { icon:I.Beaker,label:'Trigger eval suite', sub:'opens harness bridge · Cmd+E', route:'evals', toast:'Eval harness opened', intent:'eval_suite', extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick' } },
+    { icon:I.Refresh, label:'Re-score stale leads', sub:'opens pipeline saved views', route:'pipeline', toast:'Lead re-score review opened', intent:'lead_rescore', extra:{ pipeline_panel:'filters', pipeline_filter:'all' } },
   ];
+  const openNotification = (n) => {
+    // Guard the selection even though notifications are derived from live
+    // fixture state. History can still refresh between render and click,
+    // and the topbar should never write a stale id into AppContext.
+    let selection = n.selection || null;
+    if (selection?.type && selection?.id) {
+      const D = window.GTM || {};
+      const lookup = {
+        lead: (D.companies || []).some(c => c.id === selection.id),
+        call: (D.calls || []).some(c => c.id === selection.id),
+        proposal: (D.proposals || []).some(p => p.id === selection.id),
+        eval: (D.evalSuites || []).some(s => s.id === selection.id),
+      };
+      if (lookup[selection.type] === false) selection = null;
+    }
+    if (selection || n.extra) {
+      window.AppContext.set({
+        selection,
+        extra: {
+          ...(window.AppContext.get().extra || {}),
+          ...(n.extra || {}),
+          triggered_from: 'topbar-notification',
+        },
+      });
+    }
+    if (n.extra?.settings_tab) {
+      window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: n.extra.settings_tab } }));
+    }
+    setRoute(n.route);
+    setNotifOpen(false);
+    setNotificationsRead(true);
+  };
+  const startRun = (o) => {
+    const ctx = window.AppContext.get();
+    window.AppContext.set({
+      extra: {
+        ...(ctx.extra || {}),
+        ...(o.extra || {}),
+        run_intent: o.intent,
+        triggered_from: 'topbar-new-run',
+      },
+    });
+    setRoute(o.route);
+    setRunOpen(false);
+  };
 
   return (
     <header className="tb">
@@ -235,9 +469,9 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
         <I.Menu size={16} />
       </button>
       <div className="tb__crumbs">
-        <span className="tb__crumb">helix</span>
+        <button className="tb__crumb tb__crumb--brand" disabled={route === 'home'} onClick={() => setRoute('home')}>Wranngle</button>
         <span className="tb__sep">/</span>
-        <span className="tb__crumb">production</span>
+        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops console</button>
         <span className="tb__sep">/</span>
         <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
       </div>
@@ -249,9 +483,9 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
       )}
 
       <button type="button" className="tb__search" onClick={openPalette}
-              aria-label="Open command palette to search leads, calls, proposals">
+              aria-label="Open command palette to search commands, leads, calls, proposals">
         <span className="tb__search-icon" aria-hidden="true"><I.Search size={14} /></span>
-        <span className="tb__search-placeholder">Search leads, calls, proposals…</span>
+        <span className="tb__search-placeholder">Search commands, leads, calls, proposals…</span>
         <span className="tb__kbd" aria-hidden="true">⌘K</span>
       </button>
 
@@ -259,7 +493,7 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
         <button ref={notifRef} className="btn btn--ghost btn--icon tb__bell" title="Notifications" aria-label="Notifications"
                 onClick={() => setNotifOpen(o => !o)}>
           <I.Bell size={16} />
-          <span className="tb__bell-dot"/>
+          {!notificationsRead && <span className="tb__bell-dot"/>}
         </button>
         <button className="btn btn--ghost btn--icon"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -275,41 +509,41 @@ function Topbar({ route, openPalette, theme, setTheme, collapsed, setCollapsed }
       <Popover open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
         <div className="pop__hd">
           <span>Notifications</span>
-          <span className="mono dim" style={{fontSize:10}}>{notifs.length} new</span>
+          <span className="mono dim" style={{fontSize:10}}>{notificationsRead ? '0 new' : `${notifs.length} new`}</span>
         </div>
         <div className="pop__list">
           {notifs.map(n => (
             <div key={n.id} className="pop__row" role="button" tabIndex={0}
-                 onClick={() => { window.toast(n.title, { sub: n.sub, tone: n.tone }); setNotifOpen(false); }}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.toast(n.title, { sub: n.sub, tone: n.tone }); setNotifOpen(false); } }}>
+                 data-notification-id={n.id}
+                 data-notification-route={n.route}
+                 data-selection-type={n.selection?.type || ''}
+                 data-selection-id={n.selection?.id || ''}
+                 aria-label={`${n.act}: ${n.title}`}
+                 onClick={() => openNotification(n)}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}>
               <span className={`dot dot--${n.tone === 'neutral' ? 'idle' : n.tone}`} style={{width:7,height:7,marginTop:6}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{n.title}</div>
                 <div style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>{n.sub}</div>
               </div>
               <span className="mono dim" style={{fontSize:10}}>{n.t}</span>
+              <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
             </div>
           ))}
         </div>
         <div className="pop__ft">
-          <button className="btn btn--ghost btn--xs" onClick={() => { window.toast('All notifications marked read'); setNotifOpen(false); }}>Mark all read</button>
-          <button className="btn btn--ghost btn--xs" onClick={() => { window.toast('Notification settings opened'); setNotifOpen(false); }}>Settings</button>
+          <button className="btn btn--ghost btn--xs" onClick={() => { setNotificationsRead(true); setNotifOpen(false); }}>Mark all read</button>
+          <button className="btn btn--ghost btn--xs" onClick={() => { setRoute('settings'); window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } })); setNotifOpen(false); }}>Settings</button>
         </div>
       </Popover>
 
       <Popover open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={300} label="Start a run">
         <div className="pop__hd"><span>Start a run</span></div>
         <div className="pop__list">
-          {[
-            { icon:I.Phone, label:'Outbound discovery', sub:'agent-01 · Hunter', tone:'accent' },
-            { icon:I.Mail,  label:'Multi-thread sequence', sub:'3+ stakeholders', tone:'accent' },
-            { icon:I.Doc,   label:'Generate proposal', sub:'from a closed call', tone:'accent' },
-            { icon:I.Beaker,label:'Trigger eval suite', sub:'all 6 suites · ⌘E', tone:'accent' },
-            { icon:I.Refresh, label:'Re-score stale leads', sub:'24 candidates', tone:'accent' },
-          ].map(o => (
+          {runActions.map(o => (
             <div key={o.label} className="pop__row" role="button" tabIndex={0}
-                 onClick={() => { window.toast(`${o.label} queued`, { sub: o.sub, tone: 'accent' }); setRunOpen(false); }}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.toast(`${o.label} queued`, { sub: o.sub, tone: 'accent' }); setRunOpen(false); } }}>
+                 onClick={() => startRun(o)}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRun(o); } }}>
               <o.icon size={14} />
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{o.label}</div>
@@ -333,8 +567,59 @@ function CommandPalette({ open, setOpen, setRoute }) {
   const previousFocusRef = useRef(null);
 
   const items = useMemo(() => {
+    const setExtra = (extra) => {
+      const ctx = window.AppContext.get();
+      window.AppContext.set({
+        extra: {
+          ...(ctx.extra || {}),
+          ...extra,
+          triggered_from: 'command-palette',
+        },
+      });
+    };
+    const openOutboundRun = () => {
+      setExtra({
+        pipeline_panel: 'new-lead',
+        run_intent: 'outbound_discovery',
+      });
+      setRoute('pipeline');
+    };
+    const openRecapDraft = () => {
+      // Pick the call that actually needs a recap (highest flags + deflections)
+      // rather than hardcoding CALL-2419. The "Draft recap email" action
+      // doesn't promise a specific call — it should open the recap composer
+      // for whichever call is currently the highest-priority follow-up.
+      const calls = (window.GTM?.calls || []);
+      const target = [...calls].sort(
+        (a, b) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0))
+      )[0] || null;
+      if (!target) {
+        window.toast('No calls to recap', { sub: 'D.calls is empty', tone: 'warn' });
+        return;
+      }
+      const ctx = window.AppContext.get();
+      window.AppContext.set({
+        selection: { type: 'call', id: target.id },
+        extra: {
+          ...(ctx.extra || {}),
+          call_workflow: 'recap',
+          run_intent: 'recap_draft',
+          triggered_from: 'command-palette',
+        },
+      });
+      setRoute('calls');
+    };
+    const openLeadRescore = () => {
+      setExtra({
+        pipeline_panel: 'filters',
+        pipeline_filter: 'all',
+        run_intent: 'lead_rescore',
+      });
+      setRoute('pipeline');
+    };
     const base = [
       { group:'Navigation', icon:I.Home,     label:'Go to Mission Control', meta:'⏎', do: () => setRoute('home') },
+      { group:'Navigation', icon:I.Plus,     label:'Go to Generate Proposal', meta:'draft gate', do: () => setRoute('generate') },
       { group:'Navigation', icon:I.Pipeline, label:'Go to Pipeline',        meta:'⏎', do: () => setRoute('pipeline') },
       { group:'Navigation', icon:I.Phone,    label:'Go to Calls',           meta:'⏎', do: () => setRoute('calls') },
       { group:'Navigation', icon:I.Doc,      label:'Go to Proposals',       meta:'⏎', do: () => setRoute('proposals') },
@@ -342,19 +627,78 @@ function CommandPalette({ open, setOpen, setRoute }) {
       { group:'Navigation', icon:I.Bot,      label:'Go to Agents',          meta:'⏎', do: () => setRoute('agents') },
       { group:'Navigation', icon:I.Cog,      label:'Go to Settings',        meta:'⏎', do: () => setRoute('settings') },
       { group:'Actions', icon:I.Mic,    label:'Talk to Sales Coach',       meta:'opens dock', do: () => { document.querySelector('.coach-launcher')?.click(); } },
-      { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'agent-01', do: () => window.toast('Outbound run queued', { sub:'agent-01 · 12 candidates · Hunter pass', tone:'accent' }) },
-      { group:'Actions', icon:I.Bolt,    label:'Trigger eval suite',        meta:'⌘E', do: () => { setRoute('evals'); window.toast('Eval suite queued', { tone:'accent' }); } },
-      { group:'Actions', icon:I.Mail,    label:'Draft recap email',         meta:'agent-01', do: () => window.toast('Recap email drafted', { sub:'review before sending →', tone:'accent' }) },
-      { group:'Actions', icon:I.Refresh, label:'Re-score stale leads',      meta:'24 candidates', do: () => window.toast('Re-scoring queued', { sub:'24 leads · ~3 min', tone:'accent' }) },
-      { group:'Jump to', icon:I.Building, label:'Banyan Health',            meta:'co · proposal', do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id:'banyan' }}); } },
-      { group:'Jump to', icon:I.Building, label:'Helix Robotics',           meta:'co · qualifying', do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id:'helix' }}); } },
-      { group:'Jump to', icon:I.Building, label:'Arcadia Insurance',        meta:'co · proposal', do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id:'arcadia' }}); } },
-      { group:'Jump to', icon:I.Phone,    label:'CALL-2419 · Banyan',       meta:'45m ago', do: () => { setRoute('calls'); window.AppContext.set({ selection: { type:'call', id:'CALL-2419' }}); } },
-      { group:'Jump to', icon:I.Phone,    label:'CALL-2417 · Arcadia',      meta:'flagged ×2', do: () => { setRoute('calls'); window.AppContext.set({ selection: { type:'call', id:'CALL-2417' }}); } },
+      { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'opens intake', do: openOutboundRun },
+      { group:'Actions', icon:I.Bolt,    label:'Trigger eval suite',        meta:'run plan', do: () => {
+        const ctx = window.AppContext.get();
+        window.AppContext.set({
+          extra: {
+            ...(ctx.extra || {}),
+            evals_bridge_open: true,
+            eval_harness_command_id: 'eval-quick',
+            run_intent: 'eval_suite',
+            triggered_from: 'command-palette',
+          },
+        });
+        setRoute('evals');
+      } },
+      { group:'Actions', icon:I.Mail,    label:'Draft recap email',         meta:'opens recap', do: openRecapDraft },
+      { group:'Actions', icon:I.Refresh, label:'Re-score stale leads',      meta:'saved view', do: openLeadRescore },
     ];
+    // Derive Jump-to entries from live fixture data instead of hardcoding
+    // 3 companies + 2 calls with literal "45m ago"/"flagged ×2" labels —
+    // the fixture has 12 companies and 7 calls, and the literal meta
+    // strings would silently lie if the fixture state shifted.
+    const D = window.GTM || {};
+    const normalizedQuery = q.trim().toLowerCase();
+    const topCompanies = [...(D.companies || [])]
+      .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))
+      .filter(c => !normalizedQuery || `${c.name} ${c.stage} ${c.id || ''}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, normalizedQuery ? 8 : 3)
+      .map(c => ({
+        group: 'Jump to',
+        icon: I.Building,
+        label: c.name,
+        meta: `co · ${c.stage}`,
+        do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id: c.id } }); },
+      }));
+    const topCalls = [...(D.calls || [])]
+      .sort((a, b) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0)))
+      .filter(c => !normalizedQuery || `${c.id} ${c.co} ${c.who || ''}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, normalizedQuery ? 8 : 3)
+      .map(c => ({
+        group: 'Jump to',
+        icon: I.Phone,
+        label: `${c.id} · ${c.co}`,
+        meta: c.flags > 0 ? `flagged ×${c.flags}` : c.when,
+        do: () => { setRoute('calls'); window.AppContext.set({ selection: { type:'call', id: c.id } }); },
+      }));
+    const topProposals = [...(D.proposals || [])]
+      .sort((a, b) => {
+        const stageRank = (p) => isOpenProposalStage(p.stage) ? 1 : 0;
+        const amount = (p) => proposalAmountToThousands(p.amount);
+        return (stageRank(b) - stageRank(a)) || (amount(b) - amount(a));
+      })
+      .filter(p => !normalizedQuery || `${p.id} ${p.co} ${p.stage}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, normalizedQuery ? 8 : 3)
+      .map(p => ({
+        group: 'Jump to',
+        icon: I.Doc,
+        label: `${p.id} · ${p.co}`,
+        meta: `proposal · ${p.stage}`,
+        do: () => {
+          setRoute('proposals');
+          window.AppContext.set({ selection: { type:'proposal', id: p.id } });
+        },
+      }));
+    base.push(...topCompanies, ...topCalls, ...topProposals);
     if (!q) return base;
     return base.filter(i => i.label.toLowerCase().includes(q.toLowerCase()));
-  }, [q]);
+    // `open` belongs in deps so each palette open re-derives the Jump-to
+    // entries from the current window.GTM. Without it, an open BEFORE
+    // loadData mutates companies (history fetch is async) caches the
+    // pre-mutation seed list and the palette serves stale labels for the
+    // rest of the session.
+  }, [q, open]);
 
   // Focus management: when the palette opens, save the previously-focused
   // element so we can restore it on close, and move focus into the input.
@@ -445,37 +789,164 @@ function CommandPalette({ open, setOpen, setRoute }) {
 }
 
 /* ---------- Shared widgets ---------- */
-function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w = 120 }) {
+function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w = 120, label, pointLabels }) {
+  const [hovered, setHovered] = useState(null);
   const min = Math.min(...data), max = Math.max(...data);
   const span = max - min || 1;
-  const step = w / (data.length - 1);
-  const pts = data.map((v, i) => [i * step, h - ((v - min) / span) * (h - 4) - 2]);
+  const step = data.length > 1 ? w / (data.length - 1) : 0;
+  const pts = data.map((v, i) => [data.length > 1 ? i * step : w / 2, h - ((v - min) / span) * (h - 4) - 2]);
   const path = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
   const area = `${path} L${w},${h} L0,${h} Z`;
+  const latest = data[data.length - 1];
+  const first = data[0];
+  const delta = latest - first;
+  const isPercentSeries = data.every(v => Number.isFinite(v) && Math.abs(v) <= 1);
+  const rounded = (value, places = 2) => {
+    if (!Number.isFinite(value)) return value;
+    const factor = 10 ** places;
+    const next = Math.round((value + Number.EPSILON) * factor) / factor;
+    return Object.is(next, -0) ? 0 : next;
+  };
+  const fmt = (v) => {
+    if (isPercentSeries) return `${Math.round(rounded(v, 4) * 100)}%`;
+    return String(rounded(v, 2));
+  };
+  const deltaLabel = (value) => {
+    const next = rounded(value, isPercentSeries ? 4 : 2);
+    return `${next > 0 ? '+' : ''}${fmt(next)}`;
+  };
+  const seriesLabel = String(label || 'Trend').split(':')[0].trim() || 'Trend';
+  const summary = label || `${seriesLabel}: ${data.length} periods, ${fmt(first)} to ${fmt(latest)}; range ${fmt(min)} to ${fmt(max)}; delta ${deltaLabel(delta)}`;
+  const detailedLabels = Array.isArray(pointLabels)
+    ? pointLabels
+    : [];
+  const pointLabel = (i) => {
+    const context = detailedLabels[i]
+      ? String(detailedLabels[i]).trim()
+      : data.length === 1
+        ? 'single sample'
+        : `point ${i + 1}/${data.length}`;
+    const fallbackRecency = detailedLabels[i] ? '' : i === data.length - 1 ? ' · latest' : '';
+    const movement = i > 0 ? `${deltaLabel(data[i] - data[i - 1])} vs prior` : 'baseline';
+    return `${seriesLabel} · ${context}${fallbackRecency}: ${fmt(data[i])} · ${movement}`;
+  };
+  const pointLabelValues = data.map((_, i) => pointLabel(i));
+  const clampIndex = (i) => Math.max(0, Math.min(data.length - 1, i));
+  const tooltipEdge = hovered === 0 ? 'start' : hovered === data.length - 1 ? 'end' : 'middle';
+  const inspectPointFromX = (clientX, target) => {
+    const rect = target.getBoundingClientRect();
+    if (!rect.width || data.length === 0) return;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    setHovered(clampIndex(Math.round(ratio * (data.length - 1))));
+  };
+  const onKeyDown = (e) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Escape'].includes(e.key)) return;
+    e.preventDefault();
+    if (e.key === 'Escape') {
+      setHovered(null);
+      return;
+    }
+    if (e.key === 'Home') {
+      setHovered(0);
+      return;
+    }
+    if (e.key === 'End') {
+      setHovered(data.length - 1);
+      return;
+    }
+    const current = hovered == null ? data.length - 1 : hovered;
+    const direction = e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 1;
+    setHovered(clampIndex(current + direction));
+  };
   return (
-    <svg className="spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      {fill && <path d={area} fill={color} opacity="0.15" />}
-      <path d={path} fill="none" stroke={color} strokeWidth="1.5" />
-    </svg>
+    <span
+      className="spark-wrap"
+      role="group"
+      aria-label={`${summary}. Use arrow keys to inspect each period.`}
+      tabIndex={0}
+      data-active-index={hovered ?? undefined}
+      onPointerMove={(e) => inspectPointFromX(e.clientX, e.currentTarget)}
+      onPointerLeave={() => setHovered(null)}
+      onMouseLeave={() => setHovered(null)}
+      onFocus={() => setHovered(v => v == null ? data.length - 1 : v)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHovered(null); }}
+      onKeyDown={onKeyDown}
+    >
+      <svg className="spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+        {fill && <path d={area} fill={color} opacity="0.15" />}
+        <path d={path} fill="none" stroke={color} strokeWidth="1.5" />
+      </svg>
+      {pts.map((p, i) => (
+        <span
+          key={i}
+          className="spark-point"
+          aria-hidden="true"
+          data-point-label={pointLabelValues[i]}
+          data-active={hovered === i ? 'true' : 'false'}
+          onPointerEnter={() => setHovered(i)}
+          style={{ left: `${(p[0] / w) * 100}%`, top: `${(p[1] / h) * 100}%`, '--spark-color': color }}
+        />
+      ))}
+      {hovered != null && (
+        <span
+          className="spark-tooltip"
+          data-testid="sparkline-tooltip"
+          data-edge={tooltipEdge}
+          role="status"
+          aria-live="polite"
+          style={{ left: `${(pts[hovered][0] / w) * 100}%`, top: `${Math.max(8, (pts[hovered][1] / h) * 100)}%` }}
+        >
+          {pointLabelValues[hovered]}
+        </span>
+      )}
+    </span>
   );
 }
 
-function Stat({ label, value, delta, tone, spark, sparkColor, accent }) {
-  const dir = delta > 0 ? 'up' : delta < 0 ? 'down' : null;
+function statDeltaNumber(delta) {
+  if (typeof delta === 'number') return delta;
+  if (typeof delta !== 'string') return null;
+  const parsed = Number(delta.trim().replace(/%$/, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function statDeltaLabel(delta) {
+  if (delta == null || delta === '') return null;
+  const numeric = statDeltaNumber(delta);
+  const raw = String(delta).trim().replace(/%$/, '');
+  const magnitude = raw.replace(/^\+/, '');
+  const signed = numeric == null
+    ? raw
+    : `${numeric > 0 ? '+' : ''}${magnitude}`;
+  const suffix = numeric != null && Math.abs(numeric) < 1 ? '' : '%';
+  return `${signed}${suffix} vs last week`;
+}
+
+function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accent }) {
+  const deltaValue = statDeltaNumber(delta);
+  const deltaText = statDeltaLabel(delta);
+  const dir = deltaValue > 0 ? 'up' : deltaValue < 0 ? 'down' : null;
   return (
     <div className={`stat ${accent ? 'stat--accent' : ''}`}>
       <div className="stat__label">{label}</div>
       <div className={`stat__value ${tone ? `stat__value--${tone}` : ''}`}>{value}</div>
-      {delta != null && (
+      {deltaText && (
         <div className={`stat__delta ${dir ? `stat__delta--${dir}` : ''}`}>
           {dir === 'up' && <I.ArrowUp size={11} />}
           {dir === 'down' && <I.ArrowDown size={11} />}
-          {delta > 0 ? '+' : ''}{delta}{typeof delta === 'number' && Math.abs(delta) < 1 ? '' : '%'} vs last week
+          {deltaText}
         </div>
       )}
       {spark && (
         <div className="stat__spark">
-          <Sparkline data={spark} color={sparkColor || 'var(--sunset-500)'} h={28} w={80} />
+          <Sparkline
+            data={spark}
+            color={sparkColor || 'var(--sunset-500)'}
+            h={28}
+            w={80}
+            label={`${label} trend: current ${value}${delta != null ? `, delta ${delta}` : ''}`}
+            pointLabels={sparkLabels}
+          />
         </div>
       )}
     </div>
@@ -488,14 +959,14 @@ function Badge({ children, tone = 'neutral' }) {
 
 function PageHeader({ eyebrow, title, sub, actions }) {
   return (
-    <div className="ph">
+    <header className="ph">
       <div>
         {eyebrow && <div className="ph__eyebrow">{eyebrow}</div>}
-        <div className="ph__title">{title}</div>
+        <h1 id="console-page-title" className="ph__title">{title}</h1>
         {sub && <div className="ph__sub">{sub}</div>}
       </div>
       {actions && <div className="ph__actions">{actions}</div>}
-    </div>
+    </header>
   );
 }
 
@@ -516,51 +987,162 @@ function Card({ title, action, children, accent, className = '' }) {
   );
 }
 
+/* ConsolePanel — scrolling pipeline log surface used by Mission Control
+   and by the Generate page. Cap is large (200) so a full sequence trace
+   stays visible; older lines are still bounded so a long-running tab
+   does not leak unbounded memory. The body is scrollable and snaps to
+   the bottom when new lines arrive (unless the user has scrolled up,
+   so they can review history without being yanked away). */
+const CONSOLE_PANEL_CAP = 200;
 function ConsolePanel({ lines, title = 'live · agent.feed' }) {
   const [liveLines, setLiveLines] = React.useState([]);
+  const [streamState, setStreamState] = React.useState(() => (window.DEMO_MODE ? 'ready' : 'connecting'));
+  const bodyRef = React.useRef(null);
+  const stuckToBottomRef = React.useRef(true);
   React.useEffect(() => {
     if (lines) return; // Use provided static lines if available
+    setStreamState(window.DEMO_MODE ? 'ready' : 'connecting');
     const append = (txt, level = 'info') => {
       setLiveLines(prev => {
         const next = [...prev, { t: new Date().toLocaleTimeString(), level, txt }];
-        return next.slice(-20); // Keep last 20
+        return next.slice(-CONSOLE_PANEL_CAP);
       });
     };
-    // Live mode: EventSource over /api/stream.
-    const es = new EventSource('/api/stream');
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.msg) append(data.msg, data.level);
-      } catch (_) { /* ignore malformed payloads */ }
-    };
+    let es = null;
+    if (!window.DEMO_MODE && typeof EventSource === 'function') {
+      // Live mode: EventSource over /api/stream. Static DEMO_MODE replays
+      // synthetic gtm:stream events instead, so do not show a transport
+      // failure before the operator has launched a sequence.
+      es = new EventSource('/api/stream');
+      es.onopen = () => setStreamState('streaming');
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.msg) append(data.msg, data.level);
+        } catch (_) { /* ignore malformed payloads */ }
+      };
+      // Surface transport errors in live mode so the user sees the panel
+      // went silent for an actual reason (CSP block, server hangup).
+      es.onerror = () => {
+        setStreamState('disconnected');
+        append('stream.error: EventSource disconnected (will retry on next tick)', 'err');
+      };
+    }
     // Demo mode + manual fan-out: any code can dispatch
     // window.dispatchEvent(new CustomEvent('gtm:stream', {detail: {msg, level}}))
     // and the panel will append it. Used by GeneratePage in DEMO_MODE.
     const onStream = (e) => {
       const d = e.detail || {};
-      if (typeof d.msg === 'string') append(d.msg, d.level || 'info');
+      if (typeof d.msg === 'string') {
+        setStreamState(d.msg.includes('pipeline.complete') ? 'complete' : 'streaming');
+        append(d.msg, d.level || 'info');
+      } else {
+        setStreamState('streaming');
+      }
+    };
+    const onReset = () => {
+      setLiveLines([]);
+      setStreamState(window.DEMO_MODE ? 'ready' : (es ? 'streaming' : 'connecting'));
     };
     window.addEventListener('gtm:stream', onStream);
-    return () => { es.close(); window.removeEventListener('gtm:stream', onStream); };
+    window.addEventListener('gtm:stream-reset', onReset);
+    return () => {
+      es?.close();
+      window.removeEventListener('gtm:stream', onStream);
+      window.removeEventListener('gtm:stream-reset', onReset);
+    };
   }, [lines]);
 
   const displayLines = lines || liveLines;
+
+  // Track whether the user is at-bottom; if they scrolled up, don't
+  // yank them. If they're at-bottom, auto-scroll on new lines.
+  const onBodyScroll = () => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 12;
+    stuckToBottomRef.current = atBottom;
+  };
+  React.useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    if (stuckToBottomRef.current) el.scrollTop = el.scrollHeight;
+  }, [displayLines.length]);
+
+  const lineToText = (l) => `[${l.t}] ${(l.level || 'info').toUpperCase().padEnd(4, ' ')} ${l.txt}`;
+  const onCopy = async () => {
+    const blob = displayLines.map(lineToText).join('\n');
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(blob);
+        window.toast('Log copied to clipboard', { sub: `${displayLines.length} line${displayLines.length === 1 ? '' : 's'}`, tone: 'accent' });
+      } else {
+        window.toast('Clipboard unavailable', { sub: 'browser blocked navigator.clipboard', tone: 'warn' });
+      }
+    } catch (_) {
+      window.toast('Could not copy log', { tone: 'critical' });
+    }
+  };
+  const onClear = () => {
+    if (lines) return; // static-line mode is read-only
+    window.dispatchEvent(new CustomEvent('gtm:stream-reset'));
+  };
+  const status = lines ? 'static' : streamState === 'ready' ? 'ready' : streamState;
+  const statusTone = streamState === 'disconnected'
+    ? 'critical'
+    : streamState === 'complete'
+      ? 'healthy'
+      : streamState === 'ready'
+        ? 'idle'
+        : 'accent';
 
   return (
     <div className="console-panel">
       <div className="console-panel__hd">
         <span>{title}</span>
-        <span><span className="dot dot--accent" style={{display:'inline-block',marginRight:6,verticalAlign:'middle'}}/>streaming</span>
+        <span className="console-panel__hd-right">
+          <span className="console-panel__count" data-testid="console-panel-count">{displayLines.length} line{displayLines.length === 1 ? '' : 's'}</span>
+          <button
+            type="button"
+            className="console-panel__btn"
+            data-testid="console-panel-copy"
+            aria-label="Copy log to clipboard"
+            onClick={onCopy}
+            disabled={displayLines.length === 0}
+          >Copy</button>
+          {!lines && (
+            <button
+              type="button"
+              className="console-panel__btn"
+              data-testid="console-panel-clear"
+              aria-label="Clear log"
+              onClick={onClear}
+              disabled={displayLines.length === 0}
+            >Clear</button>
+          )}
+          <span className="console-panel__status"><span className={`dot dot--${statusTone}`} style={{display:'inline-block',marginRight:6,verticalAlign:'middle'}}/>{status}</span>
+        </span>
       </div>
-      {displayLines.map((l, i) => (
-        <div key={i}>
-          <span className="cl-meta">{l.t}</span>{' '}
-          <span className={`cl-${l.level || 'info'}`}>{(l.level || 'info').toUpperCase().padEnd(4,' ')}</span>{' '}
-          <span>{l.txt}</span>
-        </div>
-      ))}
-      <div><span className="cl-prompt">›</span> <span className="cl-cursor"></span></div>
+      <div
+        className="console-panel__body"
+        data-testid="console-panel-body"
+        ref={bodyRef}
+        onScroll={onBodyScroll}
+        role="log"
+        tabIndex={0}
+        aria-label={`${title} output`}
+        aria-live="polite"
+        aria-relevant="additions"
+      >
+        {displayLines.map((l, i) => (
+          <div key={i} className={`console-panel__line console-panel__line--${l.level || 'info'}`}>
+            <span className="cl-meta">{l.t}</span>{' '}
+            <span className={`cl-${l.level || 'info'}`}>{(l.level || 'info').toUpperCase().padEnd(4,' ')}</span>{' '}
+            <span>{l.txt}</span>
+          </div>
+        ))}
+        <div><span className="cl-prompt">›</span> <span className="cl-cursor"></span></div>
+      </div>
     </div>
   );
 }
@@ -571,6 +1153,7 @@ function Segmented({ options, value, onChange }) {
       {options.map(o => (
         <button key={o.value} className="seg__btn"
                 data-active={value === o.value}
+                aria-label={o.ariaLabel || undefined}
                 onClick={() => onChange(o.value)}>{o.label}</button>
       ))}
     </div>
@@ -580,4 +1163,5 @@ function Segmented({ options, value, onChange }) {
 Object.assign(window, {
   Sidebar, Topbar, CommandPalette, ToastHost, Popover,
   Sparkline, Stat, Badge, PageHeader, Card, ConsolePanel, Segmented,
+  proposalAmountToThousands, formatProposalTotal, isOpenProposalStage,
 });

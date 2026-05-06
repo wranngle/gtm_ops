@@ -1,55 +1,92 @@
 /**
- * /evaluation/ subapp data flow — symmetric to eval-runs-links.spec.ts
- * but for the per-run detail click flow. Verifies the page loads stats,
- * runs table, flaw chart, and that clicking a row opens a detail panel
- * populated from the demo-mode-shimmed /api/eval/runs/{id} fixture.
+ * /evaluation/ is now only a compatibility entrypoint. The actual Evals
+ * dashboard lives inside /console so it inherits the shell, ElevenLabs lab,
+ * command bridge, and operator context instead of acting like a bolted-on app.
  */
 import { test, expect } from './_helpers.js';
 
-test.describe('/evaluation/ data flow', () => {
-  test('initial paint renders stats grid + runs table + flaw chart', async ({ page }) => {
+test.describe('/evaluation/ console bridge', () => {
+  test('redirects into the native console Evals route', async ({ page }) => {
     await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
-    await page.goto('/evaluation/');
-    await page.waitForLoadState('networkidle');
-    // Stats: 5 cards each with a .label and .value.
-    await expect(page.locator('#stats-grid .stat-card')).toHaveCount(5);
-    const values = await page.locator('#stats-grid .value').allTextContents();
-    expect(values.every((v) => v && v !== '--')).toBe(true);
-    // Runs table: at least one row populated.
-    await expect(page.locator('#runs-table tr')).not.toHaveCount(0);
-    // Flaw chart: rendered with real items, not the empty placeholder.
-    await expect(page.locator('#flaw-chart')).not.toContainText(/no evaluation data yet/i);
-    expect(await page.locator('#flaw-chart > *').count()).toBeGreaterThan(0);
+    await page.goto('/evaluation/', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
+
+    await expect(page).toHaveURL(/\/console\/\?route=evals$/);
+    await expect(page.locator('.tb__crumb--active')).toContainText('Evals');
+    await expect(page.locator('.ph__title')).toContainText('Evals');
+    await expect(page.locator('[data-testid="eval-run-plan-summary"]')).toBeVisible();
+    await expect(page.locator('.eval-convai-frame')).toBeVisible();
+    await expect(page.locator('h1', { hasText: /^Evaluation Dashboard$/ })).toHaveCount(0);
   });
 
-  test('clicking a run row opens the detail panel with axis scores', async ({ page }) => {
-    await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
-    await page.goto('/evaluation/');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(300);
-    await page.locator('#runs-table tr').first().click();
-    const panel = page.locator('#detail-panel');
-    await expect(panel).toHaveClass(/open/, { timeout: 3000 });
-    // Detail content should include real fields — the case id, status, scores object.
-    const content = page.locator('#detail-content');
-    await expect(content).toContainText(/case:/i);
-    await expect(content).toContainText(/status:/i);
-    await expect(content).toContainText(/score/i);
+  test('public landing links point at console Evals, not the legacy dashboard', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator('a[href="/evaluation/"]')).toHaveCount(0);
+    for (const link of await page.locator('a', { hasText: /Evals|Evals dashboard/i }).all()) {
+      await expect(link).toHaveAttribute('href', '/console/?route=evals');
+    }
   });
 
-  test('filter selects narrow the runs table without errors', async ({ page }) => {
+  test('compatibility document is only a redirect bridge, not a second dashboard', async ({ request }) => {
+    const response = await request.get('/evaluation/');
+    expect(response.ok()).toBe(true);
+
+    const html = await response.text();
+    expect(html).toContain('/console/?route=evals');
+    expect(html).not.toContain('Evaluation Dashboard');
+    expect(html).not.toContain('filter-version');
+    expect(html).not.toContain('runs-table');
+  });
+
+  test('global coach launcher does not cover the local eval run plan', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.route('**/unpkg.com/@elevenlabs/**', async (route) => route.abort('blockedbyclient'));
     await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
-    await page.goto('/evaluation/');
-    await page.waitForLoadState('networkidle');
-    const all = await page.locator('#runs-table tr').count();
-    expect(all).toBeGreaterThan(0);
-    // Status filter to "completed" / "failed" / back to all.
-    await page.locator('#filter-status').selectOption('completed');
-    await page.waitForTimeout(200);
-    const afterCompleted = await page.locator('#runs-table tr').count();
-    expect(afterCompleted).toBeLessThanOrEqual(all);
-    await page.locator('#filter-status').selectOption('');
-    await page.waitForTimeout(200);
-    expect(await page.locator('#runs-table tr').count()).toBe(all);
+    await page.goto('/console/?route=evals', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
+
+    const launcher = page.locator('.coach-launcher');
+    const runPlan = page.locator('[data-testid="eval-run-plan-summary"]');
+    await expect(launcher).toBeVisible();
+    await expect(runPlan).toBeVisible();
+
+    const overlaps = await page.evaluate(() => {
+      const a = document.querySelector('.coach-launcher')?.getBoundingClientRect();
+      const b = document.querySelector('[data-testid="eval-run-plan-summary"]')?.getBoundingClientRect();
+      if (!a || !b) return true;
+      return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    });
+    expect(overlaps, 'global coach launcher must not obscure the eval run-plan summary').toBe(false);
+  });
+
+  test('run detail labels prompt and harness metadata instead of exposing a bare version chip', async ({ page }) => {
+    await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
+    await page.goto('/console/?route=evals', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
+
+    const meta = page.locator('.eval-meta-strip').first();
+    await expect(meta).toBeVisible();
+    await expect(meta).toContainText(/scenario\s*[a-z0-9-]+/i);
+    await expect(meta).toContainText(/prompt\s*prompt\/sewy\/v/i);
+    await expect(meta).toContainText(/harness\s*0\.0\.1/i);
+
+    const chips = (await meta.locator('> .mono').allTextContents()).map(text => text.trim());
+    expect(chips).not.toContain('0.0.1');
+  });
+
+  test('run rows use readable scenario titles while preserving raw scenario ids', async ({ page }) => {
+    await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
+    await page.goto('/console/?route=evals', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
+
+    const firstRun = page.locator('.eval-run-row').first();
+    await expect(firstRun.locator('.eval-run-row__title')).toHaveText('Multi Turn Tool Loop');
+    await expect(firstRun.locator('[data-testid="eval-run-row-scenario-id"]')).toContainText('scenario multi-turn-tool-loop');
+    await expect(firstRun.locator('.eval-run-row__title')).not.toContainText('multi-turn-tool-loop');
+
+    await firstRun.click();
+    await expect(page.locator('.card__title:has-text("run detail")').first()).toContainText('Multi Turn Tool Loop');
+    await expect(page.locator('.eval-meta-strip').first()).toContainText(/scenario\s*multi-turn-tool-loop/i);
   });
 });

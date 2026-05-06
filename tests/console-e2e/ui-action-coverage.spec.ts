@@ -64,7 +64,7 @@ function normalizeActionName(name: string) {
 async function goToRoute(page: Page, route: (typeof ROUTES)[number]) {
   if (await page.locator('.app').count() === 0) {
     await page.goto('/console/', { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
+    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
   }
 
   await page.keyboard.press('Escape').catch(() => {});
@@ -72,7 +72,18 @@ async function goToRoute(page: Page, route: (typeof ROUTES)[number]) {
 
   const currentRoute = await page.evaluate(() => (globalThis as any).AppContext?.get?.().route || 'home');
   if (currentRoute !== route) {
-    await page.locator(`.sb__item:has-text("${ROUTE_LABELS[route]}")`).first().click();
+    const label = ROUTE_LABELS[route].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const routeButton = page.getByRole('button', { name: new RegExp(`^${label}(?:\\s+\\d+)?$`, 'i') }).first();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await routeButton.click({ timeout: 5_000 });
+        break;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await page.waitForTimeout(150);
+      }
+    }
+    await expect.poll(async () => page.evaluate(() => (globalThis as any).AppContext?.get?.().route || 'home')).toBe(route);
   }
 
   await page.waitForTimeout(150);
@@ -167,6 +178,8 @@ async function actionFingerprint(page: Page) {
         (element as HTMLElement).innerText,
         element.textContent,
       ].find(Boolean) || element.tagName.toLowerCase();
+      const inputType = element.tagName === 'INPUT' ? (input.type || '').toLowerCase() : '';
+      const isToggle = inputType === 'checkbox' || inputType === 'radio';
       return [
         element.tagName.toLowerCase(),
         String(label).trim().replace(/\s+/g, ' '),
@@ -176,6 +189,9 @@ async function actionFingerprint(page: Page) {
         element.getAttribute('aria-expanded') || '',
         element.getAttribute('data-active') || '',
         ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) ? input.value : '',
+        // Checkbox/radio toggles only flip `checked` — `value` is constant —
+        // so probing them was being mis-flagged as "no observable effect".
+        isToggle ? (input.checked ? 'checked' : 'unchecked') : '',
       ].join('|');
     });
 
@@ -263,7 +279,18 @@ async function exerciseTarget(page: Page, target: ActionTarget) {
       });
       if (!changed) return { covered: true, reason: 'single-option select' };
     } else {
-      await locator.fill('__ui_action_probe__');
+      // Checkbox/radio inputs cannot be filled — toggle them instead.
+      // Playwright .fill() on a checkbox throws "Input of type checkbox
+      // cannot be filled" and the entire coverage scan halts.
+      const inputType = await locator.evaluate((element: HTMLInputElement) =>
+        element.tagName === 'INPUT' ? (element.type || '').toLowerCase() : ''
+      );
+      if (inputType === 'checkbox' || inputType === 'radio') {
+        const clicked = await clickActionTarget(page, resolved.target);
+        if (!clicked) return { covered: true, reason: 'checkbox detached during probe' };
+      } else {
+        await locator.fill('__ui_action_probe__');
+      }
     }
   } else {
     const clicked = await clickActionTarget(page, resolved.target);

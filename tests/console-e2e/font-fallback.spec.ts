@@ -51,7 +51,7 @@ test('console renders with system-font fallback when Google Fonts is blocked', a
   await page.route('**/fonts.gstatic.com/**', async (route) => route.abort('blockedbyclient'));
   await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
   await page.goto('/console/');
-  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
+  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
   await page.waitForTimeout(300);
   const families = await page.evaluate(() => ({
     body: getComputedStyle(document.body).fontFamily,

@@ -8,11 +8,17 @@
 import { test, expect } from './_helpers.js';
 
 test('empty /api/history preserves demo fallback companies + proposals', async ({ page }) => {
+  // The console runs in DEMO_MODE on the static test server (port !== 3000),
+  // so /api/history is rewritten to ../fixtures/history.json before the network.
+  // Mock both: the fixture path catches DEMO_MODE; the /api path catches live mode.
+  await page.route('**/fixtures/history.json', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
   await page.route('**/api/history', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
   await page.goto('/console/');
-  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
+  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
   await page.waitForTimeout(500);
 
   // window.GTM.companies should still hold the synthetic fixture rows.
@@ -27,11 +33,17 @@ test('empty /api/history preserves demo fallback companies + proposals', async (
 });
 
 test('demo-data pill is visible in the topbar when fallback is active', async ({ page }) => {
+  // The console runs in DEMO_MODE on the static test server (port !== 3000),
+  // so /api/history is rewritten to ../fixtures/history.json before the network.
+  // Mock both: the fixture path catches DEMO_MODE; the /api path catches live mode.
+  await page.route('**/fixtures/history.json', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
   await page.route('**/api/history', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
   await page.goto('/console/');
-  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
+  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
   await page.waitForTimeout(500);
   // Force a small re-render so React picks up the flag if needed.
   await page.locator('.sb__item:has-text("Pipeline")').first().click();
@@ -40,11 +52,17 @@ test('demo-data pill is visible in the topbar when fallback is active', async ({
 });
 
 test('Pipeline route shows real cards (not "— empty —") with empty history', async ({ page }) => {
+  // The console runs in DEMO_MODE on the static test server (port !== 3000),
+  // so /api/history is rewritten to ../fixtures/history.json before the network.
+  // Mock both: the fixture path catches DEMO_MODE; the /api path catches live mode.
+  await page.route('**/fixtures/history.json', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
   await page.route('**/api/history', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
   await page.goto('/console/');
-  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 15_000 });
+  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
   await page.waitForTimeout(500);
   await page.locator('.sb__item:has-text("Pipeline")').first().click();
   // At least one kanban card visible — proves fallback survived.

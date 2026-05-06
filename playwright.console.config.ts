@@ -33,6 +33,10 @@ export default defineConfig({
     timeout: 30_000,
   },
   outputDir: 'test-results-console/',
-  timeout: 30_000,
+  // 60s per-test budget. Babel-standalone transpile + 4-worker parallel
+  // load makes the prior 30s ceiling brittle for mount-heavy suites
+  // (smoke-click sweeps 60 buttons; ui-action-coverage exercises every
+  // route). Each test still asserts its own action timeouts inside.
+  timeout: 60_000,
   expect: { timeout: 5_000 },
 });

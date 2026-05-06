@@ -4,7 +4,7 @@ Voice-AI-led GTM motion runtime. An inbound voice agent enriches the lead from C
 
 ## What's in here
 
-- **`apps/ops-console/`** — operator UI: React (loaded via UMD + babel-standalone, no build step) for the main `/console/`, plus static dashboards at `/evaluation/` and `/eval-runs/`. Same code runs static (`DEMO_MODE`) or against the live backend. Includes the **Agents** route — live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake agents wired to app context.
+- **`apps/ops-console/`** — operator UI: React (loaded via UMD + babel-standalone, no build step) for the main `/console/`; `/evaluation/` is a compatibility redirect into `/console/?route=evals`, and `/eval-runs/` remains the static harness output surface. Same code runs static (`DEMO_MODE`) or against the live backend. Includes the **Agents** route and the **Evals** regression lab — live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake agents wired to app context.
 - **`lib/`** — intake, CRM enrichment, post-call processing, LLM extraction, branded PDF generation, audit log surface, evaluation hooks.
 - **`server.js`** — Express `/api/*` surface (live mode, full Express backend).
 - **`functions/api/`** — Cloudflare Pages Functions mirror of the same `/api/*` surface so the Pages deploy is full-stack. Pages Functions read from D1 first and fall back to the bundled fixtures when D1 is empty or unbound.
@@ -16,7 +16,7 @@ The n8n workflow library is the single source of truth at [`wranngle/n8n`](https
 
 ## Demo
 
-The deployed Pages site at [`gtm-ops.pages.dev`](https://gtm-ops.pages.dev) runs in DEMO_MODE end-to-end against the bundled fixtures. Open `/console/` to drive the operator UI, `/evaluation/` for the eval dashboard, `/eval-runs/` for the harness output surface. The Generate page replays a canned 11-step pipeline trace so you can see the proposal flow without a live backend. A 3-minute architecture walkthrough video lives at the project's README on GitHub when published.
+The deployed Pages site at [`gtm-ops.wranngle.com`](https://gtm-ops.wranngle.com) (Cloudflare Pages project `gtm-ops`, also reachable at `gtm-ops.pages.dev`) runs in DEMO_MODE end-to-end against the bundled fixtures. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. The Generate page replays a canned 11-step pipeline trace so you can see the proposal flow without a live backend. A 3-minute architecture walkthrough video lives at the project's README on GitHub when published.
 
 ## Architecture
 
@@ -48,7 +48,7 @@ python3 -m http.server 4173   # then open http://localhost:4173/console/
 
 In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/fixtures/`. The same UI runs in both modes. A small "demo data" pill appears in the topbar when the backend returns no historic runs.
 
-**ElevenLabs Sales Coach + Sarah Intake** mount as live ConvAI widgets when `unpkg.com/@elevenlabs/convai-widget-embed` is reachable. If the embed script can't load (corporate network, strict CSP), the widget container shows a fallback message + deep link to the agent on `elevenlabs.io`. Append `?admin=1` to the `/console/` URL to reveal admin-only agents.
+**ElevenLabs Sales Coach + Sarah Intake** mount as live ConvAI widgets from the coach launcher, Agents route, and Evals regression lab when `unpkg.com/@elevenlabs/convai-widget-embed` is reachable. If the embed script can't load (corporate network, strict CSP), the widget container shows a fallback message + deep link to the agent on `elevenlabs.io`. Append `?admin=1` to the `/console/` URL to reveal admin-only agents.
 
 ## Tests
 

@@ -1,10 +1,7 @@
 /**
- * a11y regression for the static dashboards (/evaluation/ and
- * /eval-runs/). They live outside the React console but are linked
- * from the sitemap and from the Evals route header, so visitors will
- * land on them. Asserts axe finds zero violations (color-contrast
- * disabled — fonts.googleapis.com timing makes that probe noisy when
- * the dashboards are still loading their data).
+ * a11y regression for the remaining static dashboard (/eval-runs/).
+ * /evaluation/ is only a compatibility redirect into /console/?route=evals,
+ * so its behavior is covered in evaluation-flow.spec.ts.
  */
 import { test, expect } from './_helpers.js';
  
@@ -12,7 +9,7 @@ import AxeBuilderImport from '@axe-core/playwright';
 
 const AxeBuilder = (AxeBuilderImport as any).default ?? AxeBuilderImport;
 
-const PATHS = ['/evaluation/', '/eval-runs/'];
+const PATHS = ['/eval-runs/'];
 
 for (const path of PATHS) {
   test(`subapp a11y · ${path} (no critical/serious violations)`, async ({ page }) => {
@@ -37,16 +34,3 @@ for (const path of PATHS) {
     expect(mainCount).toBe(1);
   });
 }
-
-test('/evaluation/ filter selects have accessible names', async ({ page }) => {
-  await page.goto('/evaluation/');
-  for (const id of ['filter-status', 'filter-version', 'filter-search']) {
-    const el = page.locator(`#${id}`);
-    const ariaLabel = await el.getAttribute('aria-label');
-    const labelFor = await page.locator(`label[for="${id}"]`).count();
-    expect(
-      Boolean(ariaLabel) || labelFor > 0,
-      `${id} has neither aria-label nor associated <label>`,
-    ).toBe(true);
-  }
-});

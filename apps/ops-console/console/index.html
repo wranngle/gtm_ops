@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>gtm_ops · console</title>
+<title>Wranngle · gtm_ops console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="preconnect" href="https://unpkg.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg"/>
+<link rel="icon" type="image/png" href="/assets/favicon.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
 <link rel="manifest" href="/site.webmanifest"/>
 <meta name="theme-color" content="#12111a"/>
 <link rel="stylesheet" href="app.css"/>
@@ -16,14 +17,32 @@
       (function () {
         var host = (window.location.hostname || '').toLowerCase();
         var isPagesDemo = /\.pages\.dev$/.test(host) || host === 'gtm-ops.pages.dev';
-        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo;
+        var isLocalStatic = (host === 'localhost' || host === '127.0.0.1' || host === '::1') &&
+          window.location.port !== '3000' &&
+          !new URLSearchParams(window.location.search).has('live');
+        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo || isLocalStatic;
         window.DEMO_MODE = DEMO_MODE;
         if (!DEMO_MODE) return;
 
         var nativeFetch = window.fetch.bind(window);
 
+        function parseFetchUrl(pathOrUrl) {
+          try {
+            return new URL(String(pathOrUrl), window.location.href);
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function shouldUseFixture(pathOrUrl) {
+          var parsed = parseFetchUrl(pathOrUrl);
+          if (!parsed) return String(pathOrUrl).indexOf('/api') === 0;
+          return parsed.origin === window.location.origin && parsed.pathname.indexOf('/api') === 0;
+        }
+
         function pathToFixture(pathOrUrl) {
-          var u = String(pathOrUrl).replace(/^https?:\/\/[^/]+/, '');
+          var parsed = parseFetchUrl(pathOrUrl);
+          var u = parsed ? parsed.pathname : String(pathOrUrl).replace(/^https?:\/\/[^/]+/, '');
           u = u.split('?')[0].split('#')[0];
           if (!u.indexOf('/api')) u = u.slice(4);
           if (!u || u === '/') u = '/index';
@@ -43,7 +62,7 @@
           var url = typeof input === 'string' ? input : (input && input.url) || '';
           var method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
 
-          if (url.indexOf('/api') === -1) {
+          if (!shouldUseFixture(url)) {
             return nativeFetch(input, init);
           }
 
@@ -97,6 +116,7 @@
 <script type="text/babel" src="icons.jsx"></script>
 <script type="text/babel" src="tweaks-panel.jsx"></script>
 <script type="text/babel" src="el-widget.jsx"></script>
+<script type="text/babel" src="elevenlabs-ui.jsx"></script>
 <script type="text/babel" src="shell.jsx"></script>
 <script type="text/babel" src="pages-1.jsx"></script>
 <script type="text/babel" src="pages-2.jsx"></script>
