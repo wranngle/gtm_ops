@@ -27,6 +27,7 @@ let requireRole: any;
 let requirePermission: any;
 let getPermissionSummary: any;
 let resolveDevAuthRole: any;
+let _resetAuthEnvWarningForTests: any;
 
 beforeEach(async () => {
   const module = await import('../../lib/rbac.js');
@@ -47,6 +48,8 @@ beforeEach(async () => {
   requirePermission = module.requirePermission;
   getPermissionSummary = module.getPermissionSummary;
   resolveDevAuthRole = module.resolveDevAuthRole;
+  _resetAuthEnvWarningForTests = module._resetAuthEnvWarningForTests;
+  _resetAuthEnvWarningForTests();
 });
 
 describe('[P0] Role Constants', () => {
@@ -641,6 +644,49 @@ describe('[P0] Dev auth shim - resolveDevAuthRole', () => {
     expect(
       resolveDevAuthRole({ 'x-user-role': ['admin', 'owner'] as any }, { NODE_ENV: 'production' }),
     ).toBe('viewer');
+  });
+
+  it('[P0] should reject an invalid WRANNGLE_AUTH_DEFAULT_ROLE and fall through to env default', () => {
+    // Operator typo: "admni" instead of "admin". Without this guard,
+    // every request resolves to "admni", which requireRole rejects
+    // with INVALID_ROLE — the API silently breaks. Falling through
+    // keeps it functional under the env-aware default.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    expect(
+      resolveDevAuthRole({}, { NODE_ENV: 'production', WRANNGLE_AUTH_DEFAULT_ROLE: 'admni' }),
+    ).toBe('viewer');
+    expect(
+      resolveDevAuthRole({}, { NODE_ENV: 'development', WRANNGLE_AUTH_DEFAULT_ROLE: 'admni' }),
+    ).toBe('owner');
+
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('[P1] should warn only once per process for repeat invalid env values', () => {
+    // Per-request warnings would spam the access log. The flag has
+    // module scope; the test reset hook clears it so this assertion
+    // is hermetic.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    resolveDevAuthRole({}, { NODE_ENV: 'production', WRANNGLE_AUTH_DEFAULT_ROLE: 'admni' });
+    resolveDevAuthRole({}, { NODE_ENV: 'production', WRANNGLE_AUTH_DEFAULT_ROLE: 'admni' });
+    resolveDevAuthRole({}, { NODE_ENV: 'production', WRANNGLE_AUTH_DEFAULT_ROLE: 'admni' });
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it('[P0] should still honor a valid WRANNGLE_AUTH_DEFAULT_ROLE without warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    expect(
+      resolveDevAuthRole({}, { NODE_ENV: 'production', WRANNGLE_AUTH_DEFAULT_ROLE: 'member' }),
+    ).toBe('member');
+
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 
