@@ -507,6 +507,29 @@ describe('[P1] AuditLogger - CSV Export', () => {
 
     await logger.close();
   });
+
+  it('[P0] should round-trip metadata redaction through CSV export', async () => {
+    // PR #106 redacted secrets in metadata at log() time. CSV export
+    // reads via query() which reads stored data — so redaction must
+    // round-trip. A regression that bypassed the redaction (e.g. a
+    // refactor reading raw rows from a different code path) would
+    // silently re-leak secrets through the CSV download surface.
+    const logger = new AuditLogger(testDbPath);
+    await logger.log(
+      AuditAction.PIPELINE_STARTED,
+      'pipeline',
+      'p1',
+      { request: { authorization: 'Bearer sk-ant-api03-mockKeyMaterial1234567890abcdef' } },
+    );
+
+    const csv = await logger.exportToCsv({});
+
+    // The masked form must appear; the raw key body must not.
+    expect(csv).toContain('sk-ant-...');
+    expect(csv).not.toContain('mockKeyMaterial1234567890abcdef');
+
+    await logger.close();
+  });
 });
 
 describe('[P0] AuditLogger - Metadata secret redaction', () => {
