@@ -45,12 +45,16 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const port = process.env.PORT || 3000;
 // Bind to loopback by default so the local dev server isn't reachable
-// from other hosts on a shared LAN / dev VM. Several routes (notably
-// /api/restart, /api/users/:id/role, /api/audit-logs/cleanup) have no
-// auth check yet — exposing them to 0.0.0.0 makes the dev box trivially
-// abusable from anywhere on the network. Override with HOST=0.0.0.0 if
-// the deployment genuinely needs broader binding (e.g. Docker container
-// where 0.0.0.0 is the only reachable interface).
+// from other hosts on a shared LAN / dev VM. RBAC now covers every
+// mutation route and every sensitive read route (lint-rbac-coverage.sh
+// is the forcing function), and the production-default role is `viewer`
+// (lib/rbac.js#resolveDevAuthRole), so 0.0.0.0 is no longer the
+// catastrophic failure mode it once was — but loopback-by-default is
+// kept as defense in depth: a misconfigured WRANNGLE_AUTH_DEFAULT_ROLE
+// or a future un-guarded route can't be reached over the network.
+// Override with HOST=0.0.0.0 when the deployment genuinely needs
+// broader binding (e.g. Docker container where 0.0.0.0 is the only
+// reachable interface).
 const host = process.env.HOST || '127.0.0.1';
 // eslint-disable-next-line unicorn/prefer-event-target -- need Node EventEmitter API (.on/.off/.emit) used by SSE handlers below
 const logEmitter = new EventEmitter();
