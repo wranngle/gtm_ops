@@ -188,21 +188,65 @@ describe('[P0] AuditLogger - Query and Filtering', () => {
     await logger.close();
   });
 
-  it('[P0] should filter by date range', async () => {
-    // GIVEN: Logs at different times
+  it('[P0] should filter by start_date / end_date inclusive of cutoffs', async () => {
+    // The previous version of this test inserted ONE row and asserted
+    // count >= 1 — trivially true even if the date filter regressed
+    // to a no-op. This version backdates rows via direct SQL UPDATE
+    // (same pattern as the audit-tamper triplet) so the cutoff has
+    // real rows on either side.
     const logger = new AuditLogger(testDbPath);
-    const now = Date.now();
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
 
-    // Create logs with backdated timestamps (via direct query since log() uses current time)
-    await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd1', {});
-
-    // WHEN: Filtering by recent timestamp
-    const result = await logger.query({ start_date: now - 1000 });
-
-    // THEN: Should return logs after start_date
-    expect(result.logs.length).toBeGreaterThanOrEqual(1);
-
+    const oldRow = await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'old', {});
+    const midRow = await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'mid', {});
+    await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'fresh', {});
     await logger.close();
+
+    const sqlite = await import('sqlite3');
+    await new Promise<void>((resolve, reject) => {
+      const db = new sqlite.default.Database(testDbPath);
+      db.run(
+        'UPDATE audit_logs SET timestamp = CASE log_id WHEN ? THEN ? WHEN ? THEN ? ELSE timestamp END',
+        [oldRow.log_id, sevenDaysAgo, midRow.log_id, threeDaysAgo],
+        (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          db.close((closeErr) => {
+            if (closeErr) reject(closeErr);
+            else resolve();
+          });
+        },
+      );
+    });
+
+    const reader = new AuditLogger(testDbPath);
+    const fiveDaysAgo = Date.now() - 5 * 24 * 60 * 60 * 1000;
+    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+
+    // start_date = 5 days ago → timestamp >= 5d-ago → mid (3d) +
+    // fresh (now), excludes old (7d).
+    const recent = await reader.query({ start_date: fiveDaysAgo });
+    expect(recent.logs).toHaveLength(2);
+    expect(recent.logs.map((l: any) => l.resource_id).sort()).toEqual(['fresh', 'mid']);
+
+    // end_date = 5 days ago → timestamp <= 5d-ago → only old (7d).
+    const past = await reader.query({ end_date: fiveDaysAgo });
+    expect(past.logs).toHaveLength(1);
+    expect(past.logs[0].resource_id).toBe('old');
+
+    // Combined window: 5d-ago ≤ timestamp ≤ 2d-ago → only mid (3d).
+    const window_ = await reader.query({
+      start_date: fiveDaysAgo,
+      end_date: twoDaysAgo,
+    });
+    expect(window_.logs).toHaveLength(1);
+    expect(window_.logs[0].resource_id).toBe('mid');
+
+    await reader.close();
   });
 });
 
