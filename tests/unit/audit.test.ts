@@ -352,6 +352,48 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
     expect(result.invalid_at).toBeTruthy();
     await verifier.close();
   });
+
+  it('[P1] should DETECT a directly mutated hash field', async () => {
+    // GIVEN: 3 logged events with valid chain.
+    const logger = new AuditLogger(testDbPath);
+    await logger.log(AuditAction.USER_LOGIN, 'user', 'u1', {});
+    await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd1', {});
+    await logger.log(AuditAction.DOCUMENT_UPDATED, 'doc', 'd1', {});
+    expect((await logger.verifyIntegrity()).valid).toBe(true);
+    await logger.close();
+
+    // WHEN: An attacker rewrites the stored hash on row #2 directly,
+    // hoping to mask a mutation OR set up a future tampered row whose
+    // previous_hash points at this fake hash. The hash they write is
+    // a sha256-shaped string but doesn't match `computeHash(row, ...)`.
+    const fakeHash = '0'.repeat(64); // 64 hex chars; right shape, wrong content.
+    const sqlite = await import('sqlite3');
+    await new Promise<void>((resolve, reject) => {
+      const db = new sqlite.default.Database(testDbPath);
+      db.run(
+        `UPDATE audit_logs SET hash = ? WHERE log_id = (SELECT log_id FROM audit_logs ORDER BY id ASC LIMIT 1 OFFSET 1)`,
+        [fakeHash],
+        (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          db.close((closeErr) => closeErr ? reject(closeErr) : resolve());
+        },
+      );
+    });
+
+    // THEN: verify recomputes hash from the row's content + previousHash.
+    // The recomputed hash won't match the stored fake hash → chain breaks
+    // at row #2. `checked` is the row count in the DB (3), not the index
+    // of the break — the break point is in `invalid_at` instead.
+    const verifier = new AuditLogger(testDbPath);
+    const result = await verifier.verifyIntegrity();
+    expect(result.valid).toBe(false);
+    expect(result.checked).toBe(3);
+    expect(result.invalid_at).toBeTruthy();
+    await verifier.close();
+  });
 });
 
 describe('[P1] AuditLogger - Retention Cleanup', () => {
