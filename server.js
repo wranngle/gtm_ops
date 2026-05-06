@@ -4,7 +4,6 @@ import fs from 'fs/promises';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { EventEmitter } from 'events';
-import { spawn } from 'child_process';
 import express from 'express';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
@@ -1139,17 +1138,13 @@ Keep it between 150-300 words. Do not use markdown formatting - plain text only.
   }
 });
 
-app.post('/api/restart', (req, res) => {
-  console.log('--- HARD RESTART INITIATED VIA API ---');
-  res.json({ message: 'Rebooting...' });
-  setTimeout(() => {
-    spawn(process.argv[0], process.argv.slice(1), {
-      detached: true,
-      stdio: 'inherit'
-    }).unref();
-    process.exit(0);
-  }, 1000);
-});
+// Removed /api/restart — was an unauthenticated POST that called
+// process.exit(0) and respawned the node process. Zero callers in the
+// repo (no UI button, no script). PR #92 narrowed the listen host to
+// 127.0.0.1 by default; even so an unauthenticated process-restart
+// surface is a footgun on localhost (any local script could DOS the
+// dev server with `curl -X POST localhost:3000/api/restart`). Use
+// `kill <pid>` or `pkill -HUP -f 'node server.js'` instead.
 
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const { input, structured, async: asyncMode, business_profile } = req.body;
