@@ -22,6 +22,7 @@ let redactSecretsDeep: any;
 let _resetCorsWarningForTests: any;
 let inputValidationMiddleware: any;
 let safeFilenameForHeader: any;
+let createSafeLogger: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -40,6 +41,7 @@ beforeEach(async () => {
   _resetCorsWarningForTests();
   inputValidationMiddleware = module.inputValidationMiddleware;
   safeFilenameForHeader = module.safeFilenameForHeader;
+  createSafeLogger = module.createSafeLogger;
 });
 
 afterEach(() => {
@@ -117,6 +119,17 @@ describe('[P0] maskApiKeysInText - Text Sanitization', () => {
     const masked = maskApiKeysInText(text);
     expect(masked).toContain('xai-...');
     expect(masked).not.toContain('mock1234567890abcdefghijklmno');
+  });
+
+  it('[P0] should mask generic OpenAI-shaped sk-* keys (no ant/live/test prefix)', () => {
+    // The generic `sk-` masker is the catch-all that runs after the
+    // sk-ant / sk_live / sk_test specialized variants. It covers
+    // OpenAI's classic sk-... format. Pinning ensures a refactor of
+    // the masker order doesn't accidentally drop this matcher.
+    const text = 'OPENAI_API_KEY=sk-mockOpenAIKeyMaterial1234567890abcd';
+    const masked = maskApiKeysInText(text);
+    expect(masked).toContain('sk-...');
+    expect(masked).not.toContain('mockOpenAIKeyMaterial1234567890');
   });
 
   it('[P0] should mask Stripe keys (sk_live_* and sk_test_*) before generic sk-*', () => {
@@ -688,5 +701,59 @@ describe('[P0] safeFilenameForHeader - Content-Disposition injection guard', () 
     expect(safeFilenameForHeader('gdpr_export_user-123_1700000000.json')).toBe(
       'gdpr_export_user-123_1700000000.json',
     );
+  });
+});
+
+describe('[P1] createSafeLogger - logger wrapper', () => {
+  it('[P0] should mask string args before forwarding', () => {
+    const captured: any[] = [];
+    const fakeLog = (...args: any[]) => {
+      captured.push(args);
+    };
+    const wrapped = createSafeLogger(fakeLog);
+    wrapped('Anthropic key sk-ant-api03-mockKeyMaterial1234567890abcdef leaked');
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0][0]).toContain('sk-ant-...');
+    expect(captured[0][0]).not.toContain('mockKeyMaterial1234567890abcdef');
+  });
+
+  it('[P0] should walk object args via JSON round-trip and mask nested strings', () => {
+    const captured: any[] = [];
+    const wrapped = createSafeLogger((...args: any[]) => {
+      captured.push(args);
+    });
+    wrapped({
+      reqId: 'abc',
+      headers: { authorization: 'Bearer ghp_mockClassicTokenMaterial12345' },
+    });
+
+    expect(captured[0][0]).toEqual({
+      reqId: 'abc',
+      headers: { authorization: expect.stringContaining('ghp_...') },
+    });
+    expect(JSON.stringify(captured[0])).not.toContain('mockClassicTokenMaterial');
+  });
+
+  it('[P1] should pass non-string non-object args through unchanged', () => {
+    const captured: any[] = [];
+    const wrapped = createSafeLogger((...args: any[]) => {
+      captured.push(args);
+    });
+    wrapped(42, true, null, undefined);
+
+    expect(captured[0]).toEqual([42, true, null, undefined]);
+  });
+
+  it('[P1] should fall back to original arg when JSON round-trip fails (cycles)', () => {
+    const captured: any[] = [];
+    const wrapped = createSafeLogger((...args: any[]) => {
+      captured.push(args);
+    });
+    const cyclic: any = { name: 'foo' };
+    cyclic.self = cyclic;
+    expect(() => wrapped(cyclic)).not.toThrow();
+    // The fallback returns the original arg, so identity is preserved.
+    expect(captured[0][0]).toBe(cyclic);
   });
 });
