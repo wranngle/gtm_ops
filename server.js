@@ -723,11 +723,18 @@ app.get('/api/admin/health', generalLimiter, async (req, res) => {
 // the legacy presales pipeline deployment). Intentionally has zero
 // runtime dependencies so it stays green even when downstream managers/DBs
 // are degraded — use `/api/admin/health` for deep checks.
+//
+// Includes deploy provenance (commit + uptime) so an operator looking at
+// a bug report can correlate "what's deployed" with the runtime instance.
+// commit comes from GIT_SHA env (set by deploy pipelines) or falls back
+// to "unknown" when not provided.
 app.get('/api/health', generalLimiter, (req, res) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0'
+    version: process.env.npm_package_version || '1.0.0',
+    commit: (process.env.GIT_SHA || 'unknown').slice(0, 7),
+    uptime_s: Math.floor(process.uptime()),
   });
 });
 

@@ -275,6 +275,43 @@ describe('[P1] AuditLogger - Hash Chain Integrity', () => {
 
     await logger.close();
   });
+
+  it('[P1] should DETECT tampering with a logged row', async () => {
+    // GIVEN: 3 logged events. The hash chain should be `valid` initially.
+    const logger = new AuditLogger(testDbPath);
+    await logger.log(AuditAction.USER_LOGIN, 'user', 'u1', {ip: '1.1.1.1'});
+    await logger.log(AuditAction.DOCUMENT_CREATED, 'doc', 'd1', {title: 'Original'});
+    await logger.log(AuditAction.DOCUMENT_UPDATED, 'doc', 'd1', {title: 'Edited'});
+    expect((await logger.verifyIntegrity()).valid).toBe(true);
+    await logger.close();
+
+    // WHEN: An attacker mutates the middle row's metadata directly via SQL
+    // (bypassing the API). The stored `hash` is now stale relative to the
+    // recomputed hash from the new metadata.
+    const sqlite = await import('sqlite3');
+    await new Promise<void>((resolve, reject) => {
+      const db = new sqlite.default.Database(testDbPath);
+      db.run(
+        `UPDATE audit_logs SET metadata = ? WHERE log_id = (SELECT log_id FROM audit_logs ORDER BY id ASC LIMIT 1 OFFSET 1)`,
+        [JSON.stringify({title: 'Tampered'})],
+        (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          db.close((closeErr) => closeErr ? reject(closeErr) : resolve());
+        },
+      );
+    });
+
+    // THEN: A fresh logger reading the same DB should detect the break.
+    const verifier = new AuditLogger(testDbPath);
+    const result = await verifier.verifyIntegrity();
+    expect(result.valid).toBe(false);
+    expect(result.checked).toBe(3);
+    expect(result.invalid_at).toBeTruthy();
+    await verifier.close();
+  });
 });
 
 describe('[P1] AuditLogger - Retention Cleanup', () => {

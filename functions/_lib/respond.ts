@@ -10,6 +10,11 @@ export type Env = {
   GEMINI_API_KEY?: string;
   N8N_WEBHOOK_SECRET?: string;
   ALLOWED_ORIGIN?: string;
+  // Cloudflare Pages auto-injected build metadata. Surfaced via /api/health
+  // so operators can correlate "what's deployed" with bug reports.
+  CF_PAGES_COMMIT_SHA?: string;
+  CF_PAGES_BRANCH?: string;
+  CF_PAGES_URL?: string;
 };
 
 const securityHeaders = {

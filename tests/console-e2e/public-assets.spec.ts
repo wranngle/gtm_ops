@@ -100,7 +100,7 @@ test('og-card.svg references the production URL (not the preview branch)', async
     /preview\.gtm-ops\.(?:pages\.dev|wranngle\.com)/,
   );
   expect(body, 'og-card SVG should reference the production host').toMatch(
-    /gtm-ops\.wranngle\.com/,
+    /app\.wranngle\.com/,
   );
 });
 
