@@ -193,16 +193,18 @@ describe('[P0] migrateToMonetaryValue - schema v1 → v2', () => {
     expect(migrateToMonetaryValue({ value: 100 })).toMatchObject({ amount: 100, period: 'monthly' });
   });
 
-  it('[P1] should throw on a totally unknown period (no fallback in current .js runtime)', () => {
-    // The .ts source has a `validPeriods.includes(mappedPeriod) ?
-    // mappedPeriod : assumedPeriod` fallback; lib/types.js (the
-    // runtime path under bun's `./lib/types.js` import) doesn't have
-    // it yet — pinning the actual current behavior so a future
-    // collapse to .ts (cf. PR #128 for lib/health) is a deliberate
-    // change with a visible test diff, not a silent fix.
-    expect(() =>
-      migrateToMonetaryValue({ amount: 100, period: 'eternity' }),
-    ).toThrow(/Invalid period/);
+  it('[P1] should fall back to the assumed period when the input period is unknown', () => {
+    // PR #135 noted that lib/types.js was missing the
+    // `validPeriods.includes(mappedPeriod) ? mappedPeriod :
+    // assumedPeriod` fallback that lib/types.ts had — which made
+    // unknown period values throw at runtime. This PR collapses the
+    // duplicate (cf. PR #128 for lib/health), so the canonical .ts
+    // behavior is what runs: unknown periods fall through to
+    // assumedPeriod (default 'monthly') instead of throwing.
+    expect(migrateToMonetaryValue({ amount: 100, period: 'eternity' })).toMatchObject({
+      amount: 100,
+      period: 'monthly',
+    });
   });
 
   it('[P1] should fall back to $0 once for null/undefined input', () => {
