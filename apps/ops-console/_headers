@@ -14,9 +14,15 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-site
   X-Robots-Tag: index, follow
-  # CSP intentionally permissive for the unpkg/jsdelivr CDN-driven console.
-  # If you self-host these libs, tighten script-src and style-src to 'self'.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://elevenlabs.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss:; media-src 'self' blob: https:; worker-src 'self' blob:; frame-src https://elevenlabs.io https://*.elevenlabs.io; frame-ancestors 'self'; base-uri 'self'; form-action 'self'
+  # CSP — script-src + style-src still permit 'unsafe-inline' because the
+  # console runs babel-standalone in-browser to transpile JSX. Migration
+  # to a pre-built bundle that drops both 'unsafe-inline' and the CDN
+  # script-src is tracked as a separate hardening item; doing it requires
+  # adding a build step (Vite/esbuild) and self-hosting React/Babel.
+  # connect-src + media-src narrowed from `https: wss:` (any origin) to
+  # explicit ElevenLabs hosts — the console only talks to itself + the
+  # Convai widget. Tightens the post-XSS exfiltration surface.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://elevenlabs.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://elevenlabs.io https://*.elevenlabs.io wss://elevenlabs.io wss://*.elevenlabs.io; media-src 'self' blob: https://elevenlabs.io https://*.elevenlabs.io; worker-src 'self' blob:; frame-src https://elevenlabs.io https://*.elevenlabs.io; frame-ancestors 'self'; base-uri 'self'; form-action 'self'
 
 # Long-cache the immutable token assets
 /tokens/*
