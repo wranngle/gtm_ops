@@ -2585,6 +2585,71 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 .eval-artifact-panel {
   margin-bottom: 24px;
 }
+.eval-artifact-panel__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding-right: clamp(120px, 11vw, 220px);
+}
+.eval-artifact-review {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+.eval-artifact-review__summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 95, 0, .28);
+  border-radius: var(--r-md);
+  background: rgba(255, 95, 0, .07);
+}
+.eval-artifact-review__summary strong {
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.eval-artifact-review__summary p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.eval-artifact-review__axes {
+  display: grid;
+  gap: 8px;
+}
+.eval-artifact-review__axis {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-inset);
+}
+.eval-artifact-review__axis[data-status="fail"] {
+  border-color: rgba(207, 60, 105, .38);
+  background: rgba(207, 60, 105, .07);
+}
+.eval-artifact-review__axis strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.eval-artifact-review__axis p {
+  margin: 3px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
 .eval-artifact-json {
   margin-top: 14px;
   max-height: 260px;
@@ -3124,6 +3189,9 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   .eval-run-plan-summary .btn {
     justify-content: center;
   }
+  .eval-artifact-panel__head {
+    padding-right: 0;
+  }
   .page--evals { padding: 22px 16px 68px; }
   .eval-command-center h2 { font-size: 26px; }
   .eval-command-center__voice { grid-template-columns: minmax(0, 1fr); }
@@ -3186,11 +3254,14 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 }
 @media (min-width: 901px) {
   html[data-console-route="generate"] .coach-launcher,
-  html[data-console-route="evals"] .coach-launcher,
   html[data-console-route="proposals"] .coach-launcher,
   html[data-console-route="agents"] .coach-launcher {
     top: calc(var(--topbar-h) + 14px);
     bottom: auto;
+  }
+  html[data-console-route="evals"] .coach-launcher {
+    left: calc(var(--sidebar-w) + 28px);
+    right: auto;
   }
 }
 /* Bottom-right floating dock. Hosts the ElevenLabs ConvAI widget directly

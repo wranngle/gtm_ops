@@ -2502,7 +2502,12 @@ test.describe('evals', () => {
     const drawer = page.getByRole('region', { name: /Evaluation artifact drawer/i });
     await expect(drawer).toBeVisible();
     await expect(drawer).toBeFocused();
-    await expect(drawer).toContainText(/local artifact/i);
+    await expect(drawer).toContainText(/artifact review packet/i);
+    await expect(drawer.locator('[data-testid="eval-artifact-review"]')).toContainText(/review evidence/i);
+    await expect(drawer.locator('[data-testid="eval-artifact-scenario"]')).toContainText(/\S+/);
+    await expect(drawer.locator('[data-testid="eval-artifact-score"]')).toContainText(/\d+%|--/);
+    await expect(drawer.locator('[data-testid="eval-artifact-path"]')).toContainText(/fixtures\/runs|eval-runs\.json/i);
+    await expect(drawer.locator('[data-testid="eval-artifact-axis"]')).not.toHaveCount(0);
     await expect(drawer.locator('.eval-artifact-json')).toContainText(/scenario_id|id/i);
     await expect(drawer.getByRole('link', { name: /Open raw artifact/i })).toHaveCount(0);
     await expect.poll(
@@ -2527,7 +2532,8 @@ test.describe('evals', () => {
     const drawer = page.getByRole('region', { name: /Evaluation artifact drawer/i });
     await expect(drawer).toBeVisible();
     await expect(drawer).toBeFocused();
-    await expect(drawer).toContainText(/local artifact/i);
+    await expect(drawer).toContainText(/artifact review packet/i);
+    await expect(drawer.locator('[data-testid="eval-artifact-review"]')).toContainText(/review evidence/i);
     await expect.poll(
       async () => (await drawer.boundingBox())?.y ?? 9999,
       { timeout: 5_000 },
@@ -2741,6 +2747,38 @@ test.describe('evals', () => {
     }
   });
 
+  test('eval run-detail surfaces voice_ai_agent_evals latency_breakdown_ms (TTFB / first-audio / total-turn) and tool_calls round-trips', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    // Click the first run row to make sure activeRun is the fixture entry
+    // that ships latency_breakdown_ms + tool_calls (the default run does).
+    await page.locator('.eval-run-row').first().click();
+
+    // Latency-breakdown panel: TTFB, First-audio, Total turn rows + p95 + budget.
+    const breakdown = page.locator('[data-testid="eval-latency-breakdown"]');
+    await expect(breakdown).toBeVisible();
+    for (const axis of ['ttfb', 'end_to_first_audio', 'total_turn']) {
+      const row = page.locator(`[data-testid="eval-latency-row"][data-axis="${axis}"]`);
+      await expect(row).toBeVisible();
+      await expect(row).toContainText(/p95\s+\d+(\.\d+)?(ms|s)/);
+      await expect(row).toContainText(/n=\d+/);
+      await expect(row).toContainText(/mean\s+\d+(\.\d+)?(ms|s)/);
+      // Tone is one of cl-ok / cl-warn / cl-err — derived from p95 vs budget.
+      const tone = await row.getAttribute('data-tone');
+      expect(['cl-ok', 'cl-warn', 'cl-err']).toContain(tone || '');
+    }
+
+    // Tool-call rows: name + schema-pass + round-trip-ms with derived tone.
+    const tools = page.locator('[data-testid="eval-tool-calls"]');
+    await expect(tools).toBeVisible();
+    const firstTool = page.locator('[data-testid="eval-tool-call-row"]').first();
+    await expect(firstTool).toBeVisible();
+    await expect(firstTool).toHaveAttribute('data-tool-name', /\w+/);
+    await expect(firstTool).toHaveAttribute('data-schema-pass', /^(true|false)$/);
+    await expect(firstTool).toContainText(/^\w+/);
+    await expect(firstTool).toContainText(/(\d+ms|—)/);
+  });
+
   test('eval dashboard surfaces the harness latency dimension (avg + slowest + budget)', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.sb__item:has-text("Evals")').first().click();
@@ -2811,6 +2849,44 @@ test.describe('evals', () => {
       && buttonBox!.y < coachBox!.y + coachBox!.height
       && buttonBox!.y + buttonBox!.height > coachBox!.y;
     expect(overlaps, 'global coach launcher must not cover the Evals run-plan CTA').toBe(false);
+  });
+
+  test('eval run detail header is not covered by the global coach launcher after scrolling', async ({ openConsole, page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+
+    const runRows = page.locator('.eval-run-row');
+    const runCount = await runRows.count();
+    test.skip(runCount === 0, 'Evals runs are unavailable in this fixture snapshot');
+    await runRows.last().click();
+
+    const runDetailCard = page.locator('.card:has(.card__title:has-text("run detail"))').first();
+    const runDetailHeader = runDetailCard.locator('.card__hd');
+    const coach = page.locator('.coach-launcher');
+    await expect(runDetailHeader).toBeVisible();
+    await expect(coach).toBeVisible();
+    await runDetailHeader.scrollIntoViewIfNeeded();
+
+    const [headerBox, cardBox, coachBox] = await Promise.all([
+      runDetailHeader.boundingBox(),
+      runDetailCard.boundingBox(),
+      coach.boundingBox(),
+    ]);
+    expect(headerBox, 'eval run detail header should render').not.toBeNull();
+    expect(cardBox, 'eval run detail card should render').not.toBeNull();
+    expect(coachBox, 'global coach launcher should render').not.toBeNull();
+
+    const overlapsHeader = headerBox!.x < coachBox!.x + coachBox!.width
+      && headerBox!.x + headerBox!.width > coachBox!.x
+      && headerBox!.y < coachBox!.y + coachBox!.height
+      && headerBox!.y + headerBox!.height > coachBox!.y;
+    const overlapsCard = cardBox!.x < coachBox!.x + coachBox!.width
+      && cardBox!.x + cardBox!.width > coachBox!.x
+      && cardBox!.y < coachBox!.y + coachBox!.height
+      && cardBox!.y + cardBox!.height > coachBox!.y;
+    expect(overlapsHeader, 'global coach launcher must not cover the Evals run detail header after scroll').toBe(false);
+    expect(overlapsCard, 'global coach launcher must stay out of the Evals run detail card after scroll').toBe(false);
   });
 
   test('eval policy action opens Settings on the Eval policy tab', async ({ openConsole }) => {
@@ -2907,7 +2983,7 @@ test.describe('evals', () => {
     await openArtifact.click();
     const localArtifactPanel = page.locator('[data-testid="eval-artifact-panel"]');
     await expect(localArtifactPanel).toBeVisible();
-    await expect(localArtifactPanel).toContainText(/local artifact/i);
+    await expect(localArtifactPanel).toContainText(/local path/i);
     await expect(localArtifactPanel).toContainText(/loaded inside the console/i);
 
     // Opening a local artifact intentionally replaces the run-plan panel.
@@ -3087,6 +3163,18 @@ test.describe('agents page', () => {
     expect(sessionBox!.height).toBeGreaterThan(70);
     expect(sessionBox!.x).toBeGreaterThanOrEqual(frameBox!.x);
     expect(sessionBox!.x + sessionBox!.width).toBeLessThanOrEqual(frameBox!.x + frameBox!.width + 1);
+  });
+
+  test('direct Agents route publishes the route into the ConvAI context packet', async ({ page }) => {
+    await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
+    await page.goto('/console/?route=agents', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
+
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    await expect(page.locator('[data-testid="agent-context-bar"]')).toContainText(/from\s+agents/i);
+    await expect(page.locator('.agent-session-strip')).toContainText(/route\s+agents/i);
+    await page.locator('.agent-admin-tab:has-text("Context")').click();
+    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/active_route: agents/i);
   });
 
   test('agent Context tab reuses the shared app context without hook-order errors', async ({ openConsole }) => {
