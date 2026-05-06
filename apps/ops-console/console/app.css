@@ -2824,12 +2824,22 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   margin-bottom: 12px;
 }
 .eval-meta-strip > .mono {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-size: 11px;
   color: var(--text-2);
   background: var(--bg-inset);
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   padding: 3px 8px;
+}
+.eval-meta-strip__label {
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .08em;
 }
 .eval-axis-stack {
   display: flex;
@@ -3255,13 +3265,10 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 @media (min-width: 901px) {
   html[data-console-route="generate"] .coach-launcher,
   html[data-console-route="proposals"] .coach-launcher,
+  html[data-console-route="evals"] .coach-launcher,
   html[data-console-route="agents"] .coach-launcher {
     top: calc(var(--topbar-h) + 14px);
     bottom: auto;
-  }
-  html[data-console-route="evals"] .coach-launcher {
-    left: calc(var(--sidebar-w) + 28px);
-    right: auto;
   }
 }
 /* Bottom-right floating dock. Hosts the ElevenLabs ConvAI widget directly
