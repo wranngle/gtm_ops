@@ -17,6 +17,7 @@ let getCorsOptions: any;
 let generateLimiter: any;
 let historyLimiter: any;
 let securityHeadersMiddleware: any;
+let apiNoStoreMiddleware: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -29,6 +30,7 @@ beforeEach(async () => {
   generateLimiter = module.generateLimiter;
   historyLimiter = module.historyLimiter;
   securityHeadersMiddleware = module.securityHeadersMiddleware;
+  apiNoStoreMiddleware = module.apiNoStoreMiddleware;
 });
 
 afterEach(() => {
@@ -375,5 +377,52 @@ describe('[P0] securityHeadersMiddleware - Response Headers', () => {
   it('[P0] should call next() exactly once', () => {
     const { next } = runMiddleware();
     expect(next).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('[P0] apiNoStoreMiddleware - Cache-Control on /api/*', () => {
+  function runMiddleware() {
+    const headers: Record<string, string> = {};
+    const req: any = { path: '/api/anything' };
+    const res: any = {
+      setHeader(name: string, value: string) {
+        headers[name] = value;
+      },
+    };
+    const next = vi.fn();
+    apiNoStoreMiddleware(req, res, next);
+    return { headers, next };
+  }
+
+  it('[P0] should set Cache-Control: no-store', () => {
+    const { headers } = runMiddleware();
+    expect(headers['Cache-Control']).toBe('no-store');
+  });
+
+  it('[P1] should set Pragma: no-cache for HTTP/1.0 proxies', () => {
+    const { headers } = runMiddleware();
+    expect(headers.Pragma).toBe('no-cache');
+  });
+
+  it('[P0] should call next() exactly once', () => {
+    const { next } = runMiddleware();
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it('[P0] should let route handlers override Cache-Control later', () => {
+    // Simulates the SSE route's `res.setHeader('Cache-Control',
+    // 'no-cache')` after the middleware has run. The middleware must
+    // not lock the value in some way that prevents override.
+    const headers: Record<string, string> = {};
+    const req: any = { path: '/api/logs/stream' };
+    const res: any = {
+      setHeader(name: string, value: string) {
+        headers[name] = value;
+      },
+    };
+    apiNoStoreMiddleware(req, res, vi.fn());
+    expect(headers['Cache-Control']).toBe('no-store');
+    res.setHeader('Cache-Control', 'no-cache');
+    expect(headers['Cache-Control']).toBe('no-cache');
   });
 });

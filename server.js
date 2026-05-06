@@ -13,6 +13,7 @@ import { healthCheck, serverState, trackRequest } from './lib/health.js';
 import {
   corsMiddleware,
   securityHeadersMiddleware,
+  apiNoStoreMiddleware,
   inputValidationMiddleware,
   generateLimiter,
   historyLimiter,
@@ -65,6 +66,11 @@ app.use(express.static('public'));
 app.use('/output', express.static('output', { dotfiles: 'allow' }));
 app.use('/old', express.static('old'));
 app.use('/exports', express.static('exports'));
+
+// Forbid caching of API responses. Scoped to /api so it doesn't
+// disable caching for static assets above. Route handlers (e.g. the
+// SSE log stream) may still override Cache-Control.
+app.use('/api', apiNoStoreMiddleware);
 
 // Track active requests for graceful shutdown
 app.use((req, res, next) => {
