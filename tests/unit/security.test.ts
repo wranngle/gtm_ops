@@ -21,6 +21,7 @@ let apiNoStoreMiddleware: any;
 let redactSecretsDeep: any;
 let _resetCorsWarningForTests: any;
 let inputValidationMiddleware: any;
+let safeFilenameForHeader: any;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -38,6 +39,7 @@ beforeEach(async () => {
   _resetCorsWarningForTests = module._resetCorsWarningForTests;
   _resetCorsWarningForTests();
   inputValidationMiddleware = module.inputValidationMiddleware;
+  safeFilenameForHeader = module.safeFilenameForHeader;
 });
 
 afterEach(() => {
@@ -647,5 +649,44 @@ describe('[P0] redactSecretsDeep - structural secret redaction', () => {
     const before = JSON.stringify(input);
     redactSecretsDeep(input);
     expect(JSON.stringify(input)).toBe(before);
+  });
+});
+
+describe('[P0] safeFilenameForHeader - Content-Disposition injection guard', () => {
+  it('[P0] should strip CR/LF (the actual injection vector)', () => {
+    const evil = 'export.json\r\nX-Cache-Control: public';
+    const safe = safeFilenameForHeader(evil);
+    expect(safe).not.toContain('\r');
+    expect(safe).not.toContain('\n');
+    // Body characters that aren't structural (X-Cache-Control:) survive
+    // — they're harmless without preceding CRLF.
+    expect(safe).toContain('X-Cache-Control');
+  });
+
+  it('[P0] should strip embedded double quote and backslash', () => {
+    expect(safeFilenameForHeader(String.raw`a"b\c.json`)).toBe('a_b_c.json');
+  });
+
+  it('[P0] should strip embedded semicolon (parameter separator)', () => {
+    // Space survives — it's valid inside a quoted Content-Disposition
+    // filename. Only the structural `;` is replaced.
+    expect(safeFilenameForHeader('attack.json; charset=evil')).toBe('attack.json_ charset=evil');
+  });
+
+  it('[P0] should strip leading directory components (defense past path.basename)', () => {
+    expect(safeFilenameForHeader('../etc/passwd')).toBe('passwd');
+  });
+
+  it('[P1] should fall back to "download" for empty / non-string / null input', () => {
+    expect(safeFilenameForHeader('')).toBe('download');
+    expect(safeFilenameForHeader(null)).toBe('download');
+    expect(safeFilenameForHeader(undefined)).toBe('download');
+    expect(safeFilenameForHeader(42 as any)).toBe('download');
+  });
+
+  it('[P1] should pass clean filenames through unchanged', () => {
+    expect(safeFilenameForHeader('gdpr_export_user-123_1700000000.json')).toBe(
+      'gdpr_export_user-123_1700000000.json',
+    );
   });
 });

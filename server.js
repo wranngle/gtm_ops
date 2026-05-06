@@ -17,7 +17,8 @@ import {
   inputValidationMiddleware,
   generateLimiter,
   historyLimiter,
-  generalLimiter
+  generalLimiter,
+  safeFilenameForHeader
 } from './lib/security.js';
 import { getUsageTracker } from './lib/usage.js';
 import { getWebhookManager, ALL_WEBHOOK_EVENTS } from './lib/webhooks.js';
@@ -890,7 +891,10 @@ app.get('/api/gdpr/export/:jobId/download', requireRole(Role.OWNER, Role.ADMIN),
 
     const filePath = path.join(import.meta.dirname || process.cwd(), job.file_path);
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(job.file_path)}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${safeFilenameForHeader(path.basename(job.file_path))}"`,
+    );
     res.sendFile(filePath);
   } catch (error) {
     console.error('[GDPR] Export download error:', error.message);
