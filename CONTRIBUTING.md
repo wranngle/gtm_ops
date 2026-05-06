@@ -21,11 +21,13 @@ Before submitting changes, run the checks that exist for the surfaces you touche
 ```bash
 bash scripts/validate-knowledge-base.sh    # required-files + AGENTS.md size guard
 bash scripts/lint-layered-architecture.sh  # forward-only import direction
+bash scripts/lint-rbac-coverage.sh         # requireRole on every mutation route + sensitive GET
 bash scripts/gardener.sh                   # markdown staleness + broken links
 bun run typecheck                          # tsc --noEmit
 bun run test:run                           # vitest unit (~10s, 2,366 tests)
 bun run test:console                       # Playwright UI suite (100+ tests)
 bun run test:e2e                           # Playwright PDF / report suite
+bun run audit:verify                       # walks the audit hash chain in config/audit.db
 ```
 
 CI runs `static`, `unit`, and `console-e2e` jobs on every PR — see `.github/workflows/test.yml`. The doc gardener also runs as a non-blocking check via `.github/workflows/knowledge-base.yml`.
@@ -49,6 +51,7 @@ Stack-specific rules live in `docs/references/` so the doc is co-located with wh
 - [`apps/ops-console/_headers`](apps/ops-console/_headers) — CSP discipline. New external script/style/font/image/media/connect destinations must be added to the explicit allowlists. `connect-src` and `media-src` are deliberately scoped (no `https:` wildcards). CSP violations log to `/api/csp-report`.
 - [`lib/security.js#maskApiKeysInText`](lib/security.js) — extend the prefix list when adopting a new API provider. Test fixtures use synthetic placeholders that don't trip GitHub Push Protection.
 - [`tests/unit/audit.test.ts > Hash Chain Integrity`](tests/unit/audit.test.ts) — three negative-path tests (UPDATE / DELETE / hash-mutate) cover every realistic tamper vector. Add a new test if you change `lib/audit.js#computeHash` or the chain shape.
+- [`docs/references/security-tooling.md`](docs/references/security-tooling.md) — RBAC coverage lint (`scripts/lint-rbac-coverage.sh`), `audit:verify` CLI, audit metadata redaction, dev-mode auth shim resolution order, CSP report Pages Function, Express response-header middleware. Read before adding a new mutation route or sensitive GET — adding either without `requireRole(...)` will fail CI.
 
 ## Filing a Pull Request
 
