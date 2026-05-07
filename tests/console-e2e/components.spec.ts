@@ -604,6 +604,27 @@ test.describe('topbar', () => {
     expect(ctx.extra.proposal_seed_call_id).toBeUndefined();
   });
 
+  test('Generate review path exposes explicit artifact and proposal navigation', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Generate")').first().click();
+
+    await page.getByRole('button', { name: /Use sample brief/i }).click();
+    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-sample"]')).toBeVisible();
+    await page.locator('[data-testid="generate-review-path-action-open-artifact-sample"]').click();
+    const drawer = page.locator('[role="region"][aria-label="Proposal artifact review drawer"]');
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole('button', { name: /Close proposal artifact review drawer/i }).click();
+    await expect(drawer).toHaveCount(0);
+
+    const generateButton = page.locator('.generate-grid .btn--primary:has-text("Generate review draft")');
+    await generateButton.click();
+    await expect(page.locator('[data-testid="generate-review-path-step-review"] .artifact-review__path-action')).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.locator('[data-testid="generate-review-path-action-open-proposals-review"]').click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Proposals');
+  });
+
   test('"New run" eval suite opens the in-console harness bridge', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.tb .btn--primary:has-text("New run")').click();
