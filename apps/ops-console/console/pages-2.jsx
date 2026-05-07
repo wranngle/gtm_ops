@@ -2,7 +2,7 @@
    Pages: Evals, Proposals, Settings
    ============================================================ */
 
-const I3 = window.Icon;
+const I3 = globalThis.Icon;
 
 /* ------------------------------------------------------------ */
 /* EVALS */
@@ -216,13 +216,13 @@ function normalizeEvalRun(raw) {
         : null;
   const objectAxes = !Array.isArray(scorePayload.axes) && scorePayload && typeof scorePayload === 'object'
     ? Object.entries(scorePayload)
-        .filter(([name, value]) => name !== 'aggregate_score' && typeof value === 'number')
-        .map(([name, value]) => ({
-          name,
-          pass: value >= 0.72,
-          weight: 1,
-          detail: `scalar score ${evalPct(value)}`,
-        }))
+      .filter(([name, value]) => name !== 'aggregate_score' && typeof value === 'number')
+      .map(([name, value]) => ({
+        name,
+        pass: value >= 0.72,
+        weight: 1,
+        detail: `scalar score ${evalPct(value)}`,
+      }))
     : [];
   const axes = Array.isArray(scorePayload.axes) ? scorePayload.axes : objectAxes;
   const flaws = raw.flaws || parseEvalJson(raw.flaws_json || raw.flaws_detected, []) || [];
@@ -233,9 +233,9 @@ function normalizeEvalRun(raw) {
       ? 'pass'
       : weighted != null && weighted < 0.7
         ? 'fail'
-        : weighted != null
-          ? 'pass'
-          : 'unknown';
+        : weighted == null
+          ? 'unknown'
+          : 'pass';
   // Preserve voice_ai_agent_evals run-result fields the previous
   // normalizer dropped: per-tool round trips + schema-pass flags, plus
   // the latency_breakdown_ms sample arrays the harness produces for
@@ -244,18 +244,18 @@ function normalizeEvalRun(raw) {
   // that the punch-list called out as missing.
   const latencyBreakdown = raw.latency_breakdown_ms && typeof raw.latency_breakdown_ms === 'object'
     ? {
-        ttfb: Array.isArray(raw.latency_breakdown_ms.ttfb) ? raw.latency_breakdown_ms.ttfb.map(Number).filter(Number.isFinite) : [],
-        end_to_first_audio: Array.isArray(raw.latency_breakdown_ms.end_to_first_audio) ? raw.latency_breakdown_ms.end_to_first_audio.map(Number).filter(Number.isFinite) : [],
-        total_turn: Array.isArray(raw.latency_breakdown_ms.total_turn) ? raw.latency_breakdown_ms.total_turn.map(Number).filter(Number.isFinite) : [],
-      }
+      ttfb: Array.isArray(raw.latency_breakdown_ms.ttfb) ? raw.latency_breakdown_ms.ttfb.map(Number).filter(Number.isFinite) : [],
+      end_to_first_audio: Array.isArray(raw.latency_breakdown_ms.end_to_first_audio) ? raw.latency_breakdown_ms.end_to_first_audio.map(Number).filter(Number.isFinite) : [],
+      total_turn: Array.isArray(raw.latency_breakdown_ms.total_turn) ? raw.latency_breakdown_ms.total_turn.map(Number).filter(Number.isFinite) : [],
+    }
     : null;
   const toolCalls = Array.isArray(raw.tool_calls)
     ? raw.tool_calls.map(tc => ({
-        name: String(tc?.name || 'unknown'),
-        schema_pass: tc?.schema_pass === true,
-        round_trip_ms: Number.isFinite(Number(tc?.round_trip_ms)) ? Number(tc.round_trip_ms) : null,
-        response_consumed_in_next_turn: tc?.response_consumed_in_next_turn === true,
-      }))
+      name: String(tc?.name || 'unknown'),
+      schema_pass: tc?.schema_pass === true,
+      round_trip_ms: Number.isFinite(Number(tc?.round_trip_ms)) ? Number(tc.round_trip_ms) : null,
+      response_consumed_in_next_turn: tc?.response_consumed_in_next_turn === true,
+    }))
     : [];
   return {
     id: raw.id || raw.scenario_id || raw.case_study_id,
@@ -308,14 +308,14 @@ function buildEvalSparkLabels(series, cadence = 'sample') {
 }
 
 function EvalsPage({ setRoute }) {
-  const D = window.GTM;
-  const initialSelection = window.AppContext.get().selection;
+  const D = globalThis.GTM;
+  const initialSelection = globalThis.AppContext.get().selection;
   const [activeId, setActiveId] = useState(initialSelection?.type === 'eval' ? initialSelection.id : 'discovery-q1');
   const isAdmin = (() => {
     try { return new URLSearchParams(globalThis.location.search).has('admin'); }
     catch (_) { return false; }
   })();
-  const visibleEvalAgents = window.AGENT_REGISTRY.agents.filter(a => isAdmin || a.surface !== 'admin-only');
+  const visibleEvalAgents = globalThis.AGENT_REGISTRY.agents.filter(a => isAdmin || a.surface !== 'admin-only');
   const visibleEvalAgentLabel = `${visibleEvalAgents.length} ElevenLabs agent${visibleEvalAgents.length === 1 ? '' : 's'}${isAdmin ? ' · admin' : ''}`;
   const defaultSuiteAgentKey = visibleEvalAgents[0]?.key || 'sales_coach';
   // Honor `extra.suite_filter` from the AppContext handoff (e.g.,
@@ -323,8 +323,8 @@ function EvalsPage({ setRoute }) {
   // suite_filter='regressions'). Without this, the click looked like it
   // routed but the filter silently stayed on 'all' and the operator
   // had to toggle it manually.
-  const initialSuiteFilter = ['all', 'regressions'].includes(window.AppContext.get().extra?.suite_filter)
-    ? window.AppContext.get().extra.suite_filter
+  const initialSuiteFilter = ['all', 'regressions'].includes(globalThis.AppContext.get().extra?.suite_filter)
+    ? globalThis.AppContext.get().extra.suite_filter
     : 'all';
   const [suiteFilter, setSuiteFilter] = useState(initialSuiteFilter);
   const [runFilter, setRunFilter] = useState('all');
@@ -334,12 +334,20 @@ function EvalsPage({ setRoute }) {
   const [replaying, setReplaying] = useState(false);
   const [runDetail, setRunDetail] = useState(null);
   const [artifactPath, setArtifactPath] = useState(null);
-  const [bridgeOpen, setBridgeOpen] = useState(Boolean(window.AppContext.get().extra?.evals_bridge_open));
+  const [bridgeOpen, setBridgeOpen] = useState(Boolean(globalThis.AppContext.get().extra?.evals_bridge_open));
   const [activeHarnessCommandId, setActiveHarnessCommandId] = useState(null);
   const [rerunTarget, setRerunTarget] = useState(null);
   const bridgePanelRef = React.useRef(null);
   const artifactPanelRef = React.useRef(null);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
+  const [liveLatency, setLiveLatency] = useState(null);
+
+  useEffect(() => {
+    const handleLatency = (e) => setLiveLatency(e.detail);
+    globalThis.addEventListener('gtm:convai-latency', handleLatency);
+    return () => globalThis.removeEventListener('gtm:convai-latency', handleLatency);
+  }, []);
+
   const [harnessManifest, setHarnessManifest] = useState(null);
   const [harnessManifestState, setHarnessManifestState] = useState('loading');
   const [draftSuites, setDraftSuites] = useState([]);
@@ -371,13 +379,13 @@ function EvalsPage({ setRoute }) {
   const activeRun = normalizedRuns.find(r => r.scenario_id === activeRunId) || defaultActiveRun;
   const activeAxes = activeRun?.score?.axes || [];
   const failedAxes = activeAxes.filter(axis => axis.pass === false);
-  const failedAxesReviewCopy = failedAxes.length
+  const failedAxesReviewCopy = failedAxes.length > 0
     ? `${failedAxes.length} failed judge ${failedAxes.length === 1 ? 'axis needs' : 'axes need'} review before this prompt ships.`
     : 'No failed axes selected; use the fail filter to inspect the risk surface.';
   const artifactPayload = runDetail || activeRun || {};
   const artifactAxes = Array.isArray(artifactPayload?.score?.axes) ? artifactPayload.score.axes : activeAxes;
   const artifactFailedAxes = artifactAxes.filter(axis => axis.pass === false);
-  const artifactFailedAxesReviewCopy = artifactFailedAxes.length
+  const artifactFailedAxesReviewCopy = artifactFailedAxes.length > 0
     ? `${artifactFailedAxes.length} failed judge ${artifactFailedAxes.length === 1 ? 'axis needs' : 'axes need'} operator review before prompt changes ship.`
     : 'No failed judge axes in this artifact; verify the pass evidence and latency budget before closing the run.';
   const artifactScenario = artifactPayload.scenario_id || activeRun?.scenario_id || 'selected run';
@@ -385,12 +393,12 @@ function EvalsPage({ setRoute }) {
   const artifactScore = artifactPayload.score?.weighted ?? activeRun?.score?.weighted;
   const artifactDuration = artifactPayload.duration_ms ?? activeRun?.duration_ms;
   const activeAgentKey = active?.draft && active.agentKey ? active.agentKey : evalAgentKeyForRun(activeRun, active);
-  const activeAgent = window.AGENT_REGISTRY.byKey(activeAgentKey) || window.AGENT_REGISTRY.byKey('sales_coach');
+  const activeAgent = globalThis.AGENT_REGISTRY.byKey(activeAgentKey) || globalThis.AGENT_REGISTRY.byKey('sales_coach');
   const activeEvalReviewContext = evalReviewContextLabel(activeRun, active);
   const passCount = normalizedRuns.filter(r => r.verdict === 'pass').length;
   const failCount = normalizedRuns.filter(r => r.verdict === 'fail').length;
   const scoredRuns = normalizedRuns.filter(r => typeof r.score.weighted === 'number');
-  const meanScore = scoredRuns.length
+  const meanScore = scoredRuns.length > 0
     ? scoredRuns.reduce((sum, r) => sum + r.score.weighted, 0) / scoredRuns.length
     : null;
   // Latency parity with voice_ai_agent_evals: every harness run carries a
@@ -400,7 +408,7 @@ function EvalsPage({ setRoute }) {
   const latencyDurations = normalizedRuns
     .map(r => Number(r.duration_ms))
     .filter(n => Number.isFinite(n) && n > 0);
-  const avgLatencyMs = latencyDurations.length
+  const avgLatencyMs = latencyDurations.length > 0
     ? latencyDurations.reduce((a, b) => a + b, 0) / latencyDurations.length
     : null;
   const slowestRun = normalizedRuns.reduce(
@@ -440,12 +448,12 @@ function EvalsPage({ setRoute }) {
   const suiteCount = allEvalSuites.length;
   const suiteRegressionCount = realEvalSuites.filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75)).length;
   const fallbackRunCount = realEvalSuites.reduce((sum, suite) => sum + (Number(suite.runs) || 0), 0);
-  const displayedPassRate = normalizedRuns.length
+  const displayedPassRate = normalizedRuns.length > 0
     ? passCount / normalizedRuns.length
     : evalSuiteWeightedPassRate(realEvalSuites) ?? D.stats?.evalPassRate ?? null;
-  const displayedRegressionCount = normalizedRuns.length ? failCount : suiteRegressionCount;
-  const displayedRunCount = normalizedRuns.length ? normalizedRuns.length : fallbackRunCount;
-  const evalHeaderRunLabel = normalizedRuns.length
+  const displayedRegressionCount = normalizedRuns.length > 0 ? failCount : suiteRegressionCount;
+  const displayedRunCount = normalizedRuns.length > 0 ? normalizedRuns.length : fallbackRunCount;
+  const evalHeaderRunLabel = normalizedRuns.length > 0
     ? `${normalizedRuns.length.toLocaleString()} loaded result${normalizedRuns.length === 1 ? '' : 's'} · ${fallbackRunCount.toLocaleString()} suite-library runs`
     : `${fallbackRunCount.toLocaleString()} suite-library runs`;
   const selectDomainEvalCommandId = () => {
@@ -479,9 +487,9 @@ function EvalsPage({ setRoute }) {
     setArtifactPath(null);
     setSuiteBuilderOpen(true);
     setSuiteBuilderError('');
-    window.AppContext.set({
+    globalThis.AppContext.set({
       extra: {
-        ...(window.AppContext.get().extra || {}),
+        ...globalThis.AppContext.get().extra,
         triggered_from: 'evals-new-suite',
         eval_suite_builder_open: true,
       },
@@ -501,11 +509,11 @@ function EvalsPage({ setRoute }) {
       pass: suite.pass,
       delta: suite.delta,
     });
-    const ctx = window.AppContext.get();
-    window.AppContext.set({
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
       selection: { type: 'eval', id: suite.id },
       extra: {
-        ...(ctx.extra || {}),
+        ...ctx.extra,
         run_intent: 'eval_suite_rerun',
         eval_suite_id: suite.id,
         eval_suite_name: suite.name,
@@ -580,10 +588,10 @@ function EvalsPage({ setRoute }) {
       scenarioFocus: draft.scenarioFocus,
       draft: true,
     });
-    window.AppContext.set({
+    globalThis.AppContext.set({
       selection: { type: 'eval', id: draft.id },
       extra: {
-        ...(window.AppContext.get().extra || {}),
+        ...globalThis.AppContext.get().extra,
         run_intent: 'eval_suite_draft',
         eval_suite_id: draft.id,
         eval_suite_name: draft.name,
@@ -600,25 +608,25 @@ function EvalsPage({ setRoute }) {
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(cmd.command);
-        window.toast('Command copied', { sub: cmd.name, tone:'accent' });
+        globalThis.toast('Command copied', { sub: cmd.name, tone:'accent' });
       } else {
-        window.toast('Clipboard unavailable', { sub: cmd.command, tone:'warn' });
+        globalThis.toast('Clipboard unavailable', { sub: cmd.command, tone:'warn' });
       }
     } catch (_) {
-      window.toast('Could not copy command', { tone:'critical' });
+      globalThis.toast('Could not copy command', { tone:'critical' });
     }
   };
   const openEvalAgentAdmin = () => {
     if (!activeRun) {
-      window.toast('Load a harness run first', {
+      globalThis.toast('Load a harness run first', {
         sub: 'Local agent admin needs a selected eval run, not suite-level placeholder context.',
         tone: 'warn',
       });
       return;
     }
-    const prevExtra = window.AppContext.get().extra || {};
+    const prevExtra = globalThis.AppContext.get().extra || {};
     const activeRunScore = activeRun?.score?.weighted;
-    window.AppContext.set({
+    globalThis.AppContext.set({
       selection: { type: 'eval', id: activeId },
       extra: {
         ...prevExtra,
@@ -644,44 +652,44 @@ function EvalsPage({ setRoute }) {
   const canSyncEvalEvidence = hasActiveEvalRun;
   const evalLabReadiness = hasActiveEvalRun
     ? {
-        tone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
-        label: 'run context armed',
-        title: activeRun?.scenario_id || 'selected harness run',
-        body: `${activeEvalReviewContext} is ready for local admin review and evidence sync.`,
-        badge: activeRun?.verdict || 'ready',
-      }
+      tone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
+      label: 'run context armed',
+      title: activeRun?.scenario_id || 'selected harness run',
+      body: `${activeEvalReviewContext} is ready for local admin review and evidence sync.`,
+      badge: activeRun?.verdict || 'ready',
+    }
     : {
-        tone: runsState === 'error' ? 'critical' : 'neutral',
-        label: runsState === 'error' ? 'harness load failed' : 'waiting on harness run',
-        title: runsState === 'error' ? 'Harness run evidence did not load' : 'Waiting for harness run evidence',
-        body: runsState === 'error'
-          ? 'Retry the harness runs panel before opening local agent admin or syncing evidence.'
-          : 'Local admin and evidence sync unlock only after a concrete run loads inside this console.',
-        badge: runsState,
-      };
+      tone: runsState === 'error' ? 'critical' : 'neutral',
+      label: runsState === 'error' ? 'harness load failed' : 'waiting on harness run',
+      title: runsState === 'error' ? 'Harness run evidence did not load' : 'Waiting for harness run evidence',
+      body: runsState === 'error'
+        ? 'Retry the harness runs panel before opening local agent admin or syncing evidence.'
+        : 'Local admin and evidence sync unlock only after a concrete run loads inside this console.',
+      badge: runsState,
+    };
   const evalAgentSession = hasActiveEvalRun
     ? {
-        orbState: activeRun?.verdict === 'fail' ? 'alert' : 'idle',
-        subtitle: `${activeAgent?.role || 'ConvAI'} · ${activeRun?.agent_id || activeRun?.scenario_id || 'selected run'}`,
-        barActive: activeRun?.verdict === 'fail',
-        barTone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
-        bars: activeAxes.length ? activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.85) : [.28,.34,.3,.36,.32],
-        status: activeRun?.verdict === 'fail' ? 'Regression context armed' : 'Baseline context armed',
-        badge: activeRun?.verdict || 'ready',
-        badgeTone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
-      }
+      orbState: activeRun?.verdict === 'fail' ? 'alert' : 'idle',
+      subtitle: `${activeAgent?.role || 'ConvAI'} · ${activeRun?.agent_id || activeRun?.scenario_id || 'selected run'}`,
+      barActive: activeRun?.verdict === 'fail',
+      barTone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
+      bars: activeAxes.length > 0 ? activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.85) : [.28,.34,.3,.36,.32],
+      status: activeRun?.verdict === 'fail' ? 'Regression context armed' : 'Baseline context armed',
+      badge: activeRun?.verdict || 'ready',
+      badgeTone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
+    }
     : {
-        orbState: 'idle',
-        subtitle: `${activeAgent?.role || 'ConvAI'} · harness run pending`,
-        barActive: false,
-        barTone: runsState === 'error' ? 'critical' : 'neutral',
-        bars: [.18,.22,.2,.24,.19],
-        status: runsState === 'error'
-          ? 'Harness evidence failed; local context is not armed'
-          : 'Harness run required before local context is armed',
-        badge: runsState === 'error' ? 'blocked' : 'pending',
-        badgeTone: runsState === 'error' ? 'critical' : 'neutral',
-      };
+      orbState: 'idle',
+      subtitle: `${activeAgent?.role || 'ConvAI'} · harness run pending`,
+      barActive: false,
+      barTone: runsState === 'error' ? 'critical' : 'neutral',
+      bars: [.18,.22,.2,.24,.19],
+      status: runsState === 'error'
+        ? 'Harness evidence failed; local context is not armed'
+        : 'Harness run required before local context is armed',
+      badge: runsState === 'error' ? 'blocked' : 'pending',
+      badgeTone: runsState === 'error' ? 'critical' : 'neutral',
+    };
 
   const [runsError, setRunsError] = useState(null);
   const [runsReloadToken, setRunsReloadToken] = useState(0);
@@ -691,11 +699,11 @@ function EvalsPage({ setRoute }) {
   // Evals later doesn't keep snapping back to 'regressions'. Read on
   // mount above; clear here.
   React.useEffect(() => {
-    const ctx = window.AppContext.get();
+    const ctx = globalThis.AppContext.get();
     const extra = ctx?.extra || {};
     if (extra.suite_filter == null) return;
     const { suite_filter, ...rest } = extra;
-    window.AppContext.set({ extra: rest });
+    globalThis.AppContext.set({ extra: rest });
   }, []);
 
   useEffect(() => {
@@ -706,7 +714,7 @@ function EvalsPage({ setRoute }) {
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status} ${r.statusText}`)))
       .then(data => ({
         data,
-        source: window.DEMO_MODE ? 'fixture' : 'live',
+        source: globalThis.DEMO_MODE ? 'fixture' : 'live',
       }))
       .catch(err => {
         console.warn('Falling back to bundled eval runs fixture', err);
@@ -754,13 +762,13 @@ function EvalsPage({ setRoute }) {
   }, []);
 
   useEffect(() => {
-    if (!normalizedRuns.length) return;
+    if (normalizedRuns.length === 0) return;
     if (activeRunId && normalizedRuns.some(r => r.scenario_id === activeRunId)) return;
     const firstRegression = normalizedRuns.find(r => r.verdict === 'fail');
     setActiveRunId((firstRegression || normalizedRuns[0]).scenario_id);
   }, [normalizedRuns, activeRunId]);
 
-  useEffect(() => window.AppContext.subscribe((ctx) => {
+  useEffect(() => globalThis.AppContext.subscribe((ctx) => {
     if (ctx.selection?.type === 'eval' && D.evalSuites.some(s => s.id === ctx.selection.id)) {
       setActiveId(ctx.selection.id);
     }
@@ -775,12 +783,12 @@ function EvalsPage({ setRoute }) {
       setArtifactPath(null);
       setSuiteBuilderOpen(false);
       setBridgeOpen(true);
-      const latest = window.AppContext.get().extra || {};
+      const latest = globalThis.AppContext.get().extra || {};
       const { evals_bridge_open, ...rest } = latest;
-      window.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({ extra: rest });
     };
-    applyEvalsIntent(window.AppContext.get());
-    return window.AppContext.subscribe(applyEvalsIntent);
+    applyEvalsIntent(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyEvalsIntent);
   }, []);
 
   useEffect(() => {
@@ -795,11 +803,11 @@ function EvalsPage({ setRoute }) {
   }, [activeRun?.result_path]);
 
   useEffect(() => {
-    const ctx = window.AppContext.get();
-    window.AppContext.set({
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
       selection: { type: 'eval', id: activeId },
       extra: {
-        ...(ctx.extra || {}),
+        ...ctx.extra,
         selected_agent_key: activeAgentKey,
         selected_eval_suite: activeEvalReviewContext,
         selected_eval_suite_id: active?.id || activeId,
@@ -813,8 +821,8 @@ function EvalsPage({ setRoute }) {
   }, [activeId, active?.id, activeEvalReviewContext, activeAgentKey, activeRun?.scenario_id, activeRun?.verdict, activeRun?.score?.weighted, failedAxes.map(a => a.name).join('|')]);
 
   useEffect(() => () => {
-    const latest = window.AppContext.get();
-    if (latest.selection?.type === 'eval') window.AppContext.set({ selection: null });
+    const latest = globalThis.AppContext.get();
+    if (latest.selection?.type === 'eval') globalThis.AppContext.set({ selection: null });
   }, []);
 
   useEffect(() => {
@@ -846,14 +854,14 @@ function EvalsPage({ setRoute }) {
           ]} />
           <button className="btn btn--ghost btn--sm" onClick={openActiveArtifactPanel}><I3.Doc size={12}/>Artifacts</button>
           <button className="btn btn--ghost btn--sm" onClick={() => {
-            window.AppContext.set({
+            globalThis.AppContext.set({
               extra: {
-                ...(window.AppContext.get().extra || {}),
+                ...globalThis.AppContext.get().extra,
                 settings_tab:'evals',
                 triggered_from:'evals-policy',
               },
             });
-            window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab:'evals' } }));
+            globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab:'evals' } }));
             setRoute?.('settings');
           }}><I3.Cog size={12}/>Policy</button>
           <button className="btn btn--ghost btn--sm" onClick={openDomainEvalRunPlan}><I3.Bracket size={12}/>Run plan</button>
@@ -1067,17 +1075,17 @@ function EvalsPage({ setRoute }) {
               {activeHarnessCommand && (
                 <div className="eval-run-plan__detail" data-testid="eval-harness-command-detail">
                   {rerunTarget && (
-                      <div className="eval-run-plan__target" data-testid="eval-rerun-target">
-                        <div className="eyebrow eyebrow--accent">{rerunTarget.draft ? 'draft target' : 'rerun target'}</div>
-                        <strong>{rerunTarget.name}</strong>
-                        <span className="mono">
-                          {rerunTarget.id} · owner {rerunTarget.owner} · {rerunTarget.runs.toLocaleString()} historic runs · {rerunTarget.draft ? 'target' : 'pass'} {evalPct(rerunTarget.pass)}
-                        </span>
-                        {rerunTarget.scenarioFocus && (
-                          <span className="mono">focus · {rerunTarget.scenarioFocus}</span>
-                        )}
-                      </div>
-                    )}
+                    <div className="eval-run-plan__target" data-testid="eval-rerun-target">
+                      <div className="eyebrow eyebrow--accent">{rerunTarget.draft ? 'draft target' : 'rerun target'}</div>
+                      <strong>{rerunTarget.name}</strong>
+                      <span className="mono">
+                        {rerunTarget.id} · owner {rerunTarget.owner} · {rerunTarget.runs.toLocaleString()} historic runs · {rerunTarget.draft ? 'target' : 'pass'} {evalPct(rerunTarget.pass)}
+                      </span>
+                      {rerunTarget.scenarioFocus && (
+                        <span className="mono">focus · {rerunTarget.scenarioFocus}</span>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <div className="eyebrow">selected command</div>
                     <h4>{activeHarnessCommand.name}</h4>
@@ -1102,7 +1110,7 @@ function EvalsPage({ setRoute }) {
                       ))}
                     </div>
                   )}
-                <div className="eval-run-plan__actions">
+                  <div className="eval-run-plan__actions">
                     <button className="btn btn--primary btn--sm" onClick={() => copyHarnessCommand(activeHarnessCommand)}><I3.Doc size={12}/>Copy command</button>
                     <button
                       className="btn btn--ghost btn--sm"
@@ -1183,11 +1191,18 @@ function EvalsPage({ setRoute }) {
                 </div>
               </div>
               <div className="eval-artifact-review__axes" aria-label="Judge axis evidence">
-                {artifactAxes.length ? artifactAxes.map(axis => (
+                {artifactAxes.length > 0 ? artifactAxes.map(axis => (
                   <div key={axis.name} className="eval-artifact-review__axis" data-testid="eval-artifact-axis" data-status={axis.pass === false ? 'fail' : axis.pass === true ? 'pass' : 'unknown'}>
-                    <div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <strong>{axis.name}</strong>
-                      <p>{axis.detail || 'No judge detail supplied.'}</p>
+                      <p style={{ margin: 0 }}>{axis.detail || 'No judge detail supplied.'}</p>
+                      {(axis.success_criteria || axis.partial_credit !== undefined || axis.judge_llm) && (
+                        <div className="muted" style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12, marginTop: 4 }}>
+                          {axis.success_criteria && <div><span className="eyebrow" style={{ display: 'inline-block', marginRight: 4 }}>criteria</span>{axis.success_criteria}</div>}
+                          {axis.partial_credit !== undefined && <div><span className="eyebrow" style={{ display: 'inline-block', marginRight: 4 }}>partial credit</span>{axis.partial_credit}</div>}
+                          {axis.judge_llm && <div><span className="eyebrow" style={{ display: 'inline-block', marginRight: 4 }}>judge</span>{axis.judge_llm}</div>}
+                        </div>
+                      )}
                     </div>
                     <Badge tone={axis.pass === false ? 'critical' : axis.pass === true ? 'healthy' : 'neutral'}>{axis.pass === false ? 'fail' : axis.pass === true ? 'pass' : 'unknown'}</Badge>
                   </div>
@@ -1210,13 +1225,13 @@ function EvalsPage({ setRoute }) {
           <div className="vstack" style={{gap:0}}>
             {visibleSuites.map(s => (
               <div key={s.id}
-                   className="eval-suite-row inspectable"
-                   data-popout={s.draft
-                     ? `${s.name}: draft suite for ${s.agentName || s.owner}; ${s.scenarioFocus}`
-                     : `${s.name}: ${(s.pass * 100).toFixed(1)}% pass rate, ${(s.delta * 100).toFixed(1)}% delta, ${s.runs.toLocaleString()} runs`}
-                   data-active={activeId === s.id}
-                   data-draft={s.draft ? 'true' : 'false'}
-                   style={{paddingLeft: activeId === s.id ? 10 : 4}}>
+                className="eval-suite-row inspectable"
+                data-popout={s.draft
+                  ? `${s.name}: draft suite for ${s.agentName || s.owner}; ${s.scenarioFocus}`
+                  : `${s.name}: ${(s.pass * 100).toFixed(1)}% pass rate, ${(s.delta * 100).toFixed(1)}% delta, ${s.runs.toLocaleString()} runs`}
+                data-active={activeId === s.id}
+                data-draft={s.draft ? 'true' : 'false'}
+                style={{paddingLeft: activeId === s.id ? 10 : 4}}>
                 <button className="eval-suite-row__select" aria-pressed={activeId === s.id} onClick={()=>setActiveId(s.id)}>
                   <div>
                     <div style={{fontSize:13, fontWeight:600, marginBottom:2}}>{s.name}</div>
@@ -1283,7 +1298,7 @@ function EvalsPage({ setRoute }) {
             )}
           </Card>
 
-          <Card title={`harness runs${normalizedRuns.length ? ` · ${normalizedRuns.length}` : ''}`} action={
+          <Card title={`harness runs${normalizedRuns.length > 0 ? ` · ${normalizedRuns.length}` : ''}`} action={
             <span className="hstack" style={{gap:8, alignItems:'center'}}>
               <span data-testid="eval-runs-source-badge">
                 <Badge
@@ -1292,7 +1307,7 @@ function EvalsPage({ setRoute }) {
               </span>
               <button className="btn btn--ghost btn--xs" onClick={() => {
                 setRunFilter('fail');
-                window.toast('Regression filter applied', { sub:'showing failing harness runs', tone:'warn' });
+                globalThis.toast('Regression filter applied', { sub:'showing failing harness runs', tone:'warn' });
               }}><I3.Flag size={10}/>failures</button>
             </span>
           }>
@@ -1309,7 +1324,7 @@ function EvalsPage({ setRoute }) {
                   <button
                     className="btn btn--primary btn--sm"
                     data-testid="eval-runs-retry"
-                    onClick={() => { reloadEvalRuns(); window.toast('Retrying harness runs', { tone:'accent' }); }}
+                    onClick={() => { reloadEvalRuns(); globalThis.toast('Retrying harness runs', { tone:'accent' }); }}
                   ><I3.Refresh size={12}/>Retry</button>
                 </div>
               )}
@@ -1378,9 +1393,9 @@ function EvalsPage({ setRoute }) {
                   <div className="eval-axis-stack">
                     {activeAxes.map(axis => (
                       <div key={axis.name}
-                           className="eval-axis-row inspectable"
-                           data-popout={`${axis.name}: ${axis.pass ? 'pass' : 'fail'}, weight ${axis.weight}. ${axis.detail}`}
-                           data-pass={axis.pass ? 'true' : 'false'}>
+                        className="eval-axis-row inspectable"
+                        data-popout={`${axis.name}: ${axis.pass ? 'pass' : 'fail'}, weight ${axis.weight}. ${axis.detail}`}
+                        data-pass={axis.pass ? 'true' : 'false'}>
                         <div>
                           <div className="mono" style={{fontSize:12, fontWeight:700}}>{axis.name}</div>
                           <div style={{fontSize:12, color:'var(--text-2)', marginTop:3}}>{axis.detail}</div>
@@ -1433,7 +1448,7 @@ function EvalsPage({ setRoute }) {
                       <div className="eyebrow eyebrow--accent" style={{marginBottom:6}}>tool calls · {activeRun.tool_calls.length}</div>
                       <div style={{display:'grid', gap:6}}>
                         {activeRun.tool_calls.map((tc, i) => {
-                          const tone = !tc.schema_pass ? 'cl-err' : (tc.round_trip_ms != null && tc.round_trip_ms > 1500) ? 'cl-warn' : 'cl-ok';
+                          const tone = tc.schema_pass ? (tc.round_trip_ms != null && tc.round_trip_ms > 1500) ? 'cl-warn' : 'cl-ok' : 'cl-err';
                           return (
                             <div key={`${tc.name}-${i}`} data-testid="eval-tool-call-row" data-tool-name={tc.name} data-schema-pass={tc.schema_pass ? 'true' : 'false'} style={{display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12}}>
                               <span className="mono">{tc.name}</span>
@@ -1441,7 +1456,7 @@ function EvalsPage({ setRoute }) {
                                 schema {tc.schema_pass ? 'pass' : 'fail'}{tc.response_consumed_in_next_turn ? ' · response consumed' : ' · response orphan'}
                               </span>
                               <span className={`mono num ${tone}`}>
-                                {tc.round_trip_ms != null ? `${tc.round_trip_ms}ms` : '—'}
+                                {tc.round_trip_ms == null ? '—' : `${tc.round_trip_ms}ms`}
                               </span>
                             </div>
                           );
@@ -1520,8 +1535,8 @@ function EvalsPage({ setRoute }) {
                   aria-label={canSyncEvalEvidence ? 'Sync selected eval run context and evidence' : 'Context and evidence sync unavailable until a harness run loads'}
                   onClick={() => {
                     if (!activeRun) return;
-                    const prevExtra = window.AppContext.get().extra || {};
-                    window.AppContext.set({
+                    const prevExtra = globalThis.AppContext.get().extra || {};
+                    globalThis.AppContext.set({
                       extra: {
                         ...prevExtra,
                         selected_agent_key: activeAgentKey,
@@ -1539,7 +1554,7 @@ function EvalsPage({ setRoute }) {
                     });
                     setArtifactPath(activeRun?.result_path || '../fixtures/eval-runs.json');
                     setLastSyncedAt(new Date());
-                    window.toast('Context & evidence synced', {
+                    globalThis.toast('Context & evidence synced', {
                       sub: `${activeRun?.scenario_id || activeId} armed as dynamic_variables; evidence drawer open`,
                       tone: 'accent',
                     });
@@ -1557,6 +1572,14 @@ function EvalsPage({ setRoute }) {
             </div>
 
             <div className="eval-convai-frame" role="region" aria-label="ElevenLabs regression chat">
+              {liveLatency && (
+                <div className="eval-live-latency" data-testid="eval-live-latency" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-inset)', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                  <span className="eyebrow eyebrow--accent">live latency</span>
+                  <span className="mono num" style={{ color: liveLatency.ttfb > 1000 ? 'var(--warn-fg)' : 'var(--healthy-fg)' }}>
+                    ttfb: {Math.round(liveLatency.ttfb)}ms {liveLatency.first_audio ? ` · first audio: ${Math.round(liveLatency.first_audio)}ms` : ''}
+                  </span>
+                </div>
+              )}
               <window.ConvaiWidget
                 agentKey={activeAgentKey}
                 textOnly={true}
@@ -1584,9 +1607,9 @@ function EvalsPage({ setRoute }) {
                 { name:'judge-policy',    model:'sonnet-4.5', agree:0.97 },
               ].map(j => (
                 <div key={j.name}
-                     className="inspectable"
-                     data-popout={`${j.name}: ${(j.agree * 100).toFixed(0)}% agreement on ${j.model}`}
-                     style={{display:'grid', gridTemplateColumns:'1fr auto 60px', gap:12, alignItems:'center', fontSize:12}}>
+                  className="inspectable"
+                  data-popout={`${j.name}: ${(j.agree * 100).toFixed(0)}% agreement on ${j.model}`}
+                  style={{display:'grid', gridTemplateColumns:'1fr auto 60px', gap:12, alignItems:'center', fontSize:12}}>
                   <div>
                     <div className="mono" style={{fontSize:12, fontWeight:600}}>{j.name}</div>
                     <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{j.model}</div>
@@ -1609,8 +1632,8 @@ function EvalsPage({ setRoute }) {
 /* PROPOSALS */
 /* ------------------------------------------------------------ */
 function ProposalsPage({ setRoute }) {
-  const D = window.GTM;
-  const initialProposal = window.AppContext.get().selection;
+  const D = globalThis.GTM;
+  const initialProposal = globalThis.AppContext.get().selection;
   const initialProposalId = initialProposal?.type === 'proposal' && D.proposals.some(p => p.id === initialProposal.id)
     ? initialProposal.id
     : (D.proposals[0]?.id || 'PR-2041');
@@ -1665,7 +1688,7 @@ function ProposalsPage({ setRoute }) {
     ];
     return {
       packetId: proposal?.executionId || proposal?.id || 'proposal-review',
-      mode: window.DEMO_MODE ? 'demo review' : 'live review',
+      mode: globalThis.DEMO_MODE ? 'demo review' : 'live review',
       gate: proposal?.blockers?.length ? 'blocker_review' : (proposal?.stage === 'signed' ? 'sent_review' : 'operator_review'),
       items,
       pdf: items[0],
@@ -1680,7 +1703,7 @@ function ProposalsPage({ setRoute }) {
     const words = String(proposal.co).toLowerCase().split(/\s+/).filter(Boolean);
     if (words.length === 0) return '';
     const local = words[0];
-    const host = words.length > 1 ? words.slice(0).join('').replace(/[^a-z0-9]/g, '') : words[0];
+    const host = words.length > 1 ? [...words].join('').replace(/[^a-z0-9]/g, '') : words[0];
     return `${local}@${host}.example`;
   };
   const openResend = () => {
@@ -1715,10 +1738,10 @@ function ProposalsPage({ setRoute }) {
     if (activeBlockerCount === 0) {
       return;
     }
-    const ctx = window.AppContext.get();
-    window.AppContext.set({
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
       extra: {
-        ...(ctx.extra || {}),
+        ...ctx.extra,
         triggered_from: 'proposal-address-blockers',
         address_blockers_proposal_id: active.id,
         address_blockers_co: active.co,
@@ -1732,7 +1755,7 @@ function ProposalsPage({ setRoute }) {
     e.preventDefault();
     const recipient = resendForm.recipient.trim();
     if (!validEmail(recipient)) {
-      window.toast('Recipient email is invalid', { sub: 'fix the To field before re-sending', tone: 'critical' });
+      globalThis.toast('Recipient email is invalid', { sub: 'fix the To field before re-sending', tone: 'critical' });
       return;
     }
     const ccCount = resendForm.cc.split(/[\s,;]+/).filter(s => s && validEmail(s)).length;
@@ -1740,7 +1763,7 @@ function ProposalsPage({ setRoute }) {
       ...prev,
       [active.id]: { recipient, ccCount, sentAt: new Date().toISOString() },
     }));
-    window.toast(`${active.id} re-sent to ${recipient}`, {
+    globalThis.toast(`${active.id} re-sent to ${recipient}`, {
       sub: ccCount ? `cc: ${ccCount} · tracking enabled` : 'tracking enabled',
       tone: 'accent',
     });
@@ -1758,10 +1781,10 @@ function ProposalsPage({ setRoute }) {
 
   // Publish active proposal so the sales coach can copilot it.
   useEffect(() => {
-    window.AppContext.set({ selection: { type:'proposal', id: activeId }});
-    return () => { window.AppContext.set({ selection: null }); };
+    globalThis.AppContext.set({ selection: { type:'proposal', id: activeId }});
+    return () => { globalThis.AppContext.set({ selection: null }); };
   }, [activeId]);
-  useEffect(() => window.AppContext.subscribe((ctx) => {
+  useEffect(() => globalThis.AppContext.subscribe((ctx) => {
     if (ctx.selection?.type === 'proposal' && D.proposals.some(p => p.id === ctx.selection.id)) {
       setActiveId(ctx.selection.id);
     }
@@ -1834,16 +1857,16 @@ function ProposalsPage({ setRoute }) {
           <div className="vstack" style={{gap:0}}>
             {filtered.map(p => (
               <div key={p.id}
-                   className="inspectable"
-                   data-testid="proposal-row"
-                   data-active={activeId === p.id ? 'true' : 'false'}
-                   data-popout={`${p.id}: ${p.co}, ${p.amount}, ${p.stage}, ${p.accepted}/${p.sections} sections accepted`}
-                   role="button"
-                   tabIndex={0}
-                   aria-pressed={activeId === p.id}
-                   onClick={()=>setActiveId(p.id)}
-                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(p.id); } }}
-                   style={{padding:'14px 4px', borderBottom:'1px dashed var(--border)', display:'grid', gridTemplateColumns:'1fr auto', gap:12, cursor:'pointer', borderLeft: activeId === p.id ? '2px solid var(--sunset-500)' : '2px solid transparent', paddingLeft: activeId === p.id ? 10 : 4}}>
+                className="inspectable"
+                data-testid="proposal-row"
+                data-active={activeId === p.id ? 'true' : 'false'}
+                data-popout={`${p.id}: ${p.co}, ${p.amount}, ${p.stage}, ${p.accepted}/${p.sections} sections accepted`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeId === p.id}
+                onClick={()=>setActiveId(p.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(p.id); } }}
+                style={{padding:'14px 4px', borderBottom:'1px dashed var(--border)', display:'grid', gridTemplateColumns:'1fr auto', gap:12, cursor:'pointer', borderLeft: activeId === p.id ? '2px solid var(--sunset-500)' : '2px solid transparent', paddingLeft: activeId === p.id ? 10 : 4}}>
                 <div>
                   <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
                     <span className="mono" style={{fontSize:11, color:'var(--accent-fg)', fontWeight:600}}>{p.id}</span>
@@ -1918,19 +1941,17 @@ function ProposalsPage({ setRoute }) {
             <div style={{display:'flex', gap:8, marginTop:14}}>
               <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={openProposalReview}><I3.Eye size={12}/>Review packet</button>
               <button className="btn btn--ghost btn--sm" style={{flex:1}} data-testid="proposal-resend-open" onClick={openResend}><I3.Mail size={12}/>{resentProposals[active.id] ? 'Re-send again' : 'Re-send'}</button>
-              {(() => {
-                return (
-                  <button
-                    className="btn btn--primary btn--sm"
-                    style={{flex:1}}
-                    data-testid="proposal-address-blockers"
-                    data-blocker-count={activeBlockerCount}
-                    disabled={activeBlockerCount === 0}
-                    title={activeBlockerCount === 0 ? 'No open blockers — nothing to address' : `${activeBlockerCount} blocker${activeBlockerCount === 1 ? '' : 's'} to address`}
-                    onClick={addressBlockers}
-                  >{activeBlockerCount > 0 ? `Address blockers · ${activeBlockerCount}` : 'No blockers to address'}</button>
-                );
-              })()}
+              {(() => (
+                <button
+                  className="btn btn--primary btn--sm"
+                  style={{flex:1}}
+                  data-testid="proposal-address-blockers"
+                  data-blocker-count={activeBlockerCount}
+                  disabled={activeBlockerCount === 0}
+                  title={activeBlockerCount === 0 ? 'No open blockers — nothing to address' : `${activeBlockerCount} blocker${activeBlockerCount === 1 ? '' : 's'} to address`}
+                  onClick={addressBlockers}
+                >{activeBlockerCount > 0 ? `Address blockers · ${activeBlockerCount}` : 'No blockers to address'}</button>
+              ))()}
             </div>
           </Card>
 
@@ -2111,11 +2132,11 @@ function ProposalsPage({ setRoute }) {
                 return [...acceptedRows, ...blockerRows];
               })().map((s, i) => (
                 <div key={i}
-                     className="inspectable proposal-section-row"
-                     data-testid="proposal-section-row"
-                     data-status={s.status}
-                     data-popout={`${s.n}: ${s.status}, owner ${s.who}`}
-                     style={{display:'grid', gridTemplateColumns:'auto 1fr auto auto', gap:10, alignItems:'center', padding:'8px 0', borderBottom:'1px dashed var(--border)'}}>
+                  className="inspectable proposal-section-row"
+                  data-testid="proposal-section-row"
+                  data-status={s.status}
+                  data-popout={`${s.n}: ${s.status}, owner ${s.who}`}
+                  style={{display:'grid', gridTemplateColumns:'auto 1fr auto auto', gap:10, alignItems:'center', padding:'8px 0', borderBottom:'1px dashed var(--border)'}}>
                   <div style={{
                     width: 18, height: 18, borderRadius: '50%',
                     background: s.status === 'accepted' ? 'var(--healthy)' : 'var(--bg-inset)',
@@ -2141,7 +2162,7 @@ function ProposalsPage({ setRoute }) {
 /* SETTINGS */
 /* ------------------------------------------------------------ */
 function SettingsPage({ setRoute }) {
-  const initialSettingsTab = window.AppContext.get().extra?.settings_tab;
+  const initialSettingsTab = globalThis.AppContext.get().extra?.settings_tab;
   const [tab, setTab] = useState(initialSettingsTab || 'account');
   const tabs = [
     { id:'account',   label:'My Account' },
@@ -2158,8 +2179,8 @@ function SettingsPage({ setRoute }) {
       const next = event.detail?.tab;
       if (tabs.some(t => t.id === next)) setTab(next);
     };
-    window.addEventListener('gtm:settings-tab', onSettingsTab);
-    return () => window.removeEventListener('gtm:settings-tab', onSettingsTab);
+    globalThis.addEventListener('gtm:settings-tab', onSettingsTab);
+    return () => globalThis.removeEventListener('gtm:settings-tab', onSettingsTab);
   }, []);
   useEffect(() => {
     if (pendingFocusTab.current !== tab) return;
@@ -2173,10 +2194,27 @@ function SettingsPage({ setRoute }) {
   // move focus and selection across tabs. Enter/Space were already handled.
   function onTabKeyDown(e, idx) {
     let nextIdx = null;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextIdx = (idx + 1) % tabs.length;
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nextIdx = (idx - 1 + tabs.length) % tabs.length;
-    else if (e.key === 'Home') nextIdx = 0;
-    else if (e.key === 'End') nextIdx = tabs.length - 1;
+    switch (e.key) {
+      case 'ArrowRight': 
+      case 'ArrowDown': {
+        nextIdx = (idx + 1) % tabs.length;
+        break;
+      }
+      case 'ArrowLeft': 
+      case 'ArrowUp': {
+        nextIdx = (idx - 1 + tabs.length) % tabs.length;
+        break;
+      }
+      case 'Home': {
+        nextIdx = 0;
+        break;
+      }
+      case 'End': {
+        nextIdx = tabs.length - 1;
+        // No default
+      }
+        break;
+    }
     if (nextIdx === null) return;
     e.preventDefault();
     const nextId = tabs[nextIdx].id;
@@ -2198,28 +2236,28 @@ function SettingsPage({ setRoute }) {
         <div className="settings-nav" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
           {tabs.map((t, idx) => (
             <div key={t.id}
-                 ref={(el) => { tabRefs.current[t.id] = el; }}
-                 id={`settings-tab-${t.id}`}
-                 className="settings-nav__item"
-                 role="tab"
-                 tabIndex={tab === t.id ? 0 : -1}
-                 aria-selected={tab === t.id}
-                 aria-controls={`settings-panel-${t.id}`}
-                 data-active={tab === t.id}
-                 onClick={()=>setTab(t.id)}
-                 onKeyDown={(e) => {
-                   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTab(t.id); return; }
-                   onTabKeyDown(e, idx);
-                 }}>
+              ref={(el) => { tabRefs.current[t.id] = el; }}
+              id={`settings-tab-${t.id}`}
+              className="settings-nav__item"
+              role="tab"
+              tabIndex={tab === t.id ? 0 : -1}
+              aria-selected={tab === t.id}
+              aria-controls={`settings-panel-${t.id}`}
+              data-active={tab === t.id}
+              onClick={()=>setTab(t.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTab(t.id); return; }
+                onTabKeyDown(e, idx);
+              }}>
               {t.label}
             </div>
           ))}
         </div>
 
         <div role="tabpanel"
-             id={`settings-panel-${tab}`}
-             aria-labelledby={`settings-tab-${tab}`}
-             tabIndex={0}>
+          id={`settings-panel-${tab}`}
+          aria-labelledby={`settings-tab-${tab}`}
+          tabIndex={0}>
           {tab === 'integrations' && <IntegrationsSettings/>}
           {tab === 'evals' && <EvalPolicySettings/>}
           {tab === 'team' && <TeamSettings/>}
@@ -2256,7 +2294,7 @@ function IntegrationsSettings() {
   const [draftActions, setDraftActions] = useState(buildActionMap);
   const [lastTestSync, setLastTestSync] = useState({});
   const [activeName, setActiveName] = useState(() => {
-    const requestedName = window.AppContext.get().extra?.integration_name;
+    const requestedName = globalThis.AppContext.get().extra?.integration_name;
     return INTEGRATION_CONNECTIONS.some(c => c.name === requestedName) ? requestedName : null;
   });
   const activeConfig = INTEGRATION_CONNECTIONS.find(c => c.name === activeName) || null;
@@ -2274,17 +2312,17 @@ function IntegrationsSettings() {
   const onToggleAction = (name, action, checked) => {
     setDraftActions(prev => ({
       ...prev,
-      [name]: { ...(prev[name] || {}), [action]: checked },
+      [name]: { ...prev[name], [action]: checked },
     }));
   };
   const onSaveActions = () => {
     if (!activeConfig) return;
     if (!isDirty) {
-      window.toast('No mapping changes to save', { sub: activeConfig.name, tone: 'neutral' });
+      globalThis.toast('No mapping changes to save', { sub: activeConfig.name, tone: 'neutral' });
       return;
     }
     setSavedActions(prev => ({ ...prev, [activeConfig.name]: { ...draftFor(activeConfig.name) } }));
-    window.toast(`${activeConfig.name} mapping saved`, {
+    globalThis.toast(`${activeConfig.name} mapping saved`, {
       sub: `${enabledCount}/${activeConfig.canDo.length} actions permitted`,
       tone: 'accent',
     });
@@ -2292,13 +2330,13 @@ function IntegrationsSettings() {
   const onRevertActions = () => {
     if (!activeConfig) return;
     setDraftActions(prev => ({ ...prev, [activeConfig.name]: { ...savedFor(activeConfig.name) } }));
-    window.toast(`${activeConfig.name} mapping reverted`, { tone: 'neutral' });
+    globalThis.toast(`${activeConfig.name} mapping reverted`, { tone: 'neutral' });
   };
   const onTestSync = () => {
     if (!activeConfig) return;
     const stamp = new Date();
     setLastTestSync(prev => ({ ...prev, [activeConfig.name]: stamp.toISOString() }));
-    window.toast(`${activeConfig.name} test sync ok`, {
+    globalThis.toast(`${activeConfig.name} test sync ok`, {
       sub: `last sync ${stamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`,
       tone: 'accent',
     });
@@ -2306,16 +2344,16 @@ function IntegrationsSettings() {
   const onConnect = () => {
     if (!activeConfig) return;
     setStatusMap(prev => ({ ...prev, [activeConfig.name]: 'syncing' }));
-    window.toast(`${activeConfig.name} connecting…`, { sub: 'OAuth handshake started', tone: 'accent' });
+    globalThis.toast(`${activeConfig.name} connecting…`, { sub: 'OAuth handshake started', tone: 'accent' });
     setTimeout(() => {
       setStatusMap(prev => ({ ...prev, [activeConfig.name]: 'connected' }));
-      window.toast(`${activeConfig.name} connected`, { sub: 'mapping ready to configure', tone: 'accent' });
+      globalThis.toast(`${activeConfig.name} connected`, { sub: 'mapping ready to configure', tone: 'accent' });
     }, 320);
   };
   const onDisconnect = () => {
     if (!activeConfig) return;
     setStatusMap(prev => ({ ...prev, [activeConfig.name]: 'disabled' }));
-    window.toast(`${activeConfig.name} disconnected`, { sub: 'OAuth tokens revoked', tone: 'warn' });
+    globalThis.toast(`${activeConfig.name} disconnected`, { sub: 'OAuth tokens revoked', tone: 'warn' });
   };
 
   return (
@@ -2491,22 +2529,22 @@ function EvalPolicyForm() {
 
   const onSave = () => {
     if (!dirty) {
-      window.toast('No changes to save', { sub: 'eval policy unchanged', tone: 'neutral' });
+      globalThis.toast('No changes to save', { sub: 'eval policy unchanged', tone: 'neutral' });
       return;
     }
     setLastSavedAt(new Date());
-    window.toast('Eval policy saved', {
+    globalThis.toast('Eval policy saved', {
       sub: `freq · ${form.freq} · ${form.judgeConsensus} · regression ${form.regressionThreshold}`,
       tone: 'accent',
     });
   };
   const onRevert = () => {
     if (!dirty) {
-      window.toast('Already at saved policy', { sub: 'nothing to revert', tone: 'neutral' });
+      globalThis.toast('Already at saved policy', { sub: 'nothing to revert', tone: 'neutral' });
       return;
     }
     setForm(DEFAULTS);
-    window.toast('Policy reverted', { sub: 'fields restored to last saved values', tone: 'neutral' });
+    globalThis.toast('Policy reverted', { sub: 'fields restored to last saved values', tone: 'neutral' });
   };
 
   return (
@@ -2625,17 +2663,17 @@ function TeamSettings() {
     e.preventDefault();
     if (!managed || !managedDraft) return;
     setTeam(t => t.map(m => m.email === managed.email ? { ...m, role: managedDraft.role, scopes: managedDraft.scopes } : m));
-    window.toast(`${managed.name} updated`, { sub: `role: ${managedDraft.role} · ${Object.values(managedDraft.scopes).filter(Boolean).length}/${SCOPE_KEYS.length} scopes`, tone: 'accent' });
+    globalThis.toast(`${managed.name} updated`, { sub: `role: ${managedDraft.role} · ${Object.values(managedDraft.scopes).filter(Boolean).length}/${SCOPE_KEYS.length} scopes`, tone: 'accent' });
     closeManage();
   };
   const onRemoveManaged = () => {
     if (!managed) return;
     if (managed.role === 'Admin' && team.filter(m => m.role === 'Admin').length === 1) {
-      window.toast('Cannot remove the last admin', { sub: 'promote another member first', tone: 'critical' });
+      globalThis.toast('Cannot remove the last admin', { sub: 'promote another member first', tone: 'critical' });
       return;
     }
     setTeam(t => t.filter(m => m.email !== managed.email));
-    window.toast(`${managed.name} removed from workspace`, { sub: 'sessions revoked', tone: 'warn' });
+    globalThis.toast(`${managed.name} removed from workspace`, { sub: 'sessions revoked', tone: 'warn' });
     closeManage();
   };
 
@@ -2644,21 +2682,21 @@ function TeamSettings() {
     e.preventDefault();
     const email = invite.email.trim().toLowerCase();
     if (!validEmail(email)) {
-      window.toast('Enter a valid email address', { tone: 'critical' });
+      globalThis.toast('Enter a valid email address', { tone: 'critical' });
       return;
     }
     if (team.some(m => m.email.toLowerCase() === email) || pendingInvites.some(p => p.email === email)) {
-      window.toast('That email is already on the team or invited', { tone: 'warn' });
+      globalThis.toast('That email is already on the team or invited', { tone: 'warn' });
       return;
     }
     setPendingInvites(q => [...q, { email, role: invite.role, message: invite.message, sentAt: new Date().toISOString() }]);
     setInvite({ email: '', role: 'Operator', message: '' });
     setInviteOpen(false);
-    window.toast(`Invite sent to ${email}`, { sub: `role: ${invite.role} · expires in 7 days`, tone: 'accent' });
+    globalThis.toast(`Invite sent to ${email}`, { sub: `role: ${invite.role} · expires in 7 days`, tone: 'accent' });
   };
   const onRevokeInvite = (email) => {
     setPendingInvites(q => q.filter(p => p.email !== email));
-    window.toast(`Invite to ${email} revoked`, { tone: 'warn' });
+    globalThis.toast(`Invite to ${email} revoked`, { tone: 'warn' });
   };
 
   return (
@@ -2832,26 +2870,26 @@ function AccountSettings() {
       consent.sms && 'sms',
       consent.digest && 'weekly digest',
     ].filter(Boolean);
-    return enabled.length ? enabled.join(' + ') : 'no operator alerts';
+    return enabled.length > 0 ? enabled.join(' + ') : 'no operator alerts';
   };
   const setConsent = (key, value) => {
     setConsentDraft(prev => ({ ...prev, [key]: value }));
   };
   const saveConsent = () => {
     if (!consentDirty) {
-      window.toast('Alert consent already current', { sub: consentSummary(savedConsent), tone:'neutral' });
+      globalThis.toast('Alert consent already current', { sub: consentSummary(savedConsent), tone:'neutral' });
       return;
     }
     const savedAt = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
     const next = { ...consentDraft };
     setSavedConsent(next);
     setLastConsentSavedAt(savedAt);
-    window.toast('Alert consent saved', { sub:`${consentSummary(next)} · saved ${savedAt}`, tone:'accent' });
+    globalThis.toast('Alert consent saved', { sub:`${consentSummary(next)} · saved ${savedAt}`, tone:'accent' });
   };
   const revertConsent = () => {
     if (!consentDirty) return;
     setConsentDraft(savedConsent);
-    window.toast('Alert consent reverted', { sub: consentSummary(savedConsent), tone:'neutral' });
+    globalThis.toast('Alert consent reverted', { sub: consentSummary(savedConsent), tone:'neutral' });
   };
   // Account delivery rules — each rule has a per-channel toggle map. The
   // tiles used to onClick to a static toast that just echoed the rule
@@ -3069,13 +3107,13 @@ function BillingSettings() {
 
   const switchTo = (tier) => {
     if (tier.id === currentTierId) {
-      window.toast(`Already on ${tier.name}`, { sub: 'no change', tone: 'neutral' });
+      globalThis.toast(`Already on ${tier.name}`, { sub: 'no change', tone: 'neutral' });
       return;
     }
     const direction = (GTM_OPS_TIERS.findIndex(t => t.id === tier.id) > GTM_OPS_TIERS.findIndex(t => t.id === currentTierId)) ? 'upgraded' : 'downgraded';
     setCurrentTierId(tier.id);
     setPlanOpen(false);
-    window.toast(`${direction.charAt(0).toUpperCase()}${direction.slice(1)} to gtm_ops ${tier.name}`, {
+    globalThis.toast(`${direction.charAt(0).toUpperCase()}${direction.slice(1)} to gtm_ops ${tier.name}`, {
       sub: tier.id === 'pro' ? 'Sales will reach out to finalize the Pro contract' : `Billing now ${cycle} · ${fmtPrice(cycle === 'annual' ? tier.annualMonthly : tier.monthly)}/mo`,
       tone: 'accent',
     });
@@ -3271,7 +3309,7 @@ function SecuritySettings() {
   const onSubmit = (e) => {
     e.preventDefault();
     if (!dirty) {
-      window.toast('No changes to save', { sub: 'security policy unchanged', tone: 'neutral' });
+      globalThis.toast('No changes to save', { sub: 'security policy unchanged', tone: 'neutral' });
       return;
     }
     setPending(true);
@@ -3280,7 +3318,7 @@ function SecuritySettings() {
       setSavedPolicy(nextPolicy);
       setPending(false);
       audit(`saved security policy - ${ipRangeCount} IP ranges, ${form.sessionTimeoutHours}h sessions`);
-      window.toast('Security policy saved', {
+      globalThis.toast('Security policy saved', {
         sub: `SSO ${form.ssoEnforced ? 'enforced' : 'optional'} · 2FA ${form.twofaEnforced ? 'enforced' : 'optional'} · ${ipRangeCount} IP ranges · ${form.sessionTimeoutHours}h sessions`,
         tone: 'accent',
       });
@@ -3289,17 +3327,17 @@ function SecuritySettings() {
 
   const onReset = () => {
     setForm(savedPolicy);
-    window.toast('Reverted to current policy', { sub: 'no fields will be saved', tone: 'neutral' });
+    globalThis.toast('Reverted to current policy', { sub: 'no fields will be saved', tone: 'neutral' });
   };
 
   const onSignOutOthers = () => {
     if (otherSessionCount === 0) {
-      window.toast('No other sessions to sign out', { sub: 'this session is the only active session', tone: 'neutral' });
+      globalThis.toast('No other sessions to sign out', { sub: 'this session is the only active session', tone: 'neutral' });
       return;
     }
     setSessions(prev => prev.filter(s => s.current));
     audit(`revoked ${otherSessionCount} other session${otherSessionCount === 1 ? '' : 's'}`);
-    window.toast(`Signed out ${otherSessionCount} other session${otherSessionCount === 1 ? '' : 's'}`, {
+    globalThis.toast(`Signed out ${otherSessionCount} other session${otherSessionCount === 1 ? '' : 's'}`, {
       sub: 'this session preserved',
       tone: 'warn',
     });
@@ -3319,7 +3357,7 @@ function SecuritySettings() {
     };
     setRecoveryBatch(nextBatch);
     audit(`regenerated recovery code batch ${nextBatch.id}`);
-    window.toast(`${nextBatch.count} new recovery codes generated`, {
+    globalThis.toast(`${nextBatch.count} new recovery codes generated`, {
       sub: `${nextBatch.id} active · previous codes invalidated`,
       tone: 'accent',
     });
@@ -3541,7 +3579,7 @@ function GeneratePage({ setRoute }) {
         activeHandoff.callOutcome,
         typeof activeHandoff.callScore === 'number' ? `${activeHandoff.callScore.toFixed(1)}/10 call score` : null,
       ].filter(Boolean);
-      return parts.length ? parts.join(' · ') : 'qualified call context carried from the console';
+      return parts.length > 0 ? parts.join(' · ') : 'qualified call context carried from the console';
     }
     return '22% after-hours voicemail · 40% no-callback · pilot approved';
   })();
@@ -3563,7 +3601,7 @@ function GeneratePage({ setRoute }) {
     setArtifactPanel(null);
     setArtifactPayload(null);
     setArtifactState('idle');
-    window.toast('Draft review reset', {
+    globalThis.toast('Draft review reset', {
       sub: 'Buyer proof changed. Regenerate before opening Proposals.',
       tone: 'warn',
     });
@@ -3587,12 +3625,12 @@ function GeneratePage({ setRoute }) {
   // inside the console does not keep resurrecting the sample packet.
   React.useEffect(() => {
     try {
-      const url = new URL(window.location.href);
+      const url = new URL(globalThis.location.href);
       const requestedArtifact = url.searchParams.get('artifact');
       if (requestedArtifact === 'pdf' || requestedArtifact === 'json') {
         setArtifactPanel(requestedArtifact);
         url.searchParams.delete('artifact');
-        window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+        globalThis.history.replaceState(globalThis.history.state, '', `${url.pathname}${url.search}${url.hash}`);
       }
     } catch (_) {
       /* URL API unavailable */
@@ -3628,10 +3666,10 @@ function GeneratePage({ setRoute }) {
       // Clear the handoff so re-navigating to Generate doesn't keep
       // re-prefilling the textarea.
       const { triggered_from, address_blockers_proposal_id, address_blockers_co, address_blockers_list, ...rest } = extra;
-      window.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({ extra: rest });
     };
-    applyAddressBlockersHandoff(window.AppContext.get());
-    return window.AppContext.subscribe(applyAddressBlockersHandoff);
+    applyAddressBlockersHandoff(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyAddressBlockersHandoff);
   }, []);
 
   // Consume the "Generate proposal v3" handoff from CallsPage. Pre-fills
@@ -3671,10 +3709,10 @@ function GeneratePage({ setRoute }) {
         proposal_v3_call_outcome, proposal_v3_call_score, proposal_v3_call_duration,
         ...rest
       } = extra;
-      window.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({ extra: rest });
     };
-    applyProposalV3Handoff(window.AppContext.get());
-    return window.AppContext.subscribe(applyProposalV3Handoff);
+    applyProposalV3Handoff(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyProposalV3Handoff);
   }, []);
 
   // Consume the topbar "New run -> Generate proposal" handoff. That
@@ -3720,13 +3758,13 @@ function GeneratePage({ setRoute }) {
         proposal_seed_call_duration,
         ...rest
       } = extra;
-      window.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({ extra: rest });
     };
-    applyNewRunHandoff(window.AppContext.get());
-    return window.AppContext.subscribe(applyNewRunHandoff);
+    applyNewRunHandoff(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyNewRunHandoff);
   }, []);
 
-  const isDemoArtifactMode = Boolean(window.DEMO_MODE);
+  const isDemoArtifactMode = Boolean(globalThis.DEMO_MODE);
   const artifactMode = isDemoArtifactMode ? 'demo sequence' : 'live backend';
   const artifacts = {
     pdf: {
@@ -3879,16 +3917,23 @@ function GeneratePage({ setRoute }) {
   ];
   const reviewPathSteps = [
     {
+      key: 'artifact',
       label: 'Artifact',
       detail: reviewReady ? `${reviewPacketId} local preview.` : 'Local sample preview.',
       state: activeArtifact ? 'active' : reviewReady ? 'ready' : 'available',
+      action: reviewReady
+        ? { key: 'open-artifact-draft', label: 'Open draft artifact preview' }
+        : { key: 'open-artifact-sample', label: 'Open sample artifact preview' },
     },
     {
+      key: 'review',
       label: 'Review',
       detail: reviewReady ? 'Operator approval in Proposals.' : 'Draft gate locked.',
       state: reviewReady ? 'ready' : 'locked',
+      action: reviewReady ? { key: 'open-proposals-review', label: 'Open proposal review' } : null,
     },
     {
+      key: 'send',
       label: 'Send',
       detail: 'Buyer send blocked until approved.',
       state: 'blocked',
@@ -3902,9 +3947,9 @@ function GeneratePage({ setRoute }) {
     if (!artifact?.artifactId) return;
     try {
       await navigator.clipboard?.writeText?.(artifact.artifactId);
-      window.toast('Review packet ID copied', { sub: artifact.artifactId, tone:'accent' });
+      globalThis.toast('Review packet ID copied', { sub: artifact.artifactId, tone:'accent' });
     } catch (_) {
-      window.toast('Review packet ID', { sub: artifact.artifactId, tone:'accent' });
+      globalThis.toast('Review packet ID', { sub: artifact.artifactId, tone:'accent' });
     }
   };
 
@@ -3914,10 +3959,10 @@ function GeneratePage({ setRoute }) {
     // demo proposal (or fell back to PR-2041 / Banyan), which silently lied
     // when the operator had just generated a v3 from a different call or
     // addressed blockers on a different buyer's proposal.
-    const proposals = window.GTM.proposals || [];
+    const proposals = globalThis.GTM.proposals || [];
     const matchByName = (needle) => {
       if (!needle) return null;
-      const n = String(needle).toLowerCase().split(/\s+/).filter(Boolean)[0];
+      const n = String(needle).toLowerCase().split(/\s+/).find(Boolean);
       if (!n) return null;
       return proposals.find(p => `${p.id} ${p.co}`.toLowerCase().includes(n)) || null;
     };
@@ -3935,13 +3980,13 @@ function GeneratePage({ setRoute }) {
       proposals.find(p => isOpenProposalStage(p.stage)) ||
       proposals[0];
     if (!reviewProposal) {
-      window.toast('No proposal available to review', { sub: 'demo proposals fixture is empty', tone: 'critical' });
+      globalThis.toast('No proposal available to review', { sub: 'demo proposals fixture is empty', tone: 'critical' });
       return;
     }
-    window.AppContext.set({
+    globalThis.AppContext.set({
       selection: { type: 'proposal', id: reviewProposal.id },
       extra: {
-        ...(window.AppContext.get().extra || {}),
+        ...globalThis.AppContext.get().extra,
         generated_artifact_id: reviewPacketId,
         triggered_from: 'generate-artifact-review',
       },
@@ -3966,14 +4011,14 @@ function GeneratePage({ setRoute }) {
   ];
 
   const stream = (msg, level = 'info') => {
-    window.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg, level } }));
+    globalThis.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg, level } }));
   };
 
   const handleGenerate = async () => {
     if (!inputText.trim()) {
       setBriefError('Paste buyer context or load the HVAC sample before generating a review draft.');
       focusBuyerBrief();
-      return window.toast('Input required', { sub: 'Buyer proof is required before the draft engine runs.', tone: 'critical' });
+      return globalThis.toast('Input required', { sub: 'Buyer proof is required before the draft engine runs.', tone: 'critical' });
     }
     const generationId = generationIdRef.current + 1;
     generationIdRef.current = generationId;
@@ -3983,11 +4028,11 @@ function GeneratePage({ setRoute }) {
     setArtifactPanel(null);
     setArtifactPayload(null);
     setArtifactState('idle');
-    window.dispatchEvent(new CustomEvent('gtm:stream-reset'));
+    globalThis.dispatchEvent(new CustomEvent('gtm:stream-reset'));
     stream('pipeline.start: review draft requested · validating buyer brief');
     const payload = JSON.stringify({ input: inputText });
-    stream(`request.posting: POST /api/generate · ${payload.length} bytes${window.DEMO_MODE ? ' · DEMO_MODE' : ''}`);
-    window.toast('Sequence Initializing...', { tone: 'accent' });
+    stream(`request.posting: POST /api/generate · ${payload.length} bytes${globalThis.DEMO_MODE ? ' · DEMO_MODE' : ''}`);
+    globalThis.toast('Sequence Initializing...', { tone: 'accent' });
     const generateRequest = () => fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3999,7 +4044,7 @@ function GeneratePage({ setRoute }) {
         cumulative += evt.delay;
         setTimeout(() => {
           if (generationIdRef.current !== generationId) return;
-          window.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg: evt.msg, level: evt.level } }));
+          globalThis.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg: evt.msg, level: evt.level } }));
         }, cumulative);
       }
       setTimeout(() => {
@@ -4007,11 +4052,11 @@ function GeneratePage({ setRoute }) {
         stream(`pipeline.complete: artifact_id=${reviewPacketId} · 7 pages · ready for review`, 'ok');
         setIsGenerating(false);
         setReviewReady(true);
-        window.toast('Proposal generated', { sub: `${reviewSubject} · 7 pages · ready to review`, tone: 'accent' });
+        globalThis.toast('Proposal generated', { sub: `${reviewSubject} · 7 pages · ready to review`, tone: 'accent' });
       }, cumulative + 200);
     };
 
-    if (window.DEMO_MODE) {
+    if (globalThis.DEMO_MODE) {
       try {
         generateRequest()
           .then(res => {
@@ -4044,7 +4089,7 @@ function GeneratePage({ setRoute }) {
     } catch (e) {
       const msg = (e && (e.message || String(e))) || 'unknown error';
       stream(`pipeline.error: ${msg}`, 'err');
-      window.toast('Generation failed', { sub: msg, tone: 'critical' });
+      globalThis.toast('Generation failed', { sub: msg, tone: 'critical' });
       setIsGenerating(false);
     }
   };
@@ -4079,8 +4124,8 @@ function GeneratePage({ setRoute }) {
             className="btn btn--primary btn--sm"
             onClick={handleGenerate}
             disabled={!hasBrief || isGenerating}
-            aria-describedby={!hasBrief ? 'generate-brief-required-note' : undefined}
-            title={!hasBrief ? 'Buyer proof is required before the draft engine runs.' : undefined}
+            aria-describedby={hasBrief ? undefined : 'generate-brief-required-note'}
+            title={hasBrief ? undefined : 'Buyer proof is required before the draft engine runs.'}
           >
             {draftButtonLabel}
           </button>
@@ -4205,8 +4250,8 @@ function GeneratePage({ setRoute }) {
               className="btn btn--primary btn--sm"
               onClick={handleGenerate}
               disabled={!hasBrief || isGenerating}
-              aria-describedby={!hasBrief ? 'generate-brief-required-note' : undefined}
-              title={!hasBrief ? 'Buyer proof is required before the draft engine runs.' : undefined}
+              aria-describedby={hasBrief ? undefined : 'generate-brief-required-note'}
+              title={hasBrief ? undefined : 'Buyer proof is required before the draft engine runs.'}
             >
               {lowerDraftButtonLabel}
             </button>
@@ -4240,11 +4285,27 @@ function GeneratePage({ setRoute }) {
             </div>
             <div className="artifact-review__path" aria-label="Proposal review path" data-testid="generate-review-path">
               {reviewPathSteps.map((step, idx) => (
-                <div key={step.label} data-state={step.state}>
+                <div key={step.label} data-state={step.state} data-testid={`generate-review-path-step-${step.key}`}>
                   <span className="artifact-review__path-index">{idx + 1}</span>
                   <div>
                     <strong>{step.label}</strong>
                     <p>{step.detail}</p>
+                    {step.action ? (
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--xs artifact-review__path-action"
+                        data-testid={`generate-review-path-action-${step.action.key}`}
+                        onClick={() => {
+                          if (step.action.key.includes('artifact')) {
+                            openArtifact('pdf');
+                          } else if (step.action.key === 'open-proposals-review') {
+                            reviewInProposals();
+                          }
+                        }}
+                      >
+                        {step.action.label}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -4342,4 +4403,4 @@ function GeneratePage({ setRoute }) {
   );
 }
 
-Object.assign(window, { EvalsPage, ProposalsPage, SettingsPage, GeneratePage });
+Object.assign(globalThis, { EvalsPage, ProposalsPage, SettingsPage, GeneratePage });

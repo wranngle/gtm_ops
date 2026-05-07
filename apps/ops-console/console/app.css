@@ -1571,6 +1571,12 @@ a:hover { color: var(--accent-fg); }
   display: block;
   padding: 9px 10px 9px 32px;
 }
+.generate-review-card .artifact-review__path > div[data-state="locked"] {
+  pointer-events: none;
+}
+.generate-review-card .artifact-review__path-action {
+  margin-top: 8px;
+}
 .generate-review-card .artifact-review__path p {
   margin-top: 2px;
   font-size: 10px;

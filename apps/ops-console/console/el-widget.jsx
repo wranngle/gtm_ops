@@ -183,8 +183,8 @@ function loadConvaiWidget() {
    registered by the embed script. Used to drive the fallback UI when
    the script can't load (CSP, corporate network blocking unpkg, etc). */
 function isConvaiReady() {
-  return typeof globalThis.customElements !== 'undefined' &&
-    !!customElements.get('elevenlabs-convai');
+  return globalThis.customElements !== undefined &&
+    Boolean(customElements.get('elevenlabs-convai'));
 }
 
 function installConvaiEscapeHatchGuard(el) {
@@ -241,13 +241,13 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   expandText,
   listeningText,
   speakingText,
-	  firstMessage,
-	  prompt,
-	  voiceId,
-	  serverLocation,
-	  markdownLinkAllowedHosts = 'elevenlabs.io,wranngle.com',
-	  syntaxHighlightTheme,
-	  widgetAttrs = {},
+  firstMessage,
+  prompt,
+  voiceId,
+  serverLocation,
+  markdownLinkAllowedHosts = 'elevenlabs.io,wranngle.com',
+  syntaxHighlightTheme,
+  widgetAttrs = {},
   height = 560,
   width,
   onMount,
@@ -328,9 +328,9 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     const el = document.createElement('elevenlabs-convai');
     el.classList.add('convai-widget-host');
     el.setAttribute('agent-id', agent_id);
-    if (agentKey) el.setAttribute('data-agent-key', agentKey);
-    if (reg?.display_name) el.setAttribute('data-agent-name', reg.display_name);
-    if (reg?.role) el.setAttribute('data-agent-role', reg.role);
+    if (agentKey) el.dataset.agentKey = agentKey;
+    if (reg?.display_name) el.dataset.agentName = reg.display_name;
+    if (reg?.role) el.dataset.agentRole = reg.role;
     const displayVariant = variant || (expanded ? 'expanded' : '');
     if (displayVariant) el.setAttribute('variant', displayVariant);
     const attrs = {
@@ -382,8 +382,34 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     const onCall = (event) => {
       if (!event.detail) return;
       event.detail.config = event.detail.config || {};
+
+      let userFinishedTime = 0;
+      let textTtfb = null;
+      const originalOnModeChange = event.detail.config.onModeChange;
+      const originalOnMessage = event.detail.config.onMessage;
+
+      event.detail.config.onModeChange = (modeEvent) => {
+        if (modeEvent.mode === 'speaking' && userFinishedTime > 0) {
+          const firstAudioLatency = performance.now() - userFinishedTime;
+          globalThis.dispatchEvent(new CustomEvent('gtm:convai-latency', { detail: { ttfb: textTtfb || firstAudioLatency, first_audio: firstAudioLatency } }));
+          userFinishedTime = 0;
+          textTtfb = null;
+        }
+        if (originalOnModeChange) originalOnModeChange(modeEvent);
+      };
+
+      event.detail.config.onMessage = (msgEvent) => {
+        if (msgEvent.source === 'user') {
+          userFinishedTime = performance.now();
+          textTtfb = null;
+        } else if (msgEvent.source === 'ai' && userFinishedTime > 0 && !textTtfb) {
+          textTtfb = performance.now() - userFinishedTime;
+        }
+        if (originalOnMessage) originalOnMessage(msgEvent);
+      };
+
       event.detail.config.clientTools = {
-        ...(event.detail.config.clientTools || {}),
+        ...event.detail.config.clientTools,
         openConsoleRoute: ({ route }) => {
           if (typeof route === 'string') {
             globalThis.dispatchEvent(new CustomEvent('gtm:route', { detail: { route } }));
@@ -445,20 +471,20 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       role: 'alert',
       'aria-live': 'polite',
     },
-      React.createElement('div', { className: 'convai-fallback' },
-        React.createElement('div', { className: 'convai-fallback__title' }, 'ConvAI widget unreachable'),
-        React.createElement('div', { className: 'convai-fallback__body' },
-          'The ElevenLabs embed script (',
-          React.createElement('code', null, 'unpkg.com/@elevenlabs/convai-widget-embed'),
-          ') did not load. This is usually a corporate-network or CSP block. ',
-          reg ? `${reg.display_name} settings are still available inside the console.` : 'Open the in-console agent admin.'
-        ),
-        React.createElement('button', {
-          className: 'btn btn--primary btn--sm',
-          style: { marginTop: 12, display: 'inline-flex' },
-          onClick: () => openLocalAgentAdmin('convai-fallback', 'context'),
-        }, 'Open local admin')
-      )
+    React.createElement('div', { className: 'convai-fallback' },
+      React.createElement('div', { className: 'convai-fallback__title' }, 'ConvAI widget unreachable'),
+      React.createElement('div', { className: 'convai-fallback__body' },
+        'The ElevenLabs embed script (',
+        React.createElement('code', null, 'unpkg.com/@elevenlabs/convai-widget-embed'),
+        ') did not load. This is usually a corporate-network or CSP block. ',
+        reg ? `${reg.display_name} settings are still available inside the console.` : 'Open the in-console agent admin.'
+      ),
+      React.createElement('button', {
+        className: 'btn btn--primary btn--sm',
+        style: { marginTop: 12, display: 'inline-flex' },
+        onClick: () => openLocalAgentAdmin('convai-fallback', 'context'),
+      }, 'Open local admin')
+    )
     );
   }
   if (!ready) {
@@ -483,18 +509,18 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       'aria-live': 'polite',
       'data-testid': 'convai-config-error',
     },
-      React.createElement('div', { className: 'convai-fallback__title' }, 'ElevenLabs config unavailable'),
-      React.createElement('div', { className: 'convai-fallback__body' },
-        reg ? `${reg.display_name} is wired into the console, but the official widget did not return a ` : 'The official widget did not return a ',
-        React.createElement('code', null, 'widget_config'),
-        agent_id ? ` for ${agent_id}. ` : '. ',
-        'Use the local agent admin while the embed binding is repaired.'
-      ),
-      React.createElement('button', {
-        className: 'btn btn--primary btn--sm',
-        style: { marginTop: 12, display: 'inline-flex' },
-        onClick: () => openLocalAgentAdmin('convai-config-error', 'context'),
-      }, 'Open local admin')
+    React.createElement('div', { className: 'convai-fallback__title' }, 'ElevenLabs config unavailable'),
+    React.createElement('div', { className: 'convai-fallback__body' },
+      reg ? `${reg.display_name} is wired into the console, but the official widget did not return a ` : 'The official widget did not return a ',
+      React.createElement('code', null, 'widget_config'),
+      agent_id ? ` for ${agent_id}. ` : '. ',
+      'Use the local agent admin while the embed binding is repaired.'
+    ),
+    React.createElement('button', {
+      className: 'btn btn--primary btn--sm',
+      style: { marginTop: 12, display: 'inline-flex' },
+      onClick: () => openLocalAgentAdmin('convai-config-error', 'context'),
+    }, 'Open local admin')
     )
   );
 };
