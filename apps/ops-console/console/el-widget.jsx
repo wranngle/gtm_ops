@@ -33,10 +33,10 @@ globalThis.useAppContext = function useAppContext() {
   return s;
 };
 
-/* buildContextDump — serialize current app state for the agent.
+/* buildAgentContext — serialize current app state for the agent.
    Output is the markdown blob that lands inside the {{context}}
    placeholder in the agent's system prompt. Keep human-readable. */
-globalThis.buildContextDump = function buildContextDump(ctx) {
+globalThis.buildAgentContext = function buildAgentContext(ctx) {
   const D = globalThis.GTM || {};
   const lines = [];
   const serializeExtraValue = (value) => {
@@ -455,8 +455,8 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   React.useEffect(() => {
     const el = widgetRef.current;
     if (!el) return;
-    const dump = globalThis.buildContextDump(ctx);
-    const dyn = { context: dump };
+    const context = globalThis.buildAgentContext(ctx);
+    const dyn = { context };
     el.setAttribute('dynamic-variables', JSON.stringify(dyn));
     if (textOnly) {
       el.setAttribute('override-config', JSON.stringify({

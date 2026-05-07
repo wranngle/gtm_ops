@@ -43,8 +43,8 @@ function AgentsPage({ setRoute }) {
     globalThis.AppContext.get().extra?.new_agent_intent,
   ));
   const appCtx = globalThis.useAppContext();
-  const contextDump = globalThis.buildContextDump(appCtx);
-  const contextLineCount = contextDump.split('\n').filter(Boolean).length;
+  const context = globalThis.buildAgentContext(appCtx);
+  const contextLines = context.split('\n').filter(Boolean).length;
   const adminCardRef = React.useRef(null);
   const evalHandoffBannerRef = React.useRef(null);
   const evalHandoffRef = React.useRef(null);
@@ -181,7 +181,7 @@ function AgentsPage({ setRoute }) {
     // Also snapshot the dump string itself so the rendered <pre> below
     // displays the EXACT context that was sealed at sync time. Previously
     // the panel snapshotted route/selection/lines/atLabel but the <pre>
-    // below kept rendering the LIVE contextDump — so navigating after a
+    // below kept rendering the LIVE context — so navigating after a
     // sync left the "synced N lines at TIME" sticker describing a
     // different blob than what was on screen.
     setContextSync({
@@ -189,8 +189,8 @@ function AgentsPage({ setRoute }) {
       agentName: active.display_name,
       route: current.route || appCtx.route || 'agents',
       selection,
-      lines: contextLineCount,
-      dump: contextDump,
+      lines: contextLines,
+      text: context,
       atLabel: at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     });
     setAdminPanel('context');
@@ -385,7 +385,7 @@ function AgentsPage({ setRoute }) {
               <div className="el-conversation-bar" role="status" aria-live="polite" data-testid="agent-context-bar">
                 <I3.Mic size={14}/>
                 <span>
-                  Console context packet: <code className="mono">{contextLineCount} {contextLineCount === 1 ? 'line' : 'lines'}</code>
+                  Console context packet: <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code>
                   {' '}from <code className="mono">{appCtx.route || 'agents'}</code>
                 </span>
                 <Badge tone="accent">ready</Badge>
@@ -431,7 +431,7 @@ function AgentsPage({ setRoute }) {
                 <Badge tone="accent">embedded</Badge>
                 <div className="agent-session-strip__grid">
                   <span>route <code className="mono">{appCtx.route}</code></span>
-                  <span>context <code className="mono">{contextLineCount} {contextLineCount === 1 ? 'line' : 'lines'}</code></span>
+                  <span>context <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code></span>
                   <span>tools <code className="mono">{(active.tools || []).length || 3} local</code></span>
                 </div>
               </div>
@@ -620,7 +620,7 @@ function AgentsPage({ setRoute }) {
                         <div className="agent-context-sync__facts">
                           <span>route <code className="mono">{contextSync.route}</code></span>
                           <span>selection <code className="mono">{contextSync.selection}</code></span>
-                          <span>dump <code className="mono">{contextSync.lines} {contextSync.lines === 1 ? 'line' : 'lines'}</code></span>
+                          <span>context <code className="mono">{contextSync.lines} {contextSync.lines === 1 ? 'line' : 'lines'}</code></span>
                           <span>synced <code className="mono">{contextSync.atLabel}</code></span>
                         </div>
                       </div>
@@ -629,10 +629,10 @@ function AgentsPage({ setRoute }) {
                       className="mono agent-admin-json"
                       tabIndex={0}
                       role="region"
-                      aria-label={`${active.display_name} dynamic context dump`}
-                      data-testid="agent-context-dump"
+                      aria-label={`${active.display_name} agent context`}
+                      data-testid="agent-context"
                       data-source={contextSync ? 'synced' : 'live'}
-                    >{contextSync ? contextSync.dump : contextDump}</pre>
+                    >{contextSync ? contextSync.text : context}</pre>
                   </div>
                 )}
                 {adminPanel === 'history' && (() => {
@@ -750,14 +750,14 @@ function AgentsPage({ setRoute }) {
             </Card>
           </div>
 
-          <Card title="how the context dump works">
+          <Card title="how context works">
             <div style={{fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)'}}>
               <p style={{marginBottom: 8}}>Every ConvAI session opened from inside this app passes a <code className="mono">context</code> dynamic variable to the agent. The agent's system prompt ends with a <code className="mono">{'{{context}}'}</code> placeholder that gets replaced server-side.</p>
-              <p style={{marginBottom: 8}}>The dump is rebuilt live from <code className="mono">window.AppContext</code> as you click through the app — selecting a lead, a call, or a proposal updates what the agent sees in real time.</p>
-              <p style={{marginBottom: 0}}>The current dump for this session:</p>
+              <p style={{marginBottom: 8}}>The context is rebuilt live from <code className="mono">window.AppContext</code> as you click through the app — selecting a lead, a call, or a proposal updates what the agent sees in real time.</p>
+              <p style={{marginBottom: 0}}>The current context for this session:</p>
             </div>
             <pre className="mono" style={{fontSize: 11, marginTop: 10, padding: 10, background: 'var(--bg-inset)', borderRadius: 'var(--r-md)', maxHeight: 240, overflow: 'auto', color: 'var(--text-2)'}}>
-              {contextDump}
+              {context}
             </pre>
           </Card>
         </div>
