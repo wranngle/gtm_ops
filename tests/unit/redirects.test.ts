@@ -1,14 +1,17 @@
 /**
  * apps/ops-console/_redirects content guard. Mirrors the
  * tests/unit/headers.test.ts pattern — asserts the Cloudflare Pages
- * redirect rules that route the bare gtm-ops.pages.dev landing page
- * (and its index.html) to the canonical app.wranngle.com console.
+ * redirect rules that route the bare landing path (/) to /console/
+ * on whatever host the request arrived on (app.wranngle.com is the
+ * canonical, gtm-ops.pages.dev is the project host).
  *
- * Without these 301s, the marketing landing page becomes a dead
- * middleman the operator has to click through. PR #50 wired the
- * redirects; if a future edit silently drops them, the regression
- * lands on production with no failing test until someone notices a
- * stale-looking landing page.
+ * Without these 301s, the marketing index.html becomes a dead
+ * middleman operators have to click through. The earlier shape sent
+ * `/` to https://app.wranngle.com/ as an absolute URL; that worked
+ * for gtm-ops.pages.dev but caused a self-redirect loop on the
+ * canonical host (path-only `_redirects` rules can't host-
+ * discriminate). Relative target avoids the loop and still removes
+ * the middleman.
  */
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
@@ -25,14 +28,16 @@ describe('apps/ops-console/_redirects', () => {
 
   const text = readFileSync(redirectsPath, 'utf8');
 
-  it('redirects / → https://app.wranngle.com/ as a 301', () => {
-    // Tolerate any whitespace; the contract is "/ goes to the
-    // canonical host with a permanent redirect status".
-    expect(text).toMatch(/^\/\s+https:\/\/app\.wranngle\.com\/\s+301\b/m);
+  it('redirects / → /console/ as a 301', () => {
+    // Relative target keeps the rule host-neutral: works on
+    // app.wranngle.com AND gtm-ops.pages.dev, and avoids the
+    // self-loop an absolute https://app.wranngle.com/ target hits
+    // on the canonical host.
+    expect(text).toMatch(/^\/\s+\/console\/\s+301\b/m);
   });
 
-  it('redirects /index.html → https://app.wranngle.com/ as a 301', () => {
-    expect(text).toMatch(/^\/index\.html\s+https:\/\/app\.wranngle\.com\/\s+301\b/m);
+  it('redirects /index.html → /console/ as a 301', () => {
+    expect(text).toMatch(/^\/index\.html\s+\/console\/\s+301\b/m);
   });
 
   it('keeps the legacy /api/eval-runs alias to the fixture', () => {

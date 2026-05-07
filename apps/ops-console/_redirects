@@ -1,14 +1,19 @@
 # Cloudflare Pages redirects
 # https://developers.cloudflare.com/pages/configuration/redirects/
 
-# app.wranngle.com is the canonical console host. The bare landing here
-# (apps/ops-console/index.html, deployed to gtm-ops.pages.dev / gtm-ops.
-# wranngle.com) was a marketing middleman — operators clicked through it
-# to reach /console/. Redirect the entry-points to the new home so the
-# middleman click goes away. Direct paths (/console/, /eval-runs/, etc.)
-# still serve here as legacy aliases for any deep links already in the wild.
-/                 https://app.wranngle.com/   301
-/index.html       https://app.wranngle.com/   301
+# app.wranngle.com is the canonical console host. The bare landing
+# (apps/ops-console/index.html) used to be a marketing middleman —
+# operators clicked through it to reach /console/. Skip it: bare-root
+# visits go straight to /console/ on whatever host they arrived on
+# (app.wranngle.com OR the gtm-ops.pages.dev preview host). Pages
+# `_redirects` rules are path-only, so we can't host-discriminate
+# here without a Pages Function — and we don't need to: redirecting
+# to a relative /console/ works on every host, and avoids the
+# self-loop we'd hit if `/` on app.wranngle.com 301'd to
+# https://app.wranngle.com/. Direct paths (/console/, /eval-runs/)
+# still serve as before.
+/                 /console/                   301
+/index.html       /console/                   301
 
 # Friendly alias for the legacy `/api/eval-runs` URL the UI used briefly
 # before the canonical `/api/eval/runs` route landed in server.js.
