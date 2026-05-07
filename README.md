@@ -16,7 +16,7 @@ The n8n workflow library is the single source of truth at [`wranngle/n8n`](https
 
 ## Demo
 
-The deployed Pages site at [`gtm-ops.wranngle.com`](https://gtm-ops.wranngle.com) (Cloudflare Pages project `gtm-ops`, also reachable at `gtm-ops.pages.dev`) runs in DEMO_MODE end-to-end against the bundled fixtures. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. The Generate page replays a canned 11-step pipeline trace so you can see the proposal flow without a live backend. A 3-minute architecture walkthrough video lives at the project's README on GitHub when published.
+The deployed Pages site at [`app.wranngle.com`](https://app.wranngle.com) (Cloudflare Pages project `gtm-ops`, also reachable at `gtm-ops.pages.dev`) runs in DEMO_MODE end-to-end against the bundled fixtures. The bare `/` and `/index.html` on `gtm-ops.pages.dev` 301 to `app.wranngle.com` so the wranngle.com landing demo button reaches the console without a middleman page. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. The Generate page replays a canned 11-step pipeline trace so you can see the proposal flow without a live backend. A 3-minute architecture walkthrough video lives at the project's README on GitHub when published.
 
 ## Architecture
 

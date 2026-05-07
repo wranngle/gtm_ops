@@ -1,0 +1,44 @@
+name: deploy-pages
+
+# Auto-deploy apps/ops-console to the Cloudflare Pages project `gtm-ops`
+# on every push to main. Without this, _redirects/_headers/CSP changes that
+# merge to main never reach gtm-ops.pages.dev or app.wranngle.com — the
+# canonical example being the / → app.wranngle.com 301 (PR #51) which sat
+# unrendered in production until someone ran `bun run deploy` by hand.
+#
+# Required repo secret (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN — scoped to Account → Cloudflare Pages: Edit.
+# Create at https://dash.cloudflare.com/profile/api-tokens with the
+# "Edit Cloudflare Workers" template (or a custom token with the Pages
+# permission). The account ID below is public.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: cloudflare pages deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://app.wranngle.com/
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd  # v3.15.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: d75d18b5b799b0a7f59a4987c7006131
+          command: pages deploy apps/ops-console --project-name=gtm-ops --branch=main
