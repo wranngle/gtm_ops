@@ -1,0 +1,37 @@
+{
+  "_source": "/home/wranngle/projects/wranngle_com/client/src/data/offerings.ts",
+  "_extracted_at": "2026-05-06",
+  "_refresh": "Re-snapshot whenever the gtm_ops items in wranngle_com/client/src/data/offerings.ts change ids, names, prices, ctas, or badges. The console BillingSettings tier list in apps/ops-console/console/pages-2.jsx must move with it.",
+  "tiers": [
+    {
+      "id": "gtm-ops-trial",
+      "name": "Trial",
+      "price": "0",
+      "priceCadence": "monthly",
+      "cta": "Start gtm_ops Trial",
+      "badge": null,
+      "monthly": 0,
+      "annualMonthly": 0
+    },
+    {
+      "id": "gtm-ops-plus",
+      "name": "Plus",
+      "price": "20",
+      "priceCadence": "monthly",
+      "cta": "Start gtm_ops Plus",
+      "badge": "Most Popular",
+      "monthly": 20,
+      "annualMonthly": 16.67
+    },
+    {
+      "id": "gtm-ops-pro",
+      "name": "Pro",
+      "price": "99",
+      "priceCadence": "monthly",
+      "cta": "Talk to Cody",
+      "badge": null,
+      "monthly": 99,
+      "annualMonthly": 82.5
+    }
+  ]
+}
