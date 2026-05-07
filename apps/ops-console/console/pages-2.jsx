@@ -444,6 +444,48 @@ function EvalsPage({ setRoute }) {
   };
   const p95LatencyMs = evalPercentile(latencyDurations, 95);
   const p95LatencyTone = evalLatencyTone(p95LatencyMs);
+  // Per-tool rolling aggregation across the loaded runs. voice_ai_agent_evals'
+  // README explicitly calls out "Tool-call latency aggregation. Per-call
+  // tool latency can be asserted from fixtures and live simulate responses,
+  // but there is no rolling p95/p99 view by tool yet" as a known gap. We
+  // already retain `tool_calls[]` (name, schema_pass, round_trip_ms,
+  // response_consumed_in_next_turn) on every normalized run — group by
+  // tool name so an operator can spot a tool that's slow / schema-broken
+  // / orphan-response-prone across the run set, not just inside one run.
+  const TOOL_ROUND_TRIP_BUDGET_MS = 2000; // matches scenario.yaml thresholds.tool_call_round_trip_ms
+  const toolLatencyRollup = (() => {
+    const byTool = new Map();
+    for (const run of normalizedRuns) {
+      for (const tc of run.tool_calls || []) {
+        if (!tc.name) continue;
+        let bucket = byTool.get(tc.name);
+        if (!bucket) {
+          bucket = { name: tc.name, samples: [], schemaPass: 0, schemaTotal: 0, orphan: 0 };
+          byTool.set(tc.name, bucket);
+        }
+        if (Number.isFinite(tc.round_trip_ms)) bucket.samples.push(tc.round_trip_ms);
+        bucket.schemaTotal += 1;
+        if (tc.schema_pass) bucket.schemaPass += 1;
+        if (!tc.response_consumed_in_next_turn) bucket.orphan += 1;
+      }
+    }
+    const rows = [...byTool.values()].map(b => {
+      const mean = b.samples.length ? b.samples.reduce((a, c) => a + c, 0) / b.samples.length : null;
+      const p95 = b.samples.length ? evalPercentile(b.samples, 95) : null;
+      const p99 = b.samples.length ? evalPercentile(b.samples, 99) : null;
+      const schemaRate = b.schemaTotal ? b.schemaPass / b.schemaTotal : null;
+      const tone = (schemaRate != null && schemaRate < 1)
+        ? 'critical'
+        : (p95 != null && p95 > TOOL_ROUND_TRIP_BUDGET_MS)
+          ? 'critical'
+          : (p95 != null && p95 > TOOL_ROUND_TRIP_BUDGET_MS * 0.85)
+            ? 'warn'
+            : 'healthy';
+      return { ...b, mean, p95, p99, schemaRate, tone };
+    });
+    rows.sort((a, b) => (b.p95 ?? 0) - (a.p95 ?? 0));
+    return rows;
+  })();
   const realEvalSuites = allEvalSuites.filter(s => !s.draft);
   const suiteCount = allEvalSuites.length;
   const suiteRegressionCount = realEvalSuites.filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75)).length;
@@ -1023,6 +1065,60 @@ function EvalsPage({ setRoute }) {
               slowest: <strong data-testid="eval-slowest-scenario">{slowestRun.scenario_id}</strong> · <span data-testid="eval-slowest-duration">{evalDuration(slowestRun.duration_ms)}</span>
             </span>
           )}
+        </div>
+      )}
+
+      {toolLatencyRollup.length > 0 && (
+        <div
+          className="eval-tool-latency-rollup"
+          data-testid="eval-tool-latency-rollup"
+          aria-label="Per-tool latency rollup across loaded harness runs"
+          style={{
+            margin:'8px 0 14px',
+            padding:'10px 12px',
+            background:'var(--bg-inset)',
+            borderRadius:'var(--r-md)',
+            border:'1px solid var(--border-1)',
+          }}
+        >
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6, gap:12, flexWrap:'wrap'}}>
+            <span className="eyebrow eyebrow--accent">tool latency · rolling across {normalizedRuns.length} run{normalizedRuns.length === 1 ? '' : 's'}</span>
+            <span className="mono dim" style={{fontSize:11}}>
+              budget · round-trip p95 ≤ {TOOL_ROUND_TRIP_BUDGET_MS}ms
+            </span>
+          </div>
+          <div style={{display:'grid', gap:6}}>
+            {toolLatencyRollup.map(row => (
+              <div
+                key={row.name}
+                data-testid="eval-tool-latency-rollup-row"
+                data-tool-name={row.name}
+                data-tone={row.tone}
+                data-call-count={row.schemaTotal}
+                data-p95-ms={row.p95 != null ? Math.round(row.p95) : ''}
+                style={{
+                  display:'grid',
+                  gridTemplateColumns:'minmax(120px, 1.2fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(140px, 1.2fr)',
+                  gap:10,
+                  alignItems:'center',
+                  fontSize:12,
+                }}
+              >
+                <span className="mono" style={{fontWeight:600}}>{row.name}</span>
+                <span className="mono dim">
+                  n={row.schemaTotal}{row.samples.length !== row.schemaTotal ? ` · timed ${row.samples.length}` : ''}
+                </span>
+                <span className="mono dim">
+                  schema {row.schemaRate == null ? '—' : `${Math.round(row.schemaRate * 100)}%`}{row.orphan > 0 ? ` · ${row.orphan} orphan` : ''}
+                </span>
+                <span className={`mono num ${row.tone === 'critical' ? 'cl-err' : row.tone === 'warn' ? 'cl-warn' : 'cl-ok'}`}>
+                  {row.p95 != null
+                    ? <>p95 {evalDuration(Math.round(row.p95))}{row.p99 != null && row.samples.length >= 4 ? <span className="dim"> · p99 {evalDuration(Math.round(row.p99))}</span> : null}</>
+                    : <span className="dim">no timing</span>}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
