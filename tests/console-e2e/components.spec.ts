@@ -2309,31 +2309,25 @@ test.describe('proposals · sections card', () => {
       .toContainText(`${verdant.accepted}/${verdant.sections}`);
   });
 
-  test('coach launcher does not cover proposal section review rows on a laptop viewport', async ({ openConsole, page }) => {
+  test('coach launcher is bottom-right on the proposals route at laptop viewport', async ({ openConsole, page }) => {
+    // Earlier shape: launcher hopped to top-right on /generate /proposals
+    // /evals /agents to dodge dense content. May 5 punch list item #20
+    // explicitly asked for bottom-right everywhere, so this test pins
+    // the new contract instead of the old no-overlap one. A floating
+    // bottom-right widget can sit over scrolled content; that's how
+    // floating widgets work.
     await page.setViewportSize({ width: 1280, height: 720 });
     await openConsole();
     await page.locator('.sb__item:has-text("Proposals")').first().click();
 
-    await expect(page.locator('.coach-launcher')).toBeVisible();
+    const launcher = page.locator('.coach-launcher');
+    await expect(launcher).toBeVisible();
     await expect(page.locator('[data-testid="proposal-section-row"]').nth(1)).toBeVisible();
 
-    const overlaps = await page.evaluate(() => {
-      const coach = document.querySelector('.coach-launcher')?.getBoundingClientRect();
-      if (!coach) return ['coach launcher missing'];
-      return [...document.querySelectorAll('[data-testid="proposal-section-row"]')]
-        .filter((row) => {
-          const rect = row.getBoundingClientRect();
-          const visible = rect.bottom > 0 && rect.top < window.innerHeight;
-          return visible
-            && coach.left < rect.right
-            && coach.right > rect.left
-            && coach.top < rect.bottom
-            && coach.bottom > rect.top;
-        })
-        .map(row => row.textContent?.trim() || 'unnamed row');
-    });
-
-    expect(overlaps, `Coach launcher covered proposal review rows: ${overlaps.join(', ')}`).toEqual([]);
+    const box = await launcher.boundingBox();
+    expect(box, 'coach launcher should render').not.toBeNull();
+    expect(box!.y + box!.height, 'launcher bottom edge near viewport bottom').toBeGreaterThan(720 - 60);
+    expect(box!.x + box!.width, 'launcher right edge near viewport right').toBeGreaterThan(1280 - 60);
   });
 });
 
@@ -3187,7 +3181,15 @@ test.describe('evals', () => {
     expect(overlaps, 'global coach launcher must not cover the Evals run-plan CTA').toBe(false);
   });
 
-  test('eval run detail header is not covered by the global coach launcher after scrolling', async ({ openConsole, page }) => {
+  test('coach launcher stays bottom-right on /evals after opening a run detail', async ({ openConsole, page }) => {
+    // Replaces the earlier "must not cover the run detail card after
+    // scrolling" assertion. That contract assumed the launcher hopped
+    // to top-right on /evals — a per-route override removed for May 5
+    // punch list item #20 (bottom-right everywhere). The companion
+    // test "eval run-plan CTA is not covered by the global coach
+    // launcher" (line ~3144) still asserts no above-fold collision on
+    // the entry-point CTA; this one just pins corner stability after
+    // navigating into a run detail.
     await page.setViewportSize({ width: 1280, height: 900 });
     await openConsole();
     await page.locator('.sb__item:has-text("Evals")').first().click();
@@ -3197,32 +3199,12 @@ test.describe('evals', () => {
     test.skip(runCount === 0, 'Evals runs are unavailable in this fixture snapshot');
     await runRows.last().click();
 
-    const runDetailCard = page.locator('.card:has(.card__title:has-text("run detail"))').first();
-    const runDetailHeader = runDetailCard.locator('.card__hd');
-    const coach = page.locator('.coach-launcher');
-    await expect(runDetailHeader).toBeVisible();
-    await expect(coach).toBeVisible();
-    await runDetailHeader.scrollIntoViewIfNeeded();
-
-    const [headerBox, cardBox, coachBox] = await Promise.all([
-      runDetailHeader.boundingBox(),
-      runDetailCard.boundingBox(),
-      coach.boundingBox(),
-    ]);
-    expect(headerBox, 'eval run detail header should render').not.toBeNull();
-    expect(cardBox, 'eval run detail card should render').not.toBeNull();
-    expect(coachBox, 'global coach launcher should render').not.toBeNull();
-
-    const overlapsHeader = headerBox!.x < coachBox!.x + coachBox!.width
-      && headerBox!.x + headerBox!.width > coachBox!.x
-      && headerBox!.y < coachBox!.y + coachBox!.height
-      && headerBox!.y + headerBox!.height > coachBox!.y;
-    const overlapsCard = cardBox!.x < coachBox!.x + coachBox!.width
-      && cardBox!.x + cardBox!.width > coachBox!.x
-      && cardBox!.y < coachBox!.y + coachBox!.height
-      && cardBox!.y + cardBox!.height > coachBox!.y;
-    expect(overlapsHeader, 'global coach launcher must not cover the Evals run detail header after scroll').toBe(false);
-    expect(overlapsCard, 'global coach launcher must stay out of the Evals run detail card after scroll').toBe(false);
+    const launcher = page.locator('.coach-launcher');
+    await expect(launcher).toBeVisible();
+    const box = await launcher.boundingBox();
+    expect(box, 'coach launcher should render').not.toBeNull();
+    expect(box!.y + box!.height, 'launcher bottom edge near viewport bottom').toBeGreaterThan(900 - 60);
+    expect(box!.x + box!.width, 'launcher right edge near viewport right').toBeGreaterThan(1280 - 60);
   });
 
   test('eval policy action opens Settings on the Eval policy tab', async ({ openConsole }) => {
