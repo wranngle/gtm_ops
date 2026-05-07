@@ -3463,11 +3463,6 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 }
 .coach-launcher:hover { transform: translateY(-1px); border-color: var(--accent-fg); }
 .coach-launcher:focus-visible { outline: 2px solid var(--sunset-500); outline-offset: 2px; }
-.coach-launcher__orb {
-  width: 14px; height: 14px; border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #F97316, #8B5CF6);
-  box-shadow: 0 0 12px rgba(249,115,22,.55);
-}
 @media (min-width: 901px) {
   html[data-console-route="generate"] .coach-launcher,
   html[data-console-route="proposals"] .coach-launcher,

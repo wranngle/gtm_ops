@@ -566,7 +566,13 @@ globalThis.SalesCoachLauncher = function SalesCoachLauncher() {
         'aria-expanded': open,
         onClick: () => setOpen(o => !o),
       },
-      React.createElement('span', { className: 'coach-launcher__orb' }),
+      React.createElement(globalThis.ElevenUI.Orb, {
+        size: 16,
+        state: 'idle',
+        color1: reg.avatar_color_1 || '#F97316',
+        color2: reg.avatar_color_2 || '#8B5CF6',
+        label: `${reg.display_name} state`,
+      }),
       React.createElement('span', { className: 'coach-launcher__label' }, open ? 'Hide coach' : 'Coach')
       ),
       open && React.createElement('div', { className: 'coach-dock', role: 'dialog', 'aria-label': `${reg.display_name} chat` },
