@@ -149,15 +149,21 @@ test.describe('shell', () => {
     await expect(page.locator('.sb__nav[aria-label="ElevenLabs agents"] .sb__agent-orb')).toHaveCount(0);
   });
 
-  test('sidebar brand shows Wranngle / gtm_ops console without exposing a version', async ({ openConsole }) => {
+  test('sidebar brand shows Wranngle / gtm_ops without exposing a version', async ({ openConsole }) => {
     const page = await openConsole();
+    // Browser <title> still says "Wranngle \u00b7 gtm_ops console" \u2014 that's
+    // the tab title, where the surface name is helpful disambiguation.
+    // The in-app breadcrumb and brand-sub drop the redundant " console"
+    // suffix per the original visual punch list (May 5 04:22 UTC, item
+    // #2: "gtm_ops console > gtm_ops").
     await expect(page).toHaveTitle(/Wranngle\s+\u00b7\s+gtm_ops console/i);
     await expect(page).not.toHaveTitle(/v\d/i);
     await expect(page.locator('.sb__brand .sb__wordmark')).toHaveAttribute('alt', /Wranngle/i);
     await expect(page.locator('.sb__brand .sb__logo--lasso img')).toHaveAttribute('src', /wranngle-lasso\.png/);
-    await expect(page.locator('.sb__brand')).toContainText(/gtm_ops console/i);
+    await expect(page.locator('.sb__brand-sub')).toHaveText('gtm_ops');
     await expect(page.locator('.sb__brand')).not.toContainText(/v\d/i);
-    await expect(page.locator('.tb__crumbs')).toContainText(/Wranngle\s*\/\s*gtm_ops console/i);
+    await expect(page.locator('.tb__crumb--workspace')).toHaveText('gtm_ops');
+    await expect(page.locator('.tb__crumbs')).toContainText(/Wranngle\s*\/\s*gtm_ops/i);
     await expect(page.locator('.tb__crumbs')).not.toContainText(/v\d/i);
   });
 
@@ -2558,10 +2564,10 @@ test.describe('evals', () => {
     const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
     expect(ctx.selection.type).toBe('eval');
     expect(ctx.extra.selected_eval_run).toBeTruthy();
-    expect(ctx.extra.eval_run, 'rich eval_run object should be set so buildContextDump emits failed_axes/score/verdict').toEqual(expect.any(Object));
+    expect(ctx.extra.eval_run, 'rich eval_run object should be set so buildAgentContext emits failed_axes/score/verdict').toEqual(expect.any(Object));
     expect(ctx.extra.eval_run.scenario_id || ctx.extra.eval_run.id).toBeTruthy();
 
-    const dump = await page.evaluate(() => (globalThis as any).buildContextDump((globalThis as any).AppContext.get()));
+    const dump = await page.evaluate(() => (globalThis as any).buildAgentContext((globalThis as any).AppContext.get()));
     expect(dump).toMatch(/active_eval_run\.scenario:\s+\S+/);
     expect(dump).toMatch(/active_eval_run\.verdict:\s+(pass|fail|unknown)/);
     expect(dump).toMatch(/active_eval_run\.score:\s+\d+%/);
@@ -2686,12 +2692,12 @@ test.describe('evals', () => {
       return Array.from(range.getClientRects()).length;
     });
     expect(quickAdminKeyLines).toBe(1);
-    const contextDump = page.locator('[data-testid="agent-context-dump"]');
-    await expect(contextDump).toContainText(`active_eval_run.scenario: ${scenario}`);
-    await expect(contextDump).toContainText(/active_eval_run\.verdict: (pass|fail|unknown)/);
-    await expect(contextDump).toContainText(/active_eval_run\.score: \d+%/);
-    await expect(contextDump).toContainText(/selected_eval_score: \d+%|selected_eval_score: --/);
-    await expect(contextDump).toContainText(/eval_failed_axes: /);
+    const agentContext = page.locator('[data-testid="agent-context"]');
+    await expect(agentContext).toContainText(`active_eval_run.scenario: ${scenario}`);
+    await expect(agentContext).toContainText(/active_eval_run\.verdict: (pass|fail|unknown)/);
+    await expect(agentContext).toContainText(/active_eval_run\.score: \d+%/);
+    await expect(agentContext).toContainText(/selected_eval_score: \d+%|selected_eval_score: --/);
+    await expect(agentContext).toContainText(/eval_failed_axes: /);
 
     const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
     expect(ctx.extra.triggered_from).toBe('eval-agent-admin');
@@ -2728,8 +2734,8 @@ test.describe('evals', () => {
     await page.locator('.sb__item:has-text("Agents")').first().click();
     await page.locator('[data-testid="agent-refresh-context"]').click();
     await expect(page.locator('.agent-admin-tab:has-text("Context")')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('[data-testid="agent-context-dump"]')).toHaveAttribute('data-source', 'synced');
-    await expect(page.locator('[data-testid="agent-context-dump"]')).toContainText(/active_route: agents/i);
+    await expect(page.locator('[data-testid="agent-context"]')).toHaveAttribute('data-source', 'synced');
+    await expect(page.locator('[data-testid="agent-context"]')).toContainText(/active_route: agents/i);
 
     await page.locator('.sb__item:has-text("Evals")').first().click();
     await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
@@ -2740,7 +2746,7 @@ test.describe('evals', () => {
     await page.locator('[data-testid="eval-local-agent-admin"]').click();
 
     await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
-    const dump = page.locator('[data-testid="agent-context-dump"]');
+    const dump = page.locator('[data-testid="agent-context"]');
     await expect(dump).toHaveAttribute('data-source', 'live');
     await expect(dump).toContainText(`active_eval_run.scenario: ${scenario}`);
   });
@@ -2751,7 +2757,7 @@ test.describe('evals', () => {
     await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
     await page.locator('[data-testid="eval-local-agent-admin"]').click();
     await expect(page.locator('[data-testid="agent-eval-handoff-banner"]')).toBeVisible();
-    await expect(page.locator('[data-testid="agent-context-dump"]')).toContainText(/active_eval_run\.scenario:/);
+    await expect(page.locator('[data-testid="agent-context"]')).toContainText(/active_eval_run\.scenario:/);
 
     await page.locator('.sb__nav[aria-label="ElevenLabs agents"] .sb__item:has-text("Sarah")').first().click();
 
@@ -2760,7 +2766,7 @@ test.describe('evals', () => {
     await expect(page.locator('[data-testid="agent-eval-handoff"]')).toHaveCount(0);
     await expect(page.locator('.agent-row[data-active="true"]')).toContainText(/Sarah/i);
     await page.locator('.agent-admin-tab:has-text("Context")').click();
-    const dump = page.locator('[data-testid="agent-context-dump"]');
+    const dump = page.locator('[data-testid="agent-context"]');
     await expect(dump).not.toContainText(/active_eval_run\.scenario:/);
     await expect(dump).not.toContainText(/selected_eval_run:/);
     await expect(dump).not.toContainText(/eval_admin_return_route:/);
@@ -3483,7 +3489,7 @@ test.describe('agents page', () => {
     await expect(page.locator('[data-testid="agent-context-bar"]')).toContainText(/from\s+agents/i);
     await expect(page.locator('.agent-session-strip')).toContainText(/route\s+agents/i);
     await page.locator('.agent-admin-tab:has-text("Context")').click();
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/active_route: agents/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).toContainText(/active_route: agents/i);
   });
 
   test('Agents navigation publishes the current route before the local ConvAI wrapper renders', async ({ openConsole }) => {
@@ -3499,8 +3505,8 @@ test.describe('agents page', () => {
     await expect(page.locator('[data-testid="agent-context-bar"]')).toContainText(/from\s+agents/i);
     await expect(page.locator('.agent-session-strip')).toContainText(/route\s+agents/i);
     await page.locator('.agent-admin-tab:has-text("Context")').click();
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/active_route: agents/i);
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).not.toContainText(/active_route: generate/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).toContainText(/active_route: agents/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).not.toContainText(/active_route: generate/i);
   });
 
   test('agent Context tab reuses the shared app context without hook-order errors', async ({ openConsole }) => {
@@ -3536,7 +3542,7 @@ test.describe('agents page', () => {
     const contextPane = page.locator('.agent-admin-json').first();
     await expect(contextPane).toHaveAttribute('tabindex', '0');
     await expect(contextPane).toHaveAttribute('role', 'region');
-    await expect(contextPane).toHaveAttribute('aria-label', /dynamic context dump/i);
+    await expect(contextPane).toHaveAttribute('aria-label', /agent context/i);
   });
 
   test('playground keeps local admin controls above the fold without stretching the picker', async ({ openConsole, page }) => {
@@ -3601,7 +3607,7 @@ test.describe('agents page', () => {
     await expect(sync).toContainText(/refreshed inside the console/i);
     await expect(sync).toContainText(/route\s+agents/i);
     await expect(sync).toContainText(/No dashboard handoff/i);
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/route: agents/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).toContainText(/route: agents/i);
     await expect(page.locator('.toast').first()).toContainText(/context refreshed/i);
 
     const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
@@ -3609,19 +3615,19 @@ test.describe('agents page', () => {
     expect(ctx.extra.triggered_from).toBe('agents-page');
   });
 
-  test('synced context dump is sealed at sync time — switching the active agent on-page does not silently mutate the displayed dump', async ({ openConsole }) => {
+  test('synced agent context is sealed at sync time — switching the active agent on-page does not silently mutate the displayed dump', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.sb__item:has-text("Agents")').first().click();
     await page.locator('[data-testid="agent-refresh-context"]').click();
     // Wait for the Context tab to become selected before reading the dump,
     // since refreshActiveContext switches admin panels asynchronously.
     await expect(page.locator('.agent-admin-tab:has-text("Context")')).toHaveAttribute('aria-selected', 'true');
-    const dump = page.locator('[data-testid="agent-context-dump"]');
+    const dump = page.locator('[data-testid="agent-context"]');
     await expect(dump).toHaveAttribute('data-source', 'synced');
     const sealed = (await dump.textContent() || '').trim();
     expect(sealed.length).toBeGreaterThan(0);
     // Switch to a different agent — selection inside the playground would
-    // normally re-derive contextDump. The sealed snapshot must not move.
+    // normally re-derive agentContext. The sealed snapshot must not move.
     const otherAgentRow = page.locator('.agents-grid .vstack [role="button"]').filter({ hasText: /Sarah/i }).first();
     await otherAgentRow.click();
     // Re-open the Context tab on the new active agent.

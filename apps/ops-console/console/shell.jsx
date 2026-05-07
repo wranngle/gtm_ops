@@ -337,7 +337,7 @@ function Sidebar({ route, setRoute, collapsed }) {
         {!collapsed && (
           <div>
             <img className="sb__wordmark" src="../assets/wranngle-wordmark.png" alt="Wranngle"/>
-            <div className="sb__brand-sub">gtm_ops console</div>
+            <div className="sb__brand-sub">gtm_ops</div>
           </div>
         )}
       </div>
@@ -495,7 +495,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
       <div className="tb__crumbs">
         <button className="tb__crumb tb__crumb--brand" disabled={route === 'home'} onClick={() => setRoute('home')}>Wranngle</button>
         <span className="tb__sep">/</span>
-        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops console</button>
+        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops</button>
         <span className="tb__sep">/</span>
         <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
       </div>

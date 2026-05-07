@@ -1357,7 +1357,6 @@ a:hover { color: var(--accent-fg); }
    ============================================================ */
 .page--generate {
   max-width: none;
-  padding: 30px 34px 78px;
 }
 .generate-sequence {
   display: grid;
@@ -1795,7 +1794,6 @@ a:hover { color: var(--accent-fg); }
   justify-content: center;
 }
 @media (max-width: 1260px) {
-  .page--generate { padding: 22px 16px 68px; }
   .generate-sequence,
   .generate-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -2548,7 +2546,6 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
    ============================================================ */
 .page--evals {
   max-width: none;
-  padding: 24px 34px 80px;
 }
 .eval-command-center {
   display: grid;
@@ -3402,7 +3399,6 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   .eval-artifact-panel__head {
     padding-right: 0;
   }
-  .page--evals { padding: 22px 16px 68px; }
   .eval-command-center h2 { font-size: 26px; }
   .eval-command-center__voice { grid-template-columns: minmax(0, 1fr); }
   .eval-run-row {
@@ -3461,15 +3457,6 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   width: 14px; height: 14px; border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #F97316, #8B5CF6);
   box-shadow: 0 0 12px rgba(249,115,22,.55);
-}
-@media (min-width: 901px) {
-  html[data-console-route="generate"] .coach-launcher,
-  html[data-console-route="proposals"] .coach-launcher,
-  html[data-console-route="evals"] .coach-launcher,
-  html[data-console-route="agents"] .coach-launcher {
-    top: calc(var(--topbar-h) + 14px);
-    bottom: auto;
-  }
 }
 /* Bottom-right floating dock. Hosts the ElevenLabs ConvAI widget directly
    — no custom header chrome — and intentionally does NOT shift the page
