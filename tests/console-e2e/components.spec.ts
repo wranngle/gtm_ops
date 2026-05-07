@@ -3470,6 +3470,28 @@ test.describe('agents page', () => {
     await expect(frame.locator('elevenlabs-convai')).toHaveCount(1, { timeout: 10_000 });
   });
 
+  test('playground card chrome is composed from ElevenUI primitives (data-component coverage)', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+    const playground = page.locator('.agent-playground-card');
+    await expect(playground).toBeVisible();
+
+    // Each ElevenUI primitive carries a stable data-component attribute so the
+    // chrome cannot silently regress back to bespoke <div>s.
+    const components = await playground
+      .locator('[data-component^="eleven-"]')
+      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-component')));
+
+    const distinct = new Set(components);
+    expect(distinct.size, `expected ≥2 distinct ElevenUI primitives, got ${[...distinct].join(', ')}`).toBeGreaterThanOrEqual(2);
+    expect(distinct.has('eleven-orb')).toBe(true);
+    expect(distinct.has('eleven-bar-visualizer')).toBe(true);
+    // Chrome composables introduced by this refactor.
+    expect(distinct.has('eleven-agent-panel')).toBe(true);
+    expect(distinct.has('eleven-context-bar')).toBe(true);
+    expect(distinct.has('eleven-session-strip')).toBe(true);
+  });
+
   test('playground widget frame includes a local session packet instead of a blank embed box', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.sb__item:has-text("Agents")').first().click();
