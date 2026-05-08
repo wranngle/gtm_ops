@@ -1,0 +1,27 @@
+$ vitest run
+
+ RUN  v4.1.5 /home/wranngle/projects/gtm_ops
+
+ ❯ tests/unit/console-data.test.ts (8 tests | 8 skipped) 12ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/console-data.test.ts [ tests/unit/console-data.test.ts ]
+Error: data.js did not assign window.GTM
+ ❯ tests/unit/console-data.test.ts:44:30
+     42|   vm.createContext(ctx);
+     43|   vm.runInContext(src, ctx);
+     44|   if (!ctx.window.GTM) throw new Error('data.js did not assign window.…
+       |                              ^
+     45|   GTM = ctx.window.GTM;
+     46| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 53 passed (54)
+      Tests  2666 passed | 8 skipped (2674)
+   Start at  23:01:01
+   Duration  11.24s (transform 3.39s, setup 0ms, import 8.56s, tests 49.21s, environment 12ms)
+
+error: script "test:run" exited with code 1
