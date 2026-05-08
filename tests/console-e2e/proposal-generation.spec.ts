@@ -427,11 +427,15 @@ test('Generate page · artifact review card is not cramped at 1280px desktop wid
   expect(titleBox!.height, 'artifact review title should stay on one line at desktop width').toBeLessThan(24);
   expect(reviewBox!.x + reviewBox!.width, 'review CTA should stay inside the card header').toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
 
-  const coachOverlapsPacket = packetBox!.x < coachBox!.x + coachBox!.width
-    && packetBox!.x + packetBox!.width > coachBox!.x
-    && packetBox!.y < coachBox!.y + coachBox!.height
-    && packetBox!.y + packetBox!.height > coachBox!.y;
-  expect(coachOverlapsPacket, 'coach launcher should not cover the review packet copy').toBe(false);
+  // Per May 5 punch list item #20 the launcher anchors bottom-right on
+  // every route. A floating bottom-right widget can sit over scrolled
+  // content; that's the accepted trade-off (Intercom-style). The layout
+  // checks above (card width, title not wrapping, CTA inside card) are
+  // what kept the page from feeling cramped — the launcher-overlap
+  // assertion was a side-effect of the old top-right hop. Keep `coachBox`
+  // resolved so we still flag a missing launcher.
+  void coachBox;
+  void packetBox;
 });
 
 test('Generate page · artifact inspection controls stay visible before the checklist', async ({ openConsole, page }) => {
@@ -545,7 +549,14 @@ test('Generate page · locked mobile review gate jumps to buyer proof', async ({
   ).toBeGreaterThan(120);
 });
 
-test('Generate page · coach launcher does not cover the review packet on short desktop viewports', async ({ openConsole, page }) => {
+test('Generate page · coach launcher anchors bottom-right on short desktop viewports', async ({ openConsole, page }) => {
+  // Used to assert the launcher must NOT overlap the review packet on a
+  // 1280×640 viewport — back when the launcher hopped to top-right on
+  // /generate. May 5 punch list item #20 ("bottom-right everywhere")
+  // removed that override, so this test now pins the new contract:
+  // launcher renders bottom-right on /generate at the short viewport.
+  // Bottom-right floating widgets sit over scrolled content; that's
+  // the accepted trade-off.
   await page.setViewportSize({ width: 1280, height: 640 });
   await openConsole();
   await page.locator('.sb__item:has-text("Generate")').first().click();
@@ -556,18 +567,10 @@ test('Generate page · coach launcher does not cover the review packet on short 
   await expect(packet).toBeVisible();
   await expect(coach).toBeVisible();
 
-  const [packetBox, coachBox] = await Promise.all([
-    packet.boundingBox(),
-    coach.boundingBox(),
-  ]);
-  expect(packetBox, 'review packet should render').not.toBeNull();
+  const coachBox = await coach.boundingBox();
   expect(coachBox, 'coach launcher should render').not.toBeNull();
-
-  const overlapsPacket = packetBox!.x < coachBox!.x + coachBox!.width
-    && packetBox!.x + packetBox!.width > coachBox!.x
-    && packetBox!.y < coachBox!.y + coachBox!.height
-    && packetBox!.y + packetBox!.height > coachBox!.y;
-  expect(overlapsPacket, 'global coach launcher must not cover the Generate review packet on laptop-height viewports').toBe(false);
+  expect(coachBox!.y + coachBox!.height, 'launcher bottom edge near viewport bottom').toBeGreaterThan(640 - 60);
+  expect(coachBox!.x + coachBox!.width, 'launcher right edge near viewport right').toBeGreaterThan(1280 - 60);
 });
 
 test('Generate page · DEMO_MODE streams a canned pipeline trace and resets the button', async ({ openConsole }) => {
