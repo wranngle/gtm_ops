@@ -1,5 +1,5 @@
 /* Inline SVG icon set — stroke-based, 16/20px, currentColor */
-window.Icon = (function () {
+globalThis.Icon = (function () {
   const make = (path, opts={}) => function Icon(props={}) {
     const size = props.size || 16;
     const stroke = props.stroke || 1.7;

@@ -22,6 +22,7 @@ module.exports = [
       '**/*.d.ts',
     ],
     rules: {
+      'unicorn/no-await-expression-member': 'off',
       'unicorn/filename-case': ['error', {
         cases: {
           snakeCase: true,

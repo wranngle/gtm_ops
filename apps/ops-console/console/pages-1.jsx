@@ -2,11 +2,11 @@
    Pages: Home (Mission Control), Pipeline, Calls
    ============================================================ */
 
-const I2 = window.Icon;
+const I2 = globalThis.Icon;
 
 function pageProposalAmountToThousands(amount) {
-  if (typeof window.proposalAmountToThousands === 'function') {
-    return window.proposalAmountToThousands(amount);
+  if (typeof globalThis.proposalAmountToThousands === 'function') {
+    return globalThis.proposalAmountToThousands(amount);
   }
   if (typeof amount === 'number' && Number.isFinite(amount)) return amount;
   const match = String(amount || '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?\s*([kmb])?/i);
@@ -20,8 +20,8 @@ function pageProposalAmountToThousands(amount) {
 }
 
 function pageFormatProposalTotal(totalK) {
-  if (typeof window.formatProposalTotal === 'function') {
-    return window.formatProposalTotal(totalK);
+  if (typeof globalThis.formatProposalTotal === 'function') {
+    return globalThis.formatProposalTotal(totalK);
   }
   if (!Number.isFinite(totalK) || totalK === 0) return '$0K';
   if (Math.abs(totalK) >= 1000) {
@@ -35,7 +35,7 @@ function pageFormatProposalTotal(totalK) {
 /* MISSION CONTROL (home) */
 /* ------------------------------------------------------------ */
 function HomePage({ setRoute }) {
-  const D = window.GTM;
+  const D = globalThis.GTM;
   const { stats, sparks, feed, agents, companies, evalSuites } = D;
   const liveCalls = D.calls.slice(0, 3);
   const hotLeads = [...companies].sort((a, b) => b.score - a.score).slice(0, 5);
@@ -59,7 +59,7 @@ function HomePage({ setRoute }) {
   const triggerRefresh = () => {
     if (refreshing) return;
     setRefreshing(true);
-    window.dispatchEvent(new CustomEvent('gtm:refresh-data'));
+    globalThis.dispatchEvent(new CustomEvent('gtm:refresh-data'));
     // The data loader in app.jsx is async; give it a moment, then settle
     // and stamp the new "as of" timestamp. We don't have a Promise we can
     // await for the in-app event, so the stamp shows up after the visual
@@ -67,7 +67,7 @@ function HomePage({ setRoute }) {
     setTimeout(() => {
       setLastRefreshAt(Date.now());
       setRefreshing(false);
-      window.toast('Dashboard refreshed', {
+      globalThis.toast('Dashboard refreshed', {
         sub: `feeds resynced · as of ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`,
         tone: 'accent',
       });
@@ -92,7 +92,7 @@ function HomePage({ setRoute }) {
     const matchedCall =
       callList.find(c => c.co_id && taskBlob.includes(String(c.co_id).toLowerCase())) ||
       callList.find(c => c.co && taskBlob.includes(String(c.co).toLowerCase().split(' ')[0])) ||
-      callList.slice().sort((a, b) => (Number(b.flags || 0) + Number(b.deflections || 0)) - (Number(a.flags || 0) + Number(a.deflections || 0)))[0];
+      [...callList].sort((a, b) => (Number(b.flags || 0) + Number(b.deflections || 0)) - (Number(a.flags || 0) + Number(a.deflections || 0)))[0];
     const companyName = matchedCall?.co || '';
     const matchedProposal = (D.proposals || []).find(
       p => p.co && companyName && String(p.co).toLowerCase().includes(String(companyName).toLowerCase().split(' ')[0])
@@ -115,7 +115,7 @@ function HomePage({ setRoute }) {
     if (!attentionItem) return;
     const until = Date.now() + durationMs;
     setSnoozedBanners(s => ({ ...s, [ATTENTION_BANNER_ID]: until }));
-    window.toast(`Attention snoozed · ${label}`, {
+    globalThis.toast(`Attention snoozed · ${label}`, {
       sub: `${attentionItem.agentId} will retry ${attentionItem.callOutcome} · until ${new Date(until).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
       tone: 'warn',
     });
@@ -125,7 +125,7 @@ function HomePage({ setRoute }) {
       const { [ATTENTION_BANNER_ID]: _, ...rest } = s;
       return rest;
     });
-    window.toast('Attention restored', { sub: 'banner is visible again', tone: 'accent' });
+    globalThis.toast('Attention restored', { sub: 'banner is visible again', tone: 'accent' });
   };
   // Re-render once when the snooze expires so the banner reappears
   // automatically without the operator clicking anything.
@@ -153,14 +153,14 @@ function HomePage({ setRoute }) {
   useEffect(() => {
     if (!Array.isArray(feed) || feed.length === 0) return undefined;
     // Reset the live panel first so remounts don't double-stack.
-    window.dispatchEvent(new CustomEvent('gtm:stream-reset'));
+    globalThis.dispatchEvent(new CustomEvent('gtm:stream-reset'));
     const cancellers = [];
     // Reverse so the oldest entry lands first; the panel auto-scrolls
     // and the newest visually pins to the bottom (matches the snapshot's
     // implied chronology).
-    feed.slice(0, 8).slice().reverse().forEach((line, idx) => {
+    [...feed.slice(0, 8)].reverse().forEach((line, idx) => {
       const t = setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('gtm:stream', {
+        globalThis.dispatchEvent(new CustomEvent('gtm:stream', {
           detail: { msg: line.txt, level: line.level || 'info' },
         }));
       }, 80 + idx * 40);
@@ -192,14 +192,14 @@ function HomePage({ setRoute }) {
   })();
   const reviewAttentionNow = () => {
     if (!attentionItem) return;
-    const ctx = window.AppContext.get();
-    window.AppContext.set({
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
       // Selection follows the live attention item rather than a hardcoded
       // CALL-2417, so the Calls page focuses whichever call the paused
       // agent is actually blocked on.
       selection: attentionItem.callId ? { type: 'call', id: attentionItem.callId } : ctx.selection,
       extra: {
-        ...(ctx.extra || {}),
+        ...ctx.extra,
         call_window: 'flagged',
         call_workflow: 'human-review',
         triggered_from: 'mission-attention-review',
@@ -231,9 +231,9 @@ function HomePage({ setRoute }) {
             as of {new Date(lastRefreshAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}
           </span>
           <button className="btn" onClick={() => {
-            window.AppContext.set({
+            globalThis.AppContext.set({
               extra: {
-                ...(window.AppContext.get().extra || {}),
+                ...globalThis.AppContext.get().extra,
                 evals_bridge_open: true,
                 eval_harness_command_id: 'eval-quick',
                 run_intent: 'eval_suite',
@@ -340,12 +340,12 @@ function HomePage({ setRoute }) {
           sparkColor="var(--violet-500)"
         />
         <Stat label={`Qualified · ${range === 'today' ? 'today' : range === 'week' ? '7d' : '30d'}`}
-              value={range === 'today' ? Math.round(stats.qualifiedThisWeek / 7) : range === 'week' ? stats.qualifiedThisWeek : Math.round(stats.qualifiedThisWeek * (30 / 7))}
-              delta={stats.qualifiedThisWeekDelta}
-              tone="healthy"
-              spark={sparks.qualified}
-              sparkLabels={buildSparkLabels(sparks.qualified, 'opportunity')}
-              sparkColor="var(--healthy)" />
+          value={range === 'today' ? Math.round(stats.qualifiedThisWeek / 7) : range === 'week' ? stats.qualifiedThisWeek : Math.round(stats.qualifiedThisWeek * (30 / 7))}
+          delta={stats.qualifiedThisWeekDelta}
+          tone="healthy"
+          spark={sparks.qualified}
+          sparkLabels={buildSparkLabels(sparks.qualified, 'opportunity')}
+          sparkColor="var(--healthy)" />
         <Stat
           label="Avg call score"
           value={(() => {
@@ -395,17 +395,17 @@ function HomePage({ setRoute }) {
             const active = list.filter(a => a.status === 'active').length;
             return `agents · ${active} of ${list.length} in flight`;
           })()} action={<div className="hstack"><Badge tone={queueMode === 'active' ? 'healthy' : 'warn'}>{queueMode}</Badge><button className="btn btn--xs btn--ghost" onClick={() => {
-            const ctx = window.AppContext.get();
-            window.AppContext.set({ extra: { ...(ctx.extra || {}), triggered_from: 'mission-configure' } });
+            const ctx = globalThis.AppContext.get();
+            globalThis.AppContext.set({ extra: { ...ctx.extra, triggered_from: 'mission-configure' } });
             setRoute('agents');
           }}>configure →</button></div>}>
             <div className="vstack" style={{gap:14}}>
               {agents.map(a => {
                 const openAgent = () => {
-                  const ctx = window.AppContext.get();
-                  window.AppContext.set({
+                  const ctx = globalThis.AppContext.get();
+                  globalThis.AppContext.set({
                     extra: {
-                      ...(ctx.extra || {}),
+                      ...ctx.extra,
                       selected_runtime_agent_id: a.id,
                       selected_runtime_agent_name: a.name,
                       // Hop directly to the History tab — runtime agents
@@ -429,50 +429,50 @@ function HomePage({ setRoute }) {
                 const displayStatus = queueMode === 'paused' ? 'paused' : a.status;
                 const statusTone = displayStatus === 'active' ? 'healthy' : 'warn';
                 return (
-                <div key={a.id}
-                     className="agent-flight-row inspectable"
-                     data-testid="agent-flight-row"
-                     data-agent-id={a.id}
-                     data-agent-status={displayStatus}
-                     data-popout={`${a.name} · ${displayStatus} · ${a.currentTask}`}
-                     role="button"
-                     tabIndex={0}
-                     aria-label={`Open ${a.name} in Agents page`}
-                     onClick={openAgent}
-                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAgent(); } }}
-                     style={{display:'grid', gridTemplateColumns:'auto 1fr auto auto', gap:14, alignItems:'center', paddingBottom:14, borderBottom:'1px dashed var(--border)', cursor:'pointer'}}>
-                  <div style={{width:36, height:36, borderRadius:9, background:'var(--bg-inset)', display:'grid',placeItems:'center', border:'1px solid var(--border)'}}>
-                    <I2.Bot size={18}/>
-                  </div>
-                  <div>
-                    <div style={{fontWeight:600, fontSize:14, display:'flex', alignItems:'center', gap:8}}>
-                      {a.name}
-                      <span className={`badge badge--${statusTone}`}>
-                        <span className={`dot dot--${displayStatus === 'active' ? 'accent' : 'warn'}`} style={{width:5,height:5}}/>
-                        {displayStatus}
-                      </span>
+                  <div key={a.id}
+                    className="agent-flight-row inspectable"
+                    data-testid="agent-flight-row"
+                    data-agent-id={a.id}
+                    data-agent-status={displayStatus}
+                    data-popout={`${a.name} · ${displayStatus} · ${a.currentTask}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${a.name} in Agents page`}
+                    onClick={openAgent}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAgent(); } }}
+                    style={{display:'grid', gridTemplateColumns:'auto 1fr auto auto', gap:14, alignItems:'center', paddingBottom:14, borderBottom:'1px dashed var(--border)', cursor:'pointer'}}>
+                    <div style={{width:36, height:36, borderRadius:9, background:'var(--bg-inset)', display:'grid',placeItems:'center', border:'1px solid var(--border)'}}>
+                      <I2.Bot size={18}/>
                     </div>
-                    <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>
-                      {a.role}
-                    </div>
-                    <div style={{fontSize:12, color:'var(--text-2)', marginTop:6}}>
-                      {/* When the queue is paused, the displayed task line
+                    <div>
+                      <div style={{fontWeight:600, fontSize:14, display:'flex', alignItems:'center', gap:8}}>
+                        {a.name}
+                        <span className={`badge badge--${statusTone}`}>
+                          <span className={`dot dot--${displayStatus === 'active' ? 'accent' : 'warn'}`} style={{width:5,height:5}}/>
+                          {displayStatus}
+                        </span>
+                      </div>
+                      <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>
+                        {a.role}
+                      </div>
+                      <div style={{fontSize:12, color:'var(--text-2)', marginTop:6}}>
+                        {/* When the queue is paused, the displayed task line
                           must reflect that — "Drafting recap → kestrelbio"
                           while the queue is paused is a state lie. Prefix
                           with "Paused — last task:" so the operator sees
                           both the pause AND what was in flight when paused. */}
-                      {queueMode === 'paused' ? `Paused — last task: ${a.currentTask}` : a.currentTask}
+                        {queueMode === 'paused' ? `Paused — last task: ${a.currentTask}` : a.currentTask}
+                      </div>
+                    </div>
+                    <div style={{textAlign:'right'}}>
+                      <div className="mono num" style={{fontSize:18, fontWeight:700}}>{a.tasks}</div>
+                      <div className="eyebrow">tasks</div>
+                    </div>
+                    <div style={{textAlign:'right', minWidth:60}}>
+                      <div className="mono num" style={{fontSize:18, fontWeight:700, color: 'var(--healthy-fg)'}}>{(a.success*100).toFixed(0)}%</div>
+                      <div className="eyebrow">success</div>
                     </div>
                   </div>
-                  <div style={{textAlign:'right'}}>
-                    <div className="mono num" style={{fontSize:18, fontWeight:700}}>{a.tasks}</div>
-                    <div className="eyebrow">tasks</div>
-                  </div>
-                  <div style={{textAlign:'right', minWidth:60}}>
-                    <div className="mono num" style={{fontSize:18, fontWeight:700, color: 'var(--healthy-fg)'}}>{(a.success*100).toFixed(0)}%</div>
-                    <div className="eyebrow">success</div>
-                  </div>
-                </div>
                 );
               })}
             </div>
@@ -485,10 +485,10 @@ function HomePage({ setRoute }) {
                 // referenced a throttle state that doesn't exist anywhere
                 // in the code.
                 const list = agents || [];
-                const avgSuccess = list.length
+                const avgSuccess = list.length > 0
                   ? Math.round(list.reduce((s, a) => s + (Number(a.success) || 0), 0) / list.length * 100)
                   : 0;
-                window.toast('All agents resumed', {
+                globalThis.toast('All agents resumed', {
                   sub: `${list.length} agent${list.length === 1 ? '' : 's'} active · avg success ${avgSuccess}%`,
                 });
               }}><I2.Play size={12}/>Resume all</button>
@@ -496,14 +496,14 @@ function HomePage({ setRoute }) {
                 setQueueMode('paused');
                 const list = agents || [];
                 const inFlight = list.reduce((s, a) => s + (Number(a.tasks) || 0), 0);
-                window.toast('Queue paused', {
+                globalThis.toast('Queue paused', {
                   sub: `${inFlight} in-flight task${inFlight === 1 ? '' : 's'} will finish before idle`,
                   tone: 'warn',
                 });
               }}><I2.Pause size={12}/>Pause queue</button>
               <button className="btn btn--ghost btn--sm" data-testid="mission-new-agent" style={{flex:1}} onClick={() => {
-                const ctx = window.AppContext.get();
-                window.AppContext.set({ extra: { ...(ctx.extra || {}), triggered_from: 'mission-new-agent', new_agent_intent: true } });
+                const ctx = globalThis.AppContext.get();
+                globalThis.AppContext.set({ extra: { ...ctx.extra, triggered_from: 'mission-new-agent', new_agent_intent: true } });
                 setRoute('agents');
               }}><I2.Sparkle size={12}/>New agent</button>
             </div>
@@ -574,10 +574,10 @@ function HomePage({ setRoute }) {
                     tabIndex={0}
                     aria-label={`Open ${c.name} in pipeline`}
                     onClick={() => {
-                      window.AppContext.set({
+                      globalThis.AppContext.set({
                         selection: { type: 'lead', id: c.id },
                         extra: {
-                          ...(window.AppContext.get().extra || {}),
+                          ...globalThis.AppContext.get().extra,
                           triggered_from: 'mission-schedule',
                         },
                       });
@@ -619,13 +619,12 @@ function HomePage({ setRoute }) {
                 // suites that are actually regressing (delta < 0 or
                 // pass < 0.75), sort by severity, and cap at four.
                 const score = (s) => {
-                  const deltaPart = (s.delta ?? 0) < 0 ? (s.delta ?? 0) : 0;
+                  const deltaPart = Math.min(s.delta ?? 0, 0);
                   const passPart = (s.pass ?? 1) < 0.75 ? (s.pass - 1) : 0;
                   return deltaPart + passPart * 0.5;
                 };
                 const regressions = (evalSuites || [])
                   .filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75))
-                  .slice()
                   .sort((a, b) => score(a) - score(b))
                   .slice(0, 4);
                 if (regressions.length === 0) {
@@ -637,31 +636,31 @@ function HomePage({ setRoute }) {
                 }
                 return regressions.map(s => (
                   <div key={s.id}
-                       className="inspectable eval-watch-row"
-                       data-testid="mc-regression-row"
-                       data-suite-id={s.id}
-                       data-popout={`${s.name}: ${(s.pass * 100).toFixed(1)}% pass rate, ${s.runs.toLocaleString()} runs, owner ${s.owner}`}
-                       role="button"
-                       tabIndex={0}
-                       aria-label={`Open ${s.name} regression in Evals`}
-                       onClick={() => {
-                         window.AppContext.set({
-                           selection: { type: 'eval', id: s.id },
-                           extra: {
-                             ...(window.AppContext.get().extra || {}),
-                             triggered_from: 'mission-regressions-watch',
-                             suite_filter: 'regressions',
-                           },
-                         });
-                         setRoute('evals');
-                       }}
-                       onKeyDown={(e) => {
-                         if (e.key === 'Enter' || e.key === ' ') {
-                           e.preventDefault();
-                           e.currentTarget.click();
-                         }
-                       }}
-                       style={{display:'grid', gridTemplateColumns:'1fr auto 60px', gap:10, alignItems:'center', cursor:'pointer'}}>
+                    className="inspectable eval-watch-row"
+                    data-testid="mc-regression-row"
+                    data-suite-id={s.id}
+                    data-popout={`${s.name}: ${(s.pass * 100).toFixed(1)}% pass rate, ${s.runs.toLocaleString()} runs, owner ${s.owner}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${s.name} regression in Evals`}
+                    onClick={() => {
+                      globalThis.AppContext.set({
+                        selection: { type: 'eval', id: s.id },
+                        extra: {
+                          ...globalThis.AppContext.get().extra,
+                          triggered_from: 'mission-regressions-watch',
+                          suite_filter: 'regressions',
+                        },
+                      });
+                      setRoute('evals');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.currentTarget.click();
+                      }
+                    }}
+                    style={{display:'grid', gridTemplateColumns:'1fr auto 60px', gap:10, alignItems:'center', cursor:'pointer'}}>
                     <div>
                       <div style={{fontSize:12, fontWeight:600}}>{s.name}</div>
                       <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{s.runs.toLocaleString()} runs · {s.latest}</div>
@@ -687,10 +686,10 @@ function HomePage({ setRoute }) {
 /* PIPELINE */
 /* ------------------------------------------------------------ */
 function PipelinePage({ setRoute }) {
-  const D = window.GTM;
+  const D = globalThis.GTM;
   const [view, setView] = useState('kanban'); // kanban | table
-  const initialSelection = window.AppContext.get().selection;
-  const initialIntent = window.AppContext.get().extra || {};
+  const initialSelection = globalThis.AppContext.get().selection;
+  const initialIntent = globalThis.AppContext.get().extra || {};
   const [selected, setSelected] = useState(initialSelection?.type === 'lead' ? initialSelection.id : null);
   const [filter, setFilter] = useState(['all', 'mine', 'high'].includes(initialIntent.pipeline_filter) ? initialIntent.pipeline_filter : 'all');
   const [filterEditorOpen, setFilterEditorOpen] = useState(initialIntent.pipeline_panel === 'filters');
@@ -709,7 +708,7 @@ function PipelinePage({ setRoute }) {
     if (fromStage === stageId) return;
     const stageLabel = (D.stages.find(s => s.id === stageId) || {}).label || stageId;
     setStageOverrides(prev => ({ ...prev, [companyId]: stageId }));
-    window.toast(`${company.name} → ${stageLabel}`, {
+    globalThis.toast(`${company.name} → ${stageLabel}`, {
       sub: `moved from ${fromStage}`,
       tone: 'accent',
     });
@@ -729,11 +728,11 @@ function PipelinePage({ setRoute }) {
     e.preventDefault();
     const domain = newLead.domain.trim().toLowerCase();
     if (!isValidDomain(domain)) {
-      window.toast('Domain looks invalid', { sub: 'expected something like example.com', tone: 'critical' });
+      globalThis.toast('Domain looks invalid', { sub: 'expected something like example.com', tone: 'critical' });
       return;
     }
     if (newLead.contactEmail && !isValidEmail(newLead.contactEmail)) {
-      window.toast('Contact email looks invalid', { sub: 'leave blank if not known', tone: 'critical' });
+      globalThis.toast('Contact email looks invalid', { sub: 'leave blank if not known', tone: 'critical' });
       return;
     }
     const sourceLabel = { signal: 'intent signal', call: 'call transcript', manual: 'manual entry' }[newLead.source] || newLead.source;
@@ -772,7 +771,7 @@ function PipelinePage({ setRoute }) {
       _draft: true,
     };
     setPendingLeads(prev => [draftLead, ...prev]);
-    window.toast(`Lead enrichment queued · ${domain}`, {
+    globalThis.toast(`Lead enrichment queued · ${domain}`, {
       sub: `${sourceLabel}${newLead.contactName ? ` · ${newLead.contactName}` : ''} · agent-01 will enrich firmographics and intent`,
       tone: 'accent',
     });
@@ -783,9 +782,9 @@ function PipelinePage({ setRoute }) {
   // Publish the selection to AppContext so the sales coach + intake agents
   // see it as a dynamic variable.
   useEffect(() => {
-    window.AppContext.set({ selection: selected ? { type:'lead', id: selected } : null });
+    globalThis.AppContext.set({ selection: selected ? { type:'lead', id: selected } : null });
   }, [selected]);
-  useEffect(() => window.AppContext.subscribe((ctx) => {
+  useEffect(() => globalThis.AppContext.subscribe((ctx) => {
     if (ctx.selection?.type === 'lead' && D.companies.some(c => c.id === ctx.selection.id)) {
       setSelected(ctx.selection.id);
     }
@@ -804,12 +803,12 @@ function PipelinePage({ setRoute }) {
         setNewLeadOpen(false);
       }
       if (!extra.pipeline_panel && !extra.pipeline_filter) return;
-      const latest = window.AppContext.get().extra || {};
+      const latest = globalThis.AppContext.get().extra || {};
       const { pipeline_panel, pipeline_filter, ...rest } = latest;
-      window.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({ extra: rest });
     };
-    applyPipelineIntent(window.AppContext.get());
-    return window.AppContext.subscribe(applyPipelineIntent);
+    applyPipelineIntent(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyPipelineIntent);
   }, []);
 
   // Merge operator-submitted draft leads ahead of the seed companies so
@@ -1017,30 +1016,30 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
             <div className="pipe__col-body">
               {cards.map(c => (
                 <div key={c.id}
-                     className={`pipe__card inspectable${c._draft ? ' pipe__card--draft' : ''}`}
-                     data-popout={`${c.name}: ${c.score}/100 score, ${c.intent} intent, ${c.dealSize} deal, next ${c.nextStepWhen}`}
-                     data-testid="pipe-card"
-                     data-company-id={c.id}
-                     data-draft={c._draft ? 'true' : 'false'}
-                     draggable={true}
-                     onDragStart={(e) => {
-                       draggingIdRef.current = c.id;
-                       if (e.dataTransfer) {
-                         e.dataTransfer.effectAllowed = 'move';
-                         try {
-                           e.dataTransfer.setData('text/x-gtm-company-id', c.id);
-                           e.dataTransfer.setData('text/plain', c.id);
-                         } catch (_) { /* some test harnesses block setData */ }
-                       }
-                     }}
-                     onDragEnd={() => { draggingIdRef.current = null; }}
-                     role="button"
-                     tabIndex={0}
-                     aria-pressed={selected === c.id}
-                     aria-grabbed={false}
-                     onClick={() => onSelect(c.id)}
-                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(c.id); } }}
-                     style={{borderColor: selected === c.id ? 'var(--sunset-500)' : undefined, cursor:'grab'}}>
+                  className={`pipe__card inspectable${c._draft ? ' pipe__card--draft' : ''}`}
+                  data-popout={`${c.name}: ${c.score}/100 score, ${c.intent} intent, ${c.dealSize} deal, next ${c.nextStepWhen}`}
+                  data-testid="pipe-card"
+                  data-company-id={c.id}
+                  data-draft={c._draft ? 'true' : 'false'}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    draggingIdRef.current = c.id;
+                    if (e.dataTransfer) {
+                      e.dataTransfer.effectAllowed = 'move';
+                      try {
+                        e.dataTransfer.setData('text/x-gtm-company-id', c.id);
+                        e.dataTransfer.setData('text/plain', c.id);
+                      } catch (_) { /* some test harnesses block setData */ }
+                    }
+                  }}
+                  onDragEnd={() => { draggingIdRef.current = null; }}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={selected === c.id}
+                  aria-grabbed={false}
+                  onClick={() => onSelect(c.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(c.id); } }}
+                  style={{borderColor: selected === c.id ? 'var(--sunset-500)' : undefined, cursor:'grab'}}>
                   <div className="pipe__card-co">
                     <span>{c.name}</span>
                     <span className="mono num" style={{fontSize:11, color:'var(--text-3)'}}>{c.score}</span>
@@ -1115,7 +1114,7 @@ function PipelineTable({ companies, onSelect, selected }) {
           <tr>
             {SORTABLE.map(col => {
               const active = col.key === sortKey;
-              const arrow = !active ? '' : sortDir === 'asc' ? ' ▲' : ' ▼';
+              const arrow = active ? sortDir === 'asc' ? ' ▲' : ' ▼' : '';
               return (
                 <th
                   key={col.key}
@@ -1140,14 +1139,14 @@ function PipelineTable({ companies, onSelect, selected }) {
         <tbody>
           {sortedCompanies.map(c => (
             <tr key={c.id}
-                className="inspectable"
-                data-popout={`${c.name}: ${c.score}/100 score, ${c.intent} intent, owner ${c.owner}, next ${c.nextStepWhen}`}
-                data-selected={selected === c.id}
-                role="button"
-                tabIndex={0}
-                aria-pressed={selected === c.id}
-                onClick={() => onSelect(c.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(c.id); } }}>
+              className="inspectable"
+              data-popout={`${c.name}: ${c.score}/100 score, ${c.intent} intent, owner ${c.owner}, next ${c.nextStepWhen}`}
+              data-selected={selected === c.id}
+              role="button"
+              tabIndex={0}
+              aria-pressed={selected === c.id}
+              onClick={() => onSelect(c.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(c.id); } }}>
               <td>
                 <div style={{fontWeight:600}}>{c.name}</div>
                 <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{c.industry}</div>
@@ -1240,9 +1239,9 @@ function LeadDetail({ company: c, onClose, setRoute }) {
     if (!artifact?.path) return;
     try {
       await navigator.clipboard?.writeText?.(artifact.path);
-      window.toast('Artifact path copied', { sub: artifact.path, tone:'accent' });
+      globalThis.toast('Artifact path copied', { sub: artifact.path, tone:'accent' });
     } catch (_) {
-      window.toast('Artifact path', { sub: artifact.path, tone:'accent' });
+      globalThis.toast('Artifact path', { sub: artifact.path, tone:'accent' });
     }
   };
   const openProposalReview = () => {
@@ -1250,21 +1249,21 @@ function LeadDetail({ company: c, onClose, setRoute }) {
     // company. The previous fallback to proposals[0] silently routed to
     // Banyan whenever the active lead had no proposal on file, which lied
     // to the operator about what they were about to review.
-    const proposals = window.GTM.proposals || [];
+    const proposals = globalThis.GTM.proposals || [];
     const proposal =
       proposals.find(p => p.id === c.id || p.co === c.name) ||
       proposals.find(p => String(c.id || '').includes(p.id) || String(p.id || '').includes(c.id));
     if (!proposal) {
-      window.toast(`No proposal on file for ${c.name}`, {
+      globalThis.toast(`No proposal on file for ${c.name}`, {
         sub: 'Generate one from Calls or use Generate Proposal',
         tone: 'warn',
       });
       return;
     }
-    window.AppContext.set({
+    globalThis.AppContext.set({
       selection: { type: 'proposal', id: proposal.id },
       extra: {
-        ...(window.AppContext.get().extra || {}),
+        ...globalThis.AppContext.get().extra,
         triggered_from: 'pipeline-artifact-review',
       },
     });
@@ -1297,7 +1296,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
   if (!c) return null;
   return (
     <div role="dialog" aria-label={`Lead detail · ${c.name}`}
-         style={{position:'fixed', right:18, top:74, bottom:18, width:420, background:'var(--bg-elev)', border:'1px solid var(--border-strong)', borderRadius:'var(--r-lg)', boxShadow:'var(--shadow-lg)', zIndex:50, display:'flex', flexDirection:'column', overflow:'hidden'}}>
+      style={{position:'fixed', right:18, top:74, bottom:18, width:420, background:'var(--bg-elev)', border:'1px solid var(--border-strong)', borderRadius:'var(--r-lg)', boxShadow:'var(--shadow-lg)', zIndex:50, display:'flex', flexDirection:'column', overflow:'hidden'}}>
       <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <div>
           <div className="eyebrow eyebrow--accent">{c.industry}</div>
@@ -1404,7 +1403,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
 }
 
 function IntakeAgentPanel({ company }) {
-  const reg = window.AGENT_REGISTRY?.byKey('intake');
+  const reg = globalThis.AGENT_REGISTRY?.byKey('intake');
   if (!reg) return null;
   const [open, setOpen] = useState(true);
   const widget = reg.widget || {};
@@ -1460,8 +1459,8 @@ function IntakeAgentPanel({ company }) {
 /* CALLS */
 /* ------------------------------------------------------------ */
 function CallsPage({ setRoute }) {
-  const D = window.GTM;
-  const initialSelection = window.AppContext.get().selection;
+  const D = globalThis.GTM;
+  const initialSelection = globalThis.AppContext.get().selection;
   const [activeId, setActiveId] = useState(initialSelection?.type === 'call' ? initialSelection.id : 'CALL-2419');
   const [callWindow, setCallWindow] = useState('all');
   const [coachingMode, setCoachingMode] = useState(false);
@@ -1497,7 +1496,7 @@ function CallsPage({ setRoute }) {
       '',
       'What I heard:',
       `  · score: ${typeof call?.score === 'number' ? call.score.toFixed(1) : '—'} / 10 on the rubric`,
-      `  · talk ratio: ${call?.talkRatio != null ? Math.round(call.talkRatio * 100) + '% rep' : 'n/a'}`,
+      `  · talk ratio: ${call?.talkRatio == null ? 'n/a' : Math.round(call.talkRatio * 100) + '% rep'}`,
       `  · deflections: ${call?.deflections ?? 0}${call?.flags ? `, flagged moments: ${call.flags}` : ''}`,
       '',
       'Open items I owe you:',
@@ -1573,10 +1572,10 @@ function CallsPage({ setRoute }) {
     // Carry the active call's context into Generate so the
     // context handoff is truly actionable: click "Generate proposal v3"
     // should move directly into the sequence with a pre-filled brief.
-    const ctx = window.AppContext.get();
-    window.AppContext.set({
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
       extra: {
-        ...(ctx.extra || {}),
+        ...ctx.extra,
         triggered_from: 'call-generate-proposal-v3',
         proposal_v3_call_id: active.id,
         proposal_v3_call_co: active.co,
@@ -1594,16 +1593,16 @@ function CallsPage({ setRoute }) {
     const time = bookingForm.time.trim();
     const duration = Number(bookingForm.durationMinutes);
     if (!date || !time) {
-      window.toast('Date and time are required', { sub: 'pick when the hold should land', tone: 'critical' });
+      globalThis.toast('Date and time are required', { sub: 'pick when the hold should land', tone: 'critical' });
       return;
     }
     if (!Number.isFinite(duration) || duration <= 0) {
-      window.toast('Duration must be positive', { sub: 'minutes only', tone: 'critical' });
+      globalThis.toast('Duration must be positive', { sub: 'minutes only', tone: 'critical' });
       return;
     }
     const attendeeList = bookingForm.attendees.split(/[\s,;]+/).filter(Boolean);
     if (attendeeList.length === 0) {
-      window.toast('At least one attendee required', { sub: 'comma-separated emails', tone: 'critical' });
+      globalThis.toast('At least one attendee required', { sub: 'comma-separated emails', tone: 'critical' });
       return;
     }
     setBookedReviews(prev => ({
@@ -1616,7 +1615,7 @@ function CallsPage({ setRoute }) {
         bookedAt: new Date().toISOString(),
       },
     }));
-    window.toast(`Security review held · ${date} ${time}`, {
+    globalThis.toast(`Security review held · ${date} ${time}`, {
       sub: `${duration}m · ${attendeeList.length} attendee${attendeeList.length === 1 ? '' : 's'}`,
       tone: 'accent',
     });
@@ -1626,11 +1625,11 @@ function CallsPage({ setRoute }) {
     e.preventDefault();
     const to = recapForm.to.trim();
     if (!validRecapEmail(to)) {
-      window.toast('Recap recipient is invalid', { sub: 'fix the To field before sending', tone: 'critical' });
+      globalThis.toast('Recap recipient is invalid', { sub: 'fix the To field before sending', tone: 'critical' });
       return;
     }
     if (!recapForm.subject.trim() || !recapForm.body.trim()) {
-      window.toast('Recap is missing subject or body', { sub: 'both are required to send', tone: 'critical' });
+      globalThis.toast('Recap is missing subject or body', { sub: 'both are required to send', tone: 'critical' });
       return;
     }
     const sentAt = new Date().toISOString();
@@ -1638,7 +1637,7 @@ function CallsPage({ setRoute }) {
       ...prev,
       [active.id]: { to, subject: recapForm.subject.trim(), sentAt },
     }));
-    window.toast(`Recap sent to ${to}`, {
+    globalThis.toast(`Recap sent to ${to}`, {
       sub: `${active.id} · ${recapForm.subject.slice(0, 60)}${recapForm.subject.length > 60 ? '…' : ''}`,
       tone: 'accent',
     });
@@ -1667,7 +1666,7 @@ function CallsPage({ setRoute }) {
   const noteByLineKey = (key) => callNotes.find(n => n.transcriptKey === key) || null;
   const tryOpenCoachingDraft = (l) => {
     if (!coachingMode) {
-      window.toast('Coaching mode is off', {
+      globalThis.toast('Coaching mode is off', {
         sub: 'flip the Coaching mode toggle to add notes against this transcript',
         tone: 'warn',
       });
@@ -1686,7 +1685,7 @@ function CallsPage({ setRoute }) {
     if (!coachingDraft) return;
     const trimmed = coachingDraftText.trim();
     if (!trimmed) {
-      window.toast('Coaching note is empty', { sub: 'add a comment before saving', tone: 'critical' });
+      globalThis.toast('Coaching note is empty', { sub: 'add a comment before saving', tone: 'critical' });
       return;
     }
     const key = coachingDraft.key;
@@ -1703,7 +1702,7 @@ function CallsPage({ setRoute }) {
         savedAt: new Date().toISOString(),
       }];
     });
-    window.toast(`Coaching note saved · ${coachingDraft.time}`, {
+    globalThis.toast(`Coaching note saved · ${coachingDraft.time}`, {
       sub: `${trimmed.slice(0, 80)}${trimmed.length > 80 ? '…' : ''}`,
       tone: 'accent',
     });
@@ -1712,7 +1711,7 @@ function CallsPage({ setRoute }) {
   };
   const removeCoachingNote = (note) => {
     setCoachingNotes(prev => prev.filter(n => n.id !== note.id));
-    window.toast('Coaching note removed', { sub: `${note.time} · ${note.who.toUpperCase()}`, tone: 'warn' });
+    globalThis.toast('Coaching note removed', { sub: `${note.time} · ${note.who.toUpperCase()}`, tone: 'warn' });
   };
   // Switching calls dismisses the in-progress draft so the operator
   // doesn't accidentally save a note on the wrong transcript.
@@ -1752,10 +1751,10 @@ function CallsPage({ setRoute }) {
 
   // Publish active call to AppContext for the sales coach.
   useEffect(() => {
-    window.AppContext.set({ selection: { type:'call', id: activeId }});
-    return () => { window.AppContext.set({ selection: null }); };
+    globalThis.AppContext.set({ selection: { type:'call', id: activeId }});
+    return () => { globalThis.AppContext.set({ selection: null }); };
   }, [activeId]);
-  useEffect(() => window.AppContext.subscribe((ctx) => {
+  useEffect(() => globalThis.AppContext.subscribe((ctx) => {
     if (ctx.selection?.type === 'call' && D.calls.some(c => c.id === ctx.selection.id)) {
       setActiveId(ctx.selection.id);
     }
@@ -1800,10 +1799,10 @@ function CallsPage({ setRoute }) {
         setCallWorkflow(workflow);
       }
       const { call_workflow, call_window, ...rest } = extra;
-      window.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({ extra: rest });
     };
-    applyCallIntent(window.AppContext.get());
-    return window.AppContext.subscribe(applyCallIntent);
+    applyCallIntent(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyCallIntent);
   }, [activeId]);
 
   return (
@@ -1990,12 +1989,12 @@ function CallsPage({ setRoute }) {
             )}
             {visibleCalls.map(c => (
               <div key={c.id}
-                   role="button"
-                   tabIndex={0}
-                   aria-pressed={activeId === c.id}
-                   onClick={()=>setActiveId(c.id)}
-                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(c.id); } }}
-                   style={{padding:10, borderRadius:8, cursor:'pointer', border:'1px solid', borderColor: activeId === c.id ? 'var(--sunset-500)' : 'transparent', background: activeId === c.id ? 'var(--bg-selected)' : 'transparent'}}>
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeId === c.id}
+                onClick={()=>setActiveId(c.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(c.id); } }}
+                style={{padding:10, borderRadius:8, cursor:'pointer', border:'1px solid', borderColor: activeId === c.id ? 'var(--sunset-500)' : 'transparent', background: activeId === c.id ? 'var(--bg-selected)' : 'transparent'}}>
                 <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
                   <span className="mono" style={{fontSize:11, color:'var(--accent-fg)', fontWeight:600}}>{c.id}</span>
                   <span className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{c.when}</span>
@@ -2016,54 +2015,54 @@ function CallsPage({ setRoute }) {
 
         {/* Transcript */}
         <Card title={`${active.id} · ${active.co} · ${active.who}`}
-              className="calls-grid__transcript"
-              action={(() => {
-                const recapReceipt = sentRecaps[active.id];
-                const recapStamp = recapReceipt
-                  ? new Date(recapReceipt.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                  : null;
-                const bookingReceipt = bookedReviews[active.id];
-                return (
-                  <div style={{display:'flex', gap:6, alignItems:'center'}}>
-                    <span className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{active.duration}</span>
-                    {callNotes.length > 0 && (
-                      <span data-testid="coaching-notes-count">
-                        <Badge tone="accent">{callNotes.length} note{callNotes.length === 1 ? '' : 's'}</Badge>
-                      </span>
-                    )}
-                    {recapReceipt && (
-                      <span
-                        data-testid="call-recap-receipt"
-                        data-recap-to={recapReceipt.to}
-                        title={`Recap sent to ${recapReceipt.to} at ${recapStamp}`}
-                      >
-                        <Badge tone="healthy">recap @ {recapStamp}</Badge>
-                      </span>
-                    )}
-                    {bookingReceipt && (
-                      <span
-                        data-testid="call-booking-receipt"
-                        data-booking-date={bookingReceipt.date}
-                        data-booking-time={bookingReceipt.time}
-                        title={`Security review held ${bookingReceipt.date} ${bookingReceipt.time} · ${bookingReceipt.durationMinutes}m · ${bookingReceipt.attendeeCount} attendee${bookingReceipt.attendeeCount === 1 ? '' : 's'}`}
-                      >
-                        <Badge tone="healthy">review @ {bookingReceipt.date} {bookingReceipt.time}</Badge>
-                      </span>
-                    )}
-                    <button
-                      className="btn btn--ghost btn--xs"
-                      aria-pressed={playing}
-                      data-testid="trans-play-toggle"
-                      onClick={startOrPausePlayback}
-                    >{playing ? <I2.Pause size={10}/> : <I2.Play size={10}/>}{playing ? 'pause' : 'play'}</button>
-                    <button
-                      className="btn btn--ghost btn--xs"
-                      data-testid="call-recap-open"
-                      onClick={openRecapDraft}
-                    ><I2.Mail size={10}/>{recapReceipt ? 're-send recap' : 'recap'}</button>
-                  </div>
-                );
-              })()}>
+          className="calls-grid__transcript"
+          action={(() => {
+            const recapReceipt = sentRecaps[active.id];
+            const recapStamp = recapReceipt
+              ? new Date(recapReceipt.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : null;
+            const bookingReceipt = bookedReviews[active.id];
+            return (
+              <div style={{display:'flex', gap:6, alignItems:'center'}}>
+                <span className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{active.duration}</span>
+                {callNotes.length > 0 && (
+                  <span data-testid="coaching-notes-count">
+                    <Badge tone="accent">{callNotes.length} note{callNotes.length === 1 ? '' : 's'}</Badge>
+                  </span>
+                )}
+                {recapReceipt && (
+                  <span
+                    data-testid="call-recap-receipt"
+                    data-recap-to={recapReceipt.to}
+                    title={`Recap sent to ${recapReceipt.to} at ${recapStamp}`}
+                  >
+                    <Badge tone="healthy">recap @ {recapStamp}</Badge>
+                  </span>
+                )}
+                {bookingReceipt && (
+                  <span
+                    data-testid="call-booking-receipt"
+                    data-booking-date={bookingReceipt.date}
+                    data-booking-time={bookingReceipt.time}
+                    title={`Security review held ${bookingReceipt.date} ${bookingReceipt.time} · ${bookingReceipt.durationMinutes}m · ${bookingReceipt.attendeeCount} attendee${bookingReceipt.attendeeCount === 1 ? '' : 's'}`}
+                  >
+                    <Badge tone="healthy">review @ {bookingReceipt.date} {bookingReceipt.time}</Badge>
+                  </span>
+                )}
+                <button
+                  className="btn btn--ghost btn--xs"
+                  aria-pressed={playing}
+                  data-testid="trans-play-toggle"
+                  onClick={startOrPausePlayback}
+                >{playing ? <I2.Pause size={10}/> : <I2.Play size={10}/>}{playing ? 'pause' : 'play'}</button>
+                <button
+                  className="btn btn--ghost btn--xs"
+                  data-testid="call-recap-open"
+                  onClick={openRecapDraft}
+                ><I2.Mail size={10}/>{recapReceipt ? 're-send recap' : 'recap'}</button>
+              </div>
+            );
+          })()}>
 
           {/* Only Banyan (CALL-2419) has a transcript in the fixture. Showing
               Banyan's lines under another call's card title would lie about
@@ -2079,7 +2078,7 @@ function CallsPage({ setRoute }) {
               <div className="muted" style={{fontSize:13, textAlign:'center', maxWidth:380}}>
                 <strong>{active.id}</strong> has no transcript on file yet.<br/>
                 <span className="mono" style={{fontSize:11}}>
-                  Pick {active.co !== 'Banyan Health' ? <code>CALL-2419 · Banyan Health</code> : 'another call'} from the list to walk a transcript, or wait for the live ConvAI session to capture one.
+                  Pick {active.co === 'Banyan Health' ? 'another call' : <code>CALL-2419 · Banyan Health</code>} from the list to walk a transcript, or wait for the live ConvAI session to capture one.
                 </span>
               </div>
             </div>
@@ -2092,22 +2091,22 @@ function CallsPage({ setRoute }) {
               return (
                 <React.Fragment key={i}>
                   <div className="trans__line"
-                       data-flag={!!l.flag}
-                       data-has-note={savedNote ? 'true' : 'false'}
-                       data-playing={playbackIndex === i ? 'true' : 'false'}
-                       data-coaching-mode={coachingMode ? 'true' : 'false'}
-                       data-testid="trans-line"
-                       role="button"
-                       tabIndex={0}
-                       aria-label={
-                         coachingMode
-                           ? (savedNote ? `Edit coaching note at ${l.t}` : `Add coaching note at ${l.t}`)
-                           : `Transcript line at ${l.t} (enable Coaching mode to add a note)`
-                       }
-                       onClick={() => tryOpenCoachingDraft(l)}
-                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tryOpenCoachingDraft(l); } }}
-                       ref={(el) => { if (el && playbackIndex === i) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }}
-                       style={{cursor: coachingMode ? 'pointer' : 'default'}}>
+                    data-flag={Boolean(l.flag)}
+                    data-has-note={savedNote ? 'true' : 'false'}
+                    data-playing={playbackIndex === i ? 'true' : 'false'}
+                    data-coaching-mode={coachingMode ? 'true' : 'false'}
+                    data-testid="trans-line"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={
+                      coachingMode
+                        ? (savedNote ? `Edit coaching note at ${l.t}` : `Add coaching note at ${l.t}`)
+                        : `Transcript line at ${l.t} (enable Coaching mode to add a note)`
+                    }
+                    onClick={() => tryOpenCoachingDraft(l)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tryOpenCoachingDraft(l); } }}
+                    ref={(el) => { if (el && playbackIndex === i) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }}
+                    style={{cursor: coachingMode ? 'pointer' : 'default'}}>
                     <span className="trans__time">{l.t}</span>
                     <span className={`trans__who trans__who--${l.who}`}>
                       {l.who === 'agent' ? 'AGENT' : l.who === 'caller' ? 'PRIYA' : 'SYS'}
@@ -2178,8 +2177,8 @@ function CallsPage({ setRoute }) {
                 above stay derived; only the axis breakdown is gated. */}
             {active.id === 'CALL-2419' ? D.callScores.map(s => (
               <div key={s.axis}
-                   className="axis inspectable"
-                   data-popout={`${s.axis}: ${s.score.toFixed(1)} score, ${s.weight}% weight. ${s.detail}`}>
+                className="axis inspectable"
+                data-popout={`${s.axis}: ${s.score.toFixed(1)} score, ${s.weight}% weight. ${s.detail}`}>
                 <div>
                   <div className="axis__name">{s.axis}</div>
                   <div className="axis__detail">{s.detail}</div>
@@ -2257,10 +2256,10 @@ function CallsPage({ setRoute }) {
                   const o = String(active.outcome || '').toLowerCase();
                   const tone =
                     /booked|qualified|approved|technical-deep-dive/.test(o) ? 'healthy' :
-                    /follow-up|discovery|recap/.test(o) ? 'accent' :
-                    /objection|pricing|stalled/.test(o) ? 'warn' :
-                    /no-fit|lost|cancel|declined/.test(o) ? 'critical' :
-                    'neutral';
+                      /follow-up|discovery|recap/.test(o) ? 'accent' :
+                        /objection|pricing|stalled/.test(o) ? 'warn' :
+                          /no-fit|lost|cancel|declined/.test(o) ? 'critical' :
+                            'neutral';
                   return (
                     <span data-testid="signal-outcome" data-outcome-tone={tone}>
                       <Badge tone={tone}>{active.outcome}</Badge>
@@ -2299,4 +2298,4 @@ function CallsPage({ setRoute }) {
   );
 }
 
-Object.assign(window, { HomePage, PipelinePage, CallsPage });
+Object.assign(globalThis, { HomePage, PipelinePage, CallsPage });

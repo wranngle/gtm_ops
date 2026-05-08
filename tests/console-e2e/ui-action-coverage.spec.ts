@@ -72,7 +72,7 @@ async function goToRoute(page: Page, route: (typeof ROUTES)[number]) {
 
   const currentRoute = await page.evaluate(() => (globalThis as any).AppContext?.get?.().route || 'home');
   if (currentRoute !== route) {
-    const label = ROUTE_LABELS[route].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const label = ROUTE_LABELS[route].replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
     const routeButton = page.getByRole('button', { name: new RegExp(`^${label}(?:\\s+\\d+)?$`, 'i') }).first();
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -124,8 +124,8 @@ async function visibleActionTargets(page: Page): Promise<ActionTarget[]> {
 
     return elements
       .map((element, index) => {
-        const probeId = element.getAttribute('data-ui-action-probe') || `probe-${index}-${Math.random().toString(36).slice(2)}`;
-        element.setAttribute('data-ui-action-probe', probeId);
+        const probeId = element.dataset.uiActionProbe || `probe-${index}-${Math.random().toString(36).slice(2)}`;
+        element.dataset.uiActionProbe = probeId;
         const tag = element.tagName.toLowerCase();
         const role = element.getAttribute('role') || '';
         const href = element.getAttribute('href') || '';
@@ -133,7 +133,7 @@ async function visibleActionTargets(page: Page): Promise<ActionTarget[]> {
           element.getAttribute('aria-current') === 'page' ||
           element.getAttribute('aria-pressed') === 'true' ||
           element.getAttribute('aria-selected') === 'true' ||
-          element.getAttribute('data-active') === 'true';
+          element.dataset.active === 'true';
         const disabled =
           element.hasAttribute('disabled') ||
           element.getAttribute('aria-disabled') === 'true';
@@ -170,7 +170,7 @@ async function actionFingerprint(page: Page) {
       .replace(/\d{13,}/gu, 'ID')
       .replace(/\s+/gu, ' ')
       .trim();
-    const controlState = Array.from(document.querySelectorAll(selector)).map(element => {
+    const controlState = [...document.querySelectorAll(selector)].map(element => {
       const input = element as HTMLInputElement;
       const label = [
         element.getAttribute('aria-label'),
@@ -187,7 +187,7 @@ async function actionFingerprint(page: Page) {
         element.getAttribute('aria-pressed') || '',
         element.getAttribute('aria-selected') || '',
         element.getAttribute('aria-expanded') || '',
-        element.getAttribute('data-active') || '',
+        element.dataset.active || '',
         ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) ? input.value : '',
         // Checkbox/radio toggles only flip `checked` — `value` is constant —
         // so probing them was being mis-flagged as "no observable effect".
@@ -199,7 +199,7 @@ async function actionFingerprint(page: Page) {
       href: location.href,
       route: (globalThis as any).AppContext?.get?.().route || null,
       selection: (globalThis as any).AppContext?.get?.().selection || null,
-      theme: document.documentElement.getAttribute('data-theme') || document.body.getAttribute('data-theme') || localStorage.getItem('gtm-theme') || '',
+      theme: document.documentElement.dataset.theme || document.body.dataset.theme || localStorage.getItem('gtm-theme') || '',
       controls: controlState,
       text: normalizeText(document.body.innerText || ''),
       events: (globalThis as any).__uiActionEvents || [],
@@ -270,7 +270,7 @@ async function exerciseTarget(page: Page, target: ActionTarget) {
   if (resolved.target.formControl) {
     if (resolved.target.tag === 'select') {
       const changed = await locator.evaluate((element: HTMLSelectElement) => {
-        const next = Array.from(element.options).find(option => option.value !== element.value);
+        const next = [...element.options].find(option => option.value !== element.value);
         if (!next) return false;
         element.value = next.value;
         element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -310,7 +310,7 @@ async function currentAppRoute(page: Page) {
 
 async function clearTransientUi(page: Page) {
   await page.evaluate(() => {
-    document.querySelectorAll('.toast-host .toast').forEach(toast => toast.remove());
+    document.querySelectorAll('.toast-host .toast').forEach(toast => { toast.remove(); });
   }).catch(() => {});
 }
 

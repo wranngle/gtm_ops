@@ -29,18 +29,16 @@ test.describe('shell', () => {
     // the page's history fetch can replace D.companies after first paint,
     // so a snapshot read can race the Sidebar's re-render. The point of
     // the test is that the two agree, not which moment-in-time we read.
-    await expect.poll(async () => {
-      return await page.evaluate(() => {
-        const D = (globalThis as any).GTM;
-        const isActive = D.isActivePipelineCompany || ((c: any) => !['closed', 'lost'].includes(c.stage));
-        const liveActive = (D.companies || []).filter(isActive).length;
-        const pipelineItem = Array.from(document.querySelectorAll('.sb__item'))
-          .find((el) => el.querySelector('.sb__label')?.textContent?.trim() === 'Pipeline');
-        const badgeText = (pipelineItem?.querySelector('.sb__count')?.textContent || '').trim();
-        const badge = badgeText ? Number(badgeText) : 0;
-        return { liveActive, badge, match: liveActive === 0 ? badge === 0 : badge === liveActive };
-      }).then(r => r.match);
-    }, { timeout: 5_000 }).toBe(true);
+    await expect.poll(async () => page.evaluate(() => {
+      const D = (globalThis as any).GTM;
+      const isActive = D.isActivePipelineCompany || ((c: any) => !['closed', 'lost'].includes(c.stage));
+      const liveActive = (D.companies || []).filter(isActive).length;
+      const pipelineItem = [...document.querySelectorAll('.sb__item')]
+        .find((el) => el.querySelector('.sb__label')?.textContent?.trim() === 'Pipeline');
+      const badgeText = (pipelineItem?.querySelector('.sb__count')?.textContent || '').trim();
+      const badge = badgeText ? Number(badgeText) : 0;
+      return { liveActive, badge, match: liveActive === 0 ? badge === 0 : badge === liveActive };
+    }).then(r => r.match), { timeout: 5_000 }).toBe(true);
 
     const pipelineItem = page.locator('.sb__item:has-text("Pipeline")').first();
 
@@ -54,20 +52,18 @@ test.describe('shell', () => {
     // Poll the tile content + live D.companies in one tick so loadData
     // races (history fetch can re-mutate D.companies after first paint)
     // can't desync the expected vs visible substrings.
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const D = (globalThis as any).GTM;
-        const isActive = D.isActivePipelineCompany || ((c: any) => !['closed', 'lost'].includes(c.stage));
-        const total = (D.companies || []).length;
-        const active = (D.companies || []).filter(isActive).length;
-        const archived = total - active;
-        const tile = document.querySelector('[data-testid="pipeline-filter-tile"][data-filter-value="all"]');
-        const text = (tile?.textContent || '').trim();
-        return text.includes(`${total} companies`)
+    await expect.poll(async () => page.evaluate(() => {
+      const D = (globalThis as any).GTM;
+      const isActive = D.isActivePipelineCompany || ((c: any) => !['closed', 'lost'].includes(c.stage));
+      const total = (D.companies || []).length;
+      const active = (D.companies || []).filter(isActive).length;
+      const archived = total - active;
+      const tile = document.querySelector('[data-testid="pipeline-filter-tile"][data-filter-value="all"]');
+      const text = (tile?.textContent || '').trim();
+      return text.includes(`${total} companies`)
           && text.includes(`${active} active`)
           && text.includes(`${archived} closed/lost`);
-      });
-    }).toBe(true);
+    })).toBe(true);
 
     // The legacy "All active" mislabel must not appear.
     const allTile = grid.locator('[data-testid="pipeline-filter-tile"][data-filter-value="all"]');
@@ -86,11 +82,7 @@ test.describe('shell', () => {
 
     // Sidebar Evals item count should match. The badge only renders when count > 0.
     const evalsItem = page.locator('.sb__item:has-text("Evals")').first();
-    if (expected === 0) {
-      await expect(evalsItem.locator('.sb__count')).toHaveCount(0);
-    } else {
-      await expect(evalsItem.locator('.sb__count')).toHaveText(String(expected));
-    }
+    await (expected === 0 ? expect(evalsItem.locator('.sb__count')).toHaveCount(0) : expect(evalsItem.locator('.sb__count')).toHaveText(String(expected)));
 
     // Cross-check: the regressions filter on the Evals page renders the same number of suites.
     await evalsItem.click();
@@ -151,7 +143,7 @@ test.describe('shell', () => {
 
   test('sidebar brand shows Wranngle / gtm_ops console without exposing a version', async ({ openConsole }) => {
     const page = await openConsole();
-    await expect(page).toHaveTitle(/Wranngle\s+\u00b7\s+gtm_ops console/i);
+    await expect(page).toHaveTitle(/Wranngle\s+\u00B7\s+gtm_ops console/i);
     await expect(page).not.toHaveTitle(/v\d/i);
     await expect(page.locator('.sb__brand .sb__wordmark')).toHaveAttribute('alt', /Wranngle/i);
     await expect(page.locator('.sb__brand .sb__logo--lasso img')).toHaveAttribute('src', /wranngle-lasso\.png/);
@@ -250,44 +242,42 @@ test.describe('topbar', () => {
     // each poll attempt; since `open` is in CommandPalette useMemo deps,
     // a single open is enough but the poll guards against React commit
     // timing under parallel-worker load.
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const D = (globalThis as any).GTM;
-        const topCo = [...(D.companies || [])]
-          .sort((a: any, b: any) => (Number(b.score) || 0) - (Number(a.score) || 0))
-          .slice(0, 3)
-          .map((c: any) => c.name);
-        const topCall = [...(D.calls || [])]
-          .sort((a: any, b: any) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0)))
-          .slice(0, 3)
-          .map((c: any) => `${c.id} · ${c.co}`);
-        const toK = (amount: string) => {
-          const raw = String(amount || '').replace(/[$,\s]/g, '').toLowerCase();
-          const value = Number.parseFloat(raw);
-          if (!Number.isFinite(value)) return 0;
-          if (raw.endsWith('m')) return value * 1000;
-          return raw.endsWith('k') ? value : value / 1000;
-        };
-        const isOpen = (stage: string) => ['draft', 'review', 'redlines', 'legal', 'sent', 'viewed', 'proposal'].includes(String(stage || '').toLowerCase());
-        const topProposal = [...(D.proposals || [])]
-          .sort((a: any, b: any) => ((isOpen(b.stage) ? 1 : 0) - (isOpen(a.stage) ? 1 : 0)) || (toK(b.amount) - toK(a.amount)))
-          .slice(0, 3)
-          .map((p: any) => `${p.id} · ${p.co}`);
-        const rowText = Array.from(document.querySelectorAll('.cp .cp__row'))
-          .map(r => (r.textContent || '').replace(/\s+/g, ' ').trim());
-        const allPresent = [...topCo, ...topCall, ...topProposal].every(label =>
-          rowText.some(t => t.includes(label))
-        );
-        return allPresent;
-      });
-    }).toBe(true);
+    await expect.poll(async () => page.evaluate(() => {
+      const D = (globalThis as any).GTM;
+      const topCo = [...(D.companies || [])]
+        .sort((a: any, b: any) => (Number(b.score) || 0) - (Number(a.score) || 0))
+        .slice(0, 3)
+        .map((c: any) => c.name);
+      const topCall = [...(D.calls || [])]
+        .sort((a: any, b: any) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0)))
+        .slice(0, 3)
+        .map((c: any) => `${c.id} · ${c.co}`);
+      const toK = (amount: string) => {
+        const raw = String(amount || '').replace(/[$,\s]/g, '').toLowerCase();
+        const value = Number.parseFloat(raw);
+        if (!Number.isFinite(value)) return 0;
+        if (raw.endsWith('m')) return value * 1000;
+        return raw.endsWith('k') ? value : value / 1000;
+      };
+      const isOpen = (stage: string) => ['draft', 'review', 'redlines', 'legal', 'sent', 'viewed', 'proposal'].includes(String(stage || '').toLowerCase());
+      const topProposal = [...(D.proposals || [])]
+        .sort((a: any, b: any) => ((isOpen(b.stage) ? 1 : 0) - (isOpen(a.stage) ? 1 : 0)) || (toK(b.amount) - toK(a.amount)))
+        .slice(0, 3)
+        .map((p: any) => `${p.id} · ${p.co}`);
+      const rowText = [...document.querySelectorAll('.cp .cp__row')]
+        .map(r => (r.textContent || '').replace(/\s+/g, ' ').trim());
+      const allPresent = [...topCo, ...topCall, ...topProposal].every(label =>
+        rowText.some(t => t.includes(label))
+      );
+      return allPresent;
+    })).toBe(true);
   });
 
   test('command palette searches proposals and opens the selected proposal review', async ({ openConsole }) => {
     const page = await openConsole();
     const target = await page.evaluate(() => {
       const proposals = ((globalThis as any).GTM.proposals || []) as Array<{ id: string; co: string }>;
-      return proposals.find(p => p.id === 'PR-2039') || proposals[proposals.length - 1];
+      return proposals.find(p => p.id === 'PR-2039') || proposals.at(-1);
     });
     expect(target, 'fixture should include at least one proposal').toBeTruthy();
 
@@ -574,7 +564,7 @@ test.describe('topbar', () => {
   test('"New run" Generate proposal carries call context into the review draft composer', async ({ openConsole }) => {
     const page = await openConsole();
     const sourceCall = await page.evaluate(() => {
-      const calls = ((globalThis as any).GTM.calls || []) as Array<any>;
+      const calls = ((globalThis as any).GTM.calls || []) as any[];
       return calls.find(c => c.outcome === 'meeting-booked')
         || calls.find(c => c.outcome === 'qualified')
         || calls[0];
@@ -689,62 +679,54 @@ test.describe('mission control', () => {
     // tick so the expected/actual pair is always consistent. Otherwise
     // /api/history's async mutation of window.GTM.companies (in app.jsx
     // loadData) can race the assertion.
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const D = (globalThis as any).GTM;
-        const isActive = D.isActivePipelineCompany || ((c: any) => !['closed','lost'].includes(c.stage));
-        const totalK = (D.companies || [])
-          .filter(isActive)
-          .reduce((sum: number, c: any) => sum + (window as any).proposalAmountToThousands(c.dealSize), 0);
-        const expected = (window as any).formatProposalTotal(totalK);
-        const node = document.querySelector('[data-testid="mission-stats"] .stat:has(.stat__label) .stat__value');
-        // Find the "Pipeline" Stat by label match.
-        const pipelineStat = Array.from(document.querySelectorAll('[data-testid="mission-stats"] .stat'))
-          .find(s => /^Pipeline\b/i.test(s.querySelector('.stat__label')?.textContent || ''));
-        return { expected, value: (pipelineStat?.querySelector('.stat__value')?.textContent || '').trim() };
-      }).then(({ expected, value }) => value === expected);
-    }).toBe(true);
+    await expect.poll(async () => page.evaluate(() => {
+      const D = (globalThis as any).GTM;
+      const isActive = D.isActivePipelineCompany || ((c: any) => !['closed','lost'].includes(c.stage));
+      const totalK = (D.companies || [])
+        .filter(isActive)
+        .reduce((sum: number, c: any) => sum + (globalThis as any).proposalAmountToThousands(c.dealSize), 0);
+      const expected = (globalThis as any).formatProposalTotal(totalK);
+      const node = document.querySelector('[data-testid="mission-stats"] .stat:has(.stat__label) .stat__value');
+      // Find the "Pipeline" Stat by label match.
+      const pipelineStat = [...document.querySelectorAll('[data-testid="mission-stats"] .stat')]
+        .find(s => /^Pipeline\b/i.test(s.querySelector('.stat__label')?.textContent || ''));
+      return { expected, value: (pipelineStat?.querySelector('.stat__value')?.textContent || '').trim() };
+    }).then(({ expected, value }) => value === expected)).toBe(true);
   });
 
   test('Calls · today tile derives from D.calls, not the frozen 47 literal — only sub-day calls count', async ({ openConsole }) => {
     const page = await openConsole();
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const calls = ((globalThis as any).GTM.calls || []) as Array<{ when: string }>;
-        const expected = calls.filter(c => !/\b\d+\s*[dw]\b/i.test(String(c.when || ''))).length;
-        const stat = Array.from(document.querySelectorAll('[data-testid="mission-stats"] .stat'))
-          .find(s => /^Calls · today/i.test(s.querySelector('.stat__label')?.textContent || ''));
-        return { expected, value: Number((stat?.querySelector('.stat__value')?.textContent || '').trim()) };
-      }).then(({ expected, value }) => value === expected);
-    }).toBe(true);
+    await expect.poll(async () => page.evaluate(() => {
+      const calls = ((globalThis as any).GTM.calls || []) as Array<{ when: string }>;
+      const expected = calls.filter(c => !/\b\d+\s*[dw]\b/i.test(String(c.when || ''))).length;
+      const stat = [...document.querySelectorAll('[data-testid="mission-stats"] .stat')]
+        .find(s => /^Calls · today/i.test(s.querySelector('.stat__label')?.textContent || ''));
+      return { expected, value: Number((stat?.querySelector('.stat__value')?.textContent || '').trim()) };
+    }).then(({ expected, value }) => value === expected)).toBe(true);
   });
 
   test('Avg call score tile derives from D.calls, not the frozen 7.6 literal', async ({ openConsole }) => {
     const page = await openConsole();
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const calls = ((globalThis as any).GTM.calls || []) as Array<{ score: number }>;
-        const expected = (calls.reduce((s, c) => s + Number(c.score), 0) / calls.length).toFixed(1);
-        const stat = Array.from(document.querySelectorAll('[data-testid="mission-stats"] .stat'))
-          .find(s => /Avg call score/i.test(s.querySelector('.stat__label')?.textContent || ''));
-        return { expected, value: (stat?.querySelector('.stat__value')?.textContent || '').trim() };
-      }).then(({ expected, value }) => value === expected);
-    }).toBe(true);
+    await expect.poll(async () => page.evaluate(() => {
+      const calls = ((globalThis as any).GTM.calls || []) as Array<{ score: number }>;
+      const expected = (calls.reduce((s, c) => s + Number(c.score), 0) / calls.length).toFixed(1);
+      const stat = [...document.querySelectorAll('[data-testid="mission-stats"] .stat')]
+        .find(s => /Avg call score/i.test(s.querySelector('.stat__label')?.textContent || ''));
+      return { expected, value: (stat?.querySelector('.stat__value')?.textContent || '').trim() };
+    }).then(({ expected, value }) => value === expected)).toBe(true);
   });
 
   test('Eval pass rate tile derives a run-weighted average from D.evalSuites, not the frozen 0.847 literal', async ({ openConsole }) => {
     const page = await openConsole();
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const suites = ((globalThis as any).GTM.evalSuites || []) as Array<{ pass: number; runs: number }>;
-        const totalRuns = suites.reduce((s, e) => s + e.runs, 0);
-        const weighted = suites.reduce((s, e) => s + e.pass * e.runs, 0) / totalRuns;
-        const expected = `${(weighted * 100).toFixed(1)}%`;
-        const stat = Array.from(document.querySelectorAll('[data-testid="mission-stats"] .stat'))
-          .find(s => /Eval pass rate/i.test(s.querySelector('.stat__label')?.textContent || ''));
-        return { expected, value: (stat?.querySelector('.stat__value')?.textContent || '').trim() };
-      }).then(({ expected, value }) => value === expected);
-    }).toBe(true);
+    await expect.poll(async () => page.evaluate(() => {
+      const suites = ((globalThis as any).GTM.evalSuites || []) as Array<{ pass: number; runs: number }>;
+      const totalRuns = suites.reduce((s, e) => s + e.runs, 0);
+      const weighted = suites.reduce((s, e) => s + e.pass * e.runs, 0) / totalRuns;
+      const expected = `${(weighted * 100).toFixed(1)}%`;
+      const stat = [...document.querySelectorAll('[data-testid="mission-stats"] .stat')]
+        .find(s => /Eval pass rate/i.test(s.querySelector('.stat__label')?.textContent || ''));
+      return { expected, value: (stat?.querySelector('.stat__value')?.textContent || '').trim() };
+    }).then(({ expected, value }) => value === expected)).toBe(true);
   });
 
   test('attention banner "Review now" opens the flagged call review panel', async ({ openConsole }) => {
@@ -808,13 +790,12 @@ test.describe('mission control', () => {
     const live = await page.evaluate(() => {
       const D = (globalThis as any).GTM;
       const score = (s: any) => {
-        const deltaPart = (s.delta ?? 0) < 0 ? (s.delta ?? 0) : 0;
+        const deltaPart = Math.min(s.delta ?? 0, 0);
         const passPart = (s.pass ?? 1) < 0.75 ? (s.pass - 1) : 0;
         return deltaPart + passPart * 0.5;
       };
       const regs = (D.evalSuites || [])
         .filter((s: any) => (s.delta ?? 0) < 0 || (s.pass ?? 1) < 0.75)
-        .slice()
         .sort((a: any, b: any) => score(a) - score(b))
         .slice(0, 4);
       return regs.map((s: any) => ({ id: s.id, name: s.name }));
@@ -910,16 +891,14 @@ test.describe('mission control', () => {
     // so the two values can never go out of sync due to /api/history's
     // async mutation of window.GTM.companies. Polling both together also
     // gives React time to re-render the button after loadData settles.
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const D = (globalThis as any).GTM;
-        const button = document.querySelector('[data-testid="hot-leads-see-all"]');
-        return {
-          count: (D.companies || []).length,
-          text: (button?.textContent || '').trim(),
-        };
-      }).then(({ count, text }) => text === `see all ${count} →`);
-    }).toBe(true);
+    await expect.poll(async () => page.evaluate(() => {
+      const D = (globalThis as any).GTM;
+      const button = document.querySelector('[data-testid="hot-leads-see-all"]');
+      return {
+        count: (D.companies || []).length,
+        text: (button?.textContent || '').trim(),
+      };
+    }).then(({ count, text }) => text === `see all ${count} →`)).toBe(true);
     // The card title "top N by score" derives from the live slice length, not "5".
     const card = btn.locator('xpath=ancestor::div[contains(@class, "card")][1]');
     await expect(card.locator('.card__title')).toContainText(/top \d+ by score/i);
@@ -963,7 +942,7 @@ test.describe('mission control', () => {
     // Listen for the gtm:refresh-data event to confirm the click dispatched it.
     await page.evaluate(() => {
       (globalThis as any).__refreshEvents = 0;
-      window.addEventListener('gtm:refresh-data', () => { (globalThis as any).__refreshEvents++; });
+      globalThis.addEventListener('gtm:refresh-data', () => { (globalThis as any).__refreshEvents++; });
     });
 
     const stamp = page.locator('[data-testid="mission-last-refresh"]');
@@ -1096,7 +1075,7 @@ test.describe('mission control', () => {
     const live = await page.evaluate(() => {
       const agents = ((globalThis as any).GTM.agents || []) as Array<{ tasks: number; success: number }>;
       const inFlight = agents.reduce((s, a) => s + (Number(a.tasks) || 0), 0);
-      const avgSuccess = agents.length
+      const avgSuccess = agents.length > 0
         ? Math.round(agents.reduce((s, a) => s + (Number(a.success) || 0), 0) / agents.length * 100)
         : 0;
       return { count: agents.length, inFlight, avgSuccess };
@@ -1126,14 +1105,14 @@ test.describe('mission control', () => {
     expect(rowCount).toBeGreaterThan(0);
     // Default state: at least one row should be marked active.
     const activeBefore = await rows.evaluateAll(els =>
-      els.filter(e => e.getAttribute('data-agent-status') === 'active').length,
+      els.filter(e => e.dataset.agentStatus === 'active').length,
     );
     expect(activeBefore).toBeGreaterThan(0);
 
     await page.locator('.btn:has-text("Pause queue")').click();
     // After pause: every row reflects paused — no row may still claim active.
     const statusesAfterPause = await rows.evaluateAll(els =>
-      els.map(e => e.getAttribute('data-agent-status')),
+      els.map(e => e.dataset.agentStatus),
     );
     expect(statusesAfterPause.every(s => s === 'paused')).toBe(true);
 
@@ -1146,9 +1125,9 @@ test.describe('mission control', () => {
     const taskLinesAfterPause = await rows.evaluateAll(els =>
       els.map(e => (e.textContent || '').trim()),
     );
-    for (let i = 0; i < intrinsicTasks.length; i++) {
+    for (const [i, intrinsicTask] of intrinsicTasks.entries()) {
       expect(taskLinesAfterPause[i]).toContain('Paused — last task:');
-      expect(taskLinesAfterPause[i]).toContain(intrinsicTasks[i]);
+      expect(taskLinesAfterPause[i]).toContain(intrinsicTask);
     }
 
     await page.locator('.btn:has-text("Resume all")').click();
@@ -1160,7 +1139,7 @@ test.describe('mission control', () => {
       ((globalThis as any).GTM.agents || []).map((a: any) => a.status)
     ));
     const statusesAfterResume = await rows.evaluateAll(els =>
-      els.map(e => e.getAttribute('data-agent-status')),
+      els.map(e => e.dataset.agentStatus),
     );
     expect(statusesAfterResume).toEqual(intrinsicStatuses);
     // After resume the "Paused — last task" prefix must be gone.
@@ -1276,7 +1255,7 @@ test.describe('mission control', () => {
     await page.evaluate(() => {
       const host = document.createElement('div');
       host.id = 'tiny-count-spark-host';
-      document.body.appendChild(host);
+      document.body.append(host);
       const root = (globalThis as any).ReactDOM.createRoot(host);
       root.render((globalThis as any).React.createElement((globalThis as any).Sparkline, {
         data: [0, 1, 0],
@@ -1312,7 +1291,7 @@ test.describe('mission control', () => {
   test('sparkline point labels are granular without floating-point noise', async ({ openConsole }) => {
     const page = await openConsole();
     const labels = await page.locator('.spark-point').evaluateAll((points) =>
-      points.map(point => point.getAttribute('data-point-label') || ''),
+      points.map(point => point.dataset.pointLabel || ''),
     );
 
     expect(labels.some(label => label.includes('Avg call score trend'))).toBe(true);
@@ -2274,7 +2253,7 @@ test.describe('proposals · sections card', () => {
 
     const proposals = await page.evaluate(() => {
       const D = (globalThis as any).GTM;
-      return (D.proposals || []).filter((p: any) => p && p.id && Number.isFinite(p.sections));
+      return (D.proposals || []).filter((p: any) => p?.id && Number.isFinite(p.sections));
     });
     const banyan = proposals.find((p: any) => p.id === 'PR-2041');
     const verdant = proposals.find((p: any) => p.id === 'PR-2040');
@@ -2704,7 +2683,7 @@ test.describe('evals', () => {
     const quickAdminKeyLines = await page.locator('.agent-admin-quick strong').first().evaluate((node) => {
       const range = document.createRange();
       range.selectNodeContents(node);
-      return Array.from(range.getClientRects()).length;
+      return [...range.getClientRects()].length;
     });
     expect(quickAdminKeyLines).toBe(1);
     const contextDump = page.locator('[data-testid="agent-context-dump"]');
@@ -3046,13 +3025,13 @@ test.describe('evals', () => {
     // index i to a different row. The snapshot avoids that.
     await expect(page.locator('[data-testid="eval-run-row-latency"]')).not.toHaveCount(0, { timeout: 10_000 });
     const snapshot = await page.evaluate(() => {
-      const pills = Array.from(document.querySelectorAll('[data-testid="eval-run-row-latency"]'));
+      const pills = [...document.querySelectorAll('[data-testid="eval-run-row-latency"]')];
       const pillRecords = pills.map(p => ({
-        dur: p.getAttribute('data-duration-ms'),
-        tone: p.getAttribute('data-tone'),
+        dur: p.dataset.durationMs,
+        tone: p.dataset.tone,
         label: (p.textContent || '').trim(),
       }));
-      const metas = Array.from(document.querySelectorAll('.eval-run-row .mono.dim'));
+      const metas = [...document.querySelectorAll('.eval-run-row .mono.dim')];
       const metaTexts = metas.map(m => (m.textContent || '').trim());
       return { pillRecords, metaTexts };
     });

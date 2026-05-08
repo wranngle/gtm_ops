@@ -3,7 +3,7 @@
    Single global object: window.GTM
    ============================================================ */
 
-window.GTM = (function () {
+globalThis.GTM = (function () {
 
   /* ---------- Companies / Leads ---------- */
   const companies = [

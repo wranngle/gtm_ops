@@ -4,7 +4,7 @@
    ============================================================ */
 
 const { useState, useEffect, useRef, useMemo } = React;
-const I = window.Icon;
+const I = globalThis.Icon;
 
 const EVAL_ADMIN_HANDOFF_EXTRA_KEYS = [
   'eval_admin_return_route',
@@ -28,7 +28,7 @@ function clearEvalAdminHandoffExtra(extra = {}) {
 
 /* ---------- Toast / notification system ---------- */
 const __toastListeners = new Set();
-window.toast = function toast(msg, opts = {}) {
+globalThis.toast = function toast(msg, opts = {}) {
   __toastListeners.forEach(fn => fn({ id: Date.now() + Math.random(), msg, ...opts }));
 };
 
@@ -77,7 +77,7 @@ function buildTopbarNotifications(D) {
     const matchedCall =
       calls.find(c => c.co_id && taskBlob.includes(String(c.co_id).toLowerCase())) ||
       calls.find(c => c.co && taskBlob.includes(String(c.co).toLowerCase().split(' ')[0])) ||
-      calls.slice().sort((a, b) => (Number(b.flags || 0) + Number(b.deflections || 0)) - (Number(a.flags || 0) + Number(a.deflections || 0)))[0];
+      [...calls].sort((a, b) => (Number(b.flags || 0) + Number(b.deflections || 0)) - (Number(a.flags || 0) + Number(a.deflections || 0)))[0];
     notifications.push({
       id: 'paused-agent',
       t: matchedCall?.when || 'now',
@@ -95,7 +95,6 @@ function buildTopbarNotifications(D) {
 
   const regressing = evalSuites
     .filter(data.isEvalRegressing || (s => Number(s.delta) < 0 || Number(s.pass) < 0.75))
-    .slice()
     .sort((a, b) => {
       const severity = (s) => (Number(s.delta) < 0 ? Math.abs(Number(s.delta)) : 0) + (Number(s.pass) < 0.75 ? (0.75 - Number(s.pass)) : 0);
       return severity(b) - severity(a);
@@ -131,7 +130,6 @@ function buildTopbarNotifications(D) {
 
   const hotLead = companies
     .filter(c => (c.intent === 'high' || Number(c.score) >= 80) && (data.isActivePipelineCompany || (x => !['closed', 'lost'].includes(String(x.stage || '').toLowerCase())))(c))
-    .slice()
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0];
   if (hotLead) {
     notifications.push({
@@ -219,7 +217,7 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
         );
         if (focusables.length === 0) { e.preventDefault(); return; }
         const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+        const last = focusables.at(-1);
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault(); last.focus();
         } else if (!e.shiftKey && document.activeElement === last) {
@@ -257,7 +255,7 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
   if (!open || !pos) return null;
   return (
     <div ref={popRef} className="popover" role="dialog" aria-label={label || 'Popover'}
-         style={{ top: pos.top, left: pos.left, width }}>
+      style={{ top: pos.top, left: pos.left, width }}>
       {children}
     </div>
   );
@@ -265,7 +263,7 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
 
 /* ---------- Sidebar ---------- */
 function Sidebar({ route, setRoute, collapsed }) {
-  const D = window.GTM;
+  const D = globalThis.GTM;
   const isAdmin = (() => {
     try { return new URLSearchParams(globalThis.location.search).has('admin'); }
     catch (_) { return false; }
@@ -306,7 +304,7 @@ function Sidebar({ route, setRoute, collapsed }) {
     { id:'agents',    label:'Agents',          icon:I.Bot },
     { id:'settings',  label:'Settings',        icon:I.Cog },
   ];
-  const agents = (window.AGENT_REGISTRY?.agents || [])
+  const agents = (globalThis.AGENT_REGISTRY?.agents || [])
     .filter(a => isAdmin || a.surface !== 'admin-only')
     .map(a => ({
       id: a.key,
@@ -316,9 +314,9 @@ function Sidebar({ route, setRoute, collapsed }) {
       color2: a.avatar_color_2,
     }));
   const selectAgent = (agentKey) => {
-    const ctx = window.AppContext?.get?.() || {};
+    const ctx = globalThis.AppContext?.get?.() || {};
     const baseExtra = clearEvalAdminHandoffExtra(ctx.extra || {});
-    window.AppContext?.set?.({
+    globalThis.AppContext?.set?.({
       extra: {
         ...baseExtra,
         selected_agent_key: agentKey,
@@ -346,12 +344,12 @@ function Sidebar({ route, setRoute, collapsed }) {
       <nav className="sb__nav">
         {items.map(it => (
           <button key={it.id}
-               type="button"
-               className="sb__item"
-               data-active={route === it.id}
-               aria-label={`${it.label}${it.count != null ? ` ${it.count}` : ''}`}
-               aria-current={route === it.id ? 'page' : undefined}
-               onClick={() => setRoute(it.id)}>
+            type="button"
+            className="sb__item"
+            data-active={route === it.id}
+            aria-label={`${it.label}${it.count == null ? '' : ` ${it.count}`}`}
+            aria-current={route === it.id ? 'page' : undefined}
+            onClick={() => setRoute(it.id)}>
             <it.icon className="sb__icon" size={16} />
             <span className="sb__label">{it.label}</span>
             {it.count != null && <span className="sb__count">{it.count}</span>}
@@ -365,13 +363,13 @@ function Sidebar({ route, setRoute, collapsed }) {
           const isActive = route === 'agents' && activeAgentKey === a.id;
           return (
             <button key={a.id}
-                 type="button"
-                 className="sb__item"
-                 data-active={isActive}
-                 data-agent-key={a.id}
-                 aria-label={`${a.label} ${a.surface}${isActive ? ' (active in playground)' : ''}`}
-                 aria-current={isActive ? 'true' : undefined}
-                 onClick={() => selectAgent(a.id)}>
+              type="button"
+              className="sb__item"
+              data-active={isActive}
+              data-agent-key={a.id}
+              aria-label={`${a.label} ${a.surface}${isActive ? ' (active in playground)' : ''}`}
+              aria-current={isActive ? 'true' : undefined}
+              onClick={() => selectAgent(a.id)}>
               <span className="sb__icon" aria-hidden="true">
                 <window.ElevenUI.Orb
                   size={16}
@@ -389,13 +387,13 @@ function Sidebar({ route, setRoute, collapsed }) {
       </nav>
 
       <button className="sb__footer"
-           type="button"
-           aria-label="Open My Account settings"
-           data-active={route === 'settings'}
-           onClick={() => {
-             setRoute('settings');
-             window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'account' } }));
-           }}>
+        type="button"
+        aria-label="Open My Account settings"
+        data-active={route === 'settings'}
+        onClick={() => {
+          setRoute('settings');
+          globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'account' } }));
+        }}>
         <div className="sb__avatar">RP</div>
         {!collapsed && (
           <div className="sb__user">
@@ -419,7 +417,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
   const [notificationsRead, setNotificationsRead] = useState(false);
   const notifRef = useRef(null);
   const runRef = useRef(null);
-  const D = window.GTM;
+  const D = globalThis.GTM;
   const proposalRunCall = (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'meeting-booked')
     || (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'qualified')
     || (Array.isArray(D.calls) ? D.calls[0] : null);
@@ -447,7 +445,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
     // and the topbar should never write a stale id into AppContext.
     let selection = n.selection || null;
     if (selection?.type && selection?.id) {
-      const D = window.GTM || {};
+      const D = globalThis.GTM || {};
       const lookup = {
         lead: (D.companies || []).some(c => c.id === selection.id),
         call: (D.calls || []).some(c => c.id === selection.id),
@@ -457,28 +455,28 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
       if (lookup[selection.type] === false) selection = null;
     }
     if (selection || n.extra) {
-      window.AppContext.set({
+      globalThis.AppContext.set({
         selection,
         extra: {
-          ...(window.AppContext.get().extra || {}),
-          ...(n.extra || {}),
+          ...globalThis.AppContext.get().extra,
+          ...n.extra,
           triggered_from: 'topbar-notification',
         },
       });
     }
     if (n.extra?.settings_tab) {
-      window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: n.extra.settings_tab } }));
+      globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: n.extra.settings_tab } }));
     }
     setRoute(n.route);
     setNotifOpen(false);
     setNotificationsRead(true);
   };
   const startRun = (o) => {
-    const ctx = window.AppContext.get();
-    window.AppContext.set({
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
       extra: {
-        ...(ctx.extra || {}),
-        ...(o.extra || {}),
+        ...ctx.extra,
+        ...o.extra,
         run_intent: o.intent,
         triggered_from: 'topbar-new-run',
       },
@@ -499,7 +497,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
         <span className="tb__sep">/</span>
         <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
       </div>
-      {window.GTM?._isDemoFallback && (
+      {globalThis.GTM?._isDemoFallback && (
         <span className="tb__demo-pill" role="status" aria-label="Demo data — backend returned no historic runs">
           <span className="dot dot--accent" style={{width:5,height:5}} aria-hidden="true"/>
           demo data
@@ -507,7 +505,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
       )}
 
       <button type="button" className="tb__search" onClick={openPalette}
-              aria-label="Open command palette to search commands, leads, calls, proposals">
+        aria-label="Open command palette to search commands, leads, calls, proposals">
         <span className="tb__search-icon" aria-hidden="true"><I.Search size={14} /></span>
         <span className="tb__search-placeholder">Search commands, leads, calls, proposals…</span>
         <span className="tb__kbd" aria-hidden="true">⌘K</span>
@@ -515,14 +513,14 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
 
       <div className="tb__actions">
         <button ref={notifRef} className="btn btn--ghost btn--icon tb__bell" title="Notifications" aria-label="Notifications"
-                onClick={() => setNotifOpen(o => !o)}>
+          onClick={() => setNotifOpen(o => !o)}>
           <I.Bell size={16} />
           {!notificationsRead && <span className="tb__bell-dot"/>}
         </button>
         <button className="btn btn--ghost btn--icon"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                title="Toggle theme"
-                aria-label="Toggle color theme">
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          title="Toggle theme"
+          aria-label="Toggle color theme">
           {theme === 'dark' ? <I.Sun size={16} /> : <I.Moon size={16} />}
         </button>
         <button ref={runRef} className="btn btn--primary" onClick={() => setRunOpen(o => !o)}>
@@ -538,13 +536,13 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
         <div className="pop__list">
           {notifs.map(n => (
             <div key={n.id} className="pop__row" role="button" tabIndex={0}
-                 data-notification-id={n.id}
-                 data-notification-route={n.route}
-                 data-selection-type={n.selection?.type || ''}
-                 data-selection-id={n.selection?.id || ''}
-                 aria-label={`${n.act}: ${n.title}`}
-                 onClick={() => openNotification(n)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}>
+              data-notification-id={n.id}
+              data-notification-route={n.route}
+              data-selection-type={n.selection?.type || ''}
+              data-selection-id={n.selection?.id || ''}
+              aria-label={`${n.act}: ${n.title}`}
+              onClick={() => openNotification(n)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}>
               <span className={`dot dot--${n.tone === 'neutral' ? 'idle' : n.tone}`} style={{width:7,height:7,marginTop:6}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{n.title}</div>
@@ -557,7 +555,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
         </div>
         <div className="pop__ft">
           <button className="btn btn--ghost btn--xs" onClick={() => { setNotificationsRead(true); setNotifOpen(false); }}>Mark all read</button>
-          <button className="btn btn--ghost btn--xs" onClick={() => { setRoute('settings'); window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } })); setNotifOpen(false); }}>Settings</button>
+          <button className="btn btn--ghost btn--xs" onClick={() => { setRoute('settings'); globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } })); setNotifOpen(false); }}>Settings</button>
         </div>
       </Popover>
 
@@ -566,8 +564,8 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
         <div className="pop__list">
           {runActions.map(o => (
             <div key={o.label} className="pop__row" role="button" tabIndex={0}
-                 onClick={() => startRun(o)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRun(o); } }}>
+              onClick={() => startRun(o)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRun(o); } }}>
               <o.icon size={14} />
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{o.label}</div>
@@ -592,10 +590,10 @@ function CommandPalette({ open, setOpen, setRoute }) {
 
   const items = useMemo(() => {
     const setExtra = (extra) => {
-      const ctx = window.AppContext.get();
-      window.AppContext.set({
+      const ctx = globalThis.AppContext.get();
+      globalThis.AppContext.set({
         extra: {
-          ...(ctx.extra || {}),
+          ...ctx.extra,
           ...extra,
           triggered_from: 'command-palette',
         },
@@ -613,19 +611,19 @@ function CommandPalette({ open, setOpen, setRoute }) {
       // rather than hardcoding CALL-2419. The "Draft recap email" action
       // doesn't promise a specific call — it should open the recap composer
       // for whichever call is currently the highest-priority follow-up.
-      const calls = (window.GTM?.calls || []);
+      const calls = (globalThis.GTM?.calls || []);
       const target = [...calls].sort(
         (a, b) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0))
       )[0] || null;
       if (!target) {
-        window.toast('No calls to recap', { sub: 'D.calls is empty', tone: 'warn' });
+        globalThis.toast('No calls to recap', { sub: 'D.calls is empty', tone: 'warn' });
         return;
       }
-      const ctx = window.AppContext.get();
-      window.AppContext.set({
+      const ctx = globalThis.AppContext.get();
+      globalThis.AppContext.set({
         selection: { type: 'call', id: target.id },
         extra: {
-          ...(ctx.extra || {}),
+          ...ctx.extra,
           call_workflow: 'recap',
           run_intent: 'recap_draft',
           triggered_from: 'command-palette',
@@ -653,10 +651,10 @@ function CommandPalette({ open, setOpen, setRoute }) {
       { group:'Actions', icon:I.Mic,    label:'Talk to Sales Coach',       meta:'opens dock', do: () => { document.querySelector('.coach-launcher')?.click(); } },
       { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'opens intake', do: openOutboundRun },
       { group:'Actions', icon:I.Bolt,    label:'Trigger eval suite',        meta:'run plan', do: () => {
-        const ctx = window.AppContext.get();
-        window.AppContext.set({
+        const ctx = globalThis.AppContext.get();
+        globalThis.AppContext.set({
           extra: {
-            ...(ctx.extra || {}),
+            ...ctx.extra,
             evals_bridge_open: true,
             eval_harness_command_id: 'eval-quick',
             run_intent: 'eval_suite',
@@ -672,7 +670,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
     // 3 companies + 2 calls with literal "45m ago"/"flagged ×2" labels —
     // the fixture has 12 companies and 7 calls, and the literal meta
     // strings would silently lie if the fixture state shifted.
-    const D = window.GTM || {};
+    const D = globalThis.GTM || {};
     const normalizedQuery = q.trim().toLowerCase();
     const topCompanies = [...(D.companies || [])]
       .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))
@@ -683,7 +681,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
         icon: I.Building,
         label: c.name,
         meta: `co · ${c.stage}`,
-        do: () => { setRoute('pipeline'); window.AppContext.set({ selection: { type:'lead', id: c.id } }); },
+        do: () => { setRoute('pipeline'); globalThis.AppContext.set({ selection: { type:'lead', id: c.id } }); },
       }));
     const topCalls = [...(D.calls || [])]
       .sort((a, b) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0)))
@@ -694,7 +692,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
         icon: I.Phone,
         label: `${c.id} · ${c.co}`,
         meta: c.flags > 0 ? `flagged ×${c.flags}` : c.when,
-        do: () => { setRoute('calls'); window.AppContext.set({ selection: { type:'call', id: c.id } }); },
+        do: () => { setRoute('calls'); globalThis.AppContext.set({ selection: { type:'call', id: c.id } }); },
       }));
     const topProposals = [...(D.proposals || [])]
       .sort((a, b) => {
@@ -711,7 +709,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
         meta: `proposal · ${p.stage}`,
         do: () => {
           setRoute('proposals');
-          window.AppContext.set({ selection: { type:'proposal', id: p.id } });
+          globalThis.AppContext.set({ selection: { type:'proposal', id: p.id } });
         },
       }));
     base.push(...topCompanies, ...topCalls, ...topProposals);
@@ -756,7 +754,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
         );
         if (focusables.length === 0) { e.preventDefault(); return; }
         const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+        const last = focusables.at(-1);
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault(); last.focus();
         } else if (!e.shiftKey && document.activeElement === last) {
@@ -764,8 +762,8 @@ function CommandPalette({ open, setOpen, setRoute }) {
         }
       }
     }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
   }, [open, items, active, setOpen]);
 
   if (!open) return null;
@@ -777,10 +775,10 @@ function CommandPalette({ open, setOpen, setRoute }) {
   return (
     <div className="cp-overlay" onClick={() => setOpen(false)}>
       <div ref={dialogRef} className="cp" role="dialog" aria-modal="true" aria-label="Command palette"
-           onClick={e => e.stopPropagation()}>
+        onClick={e => e.stopPropagation()}>
         <input ref={inputRef} className="cp__input" placeholder="Type a command, lead, or call ID…"
-               aria-label="Search commands, leads, or call IDs"
-               value={q} onChange={e => setQ(e.target.value)} />
+          aria-label="Search commands, leads, or call IDs"
+          value={q} onChange={e => setQ(e.target.value)} />
         <div className="cp__list">
           {Object.entries(groups).map(([g, list]) => (
             <div key={g}>
@@ -790,8 +788,8 @@ function CommandPalette({ open, setOpen, setRoute }) {
                 const isActive = idx === active;
                 return (
                   <div key={it.label} className="cp__row" data-active={isActive}
-                       onMouseEnter={() => setActive(idx)}
-                       onClick={() => { it.do?.(); setOpen(false); }}>
+                    onMouseEnter={() => setActive(idx)}
+                    onClick={() => { it.do?.(); setOpen(false); }}>
                     <span className="cp__row-icon"><it.icon size={14} /></span>
                     <span>{it.label}</span>
                     <span className="cp__row-meta">{it.meta}</span>
@@ -815,13 +813,13 @@ function CommandPalette({ open, setOpen, setRoute }) {
 /* ---------- Shared widgets ---------- */
 function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w = 120, label, pointLabels }) {
   const [hovered, setHovered] = useState(null);
-  const min = Math.min(...data), max = Math.max(...data);
+  const min = Math.min(...data); const max = Math.max(...data);
   const span = max - min || 1;
   const step = data.length > 1 ? w / (data.length - 1) : 0;
   const pts = data.map((v, i) => [data.length > 1 ? i * step : w / 2, h - ((v - min) / span) * (h - 4) - 2]);
   const path = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
   const area = `${path} L${w},${h} L0,${h} Z`;
-  const latest = data[data.length - 1];
+  const latest = data.at(-1);
   const first = data[0];
   const delta = latest - first;
   const labelText = String(label || '');
@@ -970,7 +968,7 @@ function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accen
             color={sparkColor || 'var(--sunset-500)'}
             h={28}
             w={80}
-            label={`${label} trend: current ${value}${delta != null ? `, delta ${delta}` : ''}`}
+            label={`${label} trend: current ${value}${delta == null ? '' : `, delta ${delta}`}`}
             pointLabels={sparkLabels}
           />
         </div>
@@ -1022,12 +1020,12 @@ function Card({ title, action, children, accent, className = '' }) {
 const CONSOLE_PANEL_CAP = 200;
 function ConsolePanel({ lines, title = 'live · agent.feed' }) {
   const [liveLines, setLiveLines] = React.useState([]);
-  const [streamState, setStreamState] = React.useState(() => (window.DEMO_MODE ? 'ready' : 'connecting'));
+  const [streamState, setStreamState] = React.useState(() => (globalThis.DEMO_MODE ? 'ready' : 'connecting'));
   const bodyRef = React.useRef(null);
   const stuckToBottomRef = React.useRef(true);
   React.useEffect(() => {
     if (lines) return; // Use provided static lines if available
-    setStreamState(window.DEMO_MODE ? 'ready' : 'connecting');
+    setStreamState(globalThis.DEMO_MODE ? 'ready' : 'connecting');
     const append = (txt, level = 'info') => {
       setLiveLines(prev => {
         const next = [...prev, { t: new Date().toLocaleTimeString(), level, txt }];
@@ -1035,12 +1033,12 @@ function ConsolePanel({ lines, title = 'live · agent.feed' }) {
       });
     };
     let es = null;
-    if (!window.DEMO_MODE && typeof EventSource === 'function') {
+    if (!globalThis.DEMO_MODE && typeof EventSource === 'function') {
       // Live mode: EventSource over /api/stream. Static DEMO_MODE replays
       // synthetic gtm:stream events instead, so do not show a transport
       // failure before the operator has launched a sequence.
       es = new EventSource('/api/stream');
-      es.onopen = () => setStreamState('streaming');
+      es.addEventListener('open', () => setStreamState('streaming'));
       es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
@@ -1068,14 +1066,14 @@ function ConsolePanel({ lines, title = 'live · agent.feed' }) {
     };
     const onReset = () => {
       setLiveLines([]);
-      setStreamState(window.DEMO_MODE ? 'ready' : (es ? 'streaming' : 'connecting'));
+      setStreamState(globalThis.DEMO_MODE ? 'ready' : (es ? 'streaming' : 'connecting'));
     };
-    window.addEventListener('gtm:stream', onStream);
-    window.addEventListener('gtm:stream-reset', onReset);
+    globalThis.addEventListener('gtm:stream', onStream);
+    globalThis.addEventListener('gtm:stream-reset', onReset);
     return () => {
       es?.close();
-      window.removeEventListener('gtm:stream', onStream);
-      window.removeEventListener('gtm:stream-reset', onReset);
+      globalThis.removeEventListener('gtm:stream', onStream);
+      globalThis.removeEventListener('gtm:stream-reset', onReset);
     };
   }, [lines]);
 
@@ -1101,17 +1099,17 @@ function ConsolePanel({ lines, title = 'live · agent.feed' }) {
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(blob);
-        window.toast('Log copied to clipboard', { sub: `${displayLines.length} line${displayLines.length === 1 ? '' : 's'}`, tone: 'accent' });
+        globalThis.toast('Log copied to clipboard', { sub: `${displayLines.length} line${displayLines.length === 1 ? '' : 's'}`, tone: 'accent' });
       } else {
-        window.toast('Clipboard unavailable', { sub: 'browser blocked navigator.clipboard', tone: 'warn' });
+        globalThis.toast('Clipboard unavailable', { sub: 'browser blocked navigator.clipboard', tone: 'warn' });
       }
     } catch (_) {
-      window.toast('Could not copy log', { tone: 'critical' });
+      globalThis.toast('Could not copy log', { tone: 'critical' });
     }
   };
   const onClear = () => {
     if (lines) return; // static-line mode is read-only
-    window.dispatchEvent(new CustomEvent('gtm:stream-reset'));
+    globalThis.dispatchEvent(new CustomEvent('gtm:stream-reset'));
   };
   const status = lines ? 'static' : streamState === 'ready' ? 'ready' : streamState;
   const statusTone = streamState === 'disconnected'
@@ -1178,15 +1176,15 @@ function Segmented({ options, value, onChange }) {
     <div className="seg">
       {options.map(o => (
         <button key={o.value} className="seg__btn"
-                data-active={value === o.value}
-                aria-label={o.ariaLabel || undefined}
-                onClick={() => onChange(o.value)}>{o.label}</button>
+          data-active={value === o.value}
+          aria-label={o.ariaLabel || undefined}
+          onClick={() => onChange(o.value)}>{o.label}</button>
       ))}
     </div>
   );
 }
 
-Object.assign(window, {
+Object.assign(globalThis, {
   Sidebar, Topbar, CommandPalette, ToastHost, Popover,
   Sparkline, Stat, Badge, PageHeader, Card, ConsolePanel, Segmented,
   proposalAmountToThousands, formatProposalTotal, isOpenProposalStage,

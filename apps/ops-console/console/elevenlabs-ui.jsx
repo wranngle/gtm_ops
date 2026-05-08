@@ -28,7 +28,7 @@ function ELOrb({ state = 'idle', size = 44, color1, color2, label = 'ElevenLabs 
 
 function ELBarVisualizer({ bars = [], active = false, tone = 'accent' }) {
   const fallback = [0.25, 0.52, 0.35, 0.78, 0.46, 0.63, 0.31, 0.58, 0.42, 0.74, 0.28, 0.5];
-  const values = bars.length ? bars : fallback;
+  const values = bars.length > 0 ? bars : fallback;
   return (
     <div className={`el-bars el-bars--${tone} ${active ? 'is-active' : ''}`} aria-hidden="true">
       {values.slice(0, 18).map((v, i) => (
@@ -89,7 +89,7 @@ function ELTranscriptViewer({ run, detail, replaying, onReplay }) {
   const [replayCursor, setReplayCursor] = React.useState(null);
   const transcript = (detail && (detail.transcript_summary || detail.transcript || detail.messages)) || [];
   const axes = run?.score?.axes || [];
-  const generated = transcript.length ? transcript : axes.map((axis, i) => ({
+  const generated = transcript.length > 0 ? transcript : axes.map((axis, i) => ({
     turn: i + 1,
     role: axis.pass ? 'agent' : 'caller',
     text: `${axis.name}: ${axis.detail}`,
@@ -121,11 +121,11 @@ function ELTranscriptViewer({ run, detail, replaying, onReplay }) {
   return (
     <div className="el-transcript">
       <div className="el-transcript__toolbar">
-        <ELVoiceButton active={replaying} disabled={!generated.length} onClick={onReplay}>
+        <ELVoiceButton active={replaying} disabled={generated.length === 0} onClick={onReplay}>
           {replaying ? 'Stop voice replay' : 'Replay evaluated path'}
         </ELVoiceButton>
         <div className="el-transcript__replay-status" data-testid="eval-transcript-replay-status" role="status" aria-live="polite">
-          {replaying && generated.length
+          {replaying && generated.length > 0
             ? `replaying turn ${progress}/${generated.length}`
             : `${generated.length} ${generated.length === 1 ? 'turn' : 'turns'} loaded`}
         </div>

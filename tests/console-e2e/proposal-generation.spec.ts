@@ -105,7 +105,7 @@ test('Generate proposal flow explains the review gate and destination before exe
   await expect(page.locator('[data-testid="generate-review-path"]')).toContainText(/Buyer send blocked until approved/i);
   const reviewPathLayout = await page.locator('[data-testid="generate-review-path"]').evaluate((el) => {
     const pathBox = el.getBoundingClientRect();
-    const stepBoxes = Array.from(el.children).map(child => child.getBoundingClientRect());
+    const stepBoxes = [...el.children].map(child => child.getBoundingClientRect());
     return {
       stepCount: stepBoxes.length,
       allStepsShareRow: stepBoxes.every(box => Math.abs(box.top - stepBoxes[0].top) < 2),
@@ -176,7 +176,7 @@ test('Generate page · DEMO_MODE replay unlocks review even if POST never resolv
 
   await page.evaluate(() => {
     const orig = globalThis.fetch.bind(globalThis);
-    globalThis.fetch = function (input: any, init: any) {
+    globalThis.fetch = async function (input: any, init: any) {
       const url = typeof input === 'string' ? input : (input?.url) || '';
       const method = ((init?.method) || (input?.method) || 'GET').toUpperCase();
       if (url.includes('/api/generate') && method === 'POST') {
@@ -285,7 +285,7 @@ test('Generate page · lower draft controls stay reachable on a laptop viewport'
 test('Generate page · local static console starts in DEMO_MODE without a transport error', async ({ page }) => {
   await page.goto('/console/?route=generate', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
-  await expect.poll(() => page.evaluate(() => (globalThis as any).DEMO_MODE)).toBe(true);
+  await expect.poll(async () => page.evaluate(() => (globalThis as any).DEMO_MODE)).toBe(true);
 
   const panel = page.locator('.console-panel');
   await expect(panel.locator('[data-testid="console-panel-count"]')).toContainText('0 lines');

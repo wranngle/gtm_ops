@@ -38,11 +38,12 @@ type GtmDataset = {
 let GTM: GtmDataset;
 beforeAll(() => {
   const src = readFileSync(dataPath, 'utf8');
-  const ctx: { window: { GTM?: GtmDataset } } = { window: {} };
+  const ctx: any = { window: {} };
+  ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(src, ctx);
-  if (!ctx.window.GTM) throw new Error('data.js did not assign window.GTM');
-  GTM = ctx.window.GTM;
+  if (!ctx.GTM && !ctx.window.GTM) throw new Error('data.js did not assign GTM');
+  GTM = ctx.GTM || ctx.window.GTM;
 });
 
 describe('console/data.js shape + range guard', () => {

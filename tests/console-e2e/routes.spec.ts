@@ -51,8 +51,8 @@ test('route · Mission Control stat render does not leave navigation on a stale 
   await expect(page.getByRole('heading', { level: 1 })).toContainText(/Mission Control/i);
 
   await page.evaluate(() => {
-    (window as any).proposalAmountToThousands = undefined;
-    (window as any).formatProposalTotal = undefined;
+    (globalThis as any).proposalAmountToThousands = undefined;
+    (globalThis as any).formatProposalTotal = undefined;
   });
   await page.getByRole('button', { name: /^7D$/i }).click();
   await expect(page.locator('[data-testid="mission-stats"]')).toHaveAttribute('data-range', 'week');

@@ -17,7 +17,7 @@ test('print mode · chrome is hidden + body becomes white', async ({ openConsole
     bodyColor: getComputedStyle(document.body).color,
     sidebarVisible: getComputedStyle(document.querySelector('.sb') as HTMLElement).display !== 'none',
     topbarVisible: getComputedStyle(document.querySelector('.tb') as HTMLElement).display !== 'none',
-    coachLauncherVisible: !!document.querySelector('.coach-launcher')
+    coachLauncherVisible: Boolean(document.querySelector('.coach-launcher'))
       && getComputedStyle(document.querySelector('.coach-launcher') as HTMLElement).display !== 'none',
   }));
   // body must be white-ish, text dark — printer-friendly.

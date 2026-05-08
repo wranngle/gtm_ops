@@ -33,7 +33,7 @@ function AgentsPage({ setRoute }) {
     const ctx = globalThis.AppContext.get();
     if (ctx?.extra?.selected_agent_key === activeKey) return;
     globalThis.AppContext.set({
-      extra: { ...(ctx.extra || {}), selected_agent_key: activeKey },
+      extra: { ...ctx.extra, selected_agent_key: activeKey },
     });
   }, [activeKey]);
   const [adminPanel, setAdminPanel] = React.useState('prompt');
@@ -95,13 +95,13 @@ function AgentsPage({ setRoute }) {
   };
   const evalContextHandoff = appExtra.triggered_from === 'eval-agent-admin'
     ? {
-        context: appExtra.selected_eval_context || appExtra.selected_eval_suite || appCtx.selection?.id || 'selected eval context',
-        scenario: appExtra.selected_eval_run || appExtra.eval_run?.scenario_id || 'selected run',
-        verdict: appExtra.selected_eval_verdict || appExtra.eval_run?.verdict || 'unknown',
-        score: appExtra.selected_eval_score || 'score unavailable',
-        failedAxes: appExtra.eval_failed_axes || 'none',
-        evidencePath: appExtra.eval_evidence_path || appExtra.eval_run?.result_path || '../fixtures/eval-runs.json',
-      }
+      context: appExtra.selected_eval_context || appExtra.selected_eval_suite || appCtx.selection?.id || 'selected eval context',
+      scenario: appExtra.selected_eval_run || appExtra.eval_run?.scenario_id || 'selected run',
+      verdict: appExtra.selected_eval_verdict || appExtra.eval_run?.verdict || 'unknown',
+      score: appExtra.selected_eval_score || 'score unavailable',
+      failedAxes: appExtra.eval_failed_axes || 'none',
+      evidencePath: appExtra.eval_evidence_path || appExtra.eval_run?.result_path || '../fixtures/eval-runs.json',
+    }
     : null;
   React.useEffect(() => {
     if (!evalContextHandoff || adminPanel !== 'context') return undefined;
@@ -143,7 +143,7 @@ function AgentsPage({ setRoute }) {
   const openWorkspaceAgentSettings = () => {
     globalThis.AppContext.set({
       extra: {
-        ...(globalThis.AppContext.get().extra || {}),
+        ...globalThis.AppContext.get().extra,
         settings_tab: 'integrations',
         integration_name: 'ElevenLabs',
         triggered_from: 'agents-workspace-settings',
@@ -158,7 +158,7 @@ function AgentsPage({ setRoute }) {
     setAdminPanel(panel);
     globalThis.AppContext.set({
       extra: {
-        ...(globalThis.AppContext.get().extra || {}),
+        ...globalThis.AppContext.get().extra,
         new_agent_template_key: next,
         new_agent_panel: panel,
         triggered_from: 'agents-new-agent-template',
@@ -196,7 +196,7 @@ function AgentsPage({ setRoute }) {
     setAdminPanel('context');
     globalThis.AppContext.set({
       extra: {
-        ...(current.extra || {}),
+        ...current.extra,
         triggered_from: 'agents-page',
         agent_key: active.key,
         context_synced_agent: active.key,

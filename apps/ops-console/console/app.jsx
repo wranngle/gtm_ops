@@ -4,7 +4,7 @@
 
 const { useState: useS, useEffect: useE } = React;
 
-const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+const TWEAK_DEFAULTS = /* EDITMODE-BEGIN */{
   "theme": "dark",
   "density": "comfortable",
   "accentColor": "#ff5f00",
@@ -12,9 +12,9 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "sidebarCollapsed": false,
   "fontDisplay": "Outfit",
   "showLiveDot": true
-}/*EDITMODE-END*/;
+}/* EDITMODE-END */;
 
-const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'settings'];
+const ROUTES = new Set(['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'settings']);
 
 function readHistoryMetadata(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
@@ -45,11 +45,11 @@ function nextStepFromHistoryStatus(status) {
 
 function routeFromLocation() {
   try {
-    const url = new URL(window.location.href);
+    const url = new URL(globalThis.location.href);
     const queryRoute = url.searchParams.get('route');
     const hashRoute = url.hash.replace(/^#\/?/, '');
     const next = queryRoute || hashRoute || 'home';
-    return ROUTES.includes(next) ? next : 'home';
+    return ROUTES.has(next) ? next : 'home';
   } catch (_) {
     return 'home';
   }
@@ -59,39 +59,39 @@ function App() {
   const scrollRef = React.useRef(null);
   const [route, setRoute] = useS(() => {
     const initialRoute = routeFromLocation();
-    window.AppContext.set({ route: initialRoute });
+    globalThis.AppContext.set({ route: initialRoute });
     return initialRoute;
   });
   const [paletteOpen, setPaletteOpen] = useS(false);
-  const [tw, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [tw, setTweak] = globalThis.useTweaks(TWEAK_DEFAULTS);
   const [dataLoaded, setDataLoaded] = useS(0);
   const setConsoleRoute = React.useCallback((next) => {
     if (typeof next === 'function') {
       setRoute(prev => {
         const resolved = next(prev);
-        const safeRoute = ROUTES.includes(resolved) ? resolved : 'home';
-        window.AppContext.set({ route: safeRoute });
+        const safeRoute = ROUTES.has(resolved) ? resolved : 'home';
+        globalThis.AppContext.set({ route: safeRoute });
         return safeRoute;
       });
       return;
     }
-    const safeRoute = ROUTES.includes(next) ? next : 'home';
-    window.AppContext.set({ route: safeRoute });
+    const safeRoute = ROUTES.has(next) ? next : 'home';
+    globalThis.AppContext.set({ route: safeRoute });
     setRoute(safeRoute);
   }, []);
 
   // Publish route changes to the global AppContext so the ConvAI widget
   // can pick them up as dynamic variables.
   useE(() => {
-    document.documentElement.setAttribute('data-console-route', route);
-    window.AppContext.set({ route });
+    document.documentElement.dataset.consoleRoute = route;
+    globalThis.AppContext.set({ route });
     try {
-      const url = new URL(window.location.href);
+      const url = new URL(globalThis.location.href);
       if (route === 'home') url.searchParams.delete('route');
       else url.searchParams.set('route', route);
       const next = `${url.pathname}${url.search}${url.hash}`;
-      if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
-        window.history.pushState({ route }, '', next);
+      if (next !== `${globalThis.location.pathname}${globalThis.location.search}${globalThis.location.hash}`) {
+        globalThis.history.pushState({ route }, '', next);
       }
     } catch (_) { /* URL API unavailable */ }
   }, [route]);
@@ -104,8 +104,8 @@ function App() {
 
   useE(() => {
     const onPop = () => setConsoleRoute(routeFromLocation());
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    globalThis.addEventListener('popstate', onPop);
+    return () => globalThis.removeEventListener('popstate', onPop);
   }, [setConsoleRoute]);
 
   useE(() => {
@@ -113,13 +113,13 @@ function App() {
       const next = event.detail?.route;
       if (typeof next === 'string') setConsoleRoute(next);
     };
-    window.addEventListener('gtm:route', onRoute);
-    return () => window.removeEventListener('gtm:route', onRoute);
+    globalThis.addEventListener('gtm:route', onRoute);
+    return () => globalThis.removeEventListener('gtm:route', onRoute);
   }, [setConsoleRoute]);
 
   // Apply tweaks to the document
   useE(() => {
-    document.documentElement.setAttribute('data-theme', tw.theme);
+    document.documentElement.dataset.theme = tw.theme;
     document.documentElement.style.setProperty('--sunset-500', tw.accentColor);
     document.documentElement.style.setProperty('--font-display', `'${tw.fontDisplay}', system-ui, sans-serif`);
   }, [tw.theme, tw.accentColor, tw.fontDisplay]);
@@ -137,17 +137,17 @@ function App() {
         // Cache-bust on demand so the Mission Control "Refresh" button
         // (which dispatches `gtm:refresh-data`) actually re-fetches
         // history instead of being served the existing 304/304-equivalent.
-        const cacheBuster = window.GTM._lastRefreshAt ? `?_=${window.GTM._lastRefreshAt}` : '';
+        const cacheBuster = globalThis.GTM._lastRefreshAt ? `?_=${globalThis.GTM._lastRefreshAt}` : '';
         const histRes = await fetch(`/api/history${cacheBuster}`);
         if (!histRes.ok) return;
         const history = await histRes.json();
         if (!Array.isArray(history) || history.length === 0) {
-          window.GTM._isDemoFallback = true;
+          globalThis.GTM._isDemoFallback = true;
           setDataLoaded(n => n + 1);
           return;
         }
-        window.GTM._isDemoFallback = false;
-        window.GTM.companies = history.map(h => {
+        globalThis.GTM._isDemoFallback = false;
+        globalThis.GTM.companies = history.map(h => {
           const metadata = readHistoryMetadata(h.metadata);
           return ({
             id: h.slug || h.id,
@@ -179,9 +179,9 @@ function App() {
         // id append after the seeds. Without this merge, the runtime
         // overwrite was silently dropping the curated proposals AND
         // displaying ugly slugs like "acme-hvac" as the company name.
-        const seedProposals = Array.isArray(window.GTM._seedProposals)
-          ? window.GTM._seedProposals
-          : (window.GTM._seedProposals = window.GTM.proposals.slice());
+        const seedProposals = Array.isArray(globalThis.GTM._seedProposals)
+          ? globalThis.GTM._seedProposals
+          : (globalThis.GTM._seedProposals = [...globalThis.GTM.proposals]);
         // Humanize a kebab-case slug (`harbor-property-mgmt`) into a
         // proper Title-Case display name when metadata.client_name is
         // missing. Production history entries can ship without
@@ -214,7 +214,7 @@ function App() {
         });
         const historyIds = new Set(historyProposals.map(p => p.id));
         const preservedSeeds = seedProposals.filter(p => !historyIds.has(p.id));
-        window.GTM.proposals = [...preservedSeeds, ...historyProposals];
+        globalThis.GTM.proposals = [...preservedSeeds, ...historyProposals];
         setDataLoaded(n => n + 1);
       } catch (err) {
         console.error("Failed to load history", err);
@@ -226,11 +226,11 @@ function App() {
     // affordances). The handler stamps a timestamp on window.GTM so the
     // fetch becomes cache-busted, then re-runs the same loader.
     function onRefresh() {
-      window.GTM._lastRefreshAt = Date.now();
+      globalThis.GTM._lastRefreshAt = Date.now();
       loadData();
     }
-    window.addEventListener('gtm:refresh-data', onRefresh);
-    return () => window.removeEventListener('gtm:refresh-data', onRefresh);
+    globalThis.addEventListener('gtm:refresh-data', onRefresh);
+    return () => globalThis.removeEventListener('gtm:refresh-data', onRefresh);
   }, []);
 
   const collapsed = tw.sidebarCollapsed;
@@ -242,8 +242,8 @@ function App() {
         <Sidebar route={route} setRoute={setConsoleRoute} collapsed={collapsed}/>
         <div className="main">
           <Topbar route={route} setRoute={setConsoleRoute} openPalette={()=>setPaletteOpen(true)}
-                  theme={tw.theme} setTheme={(v) => setTweak('theme', v)}
-                  collapsed={collapsed} setCollapsed={setCollapsed}/>
+            theme={tw.theme} setTheme={(v) => setTweak('theme', v)}
+            collapsed={collapsed} setCollapsed={setCollapsed}/>
           <main ref={scrollRef} className="scroll" key={route} aria-labelledby="console-page-title">
             {route === 'home' && <HomePage setRoute={setConsoleRoute}/>}
             {route === 'generate' && <GeneratePage setRoute={setConsoleRoute}/>}
@@ -283,4 +283,4 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+ReactDOM.createRoot(document.querySelector('#root')).render(<App/>);
