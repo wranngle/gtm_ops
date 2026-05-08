@@ -61,7 +61,7 @@ async function seedChain(rowCount: number) {
 
 function runCli(): { code: number; stdout: string; stderr: string } {
   try {
-    const stdout = execFileSync('bun', [scriptPath, `--db=${testDbPath}`], {
+    const stdout = execFileSync(process.execPath, [scriptPath, `--db=${testDbPath}`], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
