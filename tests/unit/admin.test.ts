@@ -218,6 +218,7 @@ describe('[P0] Activity Feed', () => {
       userId: 'user-1',
       activityType: 'document.created',
     });
+    await new Promise((resolve) => setTimeout(resolve, 10));
     await admin.logActivity({
       workspaceId: 'ws-1',
       userId: 'user-2',
