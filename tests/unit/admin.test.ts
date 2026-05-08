@@ -213,17 +213,23 @@ describe('[P0] Activity Feed', () => {
 
   it('[P0] should retrieve activity feed', async () => {
     // GIVEN: Multiple activities
+    const now = Date.now();
+    const dateSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now + 10);
+
     await admin.logActivity({
       workspaceId: 'ws-1',
       userId: 'user-1',
       activityType: 'document.created',
     });
-    await new Promise((resolve) => setTimeout(resolve, 10));
     await admin.logActivity({
       workspaceId: 'ws-1',
       userId: 'user-2',
       activityType: 'document.viewed',
     });
+
+    dateSpy.mockRestore();
 
     // WHEN: Getting feed
     const feed = await admin.getActivityFeed('ws-1');
