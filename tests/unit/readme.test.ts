@@ -23,9 +23,9 @@ describe('README content reflects reality', () => {
   const claimedPaths = [
     'apps/ops-console/',
     'lib/',
-    'server.js',
+    'server.ts',
     'functions/api/',
-    'cli.js',
+    'cli.ts',
     'templates/',
     'tokens/',
     'DESIGN.md',
@@ -66,11 +66,10 @@ describe('README content reflects reality', () => {
     expect(readme).not.toMatch(re);
   });
 
-  it('apps/ops-console contains React .jsx sources (not vanilla static HTML)', () => {
+  it('apps/ops-console contains React .tsx sources (not vanilla static HTML)', () => {
     const consoleDir = join(root, 'apps', 'ops-console', 'console');
     expect(statSync(consoleDir).isDirectory()).toBe(true);
-    // app.jsx is the React entrypoint added in tick 0.
-    expect(existsSync(join(consoleDir, 'app.jsx'))).toBe(true);
+    expect(existsSync(join(consoleDir, 'app.tsx'))).toBe(true);
   });
 });
 
@@ -79,9 +78,9 @@ describe('ARCHITECTURE content reflects reality', () => {
     'apps/ops-console/',
     'lib/',
     'prompts/',
-    'server.js',
+    'server.ts',
     'functions/api/',
-    'cli.js',
+    'cli.ts',
     'examples/',
     'templates/',
     'public/',

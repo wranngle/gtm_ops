@@ -16,7 +16,7 @@
 /index.html       /console/                   301
 
 # Friendly alias for the legacy `/api/eval-runs` URL the UI used briefly
-# before the canonical `/api/eval/runs` route landed in server.js.
+# before the canonical `/api/eval/runs` route landed in server.ts.
 /api/eval-runs    /fixtures/eval-runs.json    302
 
 # Fallback for unported /api/* GETs in DEMO_MODE → fixture equivalent.

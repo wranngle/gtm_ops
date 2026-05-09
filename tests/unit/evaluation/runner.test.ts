@@ -87,7 +87,7 @@ vi.mock('../../../lib/evaluation/comparator.js', () => ({
 }));
 
 // Mock pipeline
-vi.mock('../../../lib/pipeline.js', () => ({
+vi.mock('../../../lib/pipeline.ts', () => ({
   UnifiedPipeline: vi.fn().mockImplementation(() => ({
     run: vi.fn().mockResolvedValue(undefined),
     schema: { test: 'output' },

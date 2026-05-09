@@ -5,7 +5,7 @@
  * activation, focus semantics, and accessible role mapping without custom
  * div-button plumbing drifting out of sync.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 const WORKSPACE_ITEMS = [
   'Mission Control',

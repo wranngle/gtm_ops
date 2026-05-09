@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/security.js
+ * Unit Tests for lib/security.ts
  *
  * Tests security middleware functionality:
  * - API key masking
@@ -389,8 +389,8 @@ describe('[P1] getCorsOptions - CORS Configuration', () => {
     else delete process.env.ALLOWED_ORIGINS;
   });
 
-  it('[P0] should allow every HTTP method that server.js routes use', () => {
-    // server.js exposes GET/HEAD/POST/PUT/PATCH/DELETE routes. If any of
+  it('[P0] should allow every HTTP method that server.ts routes use', () => {
+    // server.ts exposes GET/HEAD/POST/PUT/PATCH/DELETE routes. If any of
     // them is missing here, the browser preflight OPTIONS for that method
     // would be rejected and the static console couldn't call the route at
     // all. Pin the full set so a regression is loud.

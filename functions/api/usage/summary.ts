@@ -1,5 +1,5 @@
 // /api/usage/summary — aggregated usage counters.
-// D1-backed when schema is migrated (Phase 2.5: lib/usage.js:90
+// D1-backed when schema is migrated (Phase 2.5: lib/usage.ts:90
 // usage_events); otherwise falls through to fixtures/usage/summary.json.
 
 import summaryFixture from '../../../apps/ops-console/fixtures/usage/summary.json';

@@ -1,5 +1,5 @@
 // /api/history — list executions joined with projects + artifacts.
-// D1-backed when schema is migrated (Phase 2.5: lib/history.js:21);
+// D1-backed when schema is migrated (Phase 2.5: lib/history.ts:21);
 // otherwise falls through to apps/ops-console/fixtures/history.json.
 
 import historyFixture from '../../apps/ops-console/fixtures/history.json';

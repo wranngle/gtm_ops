@@ -4,7 +4,7 @@
  *   - Run sequence is gated on input
  *   - Submitting fires a POST /api/generate (caught by the demo fetch shim)
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 test('Generate page · auto-sample populates input', async ({ openConsole }) => {
   const page = await openConsole();

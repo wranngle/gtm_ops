@@ -44,7 +44,7 @@ You are operating inside `gtm_ops`, an agent-first GTM operations repo. Complete
 - Runtime: Bun + Express, with sql.js for in-memory SQLite; vitest for tests
 - Operator UI: `apps/ops-console/` (static + live modes), deployed to Cloudflare Pages (`wrangler.toml`, `_headers`, `_redirects`)
 - Domain libs under `lib/`: intake, enrichment, post-call, extraction, pdf, branding, audit, evaluation
-- Entrypoints: `server.js`, `cli.js`
+- Entrypoints: `server.ts`, `cli.ts`
 
 ## Core rules
 

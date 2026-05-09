@@ -1,5 +1,5 @@
 /**
- * Unit tests for lib/provenance.js — the audit trail for fallback
+ * Unit tests for lib/provenance.ts — the audit trail for fallback
  * values, hardcoded defaults, clamps, and extracted data through the
  * pipeline. Untested before this file: a regression that drops the
  * confidence classification (e.g. always returns HIGH) would silently

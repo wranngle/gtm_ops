@@ -6,7 +6,7 @@
  * unpkg request to abort and asserts the fallback message + in-console
  * agent-admin action render with proper a11y semantics.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 test.describe('widget unreachability fallback', () => {
   test('DEMO_MODE fetch shim does not rewrite external ElevenLabs API calls to local fixtures', async ({ page }) => {

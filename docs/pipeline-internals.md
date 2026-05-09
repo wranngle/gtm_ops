@@ -13,14 +13,14 @@
 │                                                                              │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐              │
 │  │   CLI    │    │  Server  │    │  Library │    │   Web    │              │
-│  │  cli.js  │───▶│ server.js│───▶│ index.js │    │ public/  │              │
+│  │  cli.ts  │───▶│ server.ts│───▶│ index.js │    │ public/  │              │
 │  └──────────┘    └──────────┘    └──────────┘    └──────────┘              │
 │        │              │                                │                     │
 │        └──────────────┴───────────────┬───────────────┘                     │
 │                                       │                                      │
 │                              ┌────────▼────────┐                            │
 │                              │   UnifiedPipeline│                            │
-│                              │   lib/pipeline.js│                            │
+│                              │   lib/pipeline.ts│                            │
 │                              └────────┬────────┘                            │
 │                                       │                                      │
 │     ┌─────────────────────────────────┼─────────────────────────────────┐   │
@@ -53,9 +53,9 @@
 ### 1. Entry Layer
 
 ```
-cli.js ──────► Parses args, validates input, connects to server
+cli.ts ──────► Parses args, validates input, connects to server
                      │
-server.js ◄──────────┘ Express API + SSE streaming
+server.ts ◄──────────┘ Express API + SSE streaming
      │
      └──► /api/generate   POST - Start pipeline
      └──► /api/stream     GET  - SSE log events
@@ -66,7 +66,7 @@ server.js ◄──────────┘ Express API + SSE streaming
 ### 2. Pipeline Core
 
 ```
-UnifiedPipeline (lib/pipeline.js)
+UnifiedPipeline (lib/pipeline.ts)
 ├── Stage 1: validate_input
 ├── Stage 2: extract_structure
 │   └── Extractor.extractIntakeData()
@@ -98,7 +98,7 @@ UnifiedPipeline (lib/pipeline.js)
 │         ["CRM (HubSpot)", "Phone (RingCentral)", "Calendar"]                 │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                    integration_research.js                            │   │
+│  │                    integration-research.js                            │   │
 │  │                                                                       │   │
 │  │  1. loadLibraryIndex()                                                │   │
 │  │     └── n8n_workflow_development/context/technical-research/          │   │
@@ -123,7 +123,7 @@ UnifiedPipeline (lib/pipeline.js)
 │                                     │                                        │
 │                                     ▼                                        │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                    proactive_research.js                              │   │
+│  │                    proactive-research.js                              │   │
 │  │                                                                       │   │
 │  │  N8N_NATIVE_NODES (embedded database):                                │   │
 │  │  ┌───────────────────────────────────────────────────────────────┐   │   │

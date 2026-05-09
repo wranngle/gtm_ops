@@ -3,161 +3,153 @@
  * @module lib/schemas/intake.schema
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 import { PeriodUnitSchema, TimeUnitSchema } from './common.schema.js';
 
 // =============================================================================
 // Prepared For (Client Info)
 // =============================================================================
 
-export const PreparedForSchema = z.object({
-  account_id: z.string().optional(),
-  account_name: z.string().min(1, 'Account name is required'),
-  contact_name: z.string().optional(),
-  contact_title: z.string().optional(),
-  contact_email: z.string().email().optional(),
-  contact_phone: z.string().optional(),
+export const PreparedForSchema = type({
+  'account_id?': 'string',
+  account_name: 'string >= 1',
+  'contact_name?': 'string',
+  'contact_title?': 'string',
+  'contact_email?': 'string.email',
+  'contact_phone?': 'string',
 });
 
-export type PreparedFor = z.infer<typeof PreparedForSchema>;
+export type PreparedFor = typeof PreparedForSchema.infer;
 
 // =============================================================================
 // Section A: Workflow Definition
 // =============================================================================
 
-export const SectionASchema = z.object({
-  q01_workflow_name: z.string().min(1, 'Workflow name is required'),
-  q02_trigger_event: z.string().optional(),
-  q03_business_objective: z.string().optional(),
-  q04_end_condition: z.string().optional(),
-  q05_outcome_owner: z.string().optional(),
-  // Legacy field names for backward compatibility
-  q02_expected_trigger_frequency: z.string().optional(),
-  q03_workflow_start_triggers: z.array(z.string()).optional(),
+export const SectionASchema = type({
+  q01_workflow_name: 'string >= 1',
+  'q02_trigger_event?': 'string',
+  'q03_business_objective?': 'string',
+  'q04_end_condition?': 'string',
+  'q05_outcome_owner?': 'string',
+  'q02_expected_trigger_frequency?': 'string',
+  'q03_workflow_start_triggers?': 'string[]',
 });
 
-export type SectionA = z.infer<typeof SectionASchema>;
+export type SectionA = typeof SectionASchema.infer;
 
 // =============================================================================
 // Section B: Volume & Timing
 // =============================================================================
 
-export const SectionBSchema = z.object({
-  q06_runs_per_period: z.union([z.string(), z.number()]),
-  q06_period_unit: PeriodUnitSchema.optional().default('day'),
-  q07_avg_trigger_to_end: z.union([z.string(), z.number()]).optional(),
-  q07_time_unit: TimeUnitSchema.optional().default('minutes'),
-  q08_worst_case_delay: z.union([z.string(), z.number(), z.null()]).optional(),
-  q08_delay_unit: TimeUnitSchema.nullable().optional(),
-  q09_business_hours_expected: z.string().nullable().optional(),
+export const SectionBSchema = type({
+  q06_runs_per_period: 'string | number',
+  q06_period_unit: PeriodUnitSchema.default('day'),
+  'q07_avg_trigger_to_end?': 'string | number',
+  q07_time_unit: TimeUnitSchema.default('minutes'),
+  'q08_worst_case_delay?': 'string | number | null',
+  'q08_delay_unit?': TimeUnitSchema.or('null'),
+  'q09_business_hours_expected?': 'string | null',
 });
 
-export type SectionB = z.infer<typeof SectionBSchema>;
+export type SectionB = typeof SectionBSchema.infer;
 
 // =============================================================================
 // Section C: Systems & Handoffs
 // =============================================================================
 
-export const SectionCSchema = z.object({
-  q10_systems_involved: z.array(z.string()).default([]),
-  q11_manual_data_transfers: z.string().optional(),
-  q11_data_flow_touchpoints: z.array(z.string()).optional(),
-  q12_human_decision_gates: z.string().optional(),
-  q12_auth_types: z.array(z.string()).optional(),
-  q13_data_sensitivity: z.string().optional(),
+export const SectionCSchema = type({
+  q10_systems_involved: type('string[]').default(() => []),
+  'q11_manual_data_transfers?': 'string',
+  'q11_data_flow_touchpoints?': 'string[]',
+  'q12_human_decision_gates?': 'string',
+  'q12_auth_types?': 'string[]',
+  'q13_data_sensitivity?': 'string',
 });
 
-export type SectionC = z.infer<typeof SectionCSchema>;
+export type SectionC = typeof SectionCSchema.infer;
 
 // =============================================================================
 // Section D: Failure & Cost
 // =============================================================================
 
-export const SectionDSchema = z.object({
-  q13_common_failures: z.string().optional(),
-  q14_cost_if_slow_or_failed: z.string().optional(),
+export const SectionDSchema = type({
+  'q13_common_failures?': 'string',
+  'q14_cost_if_slow_or_failed?': 'string',
 });
 
-export type SectionD = z.infer<typeof SectionDSchema>;
+export type SectionD = typeof SectionDSchema.infer;
 
 // =============================================================================
 // Section E: Priority
 // =============================================================================
 
-export const SectionESchema = z.object({
-  q15_one_thing_to_fix: z.string().optional(),
+export const SectionESchema = type({
+  'q15_one_thing_to_fix?': 'string',
 });
 
-export type SectionE = z.infer<typeof SectionESchema>;
+export type SectionE = typeof SectionESchema.infer;
 
 // =============================================================================
 // Pain Points (Alternative Section B Structure)
 // =============================================================================
 
-export const ActivitySchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  frequency: z.string().optional(),
-  duration: z.string().optional(),
+export const ActivitySchema = type({
+  name: 'string',
+  'description?': 'string',
+  'frequency?': 'string',
+  'duration?': 'string',
 });
 
-export const SectionBPainPointsSchema = z.object({
-  q04_time_sink_activities: z.array(ActivitySchema).optional(),
-  q05_error_prone_steps: z.array(z.string()).optional(),
-  q06_revenue_impacting_delays: z.array(z.string()).optional(),
-  q07_compliance_concerns: z.array(z.string()).optional(),
-  q08_repetitive_decisions: z.array(z.string()).optional(),
-  q09_satisfaction_issues: z.array(z.string()).optional(),
+export const SectionBPainPointsSchema = type({
+  'q04_time_sink_activities?': ActivitySchema.array(),
+  'q05_error_prone_steps?': 'string[]',
+  'q06_revenue_impacting_delays?': 'string[]',
+  'q07_compliance_concerns?': 'string[]',
+  'q08_repetitive_decisions?': 'string[]',
+  'q09_satisfaction_issues?': 'string[]',
 });
 
 // =============================================================================
 // Attachments
 // =============================================================================
 
-export const AttachmentsSchema = z.object({
-  evidence_uris: z.array(z.string()).default([]),
-  notes: z.string().optional(),
+export const AttachmentsSchema = type({
+  evidence_uris: type('string[]').default(() => []),
+  'notes?': 'string',
 });
 
-export type Attachments = z.infer<typeof AttachmentsSchema>;
+export type Attachments = typeof AttachmentsSchema.infer;
 
 // =============================================================================
 // Project (Legacy/Alternative Structure)
 // =============================================================================
 
-export const ProjectSchema = z.object({
-  integrations: z.array(z.string()).optional(),
-  name: z.string().optional(),
-  description: z.string().optional(),
+export const ProjectSchema = type({
+  'integrations?': 'string[]',
+  'name?': 'string',
+  'description?': 'string',
 });
 
 // =============================================================================
 // Complete Intake Schema
 // =============================================================================
 
-export const IntakeSchema = z.object({
-  // Metadata
-  intake_version: z.string().optional().default('1.0.0'),
-  captured_at: z.string().optional(),
-  captured_by: z.string().optional(),
-
-  // Client Information
+export const IntakeSchema = type({
+  intake_version: type('string').default('1.0.0'),
+  'captured_at?': 'string',
+  'captured_by?': 'string',
   prepared_for: PreparedForSchema,
-
-  // Sections (using underscore naming for Mustache compatibility)
   section_a_workflow_definition: SectionASchema,
-  section_b_volume_timing: SectionBSchema.optional(),
-  section_b_pain_points: SectionBPainPointsSchema.optional(),
+  'section_b_volume_timing?': SectionBSchema,
+  'section_b_pain_points?': SectionBPainPointsSchema,
   section_c_systems_handoffs: SectionCSchema,
-  section_d_failure_cost: SectionDSchema.optional(),
-  section_e_priority: SectionESchema.optional(),
-
-  // Additional Fields
-  attachments: AttachmentsSchema.optional(),
-  project: ProjectSchema.optional(),
+  'section_d_failure_cost?': SectionDSchema,
+  'section_e_priority?': SectionESchema,
+  'attachments?': AttachmentsSchema,
+  'project?': ProjectSchema,
 });
 
-export type Intake = z.infer<typeof IntakeSchema>;
+export type Intake = typeof IntakeSchema.infer;
 
 // =============================================================================
 // Partial Intake (for incremental validation)
@@ -165,20 +157,20 @@ export type Intake = z.infer<typeof IntakeSchema>;
 
 export const PartialIntakeSchema = IntakeSchema.partial();
 
-export type PartialIntake = z.infer<typeof PartialIntakeSchema>;
+export type PartialIntake = typeof PartialIntakeSchema.infer;
 
 // =============================================================================
 // Intake Extraction Result (wrapper with metadata)
 // =============================================================================
 
-export const IntakeExtractionResultSchema = z.object({
-  success: z.boolean(),
-  intake: IntakeSchema.optional(),
-  errors: z.array(z.string()).optional(),
-  warnings: z.array(z.string()).optional(),
-  extraction_time_ms: z.number().optional(),
-  model_used: z.string().optional(),
-  retry_count: z.number().optional(),
+export const IntakeExtractionResultSchema = type({
+  success: 'boolean',
+  'intake?': IntakeSchema,
+  'errors?': 'string[]',
+  'warnings?': 'string[]',
+  'extraction_time_ms?': 'number',
+  'model_used?': 'string',
+  'retry_count?': 'number',
 });
 
-export type IntakeExtractionResult = z.infer<typeof IntakeExtractionResultSchema>;
+export type IntakeExtractionResult = typeof IntakeExtractionResultSchema.infer;

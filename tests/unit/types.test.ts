@@ -194,7 +194,7 @@ describe('[P0] migrateToMonetaryValue - schema v1 → v2', () => {
   });
 
   it('[P1] should fall back to the assumed period when the input period is unknown', () => {
-    // PR #135 noted that lib/types.js was missing the
+    // PR #135 noted that lib/types.ts was missing the
     // `validPeriods.includes(mappedPeriod) ? mappedPeriod :
     // assumedPeriod` fallback that lib/types.ts had — which made
     // unknown period values throw at runtime. This PR collapses the

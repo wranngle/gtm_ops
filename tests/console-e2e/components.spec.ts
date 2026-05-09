@@ -1,7 +1,7 @@
 /**
  * Per-component surface tests. One spec per major interactive component.
  */
-import { test, expect, smokeClickAll } from './_helpers.js';
+import { test, expect, smokeClickAll } from './helpers.js';
 
 test.describe('shell', () => {
   test('sidebar nav toggles every route', async ({ openConsole }) => {
@@ -693,7 +693,7 @@ test.describe('mission control', () => {
     const page = await openConsole();
     // Read live fixture and visible value together inside one evaluate
     // tick so the expected/actual pair is always consistent. Otherwise
-    // /api/history's async mutation of window.GTM.companies (in app.jsx
+    // /api/history's async mutation of window.GTM.companies (in app.tsx
     // loadData) can race the assertion.
     await expect.poll(async () => {
       return page.evaluate(() => {
@@ -2246,7 +2246,7 @@ test.describe('proposals · seed preservation', () => {
 
     // The curated demo proposals from data.js (Banyan Health, Verdant
     // Logistics, Arcadia Insurance, Thornfield Foods) MUST still render
-    // after history loads. Previously app.jsx overwrote the seed array.
+    // after history loads. Previously app.tsx overwrote the seed array.
     await expect(list).toContainText('Banyan Health');
     await expect(list).toContainText('Verdant Logistics');
 

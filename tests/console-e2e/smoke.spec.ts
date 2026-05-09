@@ -2,7 +2,7 @@
  * Console-wide smoke-click sweep. Visits every route, clicks every visible
  * button, and asserts no uncaught page errors fire.
  */
-import { test, expect, smokeClickAll } from './_helpers.js';
+import { test, expect, smokeClickAll } from './helpers.js';
 
 const ROUTES = ['home', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'settings'];
 const LABELS: Record<string, string> = {

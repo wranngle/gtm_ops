@@ -1,7 +1,7 @@
 -- seed_presales.sql
 -- Auto-generated via scripts/dump_presales_seed.js (config tables only)
 -- Source: config/presales.db (binary, gitignored)
--- Regenerate the .db file with: bun scripts/build_presales_db.js
+-- Regenerate the .db file with: bun scripts/build-presales-db.js
 
 PRAGMA foreign_keys = OFF;
 BEGIN TRANSACTION;

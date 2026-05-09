@@ -1,5 +1,5 @@
 // /api/health — stateless health probe; no D1 dependency.
-// Mirrors the local Express response shape from server.js:726.
+// Mirrors the local Express response shape from server.ts:726.
 // Includes deploy provenance (commit + branch) so an operator looking at
 // a bug report can confirm which build is actually live.
 

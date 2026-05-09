@@ -1,9 +1,13 @@
 /**
  * Validation Gate Middleware - Environment-based enforcement (ADR-003)
  * @module lib/utils/validation
+ *
+ * Backed by ArkType. Exposes a zod-style result shape (`{success, data, errors}`)
+ * so consumers can switch progressively from `Schema.safeParse(x)` →
+ * `safeValidate(Schema, x)` without rewriting every error-handling block.
  */
 
-import { type z, type ZodError } from 'zod';
+import { type } from 'arktype';
 import { PipelineError, ErrorCodes } from './errors.js';
 import { logger } from './logger.js';
 
@@ -14,28 +18,27 @@ export type ValidationResult<T> = {
   data?: T;
   errors?: ValidationError[];
   warnings?: string[];
-}
+};
 
 export type ValidationError = {
   path: string;
   message: string;
   code: string;
-}
+};
 
-/**
- * Formats Zod errors into a readable array
- */
-function formatZodErrors(error: ZodError): ValidationError[] {
-  return error.issues.map((issue) => ({
-    path: issue.path.join('.'),
-    message: issue.message,
-    code: issue.code,
+// ArkType `Type` instances are callable; we use the structural shape to keep
+// generics inference-friendly without depending on internal ArkType types.
+type ArkSchema<T = unknown> = ((data: unknown) => T | type.errors) & { infer: T };
+
+function formatArkErrors(errors: type.errors): ValidationError[] {
+  // type.errors is an iterable of ArkErrors; each has .path, .message, .code
+  return [...errors].map((issue: any) => ({
+    path: Array.isArray(issue.path) ? issue.path.join('.') : String(issue.path ?? ''),
+    message: typeof issue.message === 'string' ? issue.message : String(issue),
+    code: typeof issue.code === 'string' ? issue.code : 'invalid',
   }));
 }
 
-/**
- * Gets validation mode from environment
- */
 function getValidationMode(): ValidationMode {
   if (process.env.VALIDATION_MODE === 'strict') return 'strict';
   if (process.env.VALIDATION_MODE === 'permissive') return 'permissive';
@@ -45,11 +48,11 @@ function getValidationMode(): ValidationMode {
 /**
  * Validates data at a pipeline stage boundary.
  *
- * In strict mode (production): throws PipelineError on failure
- * In permissive mode (development): logs warning, returns data anyway
+ * In strict mode (production): throws PipelineError on failure.
+ * In permissive mode (development): logs warning, returns data anyway.
  */
-export function validateAtBoundary<T extends z.ZodTypeAny>(
-  schema: T,
+export function validateAtBoundary<T>(
+  schema: ArkSchema<T>,
   data: unknown,
   options: {
     stage: string;
@@ -57,15 +60,15 @@ export function validateAtBoundary<T extends z.ZodTypeAny>(
     mode?: ValidationMode;
     correlationId?: string;
   }
-): z.infer<T> {
+): T {
   const mode = options.mode ?? getValidationMode();
-  const result = schema.safeParse(data);
+  const result = schema(data);
 
-  if (result.success) {
-    return result.data;
+  if (!(result instanceof type.errors)) {
+    return result;
   }
 
-  const errors = formatZodErrors(result.error);
+  const errors = formatArkErrors(result);
   const errorSummary = errors.map((e) => `${e.path}: ${e.message}`).join('; ');
 
   if (mode === 'strict') {
@@ -79,64 +82,57 @@ export function validateAtBoundary<T extends z.ZodTypeAny>(
     });
   }
 
-  // Permissive mode: log and continue
-  logger.warn(`Validation warning in ${options.stage}`, {
-    errors,
-    mode: 'permissive',
-  });
-
-  // Return the original data (unsafe but permissive)
-  return data;
+  logger.warn(`Validation warning in ${options.stage}`, { errors, mode: 'permissive' });
+  return data as T;
 }
 
 /**
- * Safe validation that never throws - returns result object
+ * Safe validation that never throws — returns result object.
  */
-export function safeValidate<T extends z.ZodTypeAny>(
-  schema: T,
+export function safeValidate<T>(
+  schema: ArkSchema<T>,
   data: unknown
-): ValidationResult<z.infer<T>> {
-  const result = schema.safeParse(data);
-
-  if (result.success) {
-    return { success: true, data: result.data };
+): ValidationResult<T> {
+  const result = schema(data);
+  if (!(result instanceof type.errors)) {
+    return { success: true, data: result };
   }
-
-  return {
-    success: false,
-    errors: formatZodErrors(result.error),
-  };
+  return { success: false, errors: formatArkErrors(result) };
 }
 
 /**
- * Validates and provides default values for missing fields
+ * Validates and provides default values for missing fields.
  */
-export function validateWithDefaults<T extends z.ZodTypeAny>(
-  schema: T,
+export function validateWithDefaults<T>(
+  schema: ArkSchema<T>,
   data: unknown,
-  defaults: Partial<z.infer<T>>
-): z.infer<T> {
+  defaults: Partial<T>
+): T {
   const merged = { ...defaults, ...(data as Record<string, unknown>) };
-  return schema.parse(merged);
+  const result = schema(merged);
+  if (result instanceof type.errors) {
+    throw new Error(`Validation failed: ${result.summary}`);
+  }
+  return result;
 }
 
 /**
- * Batch validates multiple items, collecting all errors
+ * Batch validates multiple items, collecting all errors.
  */
-export function batchValidate<T extends z.ZodTypeAny>(
-  schema: T,
+export function batchValidate<T>(
+  schema: ArkSchema<T>,
   items: unknown[],
   options: { stage: string }
-): { valid: Array<z.infer<T>>; invalid: Array<{ index: number; errors: ValidationError[] }> } {
-  const valid: Array<z.infer<T>> = [];
+): { valid: T[]; invalid: Array<{ index: number; errors: ValidationError[] }> } {
+  const valid: T[] = [];
   const invalid: Array<{ index: number; errors: ValidationError[] }> = [];
 
   for (const [index, item] of items.entries()) {
-    const result = schema.safeParse(item);
-    if (result.success) {
-      valid.push(result.data);
+    const result = schema(item);
+    if (result instanceof type.errors) {
+      invalid.push({ index, errors: formatArkErrors(result) });
     } else {
-      invalid.push({ index, errors: formatZodErrors(result.error) });
+      valid.push(result);
     }
   }
 

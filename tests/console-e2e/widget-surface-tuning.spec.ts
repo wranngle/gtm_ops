@@ -10,7 +10,7 @@
  * would silently flatten the dock-vs-playground nuance — this spec
  * catches that regression at the rendered DOM.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 // Reusable mock for the ElevenLabs embed script. The official script
 // loads from unpkg (network) and registers the custom element; in CI

@@ -42,7 +42,7 @@ CI runs `static`, `unit`, `console-e2e` jobs in `.github/workflows/test.yml` and
 - [`tokens/`](tokens/) — machine-readable brand tokens (`tokens.css`, `tokens.json`, `tokens.tailwind.js`)
 - [`apps/ops-console/`](apps/ops-console/) — operator UI (static + live modes)
 - [`lib/`](lib/) — intake, enrichment, post-call, extraction, pdf, branding, audit, evaluation
-- [`server.js`](server.js), [`cli.js`](cli.js) — runtime entrypoints
+- [`server.ts`](server.ts), [`cli.ts`](cli.ts) — runtime entrypoints
 - n8n workflow library — canonical location is the `wranngle/n8n` repo; this repo no longer carries a top-level `workflows/` directory
 - [`docs/references/`](docs/references/) — stack contracts encoded for agents
 - [`scripts/`](scripts/) — lint and validation tooling

@@ -49,7 +49,7 @@ setup steps and `gtm_ops/.github/workflows/test.yml` for CI gates.
 bun run start
 ```
 
-`server.js` exposes `/api/*` and serves this directory's static files.
+`server.ts` exposes `/api/*` and serves this directory's static files.
 Useful when you need long-running streams, native binary deps, or
 big-memory PDF rendering that Pages Functions can't easily host.
 

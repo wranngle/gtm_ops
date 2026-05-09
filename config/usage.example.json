@@ -1,5 +1,5 @@
 {
-  "_comment": "usage.example.json — synthetic placeholder for the gitignored config/usage.db SQLite database. Schema is auto-created by lib/usage.js on first run. Logs per-event usage for billing/analytics.",
+  "_comment": "usage.example.json — synthetic placeholder for the gitignored config/usage.db SQLite database. Schema is auto-created by lib/usage.ts on first run. Logs per-event usage for billing/analytics.",
   "_db_path": "config/usage.db",
   "schema": {
     "statements": [

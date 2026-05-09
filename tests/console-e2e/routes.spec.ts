@@ -2,7 +2,7 @@
  * Per-route surface tests: every nav target renders, has a unique title,
  * and reports zero serious/critical axe-core violations.
  */
-import { test, expect, seriousAxeViolations } from './_helpers.js';
+import { test, expect, seriousAxeViolations } from './helpers.js';
 
 const ROUTES = [
   { id: 'home',      label: 'Mission Control', titleHint: /Mission Control/i },

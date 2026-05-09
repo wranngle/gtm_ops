@@ -2,7 +2,7 @@
  * Unit tests for lib/collections.ts — keyed-collection utilities
  * (`{ byId, order, count }` shape with O(1) lookup + preserved order).
  * The module had no test file. These helpers are used through the
- * Schema v2 pipeline (extract.js, template_context.js, etc.) — a
+ * Schema v2 pipeline (extract.js, template-context.js, etc.) — a
  * regression that drops the order array would silently change
  * iteration order in proposal templates and PDFs.
  */
