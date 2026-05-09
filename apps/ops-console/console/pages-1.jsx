@@ -1428,20 +1428,13 @@ function IntakeAgentPanel({ company }) {
       </div>
       {open && (
         <div style={{flex:1, padding:0, minHeight:0, display:'flex', flexDirection:'column'}}>
+          {/* surface="pipeline_intake" pulls voice/text-only/dismissible
+              + the lead-aware first message out of agents-registry.js;
+              the per-agent `widget` labels (Talk to Sarah / Sarah is
+              listening / etc.) come along for free. */}
           <window.ConvaiWidget
             agentKey="intake"
-            textOnly={false}
-            expanded={true}
-            dismissible={false}
-            actionText={widget.actionText}
-            startCallText={widget.startCallText}
-            endCallText={widget.endCallText}
-            expandText={widget.expandText}
-            listeningText={widget.listeningText}
-            speakingText={widget.speakingText}
-            firstMessage={reg.first_message}
-            prompt={reg.system_prompt}
-            voiceId={reg.voice_id}
+            surface="pipeline_intake"
             height="100%"
             width="100%"
           />
