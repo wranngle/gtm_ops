@@ -19,7 +19,6 @@ concurrency:
 jobs:
   arm:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       checks: read
@@ -38,6 +37,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PUPPETEER_SKIP_DOWNLOAD=true
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
           pr_number="${INPUT_PR_NUMBER:-${EVENT_PR_NUMBER:-}}"
           if [[ -z "$pr_number" ]]; then
             echo "No PR number supplied"; exit 0
@@ -75,6 +76,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PUPPETEER_SKIP_DOWNLOAD=true
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
           [[ -n "$PR_NUMBER" ]] || { echo "no PR number"; exit 0; }
           [[ "$IS_DRAFT" != "true" ]] || { echo "draft PR; skipping"; exit 0; }
 
