@@ -231,8 +231,9 @@ function installConvaiEscapeHatchGuard(el) {
 globalThis.ConvaiWidget = function ConvaiWidget({
   agentKey,
   agent_id: agentIdProp,
-  textOnly = true,
-  expanded = false,
+  surface,
+  textOnly,
+  expanded,
   variant,
   dismissible,
   actionText,
@@ -257,16 +258,25 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   const widgetRef = React.useRef(null);
   const reg = globalThis.AGENT_REGISTRY.byKey(agentKey);
   const widgetDefaults = reg?.widget || {};
+  // Per-surface tuning lives in agents-registry.js. Mount sites pass
+  // `surface="coach_dock" | "agent_playground" | "pipeline_intake" | "eval_lab"`;
+  // explicit props at the call site still win, the surface block only
+  // fills in the gaps.
+  const surfaceOv = (surface && globalThis.AGENT_REGISTRY.surfaceOverrides?.(agentKey, surface)) || {};
   const agent_id = agentIdProp || (reg && reg.agent_id);
-  const effectiveActionText = actionText ?? widgetDefaults.actionText;
-  const effectiveStartCallText = startCallText ?? widgetDefaults.startCallText;
-  const effectiveEndCallText = endCallText ?? widgetDefaults.endCallText;
-  const effectiveExpandText = expandText ?? widgetDefaults.expandText;
-  const effectiveListeningText = listeningText ?? widgetDefaults.listeningText;
-  const effectiveSpeakingText = speakingText ?? widgetDefaults.speakingText;
-  const effectiveFirstMessage = firstMessage ?? reg?.first_message;
+  const effectiveTextOnly = textOnly ?? surfaceOv.textOnly ?? true;
+  const effectiveExpanded = expanded ?? surfaceOv.expanded ?? false;
+  const effectiveDismissible = dismissible ?? surfaceOv.dismissible;
+  const effectiveActionText = actionText ?? surfaceOv.actionText ?? widgetDefaults.actionText;
+  const effectiveStartCallText = startCallText ?? surfaceOv.startCallText ?? widgetDefaults.startCallText;
+  const effectiveEndCallText = endCallText ?? surfaceOv.endCallText ?? widgetDefaults.endCallText;
+  const effectiveExpandText = expandText ?? surfaceOv.expandText ?? widgetDefaults.expandText;
+  const effectiveListeningText = listeningText ?? surfaceOv.listeningText ?? widgetDefaults.listeningText;
+  const effectiveSpeakingText = speakingText ?? surfaceOv.speakingText ?? widgetDefaults.speakingText;
+  const effectiveFirstMessage = firstMessage ?? surfaceOv.firstMessage ?? reg?.first_message;
   const effectivePrompt = prompt ?? reg?.system_prompt;
   const effectiveVoiceId = voiceId ?? reg?.voice_id;
+  const effectiveSyntaxHighlightTheme = syntaxHighlightTheme ?? surfaceOv.syntaxHighlightTheme;
   const [ready, setReady] = React.useState(isConvaiReady());
   const [unreachable, setUnreachable] = React.useState(false);
   const [configError, setConfigError] = React.useState(() => (
@@ -331,7 +341,8 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     if (agentKey) el.dataset.agentKey = agentKey;
     if (reg?.display_name) el.dataset.agentName = reg.display_name;
     if (reg?.role) el.dataset.agentRole = reg.role;
-    const displayVariant = variant || (expanded ? 'expanded' : '');
+    if (surface) el.dataset.surface = surface;
+    const displayVariant = variant || (effectiveExpanded ? 'expanded' : '');
     if (displayVariant) el.setAttribute('variant', displayVariant);
     const attrs = {
       'avatar-orb-color-1': reg && reg.avatar_color_1,
@@ -347,8 +358,8 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       'override-prompt': effectivePrompt,
       'override-voice-id': effectiveVoiceId,
       'markdown-link-allowed-hosts': markdownLinkAllowedHosts,
-      'syntax-highlight-theme': syntaxHighlightTheme,
-      dismissible: dismissible === true ? 'true' : undefined,
+      'syntax-highlight-theme': effectiveSyntaxHighlightTheme,
+      dismissible: effectiveDismissible === true ? 'true' : undefined,
       ...widgetAttrs,
     };
     for (const [name, value] of Object.entries(attrs)) {
@@ -441,14 +452,14 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       widgetRef.current = null;
     };
   }, [
-    agent_id, variant, expanded, dismissible, actionText, startCallText,
+    agent_id, variant, effectiveExpanded, effectiveDismissible, actionText, startCallText,
     endCallText, expandText, listeningText, speakingText, firstMessage,
     prompt, voiceId, effectiveActionText, effectiveStartCallText,
     effectiveEndCallText, effectiveExpandText, effectiveListeningText,
     effectiveSpeakingText, effectiveFirstMessage, effectivePrompt,
     effectiveVoiceId, serverLocation,
-    markdownLinkAllowedHosts, syntaxHighlightTheme, JSON.stringify(widgetAttrs),
-    height, width, ready, agentKey,
+    markdownLinkAllowedHosts, effectiveSyntaxHighlightTheme, JSON.stringify(widgetAttrs),
+    height, width, ready, agentKey, surface,
   ]);
 
   /* Push dynamic variables + override config every time context changes. */
@@ -458,12 +469,12 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     const context = globalThis.buildAgentContext(ctx);
     const dyn = { context };
     el.setAttribute('dynamic-variables', JSON.stringify(dyn));
-    if (textOnly) {
+    if (effectiveTextOnly) {
       el.setAttribute('override-config', JSON.stringify({
         conversation: { text_only: true },
       }));
     }
-  }, [ctx, textOnly]);
+  }, [ctx, effectiveTextOnly]);
 
   if (unreachable) {
     return React.createElement('div', {
@@ -582,21 +593,15 @@ globalThis.SalesCoachLauncher = function SalesCoachLauncher() {
           'aria-label': 'Close coach',
           type: 'button',
         }, React.createElement(globalThis.Icon.Close, { size: 14 })),
+        // Per-surface tuning (textOnly / dismissible / firstMessage /
+        // syntaxHighlightTheme) lives in agents-registry.js under
+        // sales_coach.surfaces.coach_dock. The dock is the only floating-
+        // dismissible voice surface; treating that as a registry value
+        // instead of a call-site value keeps the four mount sites
+        // (dock, playground, intake, eval) consistent.
         React.createElement(globalThis.ConvaiWidget, {
           agentKey: 'sales_coach',
-          textOnly: false,
-          expanded: true,
-          dismissible: false,
-          actionText: widget.actionText,
-          startCallText: widget.startCallText,
-          endCallText: widget.endCallText,
-          expandText: widget.expandText,
-          listeningText: widget.listeningText,
-          speakingText: widget.speakingText,
-          firstMessage: reg.first_message,
-          prompt: reg.system_prompt,
-          voiceId: reg.voice_id,
-          syntaxHighlightTheme: 'dark',
+          surface: 'coach_dock',
           height: '100%',
           width: '100%',
         })

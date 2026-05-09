@@ -435,14 +435,13 @@ function AgentsPage({ setRoute }) {
                   <span>tools <code className="mono">{(active.tools || []).length || 3} local</code></span>
                 </div>
               </div>
-              {/* Intentionally NO actionText/startCallText/listeningText/etc.
-                  overrides here — the ConvaiWidget wrapper falls through to
-                  the per-agent `widget` block in agents-registry.js, which
-                  is the single source of nuance ("Open Sales Coach" / "Sarah
-                  is listening" / "Start coaching session" / etc). Generic
-                  overrides at this call site silently flattened every
-                  agent's tuned voice into "Talk to X / Start agent session"
-                  and broke the ElevenLabs widget contract. */}
+              {/* surface="agent_playground" pulls textOnly + expanded +
+                  dismissible + theme + the playground-specific
+                  firstMessage out of agents-registry.js#surfaces, where
+                  the per-agent `widget` labels still apply. Generic
+                  overrides at this call site historically flattened every
+                  agent's tuned voice into "Talk to X / Start agent
+                  session" and broke the ElevenLabs widget contract. */}
               {/* key forces a clean remount on agent switch so each agent
                   gets its own ConvaiWidget instance with its own ready/
                   configError state — without it, prop changes alone left
@@ -452,10 +451,7 @@ function AgentsPage({ setRoute }) {
               <window.ConvaiWidget
                 key={active.key}
                 agentKey={active.key}
-                textOnly={true}
-                expanded={true}
-                dismissible={false}
-                syntaxHighlightTheme="dark"
+                surface="agent_playground"
                 height="100%"
                 width="100%"
               />

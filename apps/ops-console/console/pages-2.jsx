@@ -1580,19 +1580,16 @@ function EvalsPage({ setRoute }) {
                   </span>
                 </div>
               )}
+              {/* surface="eval_lab" pulls the regression labels +
+                  text-only mode out of agents-registry.js#surfaces.
+                  The per-run `firstMessage` is still call-site-driven
+                  because it interpolates the active scenario id; the
+                  surface block's firstMessage is the no-run-loaded
+                  default. */}
               <window.ConvaiWidget
                 agentKey={activeAgentKey}
-                textOnly={true}
-                expanded={true}
-                dismissible={false}
-                actionText="Probe regression"
-                startCallText="Start eval call"
-                endCallText="End eval call"
-                expandText="Open eval agent"
-                listeningText="Listening for eval evidence"
-                speakingText="Agent explaining run"
+                surface="eval_lab"
                 firstMessage={`Review eval run ${activeRun?.scenario_id || activeId}. Focus on failed axes and propose the smallest prompt or tool fix.`}
-                syntaxHighlightTheme="dark"
                 height="100%"
                 width="100%"
               />

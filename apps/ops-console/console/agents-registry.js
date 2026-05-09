@@ -2,6 +2,12 @@
    Agents registry — single source of truth for ElevenLabs agents
    wired into the GTM Ops console. Agent IDs are public embed IDs;
    they're safe in client code. Edit here to add/remove agents.
+
+   Each agent declares a `surfaces` map keyed by mount surface
+   (coach_dock | agent_playground | pipeline_intake | eval_lab).
+   Mount sites pass `surface="<key>"` to <ConvaiWidget>; the widget
+   wrapper merges the matching surface block over the agent defaults
+   so per-surface tuning lives here, not at the call site.
    ============================================================ */
 
 globalThis.AGENT_REGISTRY = (function () {
@@ -50,6 +56,36 @@ globalThis.AGENT_REGISTRY = (function () {
         listeningText: 'Listening to GTM context',
         speakingText: 'Sales Coach responding',
       },
+      surfaces: {
+        coach_dock: {
+          textOnly: false,
+          expanded: true,
+          dismissible: true,
+          syntaxHighlightTheme: 'dark',
+          firstMessage:
+            'Coach is docked. I can pressure-test the active route, role-play the prospect on the selected deal, or drill the latest call. What do we work on?',
+        },
+        agent_playground: {
+          textOnly: true,
+          expanded: true,
+          dismissible: false,
+          syntaxHighlightTheme: 'dark',
+          firstMessage:
+            'Sales Coach playground. Operator is admin-tuning my prompt, voice, tools, or context. Reply tersely; ask which axis they want to probe.',
+        },
+        eval_lab: {
+          textOnly: true,
+          expanded: true,
+          dismissible: false,
+          syntaxHighlightTheme: 'dark',
+          actionText: 'Probe regression',
+          startCallText: 'Start eval call',
+          endCallText: 'End eval call',
+          expandText: 'Open eval agent',
+          listeningText: 'Listening for eval evidence',
+          speakingText: 'Agent explaining run',
+        },
+      },
     },
     {
       key: 'intake',
@@ -95,6 +131,35 @@ globalThis.AGENT_REGISTRY = (function () {
         listeningText: 'Sarah is listening',
         speakingText: 'Sarah is speaking',
       },
+      surfaces: {
+        pipeline_intake: {
+          textOnly: false,
+          expanded: true,
+          dismissible: false,
+          firstMessage:
+            'Hi, this is Sarah. I have the selected lead loaded. Tell me what brought them in and I will qualify, capture pain + budget, and set up the SMS/email handoff.',
+        },
+        agent_playground: {
+          textOnly: true,
+          expanded: true,
+          dismissible: false,
+          syntaxHighlightTheme: 'dark',
+          firstMessage:
+            'Sarah intake playground. Operator is admin-tuning my qualification flow. Walk me through which step you want to probe — discovery, urgency, budget, or handoff.',
+        },
+        eval_lab: {
+          textOnly: true,
+          expanded: true,
+          dismissible: false,
+          syntaxHighlightTheme: 'dark',
+          actionText: 'Probe regression',
+          startCallText: 'Start eval call',
+          endCallText: 'End eval call',
+          expandText: 'Open eval agent',
+          listeningText: 'Listening for eval evidence',
+          speakingText: 'Agent explaining run',
+        },
+      },
     },
     {
       key: 'dev_test',
@@ -107,11 +172,29 @@ globalThis.AGENT_REGISTRY = (function () {
       avatar_color_1: '#22C55E',
       avatar_color_2: '#0EA5E9',
       capabilities: ['QA harness', 'Client-data probe'],
+      surfaces: {
+        agent_playground: {
+          textOnly: true,
+          expanded: true,
+          dismissible: false,
+          syntaxHighlightTheme: 'dark',
+          firstMessage:
+            'Client-data QA harness. Probing dynamic-variable passthrough. Echo the injected context shape so the operator can verify the wiring.',
+        },
+      },
     },
   ];
 
+  // Mount-site keys consumed by <ConvaiWidget surface="...">. Anything
+  // not listed here is treated as an unknown surface (logged in dev).
+  const SURFACE_KEYS = ['coach_dock', 'agent_playground', 'pipeline_intake', 'eval_lab'];
+
   function byKey(k) { return agents.find(a => a.key === k); }
   function bySurface(s) { return agents.filter(a => a.surface === s || a.surface === 'global'); }
+  function surfaceOverrides(agentKey, surfaceKey) {
+    const a = byKey(agentKey);
+    return (a && a.surfaces && a.surfaces[surfaceKey]) || null;
+  }
 
-  return { agents, byKey, bySurface };
+  return { agents, byKey, bySurface, surfaceOverrides, SURFACE_KEYS };
 })();
