@@ -1,9 +1,9 @@
 /**
- * Common Zod schemas shared across modules
+ * Common ArkType schemas shared across modules
  * @module lib/schemas/common.schema
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 
 // =============================================================================
 // NumericWithDisplay Pattern (ADR-002)
@@ -13,107 +13,81 @@ import { z } from 'zod';
  * Base schema for synchronized numeric/display pairs.
  * Every monetary value must use this pattern to prevent display desync bugs.
  */
-export const NumericWithDisplaySchema = z.object({
-  value: z.number(),
-  display: z.string(),
+export const NumericWithDisplaySchema = type({
+  value: 'number',
+  display: 'string',
 });
 
-export type NumericWithDisplay = z.infer<typeof NumericWithDisplaySchema>;
+export type NumericWithDisplay = typeof NumericWithDisplaySchema.infer;
 
 /**
- * Currency-specific display (e.g., "$1,234")
+ * Currency-specific display (e.g., "$1,234").
+ * Note: ArkType doesn't have schema-level defaults like zod's `.default('USD')`;
+ * callers should default `currency` themselves before validation if missing.
  */
-export const CurrencySchema = NumericWithDisplaySchema.extend({
-  currency: z.literal('USD').default('USD'),
+export const CurrencySchema = type({
+  value: 'number',
+  display: 'string',
+  'currency?': "'USD'",
 });
 
-export type Currency = z.infer<typeof CurrencySchema>;
+export type Currency = typeof CurrencySchema.infer;
 
 /**
  * Percentage display (e.g., "15%")
  */
 export const PercentageSchema = NumericWithDisplaySchema;
 
-export type Percentage = z.infer<typeof PercentageSchema>;
+export type Percentage = typeof PercentageSchema.infer;
 
 // =============================================================================
 // Period & Time Units
 // =============================================================================
 
-export const PeriodUnitSchema = z.enum([
-  'day',
-  'week',
-  'month',
-  'quarter',
-  'year',
-]);
+export const PeriodUnitSchema = type("'day' | 'week' | 'month' | 'quarter' | 'year'");
+export type PeriodUnit = typeof PeriodUnitSchema.infer;
 
-export type PeriodUnit = z.infer<typeof PeriodUnitSchema>;
-
-export const TimeUnitSchema = z.enum(['minutes', 'hours', 'days']);
-
-export type TimeUnit = z.infer<typeof TimeUnitSchema>;
+export const TimeUnitSchema = type("'minutes' | 'hours' | 'days'");
+export type TimeUnit = typeof TimeUnitSchema.infer;
 
 // =============================================================================
 // Status Types
 // =============================================================================
 
-export const StatusSchema = z.enum(['healthy', 'warning', 'critical']);
+export const StatusSchema = type("'healthy' | 'warning' | 'critical'");
+export type Status = typeof StatusSchema.infer;
 
-export type Status = z.infer<typeof StatusSchema>;
-
-export const MetricTypeSchema = z.enum([
-  'latency',
-  'error_rate',
-  'volume',
-  'complexity',
-  'cost',
-  'quality',
-]);
-
-export type MetricType = z.infer<typeof MetricTypeSchema>;
+export const MetricTypeSchema = type("'latency' | 'error_rate' | 'volume' | 'complexity' | 'cost' | 'quality'");
+export type MetricType = typeof MetricTypeSchema.infer;
 
 // =============================================================================
 // Complexity Tiers
 // =============================================================================
 
-export const ComplexityTierSchema = z.enum([
-  'simple',
-  'standard',
-  'moderate',
-  'complex',
-  'enterprise',
-]);
+export const ComplexityTierSchema = type("'simple' | 'standard' | 'moderate' | 'complex' | 'enterprise'");
+export type ComplexityTier = typeof ComplexityTierSchema.infer;
 
-export type ComplexityTier = z.infer<typeof ComplexityTierSchema>;
-
-export const PricingTierSchema = z.enum([
-  'starter',
-  'standard',
-  'advanced',
-  'premium',
-]);
-
-export type PricingTier = z.infer<typeof PricingTierSchema>;
+export const PricingTierSchema = type("'starter' | 'standard' | 'advanced' | 'premium'");
+export type PricingTier = typeof PricingTierSchema.infer;
 
 // =============================================================================
 // Evidence & Citations
 // =============================================================================
 
-export const EvidenceSchema = z.object({
-  type: z.string(),
-  summary: z.string(),
+export const EvidenceSchema = type({
+  type: 'string',
+  summary: 'string',
 });
 
-export type Evidence = z.infer<typeof EvidenceSchema>;
+export type Evidence = typeof EvidenceSchema.infer;
 
-export const CitationSchema = z.object({
-  id: z.number(),
-  url: z.string().url(),
-  type: z.enum(['api_docs', 'repository', 'other']),
+export const CitationSchema = type({
+  id: 'number',
+  url: 'string.url',
+  type: "'api_docs' | 'repository' | 'other'",
 });
 
-export type Citation = z.infer<typeof CitationSchema>;
+export type Citation = typeof CitationSchema.infer;
 
 // =============================================================================
 // Validation Helpers
@@ -131,7 +105,6 @@ export function validateDisplaySync(
   const cleanDisplay = display.replaceAll(/[$,%]/g, '').trim();
   const parsedValue = Number.parseFloat(cleanDisplay);
 
-  // Allow for formatting differences (commas, rounding)
   return Math.abs(parsedValue - value) < 0.01 ||
     Math.abs(parsedValue - Math.round(value)) < 1;
 }

@@ -24,7 +24,6 @@ module.exports = [
     rules: {
       'unicorn/filename-case': ['error', {
         cases: {
-          snakeCase: true,
           kebabCase: true,
         },
       }],

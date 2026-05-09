@@ -2,15 +2,15 @@
  * llm.ts - Consolidated LLM Service
  *
  * Combines functionality from:
- * - lib/model_config.js (model configuration, rate limits)
- * - lib/groq_adapter.js (Groq API adapter)
- * - lib/llm_executor.js (per-field LLM execution)
- * - lib/llm_batch_executor.js (batch narrative generation)
+ * - lib/model_config.ts (model configuration, rate limits)
+ * - lib/groq_adapter.ts (Groq API adapter)
+ * - lib/llm_executor.ts (per-field LLM execution)
+ * - lib/llm_batch_executor.ts (batch narrative generation)
  *
  * @module services/llm
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 import Mustache from 'mustache';
 import fs from 'fs';
 import path from 'path';
@@ -22,23 +22,23 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // SCHEMAS
 // ============================================================================
 
-export const ModelConfigSchema = z.object({
-  rpm: z.tuple([z.number(), z.number()]), // [free_tier, paid_tier]
-  tpm: z.tuple([z.number(), z.number()]),
-  rpd: z.tuple([z.number(), z.number()]),
-  category: z.string(),
-  tier: z.string()
+export const ModelConfigSchema = type({
+  rpm: ['number', 'number'],
+  tpm: ['number', 'number'],
+  rpd: ['number', 'number'],
+  category: 'string',
+  tier: 'string',
 });
 
-export const GroqModelConfigSchema = z.object({
-  rpm: z.number(),
-  rpd: z.number(),
-  context: z.number(),
-  tier: z.string()
+export const GroqModelConfigSchema = type({
+  rpm: 'number',
+  rpd: 'number',
+  context: 'number',
+  tier: 'string',
 });
 
-export type ModelConfig = z.infer<typeof ModelConfigSchema>;
-export type GroqModelConfig = z.infer<typeof GroqModelConfigSchema>;
+export type ModelConfig = typeof ModelConfigSchema.infer;
+export type GroqModelConfig = typeof GroqModelConfigSchema.infer;
 
 // ============================================================================
 // MODEL CONFIGURATION

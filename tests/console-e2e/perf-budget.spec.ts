@@ -7,7 +7,7 @@
  * size variation doesn't flake. Tightening means picking new ceilings
  * and committing them with the win.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 const BUDGETS = {
   // Total bytes pulled across all responses on a cold console load.

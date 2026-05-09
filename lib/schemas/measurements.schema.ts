@@ -3,9 +3,8 @@
  * @module lib/schemas/measurements.schema
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 import {
-  NumericWithDisplaySchema,
   StatusSchema,
   MetricTypeSchema,
   EvidenceSchema,
@@ -15,138 +14,133 @@ import {
 // Threshold Configuration
 // =============================================================================
 
-export const ThresholdSchema = z.object({
-  target: z.number().nullable(),
-  target_display: z.string().optional(),
-  healthy_max: z.number().optional(),
-  warning_max: z.number().optional(),
-  direction: z.enum(['lower_is_better', 'higher_is_better']).optional(),
+export const ThresholdSchema = type({
+  target: 'number | null',
+  'target_display?': 'string',
+  'healthy_max?': 'number',
+  'warning_max?': 'number',
+  'direction?': "'lower_is_better' | 'higher_is_better'",
 });
 
-export type Threshold = z.infer<typeof ThresholdSchema>;
+export type Threshold = typeof ThresholdSchema.infer;
 
 // =============================================================================
 // Measurement (Individual KPI)
 // =============================================================================
 
-export const MeasurementSchema = z.object({
-  id: z.string(),
-  name: z.string(),
+export const MeasurementSchema = type({
+  id: 'string',
+  name: 'string',
   metric_type: MetricTypeSchema,
-  value: z.number(),
-  unit: z.enum(['hours', 'minutes', 'days', 'percent', 'count', 'dollars']),
-  value_display: z.string(),
-  source: z.string().optional(),
-  evidence: z.array(EvidenceSchema).optional(),
-  threshold: ThresholdSchema.optional(),
-  status: StatusSchema.optional(),
-  status_reason: z.string().optional(),
+  value: 'number',
+  unit: "'hours' | 'minutes' | 'days' | 'percent' | 'count' | 'dollars'",
+  value_display: 'string',
+  'source?': 'string',
+  'evidence?': EvidenceSchema.array(),
+  'threshold?': ThresholdSchema,
+  'status?': StatusSchema,
+  'status_reason?': 'string',
 });
 
-export type Measurement = z.infer<typeof MeasurementSchema>;
+export type Measurement = typeof MeasurementSchema.infer;
 
 // =============================================================================
 // Bleed Assumption
 // =============================================================================
 
-export const BleedAssumptionSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  value: z.number(),
-  value_display: z.string(),
-  currency: z.literal('USD').optional().default('USD'),
-  period: z.string().optional().default('monthly'),
-  source: z.string().optional(),
+export const BleedAssumptionSchema = type({
+  id: 'string',
+  label: 'string',
+  value: 'number',
+  value_display: 'string',
+  currency: type("'USD'").default('USD'),
+  period: type('string').default('monthly'),
+  'source?': 'string',
 });
 
-export type BleedAssumption = z.infer<typeof BleedAssumptionSchema>;
+export type BleedAssumption = typeof BleedAssumptionSchema.infer;
 
 // =============================================================================
 // Bleed Calculation
 // =============================================================================
 
-export const BleedCalculationSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  formula: z.string(),
-  formula_display: z.string().optional(),
-  inputs: z.array(z.string()).optional(),
-  result: z.number(),
-  result_display: z.string(),
-  calculation_method: z.literal('deterministic_js').optional(),
-  time_source: z.string().optional(),
+export const BleedCalculationSchema = type({
+  id: 'string',
+  label: 'string',
+  formula: 'string',
+  'formula_display?': 'string',
+  'inputs?': 'string[]',
+  result: 'number',
+  result_display: 'string',
+  'calculation_method?': "'deterministic_js'",
+  'time_source?': 'string',
 });
 
-export type BleedCalculation = z.infer<typeof BleedCalculationSchema>;
+export type BleedCalculation = typeof BleedCalculationSchema.infer;
 
 // =============================================================================
 // Bleed Total (The Critical Number)
 // =============================================================================
 
-export const BleedTotalSchema = z.object({
-  value: z.number().nonnegative(),
-  currency: z.literal('USD').default('USD'),
-  period: z.enum(['day', 'week', 'month', 'year']).default('month'),
-  display: z.string(),
-  calculation_method: z.literal('deterministic_js').optional(),
+export const BleedTotalSchema = type({
+  value: 'number >= 0',
+  currency: type("'USD'").default('USD'),
+  period: type("'day' | 'week' | 'month' | 'year'").default('month'),
+  display: 'string',
+  'calculation_method?': "'deterministic_js'",
 });
 
-export type BleedTotal = z.infer<typeof BleedTotalSchema>;
+export type BleedTotal = typeof BleedTotalSchema.infer;
 
 // =============================================================================
 // Bleed Input Validation (for sanity checks)
 // =============================================================================
 
-export const BleedInputsSchema = z.object({
-  volume_per_day: z.number().min(0).max(100_000),
-  days_per_month: z.number().min(1).max(31).default(22),
-  minutes_per_item: z.number().min(0).max(480), // Max 8 hours per item
-  hourly_rate: z.number().min(0).max(1000).default(75),
-}).refine(
-  (data) => {
-    // Sanity check: monthly bleed should be < $10M
-    const monthlyBleed = (data.volume_per_day * data.days_per_month * data.minutes_per_item / 60) * data.hourly_rate;
-    return monthlyBleed < 10_000_000;
-  },
-  {
-    message: 'Calculated bleed exceeds $10M/month - please verify inputs (likely units confusion)',
+export const BleedInputsSchema = type({
+  volume_per_day: '0 <= number <= 100000',
+  days_per_month: type('1 <= number <= 31').default(22),
+  minutes_per_item: '0 <= number <= 480',
+  hourly_rate: type('0 <= number <= 1000').default(75),
+}).narrow((data, ctx) => {
+  const monthlyBleed = (data.volume_per_day * data.days_per_month * data.minutes_per_item / 60) * data.hourly_rate;
+  if (monthlyBleed >= 10_000_000) {
+    return ctx.reject({
+      expected: 'monthly bleed < $10M',
+      actual: `${monthlyBleed} (likely units confusion)`,
+    });
   }
-);
+  return true;
+});
 
-export type BleedInputs = z.infer<typeof BleedInputsSchema>;
+export type BleedInputs = typeof BleedInputsSchema.infer;
 
 // =============================================================================
 // Complete Measurements Data
 // =============================================================================
 
-export const MeasurementsDataSchema = z.object({
-  // Schema v2: Keyed collection for O(1) lookup
-  metrics: z.object({
-    count: z.number().default(0),
-    byId: z.record(z.string(), MeasurementSchema).default({}),
-  }).optional(),
-
-  // Legacy array format (backward compatibility)
-  measurements: z.array(MeasurementSchema).optional(),
-
-  // Bleed cost data
-  bleed_assumptions: z.array(BleedAssumptionSchema).optional(),
-  bleed_calculations: z.array(BleedCalculationSchema).optional(),
-  bleed_total: BleedTotalSchema.optional(),
+export const MeasurementsDataSchema = type({
+  'metrics?': type({
+    count: type('number').default(0),
+    byId: type('Record<string, unknown>').default(() => ({})),
+  }),
+  'measurements?': MeasurementSchema.array(),
+  'bleed_assumptions?': BleedAssumptionSchema.array(),
+  'bleed_calculations?': BleedCalculationSchema.array(),
+  'bleed_total?': BleedTotalSchema,
 });
 
-export type MeasurementsData = z.infer<typeof MeasurementsDataSchema>;
+export type MeasurementsData = typeof MeasurementsDataSchema.infer;
 
 // =============================================================================
 // Bleed Validation Gate Result
 // =============================================================================
 
-export const BleedValidationResultSchema = z.object({
-  valid: z.boolean(),
-  inputs: BleedInputsSchema.optional(),
-  calculated_monthly_bleed: z.number().optional(),
-  warnings: z.array(z.string()).optional(),
-  errors: z.array(z.string()).optional(),
+export const BleedValidationResultSchema = type({
+  valid: 'boolean',
+  'inputs?': BleedInputsSchema,
+  'calculated_monthly_bleed?': 'number',
+  'warnings?': 'string[]',
+  'errors?': 'string[]',
 });
 
-export type BleedValidationResult = z.infer<typeof BleedValidationResultSchema>;
+export type BleedValidationResult = typeof BleedValidationResultSchema.infer;

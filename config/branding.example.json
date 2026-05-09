@@ -1,5 +1,5 @@
 {
-  "_comment": "branding.example.json — synthetic placeholder for the gitignored config/branding.db SQLite database. Schema is auto-created by lib/branding.js on first run; this file shows the shape with 1 sample row per table.",
+  "_comment": "branding.example.json — synthetic placeholder for the gitignored config/branding.db SQLite database. Schema is auto-created by lib/branding.ts on first run; this file shows the shape with 1 sample row per table.",
   "_db_path": "config/branding.db",
   "schema": {
     "statements": [

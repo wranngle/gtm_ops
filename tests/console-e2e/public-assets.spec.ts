@@ -3,7 +3,7 @@
  * and og:image / twitter:image referencing a raster format that
  * social link previewers actually accept.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 test('landing og:image is a PNG (Twitter/X rejects SVG og:images)', async ({ page }) => {
   await page.goto('/');

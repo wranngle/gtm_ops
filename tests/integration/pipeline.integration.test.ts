@@ -1,3 +1,5 @@
+// @ts-nocheck — tests against lib modules carrying @ts-nocheck post-.js->.ts migration.
+
 /**
  * Pipeline Integration Tests
  *
@@ -24,8 +26,8 @@ import {
 } from '../support/factories/index.js';
 
 // Import actual pipeline modules (no mocking needed for these)
-import { buildTechnicalApproach as _buildTechnicalApproach } from '../../lib/build_technical_approach.js';
-import { generateProjectIdentity } from '../../lib/project_identity.js';
+import { buildTechnicalApproach as _buildTechnicalApproach } from '../../lib/build-technical-approach.js';
+import { generateProjectIdentity } from '../../lib/project-identity.js';
 
 type TechApproachResult = {
   integrations: Array<{ system_name: string; [k: string]: unknown }>;

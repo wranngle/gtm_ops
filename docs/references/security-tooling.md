@@ -7,7 +7,7 @@ operators don't have to re-derive what runs where.
 ## RBAC coverage lint
 
 `bash scripts/lint-rbac-coverage.sh` — fails CI when a route in
-`server.js` is missing `requireRole(...)`. Wired into the
+`server.ts` is missing `requireRole(...)`. Wired into the
 `static checks` job in `.github/workflows/test.yml`.
 
 What it flags:
@@ -27,7 +27,7 @@ matching any prefix (e.g. ad-hoc reports) are still a per-route policy
 decision. Edit `sensitive_get_prefix_re` when the API grows.
 
 Tests: `tests/unit/lint-rbac-coverage.test.ts` (13 cases including a
-smoke check that real `server.js` passes).
+smoke check that real `server.ts` passes).
 
 ## Audit hash chain CLI
 
@@ -47,8 +47,8 @@ scripts. Source: `scripts/audit-verify.mjs`. Tests:
 
 ## Audit metadata redaction
 
-`AuditLogger.log()` in `lib/audit.js` runs every metadata payload
-through `redactSecretsDeep()` (from `lib/security.js`) before both the
+`AuditLogger.log()` in `lib/audit.ts` runs every metadata payload
+through `redactSecretsDeep()` (from `lib/security.ts`) before both the
 hash computation and the SQLite INSERT. The redacted shape is what
 gets persisted, hashed, and round-tripped through `verifyIntegrity`,
 so `audit:verify` continues to report the chain as intact after
@@ -56,7 +56,7 @@ redaction.
 
 Patterns caught: Gemini, Groq, Anthropic, xAI, Stripe (live + test),
 OpenAI, GitHub PATs, Slack tokens, AWS access key IDs. Source list is
-maintained in `lib/security.js#maskApiKeysInText`. Adding a new
+maintained in `lib/security.ts#maskApiKeysInText`. Adding a new
 pattern requires no audit-side change — `redactSecretsDeep` walks
 arbitrary JSON-shaped values and applies the masker to every string.
 
@@ -66,7 +66,7 @@ chain integrity).
 
 ## Dev auth shim
 
-`lib/rbac.js#resolveDevAuthRole(headers, env)` is the pure function
+`lib/rbac.ts#resolveDevAuthRole(headers, env)` is the pure function
 that resolves the effective role for an inbound request. Resolution
 order:
 
@@ -83,7 +83,7 @@ one-shot `console.warn` listing the valid set. This prevents the
 "every request is INVALID_ROLE" footgun when an operator typos the
 env var (the prior shape that broke #105).
 
-`server.js` calls `resolveDevAuthRole` once per request and stores
+`server.ts` calls `resolveDevAuthRole` once per request and stores
 the result on `req.user_role`. `requireRole(...)` checks the same
 field; any future real-auth flow (OAuth, JWT, session cookie) only
 needs to populate `req.user_role` before the route handlers run.
@@ -107,7 +107,7 @@ modern Reporting API array into a single grep-friendly line. Tests:
 
 ## Express response headers
 
-`lib/security.js#securityHeadersMiddleware` is wired in front of
+`lib/security.ts#securityHeadersMiddleware` is wired in front of
 every Express response. It mirrors the static-deploy `_headers`
 contract from `apps/ops-console/_headers`:
 
@@ -148,7 +148,7 @@ typecheck`, and `bun run test:run`.
 
 ## Adding a new sensitive route
 
-When you add a new mutation or sensitive read route to `server.js`:
+When you add a new mutation or sensitive read route to `server.ts`:
 
 1. Apply `requireRole(...)` as the first middleware after the path
    string. Use `Role.OWNER, Role.ADMIN` for workspace-config and

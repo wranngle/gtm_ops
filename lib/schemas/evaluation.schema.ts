@@ -1,355 +1,231 @@
 /**
  * Evaluation Schema - Pipeline evaluation runs and scoring
  * @module lib/schemas/evaluation.schema
- *
- * Defines structures for:
- * - Evaluation runs (masked input → pipeline output → comparison)
- * - Multi-dimensional scoring
- * - Flaw pattern detection
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 
 // =============================================================================
 // Scoring Dimensions
 // =============================================================================
 
-/**
- * Individual dimension score with rationale
- */
-export const DimensionScoreSchema = z.object({
-  dimension: z.enum([
-    'tier_match',
-    'integration_coverage',
-    'agent_type_alignment',
-    'pricing_reasonableness',
-    'timeline_realism',
-    'feature_coverage',
-  ]),
-  score: z.number().min(0).max(1), // 0.0 to 1.0
-  weight: z.number().min(0).max(1), // Weight for aggregate
-  weighted_score: z.number(), // score * weight
-  rationale: z.string(), // Human-readable explanation
-  details: z.record(z.unknown()).optional(), // Dimension-specific data
+export const DimensionScoreSchema = type({
+  dimension:
+    "'tier_match' | 'integration_coverage' | 'agent_type_alignment' | 'pricing_reasonableness' | 'timeline_realism' | 'feature_coverage'",
+  score: '0 <= number <= 1',
+  weight: '0 <= number <= 1',
+  weighted_score: 'number',
+  rationale: 'string',
+  'details?': 'Record<string, unknown>',
 });
 
-export type DimensionScore = z.infer<typeof DimensionScoreSchema>;
+export type DimensionScore = typeof DimensionScoreSchema.infer;
 
-/**
- * Complete scoring result for an evaluation
- */
-export const EvaluationScoresSchema = z.object({
-  // Individual dimensions
-  dimensions: z.array(DimensionScoreSchema),
-
-  // Aggregate score (0-100)
-  aggregate_score: z.number().min(0).max(100),
-
-  // Summary
-  summary: z.string(), // e.g., "Strong tier match, weak pricing accuracy"
-
-  // Comparison data used for scoring
-  comparison_data: z.object({
-    pipeline_tier: z.string().optional(),
-    ground_truth_tier: z.string().optional(),
-    pipeline_integrations: z.array(z.string()).optional(),
-    ground_truth_integrations: z.array(z.string()).optional(),
-    pipeline_price: z.number().optional(),
-    ground_truth_price: z.number().optional(),
-    pipeline_timeline_weeks: z.number().optional(),
-    ground_truth_timeline_weeks: z.number().optional(),
-  }).optional(),
+export const EvaluationScoresSchema = type({
+  dimensions: DimensionScoreSchema.array(),
+  aggregate_score: '0 <= number <= 100',
+  summary: 'string',
+  'comparison_data?': type({
+    'pipeline_tier?': 'string',
+    'ground_truth_tier?': 'string',
+    'pipeline_integrations?': 'string[]',
+    'ground_truth_integrations?': 'string[]',
+    'pipeline_price?': 'number',
+    'ground_truth_price?': 'number',
+    'pipeline_timeline_weeks?': 'number',
+    'ground_truth_timeline_weeks?': 'number',
+  }),
 });
 
-export type EvaluationScores = z.infer<typeof EvaluationScoresSchema>;
+export type EvaluationScores = typeof EvaluationScoresSchema.infer;
 
 // =============================================================================
 // Evaluation Run
 // =============================================================================
 
-/**
- * Status of an evaluation run
- */
-export const EvaluationStatusSchema = z.enum([
-  'pending',    // Created but not executed
-  'running',    // Pipeline executing
-  'completed',  // Successfully finished
-  'failed',     // Pipeline error
-  'skipped',    // Skipped (e.g., holdout)
-]);
+export const EvaluationStatusSchema = type(
+  "'pending' | 'running' | 'completed' | 'failed' | 'skipped'",
+);
 
-export type EvaluationStatus = z.infer<typeof EvaluationStatusSchema>;
+export type EvaluationStatus = typeof EvaluationStatusSchema.infer;
 
-/**
- * Flaw codes detected in an evaluation
- */
-export const FlawCodeSchema = z.enum([
-  'TIER_UNDERESTIMATE',
-  'TIER_OVERESTIMATE',
-  'MISSING_INTEGRATION',
-  'EXTRA_INTEGRATION',
-  'PRICE_TOO_HIGH',
-  'PRICE_TOO_LOW',
-  'TIMELINE_OPTIMISTIC',
-  'TIMELINE_PESSIMISTIC',
-  'ROI_INFLATED',
-  'ROI_CONSERVATIVE',
-  'AGENT_TYPE_MISMATCH',
-  'FEATURE_GAP',
-]);
+export const FlawCodeSchema = type(
+  "'TIER_UNDERESTIMATE' | 'TIER_OVERESTIMATE' | 'MISSING_INTEGRATION' | 'EXTRA_INTEGRATION' | 'PRICE_TOO_HIGH' | 'PRICE_TOO_LOW' | 'TIMELINE_OPTIMISTIC' | 'TIMELINE_PESSIMISTIC' | 'ROI_INFLATED' | 'ROI_CONSERVATIVE' | 'AGENT_TYPE_MISMATCH' | 'FEATURE_GAP'",
+);
 
-export type FlawCode = z.infer<typeof FlawCodeSchema>;
+export type FlawCode = typeof FlawCodeSchema.infer;
 
-/**
- * A single evaluation run
- */
-export const EvaluationRunSchema = z.object({
-  // Identity
-  id: z.string().uuid(),
-  case_study_id: z.string(),
-
-  // Version tracking
-  pipeline_version: z.string(), // Git SHA or semver
-  schema_version: z.string().default('1.0.0'),
-
-  // Execution state
+export const EvaluationRunSchema = type({
+  id: 'string.uuid',
+  case_study_id: 'string',
+  pipeline_version: 'string',
+  schema_version: type('string').default('1.0.0'),
   status: EvaluationStatusSchema,
-  error_message: z.string().optional(),
-
-  // Input (masked intake)
-  input_json: z.record(z.unknown()), // The masked intake fed to pipeline
-
-  // Output (pipeline result)
-  output_json: z.record(z.unknown()).optional(), // Full pipeline output
-
-  // Scoring
-  scores: EvaluationScoresSchema.optional(),
-
-  // Detected flaws
-  flaws_detected: z.array(FlawCodeSchema).default([]),
-
-  // Timing
-  run_at: z.string(), // ISO timestamp when run started
-  completed_at: z.string().optional(), // ISO timestamp when finished
-  duration_ms: z.number().optional(), // Execution time
-
-  // Audit
-  triggered_by: z.enum(['manual', 'batch', 'ci']).default('manual'),
+  'error_message?': 'string',
+  input_json: 'Record<string, unknown>',
+  'output_json?': 'Record<string, unknown>',
+  'scores?': EvaluationScoresSchema,
+  flaws_detected: type(FlawCodeSchema, '[]').default(() => []),
+  run_at: 'string',
+  'completed_at?': 'string',
+  'duration_ms?': 'number',
+  triggered_by: type("'manual' | 'batch' | 'ci'").default('manual'),
 });
 
-export type EvaluationRun = z.infer<typeof EvaluationRunSchema>;
+export type EvaluationRun = typeof EvaluationRunSchema.infer;
 
-/**
- * Schema for creating a new evaluation run
- */
-export const CreateEvaluationRunSchema = EvaluationRunSchema.omit({
-  id: true,
-  run_at: true,
-  status: true,
-}).extend({
-  status: EvaluationStatusSchema.optional().default('pending'),
+export const CreateEvaluationRunSchema = type({
+  case_study_id: 'string',
+  pipeline_version: 'string',
+  schema_version: type('string').default('1.0.0'),
+  status: EvaluationStatusSchema.default('pending'),
+  'error_message?': 'string',
+  input_json: 'Record<string, unknown>',
+  'output_json?': 'Record<string, unknown>',
+  'scores?': EvaluationScoresSchema,
+  flaws_detected: type(FlawCodeSchema, '[]').default(() => []),
+  'completed_at?': 'string',
+  'duration_ms?': 'number',
+  triggered_by: type("'manual' | 'batch' | 'ci'").default('manual'),
 });
 
-export type CreateEvaluationRun = z.infer<typeof CreateEvaluationRunSchema>;
+export type CreateEvaluationRun = typeof CreateEvaluationRunSchema.infer;
 
 // =============================================================================
 // Flaw Patterns
 // =============================================================================
 
-/**
- * Severity levels for flaw patterns
- */
-export const FlawSeveritySchema = z.enum(['low', 'medium', 'high', 'critical']);
+export const FlawSeveritySchema = type("'low' | 'medium' | 'high' | 'critical'");
+export type FlawSeverity = typeof FlawSeveritySchema.infer;
 
-export type FlawSeverity = z.infer<typeof FlawSeveritySchema>;
-
-/**
- * A detected pattern across multiple evaluations
- */
-export const FlawPatternSchema = z.object({
-  // Identity
-  id: z.string().uuid(),
+export const FlawPatternSchema = type({
+  id: 'string.uuid',
   pattern_code: FlawCodeSchema,
-
-  // Description
-  description: z.string(),
-  business_impact: z.string(), // Why this matters
-
-  // Frequency
-  affected_runs: z.array(z.string()), // Run IDs
-  total_evaluations: z.number(), // Denominator
-  frequency_percent: z.number(), // affected / total * 100
-
-  // Severity
+  description: 'string',
+  business_impact: 'string',
+  affected_runs: 'string[]',
+  total_evaluations: 'number',
+  frequency_percent: 'number',
   severity: FlawSeveritySchema,
-  severity_rationale: z.string(),
-
-  // Recommendations
-  recommendations: z.array(z.string()),
-  affected_code_paths: z.array(z.string()).optional(), // e.g., ["lib/research.js"]
-
-  // Tracking
-  first_seen: z.string(), // ISO timestamp
-  last_seen: z.string(), // ISO timestamp
-  status: z.enum(['active', 'investigating', 'fixed', 'wont_fix']).default('active'),
+  severity_rationale: 'string',
+  recommendations: 'string[]',
+  'affected_code_paths?': 'string[]',
+  first_seen: 'string',
+  last_seen: 'string',
+  status: type("'active' | 'investigating' | 'fixed' | 'wont_fix'").default('active'),
 });
 
-export type FlawPattern = z.infer<typeof FlawPatternSchema>;
+export type FlawPattern = typeof FlawPatternSchema.infer;
 
 // =============================================================================
 // Batch Evaluation
 // =============================================================================
 
-/**
- * Summary of a batch evaluation run
- */
-export const BatchEvaluationSummarySchema = z.object({
-  // Identity
-  batch_id: z.string().uuid(),
-
-  // Scope
-  total_cases: z.number(),
-  completed: z.number(),
-  failed: z.number(),
-  skipped: z.number(),
-
-  // Scores
-  mean_score: z.number().optional(),
-  median_score: z.number().optional(),
-  min_score: z.number().optional(),
-  max_score: z.number().optional(),
-  std_dev: z.number().optional(),
-
-  // Score distribution
-  score_distribution: z.object({
-    excellent: z.number(), // 80-100
-    good: z.number(),      // 60-79
-    fair: z.number(),      // 40-59
-    poor: z.number(),      // 0-39
-  }).optional(),
-
-  // Top flaws
-  top_flaws: z.array(z.object({
+export const BatchEvaluationSummarySchema = type({
+  batch_id: 'string.uuid',
+  total_cases: 'number',
+  completed: 'number',
+  failed: 'number',
+  skipped: 'number',
+  'mean_score?': 'number',
+  'median_score?': 'number',
+  'min_score?': 'number',
+  'max_score?': 'number',
+  'std_dev?': 'number',
+  'score_distribution?': type({
+    excellent: 'number',
+    good: 'number',
+    fair: 'number',
+    poor: 'number',
+  }),
+  'top_flaws?': type({
     code: FlawCodeSchema,
-    count: z.number(),
-    percent: z.number(),
-  })).optional(),
-
-  // Timing
-  started_at: z.string(),
-  completed_at: z.string().optional(),
-  total_duration_ms: z.number().optional(),
-
-  // Run IDs
-  run_ids: z.array(z.string()),
+    count: 'number',
+    percent: 'number',
+  }).array(),
+  started_at: 'string',
+  'completed_at?': 'string',
+  'total_duration_ms?': 'number',
+  run_ids: 'string[]',
 });
 
-export type BatchEvaluationSummary = z.infer<typeof BatchEvaluationSummarySchema>;
+export type BatchEvaluationSummary = typeof BatchEvaluationSummarySchema.infer;
 
 // =============================================================================
 // Scoring Configuration
 // =============================================================================
 
-/**
- * Configurable weights for scoring dimensions
- */
-export const ScoringWeightsSchema = z.object({
-  tier_match: z.number().default(0.2),
-  integration_coverage: z.number().default(0.25),
-  agent_type_alignment: z.number().default(0.15),
-  pricing_reasonableness: z.number().default(0.2),
-  timeline_realism: z.number().default(0.1),
-  feature_coverage: z.number().default(0.1),
-}).refine(
-  (weights) => {
-    const sum = Object.values(weights).reduce((a, b) => a + b, 0);
-    return Math.abs(sum - 1) < 0.001;
-  },
-  { message: 'Scoring weights must sum to 1.0' }
-);
-
-export type ScoringWeights = z.infer<typeof ScoringWeightsSchema>;
-
-/**
- * Thresholds for scoring dimensions
- */
-export const ScoringThresholdsSchema = z.object({
-  // Pricing reasonableness
-  pricing_exact_threshold: z.number().default(0.3), // Within 30% = 1.0
-  pricing_acceptable_threshold: z.number().default(0.5), // Within 50% = 0.5
-
-  // Timeline realism
-  timeline_exact_weeks: z.number().default(2), // Within 2 weeks = 1.0
-  timeline_acceptable_weeks: z.number().default(4), // Within 4 weeks = 0.5
-
-  // Pattern detection
-  pattern_min_frequency: z.number().default(0.3), // 30% to flag as pattern
-  pattern_min_samples: z.number().default(5), // Need at least 5 runs
+export const ScoringWeightsSchema = type({
+  tier_match: type('number').default(0.2),
+  integration_coverage: type('number').default(0.25),
+  agent_type_alignment: type('number').default(0.15),
+  pricing_reasonableness: type('number').default(0.2),
+  timeline_realism: type('number').default(0.1),
+  feature_coverage: type('number').default(0.1),
+}).narrow((weights, ctx) => {
+  const sum = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (Math.abs(sum - 1) >= 0.001) {
+    return ctx.reject({ expected: 'weights summing to 1.0', actual: String(sum) });
+  }
+  return true;
 });
 
-export type ScoringThresholds = z.infer<typeof ScoringThresholdsSchema>;
+export type ScoringWeights = typeof ScoringWeightsSchema.infer;
 
-/**
- * Complete scoring configuration
- */
-export const ScoringConfigSchema = z.object({
+export const ScoringThresholdsSchema = type({
+  pricing_exact_threshold: type('number').default(0.3),
+  pricing_acceptable_threshold: type('number').default(0.5),
+  timeline_exact_weeks: type('number').default(2),
+  timeline_acceptable_weeks: type('number').default(4),
+  pattern_min_frequency: type('number').default(0.3),
+  pattern_min_samples: type('number').default(5),
+});
+
+export type ScoringThresholds = typeof ScoringThresholdsSchema.infer;
+
+export const ScoringConfigSchema = type({
   weights: ScoringWeightsSchema,
   thresholds: ScoringThresholdsSchema,
 });
 
-export type ScoringConfig = z.infer<typeof ScoringConfigSchema>;
+export type ScoringConfig = typeof ScoringConfigSchema.infer;
 
 // =============================================================================
 // Validation Helpers
 // =============================================================================
 
-/**
- * Validates an evaluation run
- */
 export function validateEvaluationRun(data: unknown): {
   success: boolean;
   data?: EvaluationRun;
   errors?: string[];
 } {
-  const result = EvaluationRunSchema.safeParse(data);
-
-  if (result.success) {
-    return { success: true, data: result.data };
+  const result = EvaluationRunSchema(data);
+  if (!(result instanceof type.errors)) {
+    return { success: true, data: result };
   }
-
   return {
     success: false,
-    errors: result.error.issues.map(
-      (issue) => `${issue.path.join('.')}: ${issue.message}`
-    ),
+    errors: [...result].map((issue: any) =>
+      `${Array.isArray(issue.path) ? issue.path.join('.') : issue.path ?? ''}: ${issue.message ?? String(issue)}`),
   };
 }
 
-/**
- * Validates a flaw pattern
- */
 export function validateFlawPattern(data: unknown): {
   success: boolean;
   data?: FlawPattern;
   errors?: string[];
 } {
-  const result = FlawPatternSchema.safeParse(data);
-
-  if (result.success) {
-    return { success: true, data: result.data };
+  const result = FlawPatternSchema(data);
+  if (!(result instanceof type.errors)) {
+    return { success: true, data: result };
   }
-
   return {
     success: false,
-    errors: result.error.issues.map(
-      (issue) => `${issue.path.join('.')}: ${issue.message}`
-    ),
+    errors: [...result].map((issue: any) =>
+      `${Array.isArray(issue.path) ? issue.path.join('.') : issue.path ?? ''}: ${issue.message ?? String(issue)}`),
   };
 }
 
-/**
- * Default scoring configuration
- */
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   weights: {
     tier_match: 0.2,

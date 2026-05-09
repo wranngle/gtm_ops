@@ -1,3 +1,5 @@
+// @ts-nocheck — tests against lib modules carrying @ts-nocheck post-.js->.ts migration.
+
 /**
  * Feature Extraction Tests
  *
@@ -6,7 +8,7 @@
  * @priority P0 - Critical for evaluation scoring
  */
 import { describe, it, expect } from 'vitest';
-import { buildTechnicalApproach as _buildTechnicalApproach } from '../../../lib/build_technical_approach.js';
+import { buildTechnicalApproach as _buildTechnicalApproach } from '../../../lib/build-technical-approach.js';
 
 type TechApproachResult = {
   features: string[];

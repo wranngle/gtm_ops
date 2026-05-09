@@ -1,5 +1,5 @@
 // /api/branding — workspace branding (logo, colors, font).
-// D1-backed when schema is migrated (Phase 2.5: lib/branding.js:213
+// D1-backed when schema is migrated (Phase 2.5: lib/branding.ts:213
 // workspace_branding table); otherwise falls through to
 // fixtures/branding.json.
 //

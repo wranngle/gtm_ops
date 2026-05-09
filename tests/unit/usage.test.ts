@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/usage.js
+ * Unit Tests for lib/usage.ts
  *
  * Tests usage tracking functionality:
  * - Event tracking

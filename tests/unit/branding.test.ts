@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/branding.js
+ * Unit Tests for lib/branding.ts
  *
  * Tests branding and white-label functionality:
  * - Color validation and palette generation

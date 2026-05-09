@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/webhooks.js
+ * Unit Tests for lib/webhooks.ts
  *
  * Tests webhook functionality:
  * - CRUD operations

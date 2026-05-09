@@ -1,38 +1,34 @@
 /**
- * Schema Registry - Centralized Zod schema exports
+ * Schema Registry - Centralized ArkType schema exports
  * @module lib/schemas
  *
  * This module provides the single source of truth for all data contracts
  * in the unified presales pipeline. Every module boundary should validate
  * data using these schemas.
  *
- * ADR-001: Zod Schema Contracts
- * - 9 primary schemas defined for module boundaries
- * - All types derived via z.infer<> for single source of truth
+ * ADR-001: Schema Contracts (ported zod → arktype)
+ * - Primary schemas defined for module boundaries
+ * - All types derived via `typeof Schema.infer` for single source of truth
  * - Runtime validation prevents data corruption
  */
-
-// =============================================================================
-// Common Types (shared across all schemas)
-// =============================================================================
 
 // =============================================================================
 // Schema Registry Object (ADR-001)
 // =============================================================================
 
-import { type z } from 'zod';
+import { type } from 'arktype';
 import { IntakeSchema } from './intake.schema.js';
 import { MeasurementsDataSchema, BleedTotalSchema } from './measurements.schema.js';
 import { ResearchResultSchema, TierAssessmentSchema } from './research.schema.js';
 import { EstimateOutputSchema, MilestoneSchema, FinOpsSchema } from './estimate.schema.js';
 import { TransformContextSchema } from './transform.schema.js';
 import { ConfigSchema } from './config.schema.js';
-import { SalesStrategySchema } from './sales_strategy.schema.js';
+import { SalesStrategySchema } from './sales-strategy.schema.js';
 import { QuestionDatabaseSchema, LeadQualificationResultSchema, SystemsCatalogSchema } from './questionnaire.schema.js';
-import { CaseStudySchema } from './case_study.schema.js';
+import { CaseStudySchema } from './case-study.schema.js';
 import { EvaluationRunSchema, FlawPatternSchema, ScoringConfigSchema } from './evaluation.schema.js';
-import { BusinessProfileSchema } from './business_profile.schema.js';
-import { PersonProfileSchema } from './person_profile.schema.js';
+import { BusinessProfileSchema } from './business-profile.schema.js';
+import { PersonProfileSchema } from './person-profile.schema.js';
 
 // =============================================================================
 // Validation Utilities
@@ -259,7 +255,7 @@ export {
   type Scripts,
   type Objection,
   type ComplianceNote,
-} from './sales_strategy.schema.js';
+} from './sales-strategy.schema.js';
 
 // =============================================================================
 // 8. Questionnaire Schema (Intake assessment & lead qualification)
@@ -383,7 +379,7 @@ export {
   // Helpers
   validateCaseStudy,
   generateCaseStudyId,
-} from './case_study.schema.js';
+} from './case-study.schema.js';
 
 // =============================================================================
 // 10. Evaluation Schema (Pipeline evaluation runs and scoring)
@@ -444,7 +440,7 @@ export {
   type BusinessProfile,
   type CompanySizeSegment,
   type EnrichmentSource,
-} from './business_profile.schema.js';
+} from './business-profile.schema.js';
 
 // =============================================================================
 // 12. Person Profile Schema (Contact enrichment)
@@ -457,7 +453,7 @@ export {
   type PersonProfile,
   type PersonEnrichmentSource,
   type Seniority,
-} from './person_profile.schema.js';
+} from './person-profile.schema.js';
 
 /**
  * Central registry of all schemas for programmatic access.
@@ -520,51 +516,46 @@ export type ValidationResult<T> = {
 }
 
 /**
- * Validates data against a schema with environment-aware enforcement.
- *
- * @param schema - Zod schema to validate against
- * @param data - Data to validate
- * @param options - Validation options
- * @returns Validation result with typed data or errors
+ * Validates data against an ArkType schema with environment-aware enforcement.
  */
-export function validateAtBoundary<T extends z.ZodTypeAny>(
-  schema: T,
+type ArkSchema<T = unknown> = ((data: unknown) => T | type.errors) & { infer: T };
+
+export function validateAtBoundary<T>(
+  schema: ArkSchema<T>,
   data: unknown,
   options: {
     stage?: string;
     mode?: ValidationMode;
-  } = {}
-): ValidationResult<z.infer<T>> {
+  } = {},
+): ValidationResult<T> {
   const mode = options.mode ??
     (process.env.NODE_ENV === 'production' ? 'strict' : 'permissive');
 
-  const result = schema.safeParse(data);
+  const result = schema(data);
 
-  if (result.success) {
-    return { success: true, data: result.data };
+  if (!(result instanceof type.errors)) {
+    return { success: true, data: result };
   }
 
-  const errors = result.error.issues.map((issue) => ({
-    path: issue.path.join('.'),
-    message: issue.message,
-    code: issue.code,
+  const errors = [...result].map((issue: any) => ({
+    path: Array.isArray(issue.path) ? issue.path.join('.') : String(issue.path ?? ''),
+    message: typeof issue.message === 'string' ? issue.message : String(issue),
+    code: typeof issue.code === 'string' ? issue.code : 'invalid',
   }));
 
   if (mode === 'strict') {
     return { success: false, errors };
   }
 
-  // Permissive mode: log warnings but return data with defaults
   console.warn(
     `[VALIDATION WARNING] ${options.stage ?? 'unknown'}: ${errors.length} issues`,
-    errors
+    errors,
   );
 
-  // Try to return partial data
   return {
     success: false,
     errors,
     warnings: errors.map((e) => `${e.path}: ${e.message}`),
-    data, // Unsafe but permissive
+    data: data as T,
   };
 }

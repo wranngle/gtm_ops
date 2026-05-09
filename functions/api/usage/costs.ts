@@ -1,5 +1,5 @@
 // /api/usage/costs — cost breakdown by event_type.
-// D1-backed when schema is migrated (Phase 2.5: lib/usage.js:90
+// D1-backed when schema is migrated (Phase 2.5: lib/usage.ts:90
 // usage_events); otherwise falls through to fixtures/usage/costs.json.
 
 import costsFixture from '../../../apps/ops-console/fixtures/usage/costs.json';

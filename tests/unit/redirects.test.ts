@@ -42,7 +42,7 @@ describe('apps/ops-console/_redirects', () => {
 
   it('keeps the legacy /api/eval-runs alias to the fixture', () => {
     // Defensive: the UI briefly used /api/eval-runs before the canonical
-    // /api/eval/runs landed in server.js. The 302 alias is what keeps
+    // /api/eval/runs landed in server.ts. The 302 alias is what keeps
     // any deep link in the wild from 404'ing.
     expect(text).toMatch(/^\/api\/eval-runs\s+\/fixtures\/eval-runs\.json\s+302\b/m);
   });

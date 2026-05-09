@@ -3,7 +3,7 @@
  * dashboard lives inside /console so it inherits the shell, ElevenLabs lab,
  * command bridge, and operator context instead of acting like a bolted-on app.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 test.describe('/evaluation/ console bridge', () => {
   test('redirects into the native console Evals route', async ({ page }) => {

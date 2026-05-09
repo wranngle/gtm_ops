@@ -269,7 +269,7 @@ export type LightHealthPayload = {
 /**
  * Build the lightweight /api/health response payload. Pure function
  * so the contract can be pinned by unit tests without spinning up
- * an Express app or pulling server.js into the test process.
+ * an Express app or pulling server.ts into the test process.
  */
 export function buildLightHealthPayload(
   env: Record<string, string | undefined> = process.env,

@@ -2,7 +2,7 @@
 // scripts/audit-verify.mjs
 //
 // Walk the audit log hash chain and exit non-zero if any link breaks.
-// Wraps lib/audit.js#AuditLogger.verifyIntegrity so operators can run
+// Wraps lib/audit.ts#AuditLogger.verifyIntegrity so operators can run
 // the same check that the unit tests in tests/unit/audit.test.ts pin
 // against an offline copy of config/audit.db.
 //
@@ -19,7 +19,7 @@
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getAuditLogger } from '../lib/audit.js';
+import { getAuditLogger } from '../lib/audit.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');

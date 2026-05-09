@@ -8,6 +8,7 @@
         "@google/genai": "^1.0.0",
         "ajv": "^8.12.0",
         "ajv-formats": "^2.1.1",
+        "arktype": "2.1.29",
         "cors": "2.8.5",
         "dotenv": "^16.3.1",
         "eventsource": "^2.0.2",
@@ -19,7 +20,6 @@
         "sql.js": "^1.13.0",
         "sqlite3": "^6.0.1",
         "uuid": "^9.0.1",
-        "zod": "^3.22.4",
       },
       "devDependencies": {
         "@axe-core/playwright": "4.11.3",
@@ -31,7 +31,6 @@
         "@types/uuid": "^9.0.7",
         "@vitest/coverage-v8": "^4.0.17",
         "@vitest/ui": "^4.0.18",
-        "arktype": "2.1.29",
         "bun-types": "1.3.13",
         "eslint-config-xo-typescript": "^9.0.0",
         "tsx": "^4.7.0",

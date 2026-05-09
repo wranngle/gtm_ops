@@ -1,5 +1,5 @@
 // /api/sample — synthetic demo brief for the operator-console UI.
-// Local Express path: server.js:946 reads apps/ops-console/fixtures/sample.json
+// Local Express path: server.ts:946 reads apps/ops-console/fixtures/sample.json
 // or falls through to examples/*.json. On Pages we bundle the canonical
 // fixture as an import — single source of truth, no fs reads.
 

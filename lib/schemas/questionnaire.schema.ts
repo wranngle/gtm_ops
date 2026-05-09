@@ -1,114 +1,64 @@
 /**
  * Questionnaire Schema - Intake assessment questions and lead qualification
  * @module lib/schemas/questionnaire.schema
- *
- * This schema defines the structure for:
- * - Question registry (typed form fields)
- * - Validation rules (client & server side)
- * - Conditional display logic
- * - Lead qualification scoring
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 
 // =============================================================================
 // Field Types
 // =============================================================================
 
-export const FieldTypeSchema = z.enum([
-  'text',
-  'textarea',
-  'number',
-  'currency',
-  'select',
-  'multiselect',
-  'range',
-  'date',
-  'email',
-  'phone',
-]);
+export const FieldTypeSchema = type(
+  "'text' | 'textarea' | 'number' | 'currency' | 'select' | 'multiselect' | 'range' | 'date' | 'email' | 'phone'",
+);
 
-export type FieldType = z.infer<typeof FieldTypeSchema>;
+export type FieldType = typeof FieldTypeSchema.infer;
 
 // =============================================================================
 // Section Identifiers
 // =============================================================================
 
-export const QuestionSectionSchema = z.enum([
-  'A', // Client & Workflow Identity
-  'B', // Volume & Timing
-  'C', // Systems & Integration
-  'D', // Pain & Cost
-  'E', // Priority & Timeline
-  'F', // Lead Qualification
-]);
-
-export type QuestionSection = z.infer<typeof QuestionSectionSchema>;
+export const QuestionSectionSchema = type("'A' | 'B' | 'C' | 'D' | 'E' | 'F'");
+export type QuestionSection = typeof QuestionSectionSchema.infer;
 
 // =============================================================================
 // Validation Rules
 // =============================================================================
 
-export const ValidationRuleTypeSchema = z.enum([
-  'required',
-  'min',
-  'max',
-  'minLength',
-  'maxLength',
-  'pattern',
-  'oneOf',
-  'custom',
-]);
+export const ValidationRuleTypeSchema = type(
+  "'required' | 'min' | 'max' | 'minLength' | 'maxLength' | 'pattern' | 'oneOf' | 'custom'",
+);
 
-export type ValidationRuleType = z.infer<typeof ValidationRuleTypeSchema>;
+export type ValidationRuleType = typeof ValidationRuleTypeSchema.infer;
 
-export const ValidationRuleSchema = z.object({
+export const ValidationRuleSchema = type({
   type: ValidationRuleTypeSchema,
-  value: z.union([z.number(), z.string(), z.array(z.string())]).optional(),
-  message: z.string(),
+  'value?': 'number | string | string[]',
+  message: 'string',
 });
 
-export type ValidationRule = z.infer<typeof ValidationRuleSchema>;
+export type ValidationRule = typeof ValidationRuleSchema.infer;
 
 // =============================================================================
 // Conditional Display Logic
 // =============================================================================
 
-export const ConditionalOperatorSchema = z.enum([
-  '==',
-  '!=',
-  '>',
-  '<',
-  '>=',
-  '<=',
-  'in',
-  'not_in',
-  'not_empty',
-  'empty',
-]);
-
-export type ConditionalOperator = z.infer<typeof ConditionalOperatorSchema>;
-
-// Base condition for single field comparison
-export const SimpleConditionSchema = z.object({
-  field: z.string(),
-  operator: ConditionalOperatorSchema,
-  value: z.any().optional(),
-});
-
-export type SimpleCondition = z.infer<typeof SimpleConditionSchema>;
-
-// Recursive type for AND/OR conditions
-export const ConditionalRuleSchema: z.ZodType<ConditionalRule> = z.lazy(() =>
-  z.object({
-    show_when: z.union([
-      SimpleConditionSchema,
-      z.object({ and: z.array(ConditionalRuleSchema) }),
-      z.object({ or: z.array(ConditionalRuleSchema) }),
-    ]),
-  })
+export const ConditionalOperatorSchema = type(
+  "'==' | '!=' | '>' | '<' | '>=' | '<=' | 'in' | 'not_in' | 'not_empty' | 'empty'",
 );
 
+export type ConditionalOperator = typeof ConditionalOperatorSchema.infer;
+
+export const SimpleConditionSchema = type({
+  field: 'string',
+  operator: ConditionalOperatorSchema,
+  'value?': 'unknown',
+});
+
+export type SimpleCondition = typeof SimpleConditionSchema.infer;
+
+// Recursive ConditionalRule defined via interface (ArkType supports recursion via lazy thunk).
 export interface ConditionalRule {
   show_when:
     | SimpleCondition
@@ -116,377 +66,321 @@ export interface ConditionalRule {
     | { or: ConditionalRule[] };
 }
 
+const ConditionalRuleSchema = type({
+  show_when: 'unknown',
+}) as unknown as { infer: ConditionalRule } & ((d: unknown) => ConditionalRule | type.errors);
+
+export { ConditionalRuleSchema };
+
 // =============================================================================
 // Select/Multiselect Options
 // =============================================================================
 
-export const SelectOptionSchema = z.object({
-  value: z.string(),
-  label: z.string(),
-  description: z.string().optional(),
-  is_default: z.boolean().optional(),
+export const SelectOptionSchema = type({
+  value: 'string',
+  label: 'string',
+  'description?': 'string',
+  'is_default?': 'boolean',
 });
 
-export type SelectOption = z.infer<typeof SelectOptionSchema>;
+export type SelectOption = typeof SelectOptionSchema.infer;
 
 // =============================================================================
 // Question Definition
 // =============================================================================
 
-export const QuestionSchema = z.object({
-  // Identification
-  id: z.string().min(1),
-  section: QuestionSectionSchema,
-  order: z.number().int().nonnegative(),
-
-  // Field configuration
-  field_type: FieldTypeSchema,
-  schema_path: z.string().optional(), // Dot-notation path to IntakeSchema field
-  measurement_path: z.string().optional(), // Path to measurements field
-
-  // Display
-  label: z.string().min(1),
-  help_text: z.string().optional(),
-  placeholder: z.string().optional(),
-  examples: z.array(z.string()).optional(),
-
-  // Options (for select/multiselect)
-  options: z.array(SelectOptionSchema).optional(),
-  options_from: z.string().optional(), // Reference to external options catalog
-
-  // Constraints
-  required: z.boolean().default(false),
-  validation: z.array(ValidationRuleSchema).optional(),
-  conditional: ConditionalRuleSchema.optional(),
-
-  // Range field specifics
-  min: z.number().optional(),
-  max: z.number().optional(),
-  step: z.number().optional(),
-
-  // Currency field specifics
-  currency: z.string().optional().default('USD'),
-
-  // Lead scoring
-  qualification_weight: z.number().min(0).max(10).optional(),
-  scoring_rules: z
-    .array(
-      z.object({
-        condition: SimpleConditionSchema,
-        points: z.number(),
-      })
-    )
-    .optional(),
+const ScoringRuleSchema = type({
+  condition: SimpleConditionSchema,
+  points: 'number',
 });
 
-export type Question = z.infer<typeof QuestionSchema>;
+export const QuestionSchema = type({
+  id: 'string >= 1',
+  section: QuestionSectionSchema,
+  order: 'number.integer >= 0',
+  field_type: FieldTypeSchema,
+  'schema_path?': 'string',
+  'measurement_path?': 'string',
+  label: 'string >= 1',
+  'help_text?': 'string',
+  'placeholder?': 'string',
+  'examples?': 'string[]',
+  'options?': SelectOptionSchema.array(),
+  'options_from?': 'string',
+  required: type('boolean').default(false),
+  'validation?': ValidationRuleSchema.array(),
+  'conditional?': 'unknown',
+  'min?': 'number',
+  'max?': 'number',
+  'step?': 'number',
+  currency: type('string').default('USD'),
+  'qualification_weight?': '0 <= number <= 10',
+  'scoring_rules?': ScoringRuleSchema.array(),
+});
+
+export type Question = typeof QuestionSchema.infer;
 
 // =============================================================================
 // Section Metadata
 // =============================================================================
 
-export const SectionMetadataSchema = z.object({
+export const SectionMetadataSchema = type({
   id: QuestionSectionSchema,
-  title: z.string(),
-  description: z.string().optional(),
-  icon: z.string().optional(),
-  order: z.number().int().nonnegative(),
-  collapsible: z.boolean().optional().default(false),
-  collapsed_by_default: z.boolean().optional().default(false),
+  title: 'string',
+  'description?': 'string',
+  'icon?': 'string',
+  order: 'number.integer >= 0',
+  collapsible: type('boolean').default(false),
+  collapsed_by_default: type('boolean').default(false),
 });
 
-export type SectionMetadata = z.infer<typeof SectionMetadataSchema>;
+export type SectionMetadata = typeof SectionMetadataSchema.infer;
 
 // =============================================================================
 // Lead Qualification Configuration
 // =============================================================================
 
-export const LeadStatusSchema = z.enum(['hot', 'warm', 'cold']);
+export const LeadStatusSchema = type("'hot' | 'warm' | 'cold'");
+export type LeadStatus = typeof LeadStatusSchema.infer;
 
-export type LeadStatus = z.infer<typeof LeadStatusSchema>;
-
-export const QualificationThresholdsSchema = z.object({
-  hot: z.number().min(0).max(100).default(80),
-  warm: z.number().min(0).max(100).default(50),
+export const QualificationThresholdsSchema = type({
+  hot: type('0 <= number <= 100').default(80),
+  warm: type('0 <= number <= 100').default(50),
 });
 
-export type QualificationThresholds = z.infer<typeof QualificationThresholdsSchema>;
+export type QualificationThresholds = typeof QualificationThresholdsSchema.infer;
 
-export const QualificationWeightsSchema = z.object({
-  budget_alignment: z.number().min(0).max(100).default(20),
-  integration_complexity: z.number().min(0).max(100).default(15),
-  volume_potential: z.number().min(0).max(100).default(15),
-  timeline_urgency: z.number().min(0).max(100).default(10),
-  decision_maker_access: z.number().min(0).max(100).default(15),
-  pain_severity: z.number().min(0).max(100).default(15),
-  api_readiness: z.number().min(0).max(100).default(10),
+export const QualificationWeightsSchema = type({
+  budget_alignment: type('0 <= number <= 100').default(20),
+  integration_complexity: type('0 <= number <= 100').default(15),
+  volume_potential: type('0 <= number <= 100').default(15),
+  timeline_urgency: type('0 <= number <= 100').default(10),
+  decision_maker_access: type('0 <= number <= 100').default(15),
+  pain_severity: type('0 <= number <= 100').default(15),
+  api_readiness: type('0 <= number <= 100').default(10),
 });
 
-export type QualificationWeights = z.infer<typeof QualificationWeightsSchema>;
+export type QualificationWeights = typeof QualificationWeightsSchema.infer;
 
-export const QualificationConfigSchema = z.object({
-  max_score: z.number().default(100),
+export const QualificationConfigSchema = type({
+  max_score: type('number').default(100),
   thresholds: QualificationThresholdsSchema,
   weights: QualificationWeightsSchema,
 });
 
-export type QualificationConfig = z.infer<typeof QualificationConfigSchema>;
+export type QualificationConfig = typeof QualificationConfigSchema.infer;
 
 // =============================================================================
 // Lead Score Result
 // =============================================================================
 
-export const QualificationComponentSchema = z.object({
-  name: z.string(),
-  weight: z.number(),
-  raw_score: z.number().min(0).max(100),
-  weighted_score: z.number(),
-  status: z.enum(['healthy', 'warning', 'critical']),
-  label: z.string(),
+export const QualificationComponentSchema = type({
+  name: 'string',
+  weight: 'number',
+  raw_score: '0 <= number <= 100',
+  weighted_score: 'number',
+  status: "'healthy' | 'warning' | 'critical'",
+  label: 'string',
 });
 
-export type QualificationComponent = z.infer<typeof QualificationComponentSchema>;
+export type QualificationComponent = typeof QualificationComponentSchema.infer;
 
-export const LeadQualificationResultSchema = z.object({
-  score: z.number().min(0).max(100),
-  score_display: z.string(),
+export const LeadQualificationResultSchema = type({
+  score: '0 <= number <= 100',
+  score_display: 'string',
   status: LeadStatusSchema,
-  status_label: z.string(),
-  components: z.array(QualificationComponentSchema),
-  captured_at: z.string().optional(),
+  status_label: 'string',
+  components: QualificationComponentSchema.array(),
+  'captured_at?': 'string',
 });
 
-export type LeadQualificationResult = z.infer<typeof LeadQualificationResultSchema>;
+export type LeadQualificationResult = typeof LeadQualificationResultSchema.infer;
 
 // =============================================================================
 // Complete Question Database
 // =============================================================================
 
-export const QuestionDatabaseSchema = z.object({
-  $schema: z.string().optional(),
-  version: z.string().default('1.0.0'),
-  sections: z.array(SectionMetadataSchema),
-  questions: z.array(QuestionSchema),
+export const QuestionDatabaseSchema = type({
+  '$schema?': 'string',
+  version: type('string').default('1.0.0'),
+  sections: SectionMetadataSchema.array(),
+  questions: QuestionSchema.array(),
   qualification_config: QualificationConfigSchema,
 });
 
-export type QuestionDatabase = z.infer<typeof QuestionDatabaseSchema>;
+export type QuestionDatabase = typeof QuestionDatabaseSchema.infer;
 
 // =============================================================================
 // Form Submission
 // =============================================================================
 
-export const FormSubmissionSchema = z.object({
-  version: z.string().optional(),
-  submitted_at: z.string(),
-  responses: z.record(z.string(), z.any()),
-  lead_qualification: LeadQualificationResultSchema.optional(),
+export const FormSubmissionSchema = type({
+  'version?': 'string',
+  submitted_at: 'string',
+  responses: 'Record<string, unknown>',
+  'lead_qualification?': LeadQualificationResultSchema,
 });
 
-export type FormSubmission = z.infer<typeof FormSubmissionSchema>;
+export type FormSubmission = typeof FormSubmissionSchema.infer;
 
 // =============================================================================
-// Systems Catalog (for multiselect options)
+// Systems Catalog
 // =============================================================================
 
-export const SystemCategorySchema = z.enum([
-  'healthcare',
-  'crm',
-  'communication',
-  'payment',
-  'erp',
-  'productivity',
-  'marketing',
-  'other',
-]);
+export const SystemCategorySchema = type(
+  "'healthcare' | 'crm' | 'communication' | 'payment' | 'erp' | 'productivity' | 'marketing' | 'other'",
+);
 
-export type SystemCategory = z.infer<typeof SystemCategorySchema>;
+export type SystemCategory = typeof SystemCategorySchema.infer;
 
-export const SystemEntrySchema = z.object({
-  id: z.string(),
-  name: z.string(),
+export const SystemEntrySchema = type({
+  id: 'string',
+  name: 'string',
   category: SystemCategorySchema,
-  has_api: z.boolean().default(false),
-  has_native_node: z.boolean().default(false),
-  native_node_name: z.string().optional(),
-  common_in: z.array(z.string()).optional(), // Industries where common
+  has_api: type('boolean').default(false),
+  has_native_node: type('boolean').default(false),
+  'native_node_name?': 'string',
+  'common_in?': 'string[]',
 });
 
-export type SystemEntry = z.infer<typeof SystemEntrySchema>;
+export type SystemEntry = typeof SystemEntrySchema.infer;
 
-export const SystemsCatalogSchema = z.object({
-  $schema: z.string().optional(),
-  version: z.string().default('1.0.0'),
-  systems: z.array(SystemEntrySchema),
+export const SystemsCatalogSchema = type({
+  '$schema?': 'string',
+  version: type('string').default('1.0.0'),
+  systems: SystemEntrySchema.array(),
 });
 
-export type SystemsCatalog = z.infer<typeof SystemsCatalogSchema>;
+export type SystemsCatalog = typeof SystemsCatalogSchema.infer;
 
 // =============================================================================
-// System Intelligence (Unified Lookup Result)
+// System Intelligence
 // =============================================================================
 
-export const ResearchFreshnessSchema = z.object({
-  days: z.number(),
-  stale: z.boolean(),
-  score: z.number().min(0).max(1),
-  reason: z.string().optional(),
+export const ResearchFreshnessSchema = type({
+  days: 'number',
+  stale: 'boolean',
+  score: '0 <= number <= 1',
+  'reason?': 'string',
 });
 
-export type ResearchFreshness = z.infer<typeof ResearchFreshnessSchema>;
+export type ResearchFreshness = typeof ResearchFreshnessSchema.infer;
 
-export const LaborFactorSchema = z.object({
-  factor: z.string(),
-  impact: z.string(), // 'high' | 'medium' | 'low'
-  notes: z.string().optional(),
+export const LaborFactorSchema = type({
+  factor: 'string',
+  impact: 'string',
+  'notes?': 'string',
 });
 
-export type LaborFactor = z.infer<typeof LaborFactorSchema>;
+export type LaborFactor = typeof LaborFactorSchema.infer;
 
-export const CitationSchema = z.object({
-  id: z.number().optional(),
-  url: z.string(),
-  type: z.string().optional(), // 'api_docs' | 'repository' | 'other'
+export const CitationSchema = type({
+  'id?': 'number',
+  url: 'string',
+  'type?': 'string',
 });
 
-export type Citation = z.infer<typeof CitationSchema>;
+export type Citation = typeof CitationSchema.infer;
 
-/**
- * System Intelligence Schema
- * Unified result from merging Systems Catalog with Technical Research
- * Used at runtime only - not persisted to catalog JSON
- */
-export const SystemIntelligenceSchema = z.object({
-  // From Catalog (static baseline)
-  id: z.string(),
-  name: z.string(),
-  category: z.string(),
-  has_api: z.boolean(),
-  has_native_node: z.boolean(),
-  native_node_name: z.string().nullable(),
-  common_in: z.array(z.string()),
-
-  // From Research (dynamic enrichment)
-  complexity_score: z.number().min(1).max(10).nullable(),
-  complexity_tier: z.string().nullable(), // 'simple' | 'moderate' | 'complex'
-  auth_type: z.string().nullable(),
-  gotchas: z.array(z.string()).optional(),
-  rate_limits: z.string().nullable(),
-  base_hours: z.number().nullable(),
-  labor_factors: z.array(LaborFactorSchema).optional(),
-  citations: z.array(CitationSchema).optional(),
-
-  // Match metadata
-  match_type: z.string(), // 'exact_id' | 'exact_name' | 'alias' | 'fuzzy' | 'research_only' | 'none'
-  match_confidence: z.number().min(0).max(1),
-
-  // Source tracking
-  source: z.enum(['catalog', 'research', 'merged']),
-  research_freshness: ResearchFreshnessSchema.nullable().optional(),
-  last_researched: z.string().nullable().optional(), // ISO date
+export const SystemIntelligenceSchema = type({
+  id: 'string',
+  name: 'string',
+  category: 'string',
+  has_api: 'boolean',
+  has_native_node: 'boolean',
+  native_node_name: 'string | null',
+  common_in: 'string[]',
+  complexity_score: '1 <= number <= 10 | null',
+  complexity_tier: 'string | null',
+  auth_type: 'string | null',
+  'gotchas?': 'string[]',
+  rate_limits: 'string | null',
+  base_hours: 'number | null',
+  'labor_factors?': LaborFactorSchema.array(),
+  'citations?': CitationSchema.array(),
+  match_type: 'string',
+  match_confidence: '0 <= number <= 1',
+  source: "'catalog' | 'research' | 'merged'",
+  'research_freshness?': ResearchFreshnessSchema.or('null'),
+  'last_researched?': 'string | null',
 });
 
-export type SystemIntelligence = z.infer<typeof SystemIntelligenceSchema>;
+export type SystemIntelligence = typeof SystemIntelligenceSchema.infer;
 
 // =============================================================================
-// Company Profile (for internal sheet)
+// Company Profile
 // =============================================================================
 
-export const CompanyProfileSchema = z.object({
-  account_name: z.string(),
-  contact_name: z.string().optional(),
-  contact_title: z.string().optional(),
-  contact_email: z.string().optional(),
-  contact_phone: z.string().optional(),
-  industry: z.string().optional(),
-  company_size: z.string().optional(),
-  workflow_name: z.string(),
-  volume_display: z.string().optional(),
-  time_per_item_display: z.string().optional(),
-  monthly_bleed_display: z.string().optional(),
-  systems_involved: z.array(z.string()).default([]),
+export const CompanyProfileSchema = type({
+  account_name: 'string',
+  'contact_name?': 'string',
+  'contact_title?': 'string',
+  'contact_email?': 'string',
+  'contact_phone?': 'string',
+  'industry?': 'string',
+  'company_size?': 'string',
+  workflow_name: 'string',
+  'volume_display?': 'string',
+  'time_per_item_display?': 'string',
+  'monthly_bleed_display?': 'string',
+  systems_involved: type('string[]').default(() => []),
 });
 
-export type CompanyProfile = z.infer<typeof CompanyProfileSchema>;
+export type CompanyProfile = typeof CompanyProfileSchema.infer;
 
 // =============================================================================
-// Key Metrics Summary (for internal sheet)
+// Key Metrics Summary
 // =============================================================================
 
-export const KeyMetricsSchema = z.object({
-  systems_count: z.number().nonnegative(),
-  systems_count_display: z.string().optional(),
-  complexity_score: z.number().min(0).max(10),
-  complexity_display: z.string().optional(),
-  risk_level: z.enum(['low', 'medium', 'high']),
-  risk_display: z.string().optional(),
-  roi_potential: z.enum(['low', 'medium', 'high']),
-  roi_display: z.string().optional(),
+export const KeyMetricsSchema = type({
+  systems_count: 'number >= 0',
+  'systems_count_display?': 'string',
+  complexity_score: '0 <= number <= 10',
+  'complexity_display?': 'string',
+  risk_level: "'low' | 'medium' | 'high'",
+  'risk_display?': 'string',
+  roi_potential: "'low' | 'medium' | 'high'",
+  'roi_display?': 'string',
 });
 
-export type KeyMetrics = z.infer<typeof KeyMetricsSchema>;
+export type KeyMetrics = typeof KeyMetricsSchema.infer;
 
 // =============================================================================
 // Validation Helpers
 // =============================================================================
 
-/**
- * Validates a question database configuration.
- * Returns null if invalid with logged warnings.
- */
 export function validateQuestionDatabase(data: unknown): QuestionDatabase | null {
-  const result = QuestionDatabaseSchema.safeParse(data);
-
-  if (result.success) {
-    return result.data;
+  const result = QuestionDatabaseSchema(data);
+  if (!(result instanceof type.errors)) {
+    return result;
   }
-
-  console.warn(
-    '[QUESTIONNAIRE] Validation failed:',
-    result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)
-  );
-
+  console.warn('[QUESTIONNAIRE] Validation failed:', result.summary);
   return null;
 }
 
-/**
- * Validates a systems catalog configuration.
- */
 export function validateSystemsCatalog(data: unknown): SystemsCatalog | null {
-  const result = SystemsCatalogSchema.safeParse(data);
-
-  if (result.success) {
-    return result.data;
+  const result = SystemsCatalogSchema(data);
+  if (!(result instanceof type.errors)) {
+    return result;
   }
-
-  console.warn(
-    '[SYSTEMS_CATALOG] Validation failed:',
-    result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)
-  );
-
+  console.warn('[SYSTEMS_CATALOG] Validation failed:', result.summary);
   return null;
 }
 
-/**
- * Evaluates a conditional rule against form data.
- */
 export function evaluateCondition(
   condition: ConditionalRule,
-  formData: Record<string, unknown>
+  formData: Record<string, unknown>,
 ): boolean {
   const { show_when } = condition;
 
-  // AND condition
   if ('and' in show_when) {
     return show_when.and.every((c) => evaluateCondition(c, formData));
   }
 
-  // OR condition
   if ('or' in show_when) {
     return show_when.or.some((c) => evaluateCondition(c, formData));
   }
 
-  // Simple condition
   const { field, operator, value } = show_when as SimpleCondition;
   const fieldValue = formData[field];
 

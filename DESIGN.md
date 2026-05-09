@@ -584,7 +584,7 @@ DON'T use for: general warnings (use Amber/Sunset 300), normal action buttons.
 ## 12. Accessibility
 
 - Maintain **4.5:1 contrast ratio** for normal text, **3:1** for large text (WCAG AA).
-- The runtime branding helper `unified-presales-report/lib/branding.js` enforces this via `meetsContrastRequirement()`.
+- The runtime branding helper `unified-presales-report/lib/branding.ts` enforces this via `meetsContrastRequirement()`.
 - Always provide alt text on images.
 - Don't rely on color alone for meaning (pair with icons / labels).
 - Test layouts at 320px mobile width.
@@ -701,7 +701,7 @@ extend: {
 }
 ```
 
-### Default brand exports (JS — mirrors `gtm_ops/lib/branding.js`)
+### Default brand exports (JS — mirrors `gtm_ops/lib/branding.ts`)
 
 ```js
 export const DefaultBranding = {

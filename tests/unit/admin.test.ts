@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/admin.js
+ * Unit Tests for lib/admin.ts
  *
  * Tests admin dashboard functionality:
  * - Metrics recording and aggregation

@@ -286,7 +286,7 @@ export function isLoaded() {
 // ============================================================================
 
 /**
- * Get BASE_RATES in legacy format (for pricing_calculator.js)
+ * Get BASE_RATES in legacy format (for pricing-calculator.js)
  */
 export function getLegacyBaseRates() {
   const c = getConfig();

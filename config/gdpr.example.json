@@ -1,5 +1,5 @@
 {
-  "_comment": "gdpr.example.json — synthetic placeholder for the gitignored config/gdpr.db SQLite database. Schema is auto-created by lib/gdpr.js on first run. Tracks user consents, export requests, and deletion requests.",
+  "_comment": "gdpr.example.json — synthetic placeholder for the gitignored config/gdpr.db SQLite database. Schema is auto-created by lib/gdpr.ts on first run. Tracks user consents, export requests, and deletion requests.",
   "_db_path": "config/gdpr.db",
   "schema": {
     "statements": [

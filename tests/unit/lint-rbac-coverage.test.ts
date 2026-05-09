@@ -9,7 +9,7 @@
  *   1 — at least one mutation route is missing requireRole
  *   2 — invocation error (target file does not exist)
  *
- * The current real server.js is also exercised as a smoke test so a
+ * The current real server.ts is also exercised as a smoke test so a
  * regression in either the lint or the server lights up immediately.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -192,11 +192,11 @@ describe('[P0] scripts/lint-rbac-coverage.sh - RBAC coverage lint', () => {
     expect(stderr).toContain('target file not found');
   });
 
-  it('[P0] smoke: real server.js passes the lint', () => {
+  it('[P0] smoke: real server.ts passes the lint', () => {
     // If this fails, either a real route lost its requireRole or the
     // lint regressed. Either way: a regression that needs attention,
     // not a flake.
-    const stdout = execFileSync('bash', [lintPath, path.join(repoRoot, 'server.js')], {
+    const stdout = execFileSync('bash', [lintPath, path.join(repoRoot, 'server.ts')], {
       encoding: 'utf8',
     });
     expect(stdout).toContain('all flagged routes');

@@ -3,187 +3,155 @@
  * @module lib/schemas/config.schema
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 
 // =============================================================================
 // LLM Provider Configuration
 // =============================================================================
 
-export const LLMProviderConfigSchema = z.object({
-  provider: z.enum(['gemini', 'groq']).default('gemini'),
-  model: z.string().optional(),
-  temperature: z.number().min(0).max(2).default(0.7),
-  maxTokens: z.number().positive().default(4096),
-  timeout: z.number().positive().default(60_000),
+export const LLMProviderConfigSchema = type({
+  provider: type("'gemini' | 'groq'").default('gemini'),
+  'model?': 'string',
+  temperature: type('0 <= number <= 2').default(0.7),
+  maxTokens: type('number > 0').default(4096),
+  timeout: type('number > 0').default(60_000),
 });
 
-export type LLMProviderConfig = z.infer<typeof LLMProviderConfigSchema>;
+export type LLMProviderConfig = typeof LLMProviderConfigSchema.infer;
 
 // =============================================================================
 // Rate Card Entry
 // =============================================================================
 
-export const RateCardEntrySchema = z.object({
-  role: z.string(),
-  hourly_rate: z.number().positive(),
-  description: z.string().optional(),
+export const RateCardEntrySchema = type({
+  role: 'string',
+  hourly_rate: 'number > 0',
+  'description?': 'string',
 });
 
-export type RateCardEntry = z.infer<typeof RateCardEntrySchema>;
+export type RateCardEntry = typeof RateCardEntrySchema.infer;
 
 // =============================================================================
 // Rate Card
 // =============================================================================
 
-export const RateCardSchema = z.object({
-  solutions_architect: z.number().positive().default(150),
-  automation_engineer: z.number().positive().default(125),
-  ai_developer: z.number().positive().default(140),
-  qa_documentation: z.number().positive().default(100),
+export const RateCardSchema = type({
+  solutions_architect: type('number > 0').default(150),
+  automation_engineer: type('number > 0').default(125),
+  ai_developer: type('number > 0').default(140),
+  qa_documentation: type('number > 0').default(100),
 });
 
-export type RateCard = z.infer<typeof RateCardSchema>;
+export type RateCard = typeof RateCardSchema.infer;
 
 // =============================================================================
 // Branding Configuration
 // =============================================================================
 
-export const BrandingSchema = z.object({
-  company_name: z.string().default('Wranngle Systems LLC'),
-  logo_url: z.string().optional(),
-  primary_color: z.string().default('#ff5f00'),
-  secondary_color: z.string().default('#cf3c69'),
-  font_heading: z.string().default('Outfit'),
-  font_body: z.string().default('Inter'),
+export const BrandingSchema = type({
+  company_name: type('string').default('Wranngle Systems LLC'),
+  'logo_url?': 'string',
+  primary_color: type('string').default('#ff5f00'),
+  secondary_color: type('string').default('#cf3c69'),
+  font_heading: type('string').default('Outfit'),
+  font_body: type('string').default('Inter'),
 });
 
-export type Branding = z.infer<typeof BrandingSchema>;
+export type Branding = typeof BrandingSchema.infer;
 
 // =============================================================================
 // Pipeline Configuration
 // =============================================================================
 
-export const PipelineConfigSchema = z.object({
-  // Retry settings
-  max_retries: z.number().min(1).max(10).default(3),
-  retry_delay_ms: z.number().positive().default(1000),
-
-  // Validation settings
-  validation_mode: z.enum(['strict', 'permissive']).default('permissive'),
-  throw_on_warning: z.boolean().default(false),
-
-  // Output settings
-  output_dir: z.string().default('./output'),
-  include_json_schema: z.boolean().default(true),
-
-  // Polish settings
-  enable_polish: z.boolean().default(true),
-  polish_max_tokens: z.number().positive().default(2048),
+export const PipelineConfigSchema = type({
+  max_retries: type('1 <= number <= 10').default(3),
+  retry_delay_ms: type('number > 0').default(1000),
+  validation_mode: type("'strict' | 'permissive'").default('permissive'),
+  throw_on_warning: type('boolean').default(false),
+  output_dir: type('string').default('./output'),
+  include_json_schema: type('boolean').default(true),
+  enable_polish: type('boolean').default(true),
+  polish_max_tokens: type('number > 0').default(2048),
 });
 
-export type PipelineConfig = z.infer<typeof PipelineConfigSchema>;
+export type PipelineConfig = typeof PipelineConfigSchema.infer;
 
 // =============================================================================
 // Environment Variables Schema
 // =============================================================================
 
-export const EnvVarsSchema = z.object({
-  // Required
-  GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
-
-  // Optional
-  GROQ_API_KEY: z.string().optional(),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  PORT: z.string().transform(Number).pipe(z.number().positive()).default('3000'),
-
-  // Research library
-  N8N_RESEARCH_LIBRARY_PATH: z.string().optional(),
+export const EnvVarsSchema = type({
+  GEMINI_API_KEY: 'string >= 1',
+  'GROQ_API_KEY?': 'string',
+  NODE_ENV: type("'development' | 'production' | 'test'").default('development'),
+  LOG_LEVEL: type("'debug' | 'info' | 'warn' | 'error'").default('info'),
+  // PORT: zod's `.transform(Number).pipe(z.number().positive())` is replaced with
+  // an arktype morph from string → positive number; default '3000' is mapped to 3000.
+  PORT: type('string')
+    .pipe((s, ctx) => {
+      const n = Number(s);
+      return Number.isFinite(n) && n > 0 ? n : ctx.error('a positive numeric string');
+    })
+    .default('3000'),
+  'N8N_RESEARCH_LIBRARY_PATH?': 'string',
 });
 
-export type EnvVars = z.infer<typeof EnvVarsSchema>;
+export type EnvVars = typeof EnvVarsSchema.infer;
 
 // =============================================================================
 // Complete Application Config
 // =============================================================================
 
-export const ConfigSchema = z.object({
-  // Environment
-  env: z.enum(['development', 'production', 'test']).default('development'),
-  log_level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-
-  // LLM
-  llm: LLMProviderConfigSchema.optional(),
-
-  // Pricing
-  rate_card: RateCardSchema.optional(),
-  contingency_percent: z.number().min(0).max(0.5).default(0.15),
-
-  // Branding
-  branding: BrandingSchema.optional(),
-
-  // Pipeline
-  pipeline: PipelineConfigSchema.optional(),
-
-  // Paths
-  paths: z.object({
-    input_dir: z.string().default('./input'),
-    output_dir: z.string().default('./output'),
-    template_dir: z.string().default('./templates'),
-    research_library: z.string().optional(),
-  }).optional(),
+export const ConfigSchema = type({
+  env: type("'development' | 'production' | 'test'").default('development'),
+  log_level: type("'debug' | 'info' | 'warn' | 'error'").default('info'),
+  'llm?': LLMProviderConfigSchema,
+  'rate_card?': RateCardSchema,
+  contingency_percent: type('0 <= number <= 0.5').default(0.15),
+  'branding?': BrandingSchema,
+  'pipeline?': PipelineConfigSchema,
+  'paths?': type({
+    input_dir: type('string').default('./input'),
+    output_dir: type('string').default('./output'),
+    template_dir: type('string').default('./templates'),
+    'research_library?': 'string',
+  }),
 });
 
-export type Config = z.infer<typeof ConfigSchema>;
+export type Config = typeof ConfigSchema.infer;
 
 // =============================================================================
 // CLI Options Schema
 // =============================================================================
 
-export const CLIOptionsSchema = z.object({
-  input: z.string(),
-  output: z.string().optional(),
-  verbose: z.boolean().default(false),
-  dryRun: z.boolean().default(false),
-  retry: z.boolean().default(false),
-  stage: z.string().optional(),
-  resume: z.boolean().default(false),
+export const CLIOptionsSchema = type({
+  input: 'string',
+  'output?': 'string',
+  verbose: type('boolean').default(false),
+  dryRun: type('boolean').default(false),
+  retry: type('boolean').default(false),
+  'stage?': 'string',
+  resume: type('boolean').default(false),
 });
 
-export type CLIOptions = z.infer<typeof CLIOptionsSchema>;
+export type CLIOptions = typeof CLIOptionsSchema.infer;
 
 // =============================================================================
 // Validation Helpers
 // =============================================================================
 
-/**
- * Validates environment variables at startup
- */
 export function validateEnv(): EnvVars {
-  const result = EnvVarsSchema.safeParse(process.env);
-
-  if (!result.success) {
-    const errors = result.error.issues.map(
-      (issue) => `${issue.path.join('.')}: ${issue.message}`
-    );
-    throw new Error(`Environment validation failed:\n${errors.join('\n')}`);
+  const result = EnvVarsSchema(process.env);
+  if (result instanceof type.errors) {
+    throw new Error(`Environment validation failed:\n${result.summary}`);
   }
-
-  return result.data;
+  return result;
 }
 
-/**
- * Validates config file at startup
- */
 export function validateConfig(config: unknown): Config {
-  const result = ConfigSchema.safeParse(config);
-
-  if (!result.success) {
-    const errors = result.error.issues.map(
-      (issue) => `${issue.path.join('.')}: ${issue.message}`
-    );
-    throw new Error(`Config validation failed:\n${errors.join('\n')}`);
+  const result = ConfigSchema(config);
+  if (result instanceof type.errors) {
+    throw new Error(`Config validation failed:\n${result.summary}`);
   }
-
-  return result.data;
+  return result;
 }

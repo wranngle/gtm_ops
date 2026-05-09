@@ -1,8 +1,8 @@
 # SQLite query stability
 
-Rules for writing SQL against `node-sqlite3` (the runtime in `lib/admin.js`,
-`lib/usage.js`, `lib/audit.js`, `lib/gdpr.js`, `lib/webhooks.js`,
-`lib/history.js`, `lib/research_db.js`, `lib/integration_research.js`).
+Rules for writing SQL against `node-sqlite3` (the runtime in `lib/admin.ts`,
+`lib/usage.ts`, `lib/audit.ts`, `lib/gdpr.ts`, `lib/webhooks.ts`,
+`lib/history.ts`, `lib/research-db.ts`, `lib/integration-research.ts`).
 
 The runtime is the async callback API. Three subtle failure modes recur
 under fast sequential writes — the rules below are all corrections that
@@ -39,7 +39,7 @@ to surface it.
 ## 2. `created_at < end` needs `end = Date.now() + 1`
 
 Period filters (THIS_MONTH / THIS_WEEK / TODAY in
-`lib/admin.js#getTimestampRange`) compute `end = Date.now()` at SELECT
+`lib/admin.ts#getTimestampRange`) compute `end = Date.now()` at SELECT
 time. Each `logActivity` records `created_at = Date.now()` at INSERT
 time. Strict less-than means rows where `created_at == end` are
 excluded — and they tie any time the SELECT and the most recent INSERT
@@ -90,10 +90,10 @@ format alone doesn't fix the heisenbug.
 
 ## See also
 
-- [`lib/admin.js`](../../lib/admin.js) — applied rules 1+2 in
+- [`lib/admin.ts`](../../lib/admin.ts) — applied rules 1+2 in
   `getActivityFeed`, `getSystemHealth`, `getHealthHistory`, +
   `getTimestampRange`
-- [`lib/usage.js`](../../lib/usage.js) — applied rule 1 in
+- [`lib/usage.ts`](../../lib/usage.ts) — applied rule 1 in
   `getUsageDetail`, retry shim in test
 - [`tests/unit/admin.test.ts`](../../tests/unit/admin.test.ts),
   [`tests/unit/usage.test.ts`](../../tests/unit/usage.test.ts) —

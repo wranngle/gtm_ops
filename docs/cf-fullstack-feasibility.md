@@ -1,17 +1,17 @@
 # Cloudflare Pages full-stack feasibility — gtm_ops
 
 Audit date: 2026-05-03
-Scope: read-only assessment of porting the live `server.js` runtime to Cloudflare Pages Functions + D1/KV/R2 (no migration to Fly.io / Render / Railway).
+Scope: read-only assessment of porting the live `server.ts` runtime to Cloudflare Pages Functions + D1/KV/R2 (no migration to Fly.io / Render / Railway).
 
 ## Verdict: YELLOW (trending RED on full parity)
 
-A subset of routes — the GET reads and small-table CRUD — port cleanly to Pages Functions + D1 in roughly a day. The pillar route `/api/generate` (LLM extract → render → PDF → write to `output/`) does **not** port without a separate non-Pages component, because it depends on `puppeteer` Chromium and synchronous filesystem writes throughout `lib/pipeline.js` (3028 lines, 23 `fs.*` call sites). Audit-log hash-chain integrity and the SSE `/api/stream` log tail also require architectural rewrites (Durable Objects), not direct ports.
+A subset of routes — the GET reads and small-table CRUD — port cleanly to Pages Functions + D1 in roughly a day. The pillar route `/api/generate` (LLM extract → render → PDF → write to `output/`) does **not** port without a separate non-Pages component, because it depends on `puppeteer` Chromium and synchronous filesystem writes throughout `lib/pipeline.ts` (3028 lines, 23 `fs.*` call sites). Audit-log hash-chain integrity and the SSE `/api/stream` log tail also require architectural rewrites (Durable Objects), not direct ports.
 
 A pragmatic hybrid is the recommendation: ship the read/CRUD routes on Pages Functions now, route `/api/generate` to either Cloudflare Browser Rendering (paid binding) or a separate generator host. A single-tier Pages-only port at full parity is **not feasible inside the original 90-minute budget** and would be a 3–5-day rewrite even with focused effort.
 
 ## Phase 1 inventory
 
-### Route inventory — `server.js` (52 API routes + 4 health/static)
+### Route inventory — `server.ts` (52 API routes + 4 health/static)
 
 Total routes (incl. middleware and static mounts): 62 `app.*` registrations.
 Total `/api/*` + `/health` + `/ready` handlers: 52.
@@ -60,20 +60,20 @@ DevDependencies (`@playwright/test`, `vitest`, `tsx`, `xo`, `typescript`, `@fake
 
 | Pattern | Where | Count | Workers impact |
 |---|---|---|---|
-| `import sqlite3 from 'sqlite3'` | `lib/db.js`, `lib/audit.js`, `lib/branding.js`, `lib/admin.js`, `lib/gdpr.js`, `lib/usage.js`, `lib/rbac.js` | 7+ files | Native addon — won't bundle; rewrite to D1 |
-| `import puppeteer from 'puppeteer'` | `lib/pdf_generator.js` | 1 file (431 lines) | Chromium launcher — no Workers equivalent |
-| `fs.{readFileSync,writeFileSync,existsSync,statSync,mkdirSync}` | `lib/pipeline.js`, `lib/pdf_generator.js`, `lib/extract.js`, `lib/gdpr.js`, `lib/file_utils.js`, `lib/versioning.js`, `lib/integration_research.js`, `lib/health.js`, `lib/validate.js`, `lib/html_polish.js`, `lib/estimate.js`, `lib/pricing_calculator.js` | 12+ files, 80+ call sites | Workers has no `fs` — replace with bundled imports / R2 / KV |
-| `child_process.spawn` | `server.js:/api/restart`, `lib/pipeline.js` | 2 sites | No Workers equivalent — delete the route, rework pipeline subprocess pattern |
-| `EventEmitter` + `setInterval` SSE | `server.js:/api/stream` | 1 site | Doesn't survive across isolates — needs DO + WebSocket |
-| Append-only file hash chain | `lib/audit.js` | hash chain integrity | Needs DO ordering or schema relaxation |
+| `import sqlite3 from 'sqlite3'` | `lib/db.ts`, `lib/audit.ts`, `lib/branding.ts`, `lib/admin.ts`, `lib/gdpr.ts`, `lib/usage.ts`, `lib/rbac.ts` | 7+ files | Native addon — won't bundle; rewrite to D1 |
+| `import puppeteer from 'puppeteer'` | `lib/pdf-generator.ts` | 1 file (431 lines) | Chromium launcher — no Workers equivalent |
+| `fs.{readFileSync,writeFileSync,existsSync,statSync,mkdirSync}` | `lib/pipeline.ts`, `lib/pdf-generator.ts`, `lib/extract.ts`, `lib/gdpr.ts`, `lib/file_utils.ts`, `lib/versioning.ts`, `lib/integration-research.ts`, `lib/health.ts`, `lib/validate.ts`, `lib/html-polish.ts`, `lib/estimate.ts`, `lib/pricing-calculator.ts` | 12+ files, 80+ call sites | Workers has no `fs` — replace with bundled imports / R2 / KV |
+| `child_process.spawn` | `server.ts:/api/restart`, `lib/pipeline.ts` | 2 sites | No Workers equivalent — delete the route, rework pipeline subprocess pattern |
+| `EventEmitter` + `setInterval` SSE | `server.ts:/api/stream` | 1 site | Doesn't survive across isolates — needs DO + WebSocket |
+| Append-only file hash chain | `lib/audit.ts` | hash chain integrity | Needs DO ordering or schema relaxation |
 
 ## Top 3 architectural concerns
 
-1. **`puppeteer` PDF generation has no clean Workers replacement.** `lib/pdf_generator.js` (431 lines) launches Chromium via the Node API and writes to disk. Three options on Cloudflare: (a) **Browser Rendering binding** — paid, separate API surface, requires rewriting the PDF call site; (b) **`pdf-lib` pure-JS rewrite** — loses HTML→PDF fidelity, the proposal layout would need to be re-authored as direct PDF primitives; (c) **off-edge Browserless instance** — re-introduces a non-Cloudflare host, partially defeating the goal. None is a 1-line swap. This is the single largest blocker for `/api/generate`.
+1. **`puppeteer` PDF generation has no clean Workers replacement.** `lib/pdf-generator.ts` (431 lines) launches Chromium via the Node API and writes to disk. Three options on Cloudflare: (a) **Browser Rendering binding** — paid, separate API surface, requires rewriting the PDF call site; (b) **`pdf-lib` pure-JS rewrite** — loses HTML→PDF fidelity, the proposal layout would need to be re-authored as direct PDF primitives; (c) **off-edge Browserless instance** — re-introduces a non-Cloudflare host, partially defeating the goal. None is a 1-line swap. This is the single largest blocker for `/api/generate`.
 
-2. **Five separate SQLite databases use the `sqlite3` callback API, not prepared-statement style.** `lib/db.js` (presales), `lib/audit.js` (audit), `lib/branding.js` (branding), plus admin and GDPR each instantiate their own `new sqlite3.Database(...)`. SQL DDL/DML ports to D1 directly, but the *call sites* are written in callback/promisified style, not D1's `env.DB.prepare(...).bind(...).first()/all()/run()` shape. Each manager class needs a top-to-bottom rewrite. Additionally, `lib/audit.js` writes append-only hash-chained records — preserving hash-chain integrity on D1 alone requires either a Durable Object front-door for ordering, or explicit acceptance that the integrity proof becomes "best-effort monotonic timestamp."
+2. **Five separate SQLite databases use the `sqlite3` callback API, not prepared-statement style.** `lib/db.ts` (presales), `lib/audit.ts` (audit), `lib/branding.ts` (branding), plus admin and GDPR each instantiate their own `new sqlite3.Database(...)`. SQL DDL/DML ports to D1 directly, but the *call sites* are written in callback/promisified style, not D1's `env.DB.prepare(...).bind(...).first()/all()/run()` shape. Each manager class needs a top-to-bottom rewrite. Additionally, `lib/audit.ts` writes append-only hash-chained records — preserving hash-chain integrity on D1 alone requires either a Durable Object front-door for ordering, or explicit acceptance that the integrity proof becomes "best-effort monotonic timestamp."
 
-3. **The pipeline's filesystem habit is the deepest port hazard.** `lib/pipeline.js` is 3028 lines with 23 `fs.*` call sites that read templates from `templates/`, write outputs to `output/`, persist intermediate JSON, append logs. Plus `child_process.spawn` for the restart route, plus an in-process `EventEmitter` (`logEmitter`) feeding `/api/stream` SSE with `setInterval` heartbeats. SSE itself works on Workers, but the in-process EventEmitter pattern doesn't survive across isolates — log streaming needs a Durable Object or queue. The `/api/restart` route literally exec's a new Node process and must simply be deleted.
+3. **The pipeline's filesystem habit is the deepest port hazard.** `lib/pipeline.ts` is 3028 lines with 23 `fs.*` call sites that read templates from `templates/`, write outputs to `output/`, persist intermediate JSON, append logs. Plus `child_process.spawn` for the restart route, plus an in-process `EventEmitter` (`logEmitter`) feeding `/api/stream` SSE with `setInterval` heartbeats. SSE itself works on Workers, but the in-process EventEmitter pattern doesn't survive across isolates — log streaming needs a Durable Object or queue. The `/api/restart` route literally exec's a new Node process and must simply be deleted.
 
 ## Migration path (if operator chooses to proceed)
 
@@ -83,7 +83,7 @@ The recommended path is **hybrid, in three layers**:
 
 2. **Durable Objects — ordering-sensitive layer (~1 day).** Reimplement audit-log hash-chain append on a single DO instance (serializes writes, preserves chain integrity). Reimplement `/api/stream` via DO + WebSocket fan-out, OR drop SSE and switch UI to short-polling.
 
-3. **Generator layer — strategic decision (1–3 days depending on choice).** Either: (a) rewrite `lib/pdf_generator.js` against Cloudflare Browser Rendering binding (paid, but keeps everything on Cloudflare); or (b) keep `server.js` running on a separate generator host (Fly.io / Railway / a single VPS) — the Pages Functions layer calls it via fetch for `/api/generate`. Option (b) preserves the puppeteer fidelity at the cost of "fully on Cloudflare."
+3. **Generator layer — strategic decision (1–3 days depending on choice).** Either: (a) rewrite `lib/pdf-generator.ts` against Cloudflare Browser Rendering binding (paid, but keeps everything on Cloudflare); or (b) keep `server.ts` running on a separate generator host (Fly.io / Railway / a single VPS) — the Pages Functions layer calls it via fetch for `/api/generate`. Option (b) preserves the puppeteer fidelity at the cost of "fully on Cloudflare."
 
 ### One-time D1/KV/R2 setup (when operator approves)
 
@@ -215,7 +215,7 @@ Routes not covered by the static UI fall through to the existing `_redirects` ru
 
 ### Audit chain (relaxed)
 
-Operator decision: relaxed audit verification. `functions/api/audit-logs/verify.ts` reports monotonic-timestamp ordering when D1 is migrated, otherwise returns a static `mode: "demo"` no-op body. Strict cryptographic hash-chain reconstruction (the local Express path at `server.js:544`) requires Durable Object write-side ordering and is queued as Phase 3.
+Operator decision: relaxed audit verification. `functions/api/audit-logs/verify.ts` reports monotonic-timestamp ordering when D1 is migrated, otherwise returns a static `mode: "demo"` no-op body. Strict cryptographic hash-chain reconstruction (the local Express path at `server.ts:544`) requires Durable Object write-side ordering and is queued as Phase 3.
 
 ### Phase 2.5 punch list — D1 schema extraction
 
@@ -223,14 +223,14 @@ The 12 ported routes go live as fixture-served the moment the Pages preview depl
 
 | Manager | File:line | Tables |
 |---|---|---|
-| history | `lib/history.js:21` | `projects`, `executions`, `artifacts` |
-| admin | `lib/admin.js:133` | `metric_buckets`, `metric_daily`, `activity_feed`, `health_snapshots` |
-| usage | `lib/usage.js:90` | `usage_events` |
-| webhooks | `lib/webhooks.js:84` | `webhooks`, `webhook_deliveries` |
-| branding | `lib/branding.js:213` | `workspace_branding`, `custom_domains`, `domain_verification_logs` |
-| audit | `lib/audit.js:87` | `audit_logs` |
-| gdpr | `lib/gdpr.js:93` | `user_consents`, `export_jobs`, `deletion_requests`, `legal_documents`, `data_processing`, `access_requests` |
-| rbac | `lib/rbac.js:559` | `workspace_users`, `invitations` |
+| history | `lib/history.ts:21` | `projects`, `executions`, `artifacts` |
+| admin | `lib/admin.ts:133` | `metric_buckets`, `metric_daily`, `activity_feed`, `health_snapshots` |
+| usage | `lib/usage.ts:90` | `usage_events` |
+| webhooks | `lib/webhooks.ts:84` | `webhooks`, `webhook_deliveries` |
+| branding | `lib/branding.ts:213` | `workspace_branding`, `custom_domains`, `domain_verification_logs` |
+| audit | `lib/audit.ts:87` | `audit_logs` |
+| gdpr | `lib/gdpr.ts:93` | `user_consents`, `export_jobs`, `deletion_requests`, `legal_documents`, `data_processing`, `access_requests` |
+| rbac | `lib/rbac.ts:559` | `workspace_users`, `invitations` |
 | evaluation | `lib/evaluation/corpus.js` | `evaluation_runs`, `case_studies` |
 
 Total: 23 runtime tables. Plus seed data per table for any read route to return non-empty (otherwise `tryD1` returns `null` and the fallback fixture is served — preview is functional either way).

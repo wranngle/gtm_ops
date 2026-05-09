@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/db.js
+ * Unit Tests for lib/db.ts
  *
  * Tests database abstraction layer:
  * - SQLite adapter
