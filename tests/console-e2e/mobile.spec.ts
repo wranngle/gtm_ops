@@ -5,7 +5,7 @@
  * stats grid + 2-col split push the page into a horizontal scrollbar
  * on phones.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 const ROUTES = [
   { id: 'home', label: 'Mission Control' },

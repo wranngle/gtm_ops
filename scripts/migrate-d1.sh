@@ -14,17 +14,17 @@
 #   labor_rates, pricing_rules, integration_costs, business_profile_defaults
 #
 # Phase 2.5 punch list (NOT loaded by this script — extract first):
-#   lib/history.js:21      → projects, executions, artifacts
-#   lib/admin.js:133       → metric_buckets, metric_daily, activity_feed,
+#   lib/history.ts:21      → projects, executions, artifacts
+#   lib/admin.ts:133       → metric_buckets, metric_daily, activity_feed,
 #                            health_snapshots
-#   lib/webhooks.js:84     → webhooks, webhook_deliveries
-#   lib/branding.js:213    → workspace_branding, custom_domains,
+#   lib/webhooks.ts:84     → webhooks, webhook_deliveries
+#   lib/branding.ts:213    → workspace_branding, custom_domains,
 #                            domain_verification_logs
-#   lib/audit.js:87        → audit_logs
-#   lib/usage.js:90        → usage_events
-#   lib/gdpr.js:93         → user_consents, export_jobs, deletion_requests,
+#   lib/audit.ts:87        → audit_logs
+#   lib/usage.ts:90        → usage_events
+#   lib/gdpr.ts:93         → user_consents, export_jobs, deletion_requests,
 #                            legal_documents, data_processing, access_requests
-#   lib/rbac.js:559        → workspace_users, invitations
+#   lib/rbac.ts:559        → workspace_users, invitations
 #   lib/evaluation/corpus.js → evaluation_runs, case_studies
 #
 # Until those are extracted into migrations/NNN_<table>.sql files, the

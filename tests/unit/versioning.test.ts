@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/versioning.js
+ * Unit Tests for lib/versioning.ts
  *
  * Tests document versioning functionality:
  * - Version creation and tracking

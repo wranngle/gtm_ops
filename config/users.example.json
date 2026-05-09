@@ -1,5 +1,5 @@
 {
-  "_comment": "users.example.json — synthetic placeholder for the gitignored config/users.db SQLite database. Schema is auto-created by lib/rbac.js on first run. Tracks workspace membership and pending invitations.",
+  "_comment": "users.example.json — synthetic placeholder for the gitignored config/users.db SQLite database. Schema is auto-created by lib/rbac.ts on first run. Tracks workspace membership and pending invitations.",
   "_db_path": "config/users.db",
   "schema": {
     "statements": [

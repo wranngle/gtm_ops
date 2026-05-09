@@ -1,5 +1,5 @@
 /**
- * Unit tests for lib/format_helpers.js — render-time formatters used
+ * Unit tests for lib/format-helpers.ts — render-time formatters used
  * across the proposal UI and PDF output. Untested before this file:
  * a regression that silently produces "$0" for valid amounts, drops
  * the "/mo" suffix, or rounds payback months wrong would hit
@@ -15,7 +15,7 @@ import {
   date,
   hoursEstimate,
   fmt,
-} from '../../lib/format_helpers.js';
+} from '../../lib/format-helpers.js';
 
 describe('[P0] currency - monetary formatter', () => {
   it('[P0] should format MonetaryValue with monthly period as "$X/mo"', () => {

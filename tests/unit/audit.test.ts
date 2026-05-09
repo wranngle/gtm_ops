@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/audit.js
+ * Unit Tests for lib/audit.ts
  *
  * Tests audit logging functionality:
  * - Logging actions

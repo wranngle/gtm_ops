@@ -192,7 +192,7 @@ export function createDeduplicationTestCases(): Array<{
 
 /**
  * Integration Research Result
- * Full research data returned from integration_research.js
+ * Full research data returned from integration-research.js
  */
 export interface IntegrationResearch {
   integration: string;

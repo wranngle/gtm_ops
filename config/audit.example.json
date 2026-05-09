@@ -1,5 +1,5 @@
 {
-  "_comment": "audit.example.json — synthetic placeholder for the gitignored config/audit.db SQLite database. Schema is auto-created by lib/audit.js on first run. Audit logs are immutable in production (hash-chained).",
+  "_comment": "audit.example.json — synthetic placeholder for the gitignored config/audit.db SQLite database. Schema is auto-created by lib/audit.ts on first run. Audit logs are immutable in production (hash-chained).",
   "_db_path": "config/audit.db",
   "schema": {
     "statements": [

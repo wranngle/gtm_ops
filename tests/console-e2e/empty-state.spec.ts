@@ -5,7 +5,7 @@
  * empty kanbans, blank proposals, no hot leads, and concludes the app
  * is broken. A "demo data" pill in the topbar tells them why.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 test('empty /api/history preserves demo fallback companies + proposals', async ({ page }) => {
   // The console runs in DEMO_MODE on the static test server (port !== 3000),

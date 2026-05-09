@@ -225,6 +225,147 @@ clone_repo(){ local slug=$1 default_branch=$2 target_dir=$3
   fi
 }
 
+harden_existing_workflows_repo(){ local slug=$1 repo_dir=$2 output
+  [[ -d "$repo_dir/.github/workflows" ]] || {
+    record_operation "$slug" workflows.harden skipped "no .github/workflows"
+    return 0
+  }
+  if ! command -v python3 >/dev/null 2>&1; then
+    record_operation "$slug" workflows.harden skipped "python3 unavailable"
+    return 0
+  fi
+  if output=$(REPO_DIR="$repo_dir" python3 - <<'PY' 2>&1
+import os
+from pathlib import Path
+
+repo = Path(os.environ["REPO_DIR"])
+workflow_dir = repo / ".github" / "workflows"
+
+pins = {
+    "actions/checkout@v4": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4",
+    "actions/cache@v4": "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4",
+    "actions/upload-artifact@v4": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4",
+    "oven-sh/setup-bun@v1": "oven-sh/setup-bun@f4d14e03ff726c06358e5557344e1da148b56cf7  # v1",
+    "oven-sh/setup-bun@v2": "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2",
+    "gitleaks/gitleaks-action@v2": "gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2",
+}
+
+
+def has_top_level_permissions(lines):
+    return any(line.startswith("permissions:") for line in lines)
+
+
+def add_top_level_permissions(lines):
+    if has_top_level_permissions(lines):
+        return lines, False
+    out = []
+    inserted = False
+    for line in lines:
+        if not inserted and line.startswith("on:"):
+            out.extend(["permissions:\n", "  contents: read\n", "\n"])
+            inserted = True
+        out.append(line)
+    if inserted:
+        return out, True
+    if lines and lines[0].startswith("name:"):
+        return [lines[0], "\n", "permissions:\n", "  contents: read\n", *lines[1:]], True
+    return lines, False
+
+
+def normalize_checkout_persistence(lines):
+    out = []
+    changed = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        if "uses: actions/checkout@" not in line:
+            i += 1
+            continue
+
+        step_indent = line[: len(line) - len(line.lstrip())]
+        with_indent = step_indent + "  "
+        item_indent = step_indent + "    "
+
+        if i + 1 < len(lines) and lines[i + 1].startswith(with_indent + "with:"):
+            out.append(lines[i + 1])
+            i += 1
+            j = i + 1
+            has_persist = False
+            while j < len(lines):
+                nxt = lines[j]
+                if nxt.strip() and not nxt.startswith(item_indent):
+                    break
+                if nxt.startswith(item_indent + "persist-credentials:"):
+                    has_persist = True
+                j += 1
+            if not has_persist:
+                out.append(item_indent + "persist-credentials: false\n")
+                changed = True
+        else:
+            out.append(with_indent + "with:\n")
+            out.append(item_indent + "persist-credentials: false\n")
+            changed = True
+        i += 1
+    return out, changed
+
+
+def normalize_scorecard_advisory(lines):
+    out = []
+    changed = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        if line.lstrip().startswith("- name: Run OpenSSF Scorecard"):
+            step_indent = line[: len(line) - len(line.lstrip())]
+            option_indent = step_indent + "  "
+            has_continue = False
+            j = i + 1
+            while j < len(lines):
+                nxt = lines[j]
+                if nxt.strip() and not nxt.startswith(option_indent):
+                    break
+                if nxt.startswith(option_indent + "continue-on-error:"):
+                    has_continue = True
+                    break
+                j += 1
+            if not has_continue:
+                out.append(option_indent + "continue-on-error: true\n")
+                changed = True
+        i += 1
+    return out, changed
+
+
+changed_files = []
+for path in sorted(workflow_dir.glob("*.y*ml")):
+    original = path.read_text()
+    text = original
+    for old, new in pins.items():
+        text = text.replace(old, new)
+    lines = text.splitlines(keepends=True)
+    lines, permissions_changed = add_top_level_permissions(lines)
+    lines, checkout_changed = normalize_checkout_persistence(lines)
+    lines, scorecard_changed = normalize_scorecard_advisory(lines)
+    text = "".join(lines)
+    if text != original:
+        path.write_text(text)
+        changed_files.append(path.relative_to(repo).as_posix())
+
+if changed_files:
+    print("changed " + ",".join(changed_files))
+else:
+    print("no workflow hardening changes")
+PY
+  ); then
+    record_operation "$slug" workflows.harden success "$output"
+  else
+    output=$(printf '%s' "$output" | tr '\n' ' ' | cut -c1-800)
+    record_operation "$slug" workflows.harden failure workflows "$output"
+    return 1
+  fi
+}
+
 scan_local_repo(){ local slug=$1 repo_dir=$2 report_dir=$3 status=success output
   mkdir -p "$report_dir"
   find "$repo_dir" \
@@ -360,6 +501,7 @@ bootstrap_local_repo(){ local repo_obj=$1 slug archived fork default_branch repo
   else
     record_operation "$slug" dotfiles.hydrate failure "$repo_dir" "hydrate exited nonzero"
   fi
+  harden_existing_workflows_repo "$slug" "$repo_dir" || true
   scan_local_repo "$slug" "$repo_dir" "$repo_report" || true
   commit_and_push_changes "$slug" "$repo_dir" "$default_branch" || true
 }

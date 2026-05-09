@@ -4,7 +4,7 @@
  * spec covers the form fields inside the panels (selects, inputs,
  * switches, etc.) which are the next layer down.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
  
 import AxeBuilderImport from '@axe-core/playwright';
 

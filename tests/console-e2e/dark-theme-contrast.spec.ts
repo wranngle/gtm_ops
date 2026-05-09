@@ -4,7 +4,7 @@
  * the default route a11y suite disables for noise) on every route in
  * dark theme and asserts zero AA failures.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
  
 import AxeBuilderImport from '@axe-core/playwright';
 

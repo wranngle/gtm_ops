@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/rbac.js
+ * Unit Tests for lib/rbac.ts
  *
  * Tests role-based access control:
  * - Role validation

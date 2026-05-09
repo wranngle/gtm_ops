@@ -1,5 +1,5 @@
 // /api/admin/dashboard — operator dashboard counters.
-// D1-backed when schema is migrated (Phase 2.5: lib/admin.js:133 metric_*
+// D1-backed when schema is migrated (Phase 2.5: lib/admin.ts:133 metric_*
 // tables); otherwise falls through to fixtures/admin/dashboard.json.
 
 import dashboardFixture from '../../../apps/ops-console/fixtures/admin/dashboard.json';

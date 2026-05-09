@@ -1,5 +1,5 @@
 {
-  "_comment": "admin.example.json — synthetic placeholder for the gitignored config/admin.db SQLite database. Schema is auto-created by lib/admin.js on first run. Stores admin metrics and activity feed.",
+  "_comment": "admin.example.json — synthetic placeholder for the gitignored config/admin.db SQLite database. Schema is auto-created by lib/admin.ts on first run. Stores admin metrics and activity feed.",
   "_db_path": "config/admin.db",
   "schema": {
     "statements": [

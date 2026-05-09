@@ -2,8 +2,8 @@
 # lint-rbac-coverage.sh — enforce requireRole on Express mutation routes
 # AND on sensitive read routes that expose admin/audit data.
 #
-# WHY (mutations): server.js historically grew several POST/PATCH/PUT/DELETE
-# handlers with no role check. The dev-mode auth shim (lib/rbac.js) defaults
+# WHY (mutations): server.ts historically grew several POST/PATCH/PUT/DELETE
+# handlers with no role check. The dev-mode auth shim (lib/rbac.ts) defaults
 # missing roles to "viewer" in production, so any unprotected mutation route
 # silently accepts any caller. PRs #98–#99 swept the surface; this lint stops
 # the regression.
@@ -13,24 +13,24 @@
 # operator dashboards. Letting a viewer-role caller read either one is a
 # data-leak surface, not just a missing-mutation problem.
 #
-# WHAT: walks every line of server.js (override with first arg) that calls
+# WHAT: walks every line of server.ts (override with first arg) that calls
 # app.<method>('<path>', ...) where:
 #   - method ∈ {post, patch, put, delete}                              (always)
 #   - method == get AND path starts with /api/audit-logs or /api/admin (sensitive)
 # Fails if the same line is missing requireRole(. Multi-line route signatures
 # are not supported — keep the route declaration on one line, which is the
-# convention already in use across server.js.
+# convention already in use across server.ts.
 #
 # EXIT: 0 when every flagged route is protected, 1 when any are not, 2 on
 # misuse (target file missing).
 #
 # Usage:
-#   bash scripts/lint-rbac-coverage.sh                # default: server.js
+#   bash scripts/lint-rbac-coverage.sh                # default: server.ts
 #   bash scripts/lint-rbac-coverage.sh path/to/file   # override
 
 set -euo pipefail
 
-target="${1:-server.js}"
+target="${1:-server.ts}"
 
 if [[ ! -f "$target" ]]; then
   echo "lint-rbac-coverage: target file not found: $target" >&2

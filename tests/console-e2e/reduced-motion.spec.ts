@@ -4,7 +4,7 @@
  * transitions to instantaneous (effectively-zero) durations, including
  * the infinite pulse loops on live-status dots.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 // Each test below explicitly emulates reduced-motion via page.emulateMedia,
 // which is more reliable across Playwright versions than the test.use level

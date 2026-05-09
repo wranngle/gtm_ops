@@ -1,7 +1,7 @@
 // /api/audit-logs/verify — chain-integrity probe.
 //
 // Operator decision (Phase 2): RELAXED audit chain. Strict cryptographic
-// hash-chain verification (the local Express path at server.js:544 walks
+// hash-chain verification (the local Express path at server.ts:544 walks
 // the audit_logs table and recomputes hashes) is a Phase 3 enhancement;
 // here we report monotonic-timestamp ordering only when D1 is migrated,
 // and otherwise fall through to a static "demo-mode" verification body.

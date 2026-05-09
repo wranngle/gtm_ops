@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # repo-automation.sh - primitive local observer for dotfiles-managed repos.
 set -euo pipefail
+          export PUPPETEER_SKIP_DOWNLOAD=true
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 POLICY_PATH=${REPO_AUTOMATION_POLICY:-.automation/policy.json}
 

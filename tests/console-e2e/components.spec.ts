@@ -1,7 +1,7 @@
 /**
  * Per-component surface tests. One spec per major interactive component.
  */
-import { test, expect, smokeClickAll } from './_helpers.js';
+import { test, expect, smokeClickAll } from './helpers.js';
 
 test.describe('shell', () => {
   test('sidebar nav toggles every route', async ({ openConsole }) => {
@@ -693,7 +693,7 @@ test.describe('mission control', () => {
     const page = await openConsole();
     // Read live fixture and visible value together inside one evaluate
     // tick so the expected/actual pair is always consistent. Otherwise
-    // /api/history's async mutation of window.GTM.companies (in app.jsx
+    // /api/history's async mutation of window.GTM.companies (in app.tsx
     // loadData) can race the assertion.
     await expect.poll(async () => {
       return page.evaluate(() => {
@@ -2246,7 +2246,7 @@ test.describe('proposals · seed preservation', () => {
 
     // The curated demo proposals from data.js (Banyan Health, Verdant
     // Logistics, Arcadia Insurance, Thornfield Foods) MUST still render
-    // after history loads. Previously app.jsx overwrote the seed array.
+    // after history loads. Previously app.tsx overwrote the seed array.
     await expect(list).toContainText('Banyan Health');
     await expect(list).toContainText('Verdant Logistics');
 
@@ -3129,6 +3129,43 @@ test.describe('evals', () => {
     await expect(strip.locator('[data-testid="eval-slowest-scenario"]')).not.toBeEmpty();
     const slowestDuration = (await strip.locator('[data-testid="eval-slowest-duration"]').textContent() || '').trim();
     expect(slowestDuration).toMatch(/^\d+(\.\d+)?(ms|s)$/);
+  });
+
+  test('eval dashboard surfaces per-tool rolling latency aggregation (parity with voice_ai_agent_evals tool-call rollup gap)', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+
+    // Rollup panel is run-list-wide (not per-active-run). Fixture has multiple
+    // tool_calls across runs: lookup_record (×2), schedule_appointment, send_confirmation.
+    const rollup = page.locator('[data-testid="eval-tool-latency-rollup"]');
+    await expect(rollup).toBeVisible();
+    await expect(rollup).toContainText(/tool latency · rolling across \d+ runs?/);
+    await expect(rollup).toContainText(/round-trip p95/);
+
+    const rows = page.locator('[data-testid="eval-tool-latency-rollup-row"]');
+    expect(await rows.count(), 'fixture covers at least 3 distinct tool names').toBeGreaterThanOrEqual(3);
+
+    // lookup_record appears in multiple runs — its row should aggregate the
+    // count, not show n=1, and emit a numeric p95.
+    const lookup = page.locator('[data-testid="eval-tool-latency-rollup-row"][data-tool-name="lookup_record"]');
+    await expect(lookup).toBeVisible();
+    const lookupCount = Number(await lookup.getAttribute('data-call-count') || '0');
+    expect(lookupCount, 'lookup_record should aggregate calls across the loaded runs').toBeGreaterThanOrEqual(2);
+    await expect(lookup).toContainText(/p95\s+\d+(\.\d+)?(ms|s)/);
+    await expect(lookup).toContainText(/schema\s+\d+%/);
+    const lookupTone = await lookup.getAttribute('data-tone');
+    expect(['healthy', 'warn', 'critical']).toContain(lookupTone || '');
+
+    // Rows are sorted slowest-first by p95 round-trip.
+    const p95Values = await rows.evaluateAll(nodes =>
+      nodes
+        .map(n => Number((n as HTMLElement).getAttribute('data-p95-ms')))
+        .filter(n => Number.isFinite(n) && n > 0),
+    );
+    if (p95Values.length >= 2) {
+      const sorted = [...p95Values].sort((a, b) => b - a);
+      expect(p95Values, 'rollup rows should be sorted by p95 descending').toEqual(sorted);
+    }
   });
 
   test('eval dashboard top surface stays compact at laptop width', async ({ openConsole, page }) => {

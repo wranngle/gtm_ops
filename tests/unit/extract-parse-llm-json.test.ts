@@ -1,5 +1,5 @@
 /**
- * Unit tests for lib/extract.js#parseLLMJson — the parse-with-actionable-
+ * Unit tests for lib/extract.ts#parseLLMJson — the parse-with-actionable-
  * context helper that PR #96 added inside callLLM and PR (this one)
  * extracted into a pure function. Pins the contract so a future
  * refactor that bypasses the wrapper (or trims the snippet) doesn't

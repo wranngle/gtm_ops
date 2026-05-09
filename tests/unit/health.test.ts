@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/health.js
+ * Unit Tests for lib/health.ts
  *
  * Tests health check functionality:
  * - Database health check

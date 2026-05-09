@@ -7,7 +7,6 @@ permissions:
 jobs:
   check-issue-link:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     permissions:
       contents: read
       issues: read
@@ -22,6 +21,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          export PUPPETEER_SKIP_DOWNLOAD=true
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
           # Bypassing WIP branches automatically
           if [[ "$HEAD_REF" == wip/* ]]; then

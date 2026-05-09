@@ -4,7 +4,7 @@
  * between JSX inline styles and the token map (e.g. var(--text-1) when the
  * actual token is --text).
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 const REQUIRED_TOKENS = [
   // text

@@ -58,11 +58,11 @@ Pulls account context from Pipedrive / HubSpot / Salesforce-shaped adapters. Nor
 
 ### 3. Voice agent and eval harness — external (ElevenLabs) + `voice_ai_agent_evals`
 
-The live voice agent runs on ElevenLabs; this repo doesn't host the agent runtime. What this repo owns is the integration surface: the prompt schema feeding `agent.prompt` shape, the tool definitions exposed via webhook (`server.js` `/tools/*`), and the regression hooks that wire `voice_ai_agent_evals` to the live agent for CI gating.
+The live voice agent runs on ElevenLabs; this repo doesn't host the agent runtime. What this repo owns is the integration surface: the prompt schema feeding `agent.prompt` shape, the tool definitions exposed via webhook (`server.ts` `/tools/*`), and the regression hooks that wire `voice_ai_agent_evals` to the live agent for CI gating.
 
 For app-wide evals, `gtm_ops` owns the tests and fixtures because it knows the UI semantics, domain corpus, and artifact locations. `voice_ai_agent_evals` consumes [`eval-harness.manifest.json`](eval-harness.manifest.json) through its `gtm_ops` adapter and normalizes the results. Prompt versioning, tool-call evaluation, command orchestration, and cross-run reporting live in the satellite; this repo surfaces harness output via the ops-console eval-runs page.
 
-### 4. Post-call — `lib/post_call/` + `server.js` webhooks
+### 4. Post-call — `lib/post_call/` + `server.ts` webhooks
 
 Receives ElevenLabs post-call webhooks at `/api/webhooks/post-call`. Verifies the `ElevenLabs-Signature` header (HMAC-SHA256 over `<timestamp>.<body>`) before any side effect. On success, fans out:
 
@@ -75,7 +75,7 @@ Drop-and-log on signature failure; no retry. See `voice_ai_agent_evals/docs/webh
 
 ### 5. Presales pipeline — `lib/extraction/`, `lib/pdf_generator/`, `lib/branding/`, `lib/pricing/`, `lib/audit/`
 
-Structured LLM extraction over the post-call payload produces a typed proposal. The proposal is rendered as a branded PDF via `templates/` (using `tokens/` from this repo's design system). Branding is per-tenant via `lib/branding/`; in `DEMO_MODE` it reads `config/branding.example.json` directly, in live mode it reads SQLite. Every step writes to the audit log surface (`/api/audit-logs/*` in `server.js`) — proposal generation, branding writes, webhook deliveries, and CRM updates are all replayable.
+Structured LLM extraction over the post-call payload produces a typed proposal. The proposal is rendered as a branded PDF via `templates/` (using `tokens/` from this repo's design system). Branding is per-tenant via `lib/branding/`; in `DEMO_MODE` it reads `config/branding.example.json` directly, in live mode it reads SQLite. Every step writes to the audit log surface (`/api/audit-logs/*` in `server.ts`) — proposal generation, branding writes, webhook deliveries, and CRM updates are all replayable.
 
 ### 6. Ops-console — `apps/ops-console/`
 
@@ -88,8 +88,8 @@ Internal operational UI for non-technical operators. Three surfaces:
 
 Three deploy modes serve the same UI:
 
-- **Local Express** — `bun run start` → `server.js` exposes `/api/*` and serves `public/`
-- **Cloudflare Pages full-stack** — Pages Functions under `functions/api/*` mirror `server.js`'s surface; D1-backed where bindings are configured, falling back to bundled fixtures otherwise
+- **Local Express** — `bun run start` → `server.ts` exposes `/api/*` and serves `public/`
+- **Cloudflare Pages full-stack** — Pages Functions under `functions/api/*` mirror `server.ts`'s surface; D1-backed where bindings are configured, falling back to bundled fixtures otherwise
 - **Static / DEMO_MODE** — any static file server pointed at `apps/ops-console/`; the in-page DEMO_MODE shim swaps `/api/*` calls for `fixtures/*.json`
 
 ## Cross-cutting
@@ -146,13 +146,13 @@ gtm_ops/
 ├── lib/                     # intake, enrichment, post_call, extraction, pdf,
 │                            # branding, pricing, audit, evaluation
 ├── prompts/                 # LLM extraction prompts (versioned)
-├── server.js                # Express /api/* surface for live Express mode
+├── server.ts                # Express /api/* surface for live Express mode
 ├── functions/api/           # Cloudflare Pages Functions mirroring /api/*
 │                            # (D1-backed, falling back to fixtures)
-├── cli.js                   # presales pipeline CLI
+├── cli.ts                   # presales pipeline CLI
 ├── examples/                # synthetic input fixtures (n8n payload samples, etc.)
 ├── templates/               # PDF templates rendered with tokens/
-├── public/                  # static asset root for server.js (live Express mode)
+├── public/                  # static asset root for server.ts (live Express mode)
 ├── config/
 │   └── branding.example.json
 ├── migrations/              # SQL schema (live-mode persistence)

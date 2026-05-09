@@ -18,7 +18,7 @@ Last reviewed: 2026-05-03
 
 1. **Lead intake** — form submission or inbound voice call lands; lead is normalized.
 2. **CRM enrichment** — Pipedrive / HubSpot / Salesforce-shaped adapter pulls account context server-side; voice agent prompt is parameterized before greeting.
-3. **Voice agent** — ElevenLabs handles the call; tools defined in `server.js` `/tools/*` are exposed via webhook.
+3. **Voice agent** — ElevenLabs handles the call; tools defined in `server.ts` `/tools/*` are exposed via webhook.
 4. **Post-call** — `ElevenLabs-Signature` HMAC verified; transcript + analysis fanout to presales pipeline, audit log, CRM, and eval-harness regression queue.
 5. **Presales pipeline** — structured LLM extraction produces a typed proposal; rendered as a branded PDF using `tokens/` from the design system.
 6. **Ops-console review** — operator opens the proposal dashboard, eval-runs page, or audit-log review.

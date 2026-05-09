@@ -4,7 +4,7 @@
  * the bug-class where the rendering JS generates per-scenario URLs but
  * the fixture directory was never shipped.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 test('every result.json link in /eval-runs/ resolves with HTTP 200', async ({ page }) => {
   // The test static server doesn't honour Cloudflare _redirects rules, so the
