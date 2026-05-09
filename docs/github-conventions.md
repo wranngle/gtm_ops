@@ -120,6 +120,10 @@ immediate merge when that policy says `require_green=true`.
 
 `github-hygiene.sh repair-failures` adds two universal repair steps: disables known noisy legacy AI review workflows and runs the normal dotfiles security-hygiene rollout in branch mode by default. It records semantic app/test/security failures instead of pretending they can be fixed generically.
 
+OpenSSF Scorecard is advisory in generated workflows. It still uploads SARIF
+when available, but repository-administration findings such as branch protection
+must not fail the workflow or create notification loops.
+
 ## Why not labels for status/priority/effort?
 
 - Labels lose ordering. You can't sort "P0 oldest first."
