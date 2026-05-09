@@ -1074,51 +1074,48 @@ function EvalsPage({ setRoute }) {
           data-testid="eval-tool-latency-rollup"
           aria-label="Per-tool latency rollup across loaded harness runs"
           style={{
-            margin:'8px 0 14px',
-            padding:'10px 12px',
+            margin:'2px 0 4px',
+            padding:'4px 8px',
             background:'var(--bg-inset)',
             borderRadius:'var(--r-md)',
             border:'1px solid var(--border-1)',
+            display:'flex',
+            flexWrap:'wrap',
+            gap:6,
+            alignItems:'center',
+            fontSize:11,
           }}
         >
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6, gap:12, flexWrap:'wrap'}}>
-            <span className="eyebrow eyebrow--accent">tool latency · rolling across {normalizedRuns.length} run{normalizedRuns.length === 1 ? '' : 's'}</span>
-            <span className="mono dim" style={{fontSize:11}}>
-              budget · round-trip p95 ≤ {TOOL_ROUND_TRIP_BUDGET_MS}ms
+          <span className="eyebrow eyebrow--accent" style={{fontSize:10}}>
+            tool latency · rolling across {normalizedRuns.length} run{normalizedRuns.length === 1 ? '' : 's'}
+          </span>
+          <span className="mono dim" style={{fontSize:10}}>
+            budget · round-trip p95 ≤ {TOOL_ROUND_TRIP_BUDGET_MS}ms
+          </span>
+          {toolLatencyRollup.map(row => (
+            <span
+              key={row.name}
+              data-testid="eval-tool-latency-rollup-row"
+              data-tool-name={row.name}
+              data-tone={row.tone}
+              data-call-count={row.schemaTotal}
+              data-p95-ms={row.p95 != null ? Math.round(row.p95) : ''}
+              className={`mono ${row.tone === 'critical' ? 'cl-err' : row.tone === 'warn' ? 'cl-warn' : 'cl-ok'}`}
+              style={{
+                padding:'2px 6px',
+                borderRadius:'var(--r-sm)',
+                border:'1px solid var(--border-1)',
+                background:'var(--bg-elev)',
+                whiteSpace:'nowrap',
+              }}
+            >
+              <span style={{fontWeight:600}}>{row.name}</span>
+              <span className="dim"> · n={row.schemaTotal}</span>
+              <span className="dim"> · schema {row.schemaRate == null ? '—' : `${Math.round(row.schemaRate * 100)}%`}</span>
+              <span> · {row.p95 != null ? `p95 ${evalDuration(Math.round(row.p95))}` : 'no timing'}</span>
+              {row.orphan > 0 ? <span className="dim"> · {row.orphan} orphan</span> : null}
             </span>
-          </div>
-          <div style={{display:'grid', gap:6}}>
-            {toolLatencyRollup.map(row => (
-              <div
-                key={row.name}
-                data-testid="eval-tool-latency-rollup-row"
-                data-tool-name={row.name}
-                data-tone={row.tone}
-                data-call-count={row.schemaTotal}
-                data-p95-ms={row.p95 != null ? Math.round(row.p95) : ''}
-                style={{
-                  display:'grid',
-                  gridTemplateColumns:'minmax(120px, 1.2fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(140px, 1.2fr)',
-                  gap:10,
-                  alignItems:'center',
-                  fontSize:12,
-                }}
-              >
-                <span className="mono" style={{fontWeight:600}}>{row.name}</span>
-                <span className="mono dim">
-                  n={row.schemaTotal}{row.samples.length !== row.schemaTotal ? ` · timed ${row.samples.length}` : ''}
-                </span>
-                <span className="mono dim">
-                  schema {row.schemaRate == null ? '—' : `${Math.round(row.schemaRate * 100)}%`}{row.orphan > 0 ? ` · ${row.orphan} orphan` : ''}
-                </span>
-                <span className={`mono num ${row.tone === 'critical' ? 'cl-err' : row.tone === 'warn' ? 'cl-warn' : 'cl-ok'}`}>
-                  {row.p95 != null
-                    ? <>p95 {evalDuration(Math.round(row.p95))}{row.p99 != null && row.samples.length >= 4 ? <span className="dim"> · p99 {evalDuration(Math.round(row.p99))}</span> : null}</>
-                    : <span className="dim">no timing</span>}
-                </span>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       )}
 

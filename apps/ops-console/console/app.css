@@ -2646,7 +2646,11 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   justify-content: space-between;
   gap: 14px;
   align-items: center;
-  margin-bottom: 18px;
+  /* Reserve space at the bottom-right for the global .coach-launcher (fixed,
+     bottom: 18px, right: 18px). Without this, on narrow viewports the run-plan
+     summary's bounding box overlaps the launcher pill and the eval-flow spec
+     fails the geometric overlap assertion. */
+  margin: 0 220px 18px 0;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-left: 3px solid var(--sunset-500);
