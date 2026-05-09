@@ -921,3 +921,28 @@ test('Generate page · ConsolePanel surfaces the full pipeline log with scrollab
   await expect(panel).not.toContainText(/pipeline\.start/i);
   await expect(copyBtn).toBeDisabled();
 });
+
+test('Generate page · per-step log feed reveals 11 stepIds of fixture entries on completion', async ({ openConsole }) => {
+  const page = await openConsole();
+  await page.locator('.sb__item:has-text("Generate")').first().click();
+
+  const feed = page.locator('[data-testid="generate-log-feed"]');
+  await expect(feed).toBeVisible();
+  await expect(page.locator('[data-testid="generate-log-feed-empty"]')).toBeVisible();
+  await expect(page.locator('[data-testid="generate-log-feed-status"]')).toContainText(/awaiting sequence start/i);
+
+  await page.getByRole('button', { name: /Use sample brief/i }).click();
+  await page.locator('.ph__actions').getByRole('button', { name: /^Generate review draft$/i }).click();
+
+  // Wait for the demo replay to finish so every stepId has been activated.
+  await expect(page.locator('.console-panel')).toContainText(/pipeline\.done/i, { timeout: 20_000 });
+
+  const lines = page.locator('[data-testid="generate-log-feed-line"]');
+  await expect.poll(async () => lines.count(), { timeout: 5_000 }).toBeGreaterThanOrEqual(11);
+
+  const stepIds = await lines.evaluateAll(nodes =>
+    Array.from(new Set(nodes.map(n => (n as HTMLElement).getAttribute('data-step-id') || ''))).filter(Boolean),
+  );
+  expect(stepIds.length, `expected 11 distinct stepIds covered by the feed, saw [${stepIds.join(', ')}]`).toBe(11);
+  await expect(page.locator('[data-testid="generate-log-feed-status"]')).toContainText(/streaming · step pipeline\.done/i);
+});

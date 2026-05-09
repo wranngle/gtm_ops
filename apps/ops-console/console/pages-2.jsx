@@ -3532,6 +3532,97 @@ function SecuritySettings() {
   );
 }
 
+// Per-step log feed for the Generate page. Loaded from a static fixture so
+// DEMO_MODE visitors see the same multi-line trace per pipeline step that the
+// live runtime emits — the previous surface only showed the single dotted
+// summary line per step. Entries are revealed up through the active stepId
+// as replayDemoSequence advances; the body auto-scrolls when stuck to bottom.
+function GenerateLogFeed({ fixture, loadError, activeStepId, bodyRef, demoStream }) {
+  const stuckRef = React.useRef(true);
+  const orderedStepIds = React.useMemo(
+    () => (Array.isArray(demoStream) ? demoStream.map(e => e.stepId).filter(Boolean) : []),
+    [demoStream],
+  );
+  const visible = React.useMemo(() => {
+    const entries = (fixture && Array.isArray(fixture.entries)) ? fixture.entries : [];
+    if (!entries.length) return [];
+    if (!activeStepId) return [];
+    const cutoff = orderedStepIds.indexOf(activeStepId);
+    if (cutoff < 0) return entries;
+    const allowed = new Set(orderedStepIds.slice(0, cutoff + 1));
+    return entries.filter(e => allowed.has(e.stepId));
+  }, [fixture, activeStepId, orderedStepIds]);
+
+  const onScroll = () => {
+    const el = bodyRef.current;
+    if (!el) return;
+    stuckRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 12;
+  };
+  React.useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    if (stuckRef.current) el.scrollTop = el.scrollHeight;
+  }, [visible.length, bodyRef]);
+
+  const status = loadError
+    ? 'fixture unavailable'
+    : !fixture
+      ? 'loading…'
+      : !activeStepId
+        ? 'awaiting sequence start'
+        : `streaming · step ${activeStepId}`;
+
+  return (
+    <section
+      className="generate-log-feed"
+      aria-label="Per-step pipeline log feed"
+      data-testid="generate-log-feed"
+    >
+      <div className="generate-log-feed__hd">
+        <strong className="mono">pipeline.log</strong>
+        <span className="muted mono" data-testid="generate-log-feed-status">{status}</span>
+        <span className="muted mono" data-testid="generate-log-feed-count">{visible.length} {visible.length === 1 ? 'entry' : 'entries'}</span>
+      </div>
+      <div
+        ref={bodyRef}
+        onScroll={onScroll}
+        className="generate-log-feed__body mono"
+        role="log"
+        aria-live="polite"
+        data-testid="generate-log-feed-body"
+      >
+        {loadError && (
+          <div className="generate-log-feed__line cl-err" data-testid="generate-log-feed-error">
+            log.fixture: failed to load · {loadError}
+          </div>
+        )}
+        {!loadError && !activeStepId && (
+          <div className="generate-log-feed__line muted" data-testid="generate-log-feed-empty">
+            sequence not started · run the draft to stream per-step log entries
+          </div>
+        )}
+        {visible.map((entry, i) => (
+          <div
+            key={`${entry.stepId}-${entry.ts_ms}-${i}`}
+            className={`generate-log-feed__line generate-log-feed__line--${entry.level || 'info'}`}
+            data-testid="generate-log-feed-line"
+            data-step-id={entry.stepId}
+            data-level={entry.level || 'info'}
+          >
+            <span className="cl-meta">{String(entry.ts_ms).padStart(5, ' ')}ms</span>
+            {' '}
+            <span className={`cl-${entry.level === 'warn' ? 'warn' : entry.level === 'error' ? 'err' : 'info'}`}>{(entry.level || 'info').toUpperCase().padEnd(4, ' ')}</span>
+            {' '}
+            <span className="cl-prompt">{entry.source || entry.stepId}</span>
+            {' '}
+            <span>{entry.message}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function GeneratePage({ setRoute }) {
   const [inputText, setInputText] = React.useState('');
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -3552,6 +3643,20 @@ function GeneratePage({ setRoute }) {
   const generationIdRef = React.useRef(0);
   const briefRef = React.useRef(null);
   const artifactPanelRef = React.useRef(null);
+  // Per-step structured log feed: load the fixture once, then reveal entries
+  // up through the currently active stepId as replayDemoSequence advances.
+  const [logFixture, setLogFixture] = React.useState(null);
+  const [logError, setLogError] = React.useState(null);
+  const [activeStepId, setActiveStepId] = React.useState(null);
+  const logBodyRef = React.useRef(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch('../fixtures/generate-logs.json')
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status} ${r.statusText}`)))
+      .then(data => { if (!cancelled) setLogFixture(data); })
+      .catch(e => { if (!cancelled) setLogError(e?.message || String(e)); });
+    return () => { cancelled = true; };
+  }, []);
   const artifactIdSlug = (value) => {
     const slug = String(value || '')
       .toLowerCase()
@@ -3996,18 +4101,20 @@ function GeneratePage({ setRoute }) {
 
   // Canned pipeline trace replayed in DEMO_MODE so visitors see the
   // sequence actually run. Live mode lets the real backend stream.
+  // stepId tags each event so the per-step log feed below the sequence rail
+  // can reveal the right fixture entries as replayDemoSequence advances.
   const DEMO_STREAM = [
-    { delay: 100,  level: 'info', msg: 'intake.received: parsing brief…' },
-    { delay: 300,  level: 'info', msg: `extract.client: ${reviewSubject}` },
-    { delay: 280,  level: 'info', msg: `extract.signals: ${reviewSignal}` },
-    { delay: 260,  level: 'info', msg: `enrichment.context: ${reviewContextSource}` },
-    { delay: 320,  level: 'ok',   msg: 'enrichment.icp: 0.82 · ICP fit confirmed' },
-    { delay: 360,  level: 'info', msg: 'pricing.model: 1q pilot · payback ≤ 6mo target · banded $1.5–2.5k/mo' },
-    { delay: 280,  level: 'info', msg: 'compliance.scan: TX two-party recording disclosure flagged' },
-    { delay: 320,  level: 'info', msg: 'scope.draft: phases 1–4 · SOW + AI risk report attached' },
-    { delay: 280,  level: 'info', msg: 'pdf.render: branded template · Wranngle livery · 7 pages' },
-    { delay: 180,  level: 'ok',   msg: `audit.signed: artifact_id=${reviewPacketId} · trace ok` },
-    { delay: 220,  level: 'ok',   msg: 'pipeline.done: proposal ready for review →' },
+    { delay: 100,  level: 'info', stepId: 'intake',             msg: 'intake.received: parsing brief…' },
+    { delay: 300,  level: 'info', stepId: 'extract.client',     msg: `extract.client: ${reviewSubject}` },
+    { delay: 280,  level: 'info', stepId: 'extract.signals',    msg: `extract.signals: ${reviewSignal}` },
+    { delay: 260,  level: 'info', stepId: 'enrichment.context', msg: `enrichment.context: ${reviewContextSource}` },
+    { delay: 320,  level: 'ok',   stepId: 'enrichment.icp',     msg: 'enrichment.icp: 0.82 · ICP fit confirmed' },
+    { delay: 360,  level: 'info', stepId: 'pricing.model',      msg: 'pricing.model: 1q pilot · payback ≤ 6mo target · banded $1.5–2.5k/mo' },
+    { delay: 280,  level: 'info', stepId: 'compliance.scan',    msg: 'compliance.scan: TX two-party recording disclosure flagged' },
+    { delay: 320,  level: 'info', stepId: 'scope.draft',        msg: 'scope.draft: phases 1–4 · SOW + AI risk report attached' },
+    { delay: 280,  level: 'info', stepId: 'pdf.render',         msg: 'pdf.render: branded template · Wranngle livery · 7 pages' },
+    { delay: 180,  level: 'ok',   stepId: 'audit.signed',       msg: `audit.signed: artifact_id=${reviewPacketId} · trace ok` },
+    { delay: 220,  level: 'ok',   stepId: 'pipeline.done',      msg: 'pipeline.done: proposal ready for review →' },
   ];
 
   const stream = (msg, level = 'info') => {
@@ -4028,6 +4135,7 @@ function GeneratePage({ setRoute }) {
     setArtifactPanel(null);
     setArtifactPayload(null);
     setArtifactState('idle');
+    setActiveStepId(null);
     globalThis.dispatchEvent(new CustomEvent('gtm:stream-reset'));
     stream('pipeline.start: review draft requested · validating buyer brief');
     const payload = JSON.stringify({ input: inputText });
@@ -4044,6 +4152,7 @@ function GeneratePage({ setRoute }) {
         cumulative += evt.delay;
         setTimeout(() => {
           if (generationIdRef.current !== generationId) return;
+          if (evt.stepId) setActiveStepId(evt.stepId);
           globalThis.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg: evt.msg, level: evt.level } }));
         }, cumulative);
       }
@@ -4144,6 +4253,14 @@ function GeneratePage({ setRoute }) {
           </div>
         ))}
       </section>
+
+      <GenerateLogFeed
+        fixture={logFixture}
+        loadError={logError}
+        activeStepId={activeStepId}
+        bodyRef={logBodyRef}
+        demoStream={DEMO_STREAM}
+      />
 
       <div className="generate-grid">
         <Card title="buyer brief" className="card--accent generate-brief-card">

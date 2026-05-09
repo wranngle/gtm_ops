@@ -1,0 +1,57 @@
+{
+  "_note": "Synthetic per-step log feed for the Generate page replay. One entry per (stepId, ts_ms) pair; the UI reveals entries up through the currently active step. Levels: info | warn | error. Sources mirror lib/pipeline.js stage names.",
+  "version": 1,
+  "entries": [
+    { "stepId": "intake", "ts_ms": 12, "level": "info", "source": "intake.received", "message": "POST /api/generate accepted · validating buyer brief envelope" },
+    { "stepId": "intake", "ts_ms": 31, "level": "info", "source": "intake.normalize", "message": "stripped 0 PII tokens · canonicalized 1 contact block" },
+    { "stepId": "intake", "ts_ms": 64, "level": "info", "source": "intake.schema", "message": "BuyerBrief.v3 shape ok · 1 client · 1 stack · 1 budget signal" },
+    { "stepId": "intake", "ts_ms": 88, "level": "info", "source": "intake.dispatch", "message": "queueing extract.client · trace_id=trc_b3f9 · attempt 1/3" },
+
+    { "stepId": "extract.client", "ts_ms": 142, "level": "info", "source": "extract.llm", "message": "claude-sonnet-4-6 · prompt 1.2k tok · cache hit on system block" },
+    { "stepId": "extract.client", "ts_ms": 198, "level": "info", "source": "extract.parse", "message": "schema=ClientFacts.v2 · 7 fields populated · 0 fields missing" },
+    { "stepId": "extract.client", "ts_ms": 241, "level": "info", "source": "extract.client", "message": "buyer.name resolved · industry=hvac_services · headcount≈30 · region=tx" },
+    { "stepId": "extract.client", "ts_ms": 263, "level": "info", "source": "extract.confidence", "message": "field-level confidence median 0.91 · no remediation queued" },
+
+    { "stepId": "extract.signals", "ts_ms": 312, "level": "info", "source": "extract.signals", "message": "scanning 7 signal slots · pain · urgency · trigger · authority · timeline · stack · budget" },
+    { "stepId": "extract.signals", "ts_ms": 358, "level": "info", "source": "extract.signals", "message": "primary trigger detected · 22% afterhours abandonment > 15% threshold" },
+    { "stepId": "extract.signals", "ts_ms": 401, "level": "warn", "source": "extract.signals", "message": "authority signal partial · approver named but title not stated · proceeding with low-conf flag" },
+    { "stepId": "extract.signals", "ts_ms": 422, "level": "info", "source": "extract.signals", "message": "signal score 4/5 · sufficient for ICP fit pass" },
+
+    { "stepId": "enrichment.context", "ts_ms": 488, "level": "info", "source": "enrichment.fetch", "message": "looking up firmographics · clearbit fallback disabled in DEMO_MODE" },
+    { "stepId": "enrichment.context", "ts_ms": 541, "level": "info", "source": "enrichment.context", "message": "matched 1 prior call transcript · 0 prior proposals · context window 14d" },
+    { "stepId": "enrichment.context", "ts_ms": 578, "level": "info", "source": "enrichment.merge", "message": "context bundle assembled · 4 sources · 2.1k tokens reserved for downstream prompts" },
+
+    { "stepId": "enrichment.icp", "ts_ms": 640, "level": "info", "source": "enrichment.icp", "message": "running ICP matrix · 6 dimensions · weights from config/icp.weights.json" },
+    { "stepId": "enrichment.icp", "ts_ms": 692, "level": "info", "source": "enrichment.icp", "message": "industry+geo+headcount=match · stack=partial · budget=in-band" },
+    { "stepId": "enrichment.icp", "ts_ms": 734, "level": "info", "source": "enrichment.icp", "message": "fit_score=0.82 · band=A · routing=standard_pilot_template" },
+    { "stepId": "enrichment.icp", "ts_ms": 758, "level": "info", "source": "enrichment.icp", "message": "ICP fit confirmed · proceeding to pricing.model" },
+
+    { "stepId": "pricing.model", "ts_ms": 822, "level": "info", "source": "pricing.model", "message": "selecting band · peers $1.5-2.5k/mo · pilot quarter · target payback ≤ 6mo" },
+    { "stepId": "pricing.model", "ts_ms": 871, "level": "info", "source": "pricing.calc", "message": "1q pilot · monthly run-rate $1950 · setup $0 · success-fee deferred" },
+    { "stepId": "pricing.model", "ts_ms": 915, "level": "info", "source": "pricing.model", "message": "payback projection 4.2mo @ p50 · 5.8mo @ p20 · within target window" },
+    { "stepId": "pricing.model", "ts_ms": 942, "level": "info", "source": "pricing.write", "message": "pricing block frozen · pricing_id=pri_acme_q1_pilot" },
+
+    { "stepId": "compliance.scan", "ts_ms": 1010, "level": "info", "source": "compliance.scan", "message": "geo=TX · scanning state-specific recording, retention, and consent rules" },
+    { "stepId": "compliance.scan", "ts_ms": 1065, "level": "warn", "source": "compliance.flag", "message": "TX two-party recording disclosure required · adding §4.2 disclosure clause" },
+    { "stepId": "compliance.scan", "ts_ms": 1108, "level": "info", "source": "compliance.scan", "message": "no PHI present · HIPAA path skipped · standard retention applies" },
+    { "stepId": "compliance.scan", "ts_ms": 1131, "level": "info", "source": "compliance.summary", "message": "1 disclosure clause queued · 0 hard blockers · proceeding to scope.draft" },
+
+    { "stepId": "scope.draft", "ts_ms": 1198, "level": "info", "source": "scope.draft", "message": "phase planner · phases 1-4 · pilot, integrate, ramp, handoff" },
+    { "stepId": "scope.draft", "ts_ms": 1252, "level": "info", "source": "scope.draft", "message": "SOW v1 assembled · 5 deliverables · 1 risk-report attached" },
+    { "stepId": "scope.draft", "ts_ms": 1297, "level": "info", "source": "scope.write", "message": "AI risk report appended · 3 categories · operator_review_required=true" },
+    { "stepId": "scope.draft", "ts_ms": 1318, "level": "info", "source": "scope.summary", "message": "scope frozen · 4 phases · 5 deliverables · 1 risk doc · ready for render" },
+
+    { "stepId": "pdf.render", "ts_ms": 1382, "level": "info", "source": "pdf.template", "message": "loading wranngle livery · brand=wranngle_v3 · accent=sunset · type=ibm_plex" },
+    { "stepId": "pdf.render", "ts_ms": 1441, "level": "info", "source": "pdf.compose", "message": "rendering 7 pages · cover · summary · scope · pricing · compliance · risk · appendix" },
+    { "stepId": "pdf.render", "ts_ms": 1503, "level": "info", "source": "pdf.write", "message": "wrote 312kb · checksum=sha256:8f4a... · embedded fonts subset 24%" },
+    { "stepId": "pdf.render", "ts_ms": 1525, "level": "info", "source": "pdf.render", "message": "branded pdf ready · 7 pages · ready for audit signature" },
+
+    { "stepId": "audit.signed", "ts_ms": 1582, "level": "info", "source": "audit.hash", "message": "computing artifact hash · canonicalizing JSON-LD provenance graph" },
+    { "stepId": "audit.signed", "ts_ms": 1631, "level": "info", "source": "audit.sign", "message": "ed25519 detached signature emitted · key=ops-console-2026" },
+    { "stepId": "audit.signed", "ts_ms": 1668, "level": "info", "source": "audit.signed", "message": "trace anchored · artifact_id assigned · audit log row appended" },
+
+    { "stepId": "pipeline.done", "ts_ms": 1722, "level": "info", "source": "pipeline.metrics", "message": "wall=1.71s · stages=11 · llm_calls=4 · cache_hits=2 · retries=0" },
+    { "stepId": "pipeline.done", "ts_ms": 1748, "level": "info", "source": "pipeline.gate", "message": "operator review gate locked · buyer send blocked until approved in Proposals" },
+    { "stepId": "pipeline.done", "ts_ms": 1772, "level": "info", "source": "pipeline.done", "message": "proposal ready for review · open the review packet to inspect" }
+  ]
+}
