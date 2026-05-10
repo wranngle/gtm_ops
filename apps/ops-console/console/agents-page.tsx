@@ -60,10 +60,10 @@ function AgentsPage({ setRoute }) {
         setAdminPanel(ctx.extra.agent_admin_panel);
         requestAnimationFrame(() => {
           if (isEvalAgentHandoff) {
-            evalHandoffBannerRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+            globalThis.scrollConsoleNodeIntoView?.(evalHandoffBannerRef.current, { block: 'start' });
             return;
           }
-          adminCardRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+          globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'start' });
         });
       }
       if (ctx.extra?.new_agent_intent) {
@@ -106,7 +106,7 @@ function AgentsPage({ setRoute }) {
   React.useEffect(() => {
     if (!evalContextHandoff || adminPanel !== 'context') return undefined;
     const frame = requestAnimationFrame(() => {
-      evalHandoffBannerRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(evalHandoffBannerRef.current, { block: 'start' });
     });
     return () => cancelAnimationFrame(frame);
   }, [appExtra.triggered_from, appExtra.selected_eval_run, adminPanel]);
@@ -125,7 +125,7 @@ function AgentsPage({ setRoute }) {
       setAdminFocusNotice(`${active?.display_name || 'Agent'} local admin focused · ${label}`);
     }
     requestAnimationFrame(() => {
-      adminCardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'nearest' });
       if (source === 'shortcut') adminCardRef.current?.focus?.({ preventScroll: true });
     });
   };
@@ -165,7 +165,7 @@ function AgentsPage({ setRoute }) {
       },
     });
     requestAnimationFrame(() => {
-      adminCardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'nearest' });
     });
   };
   // Clear the per-agent context snapshot when the active agent changes,
@@ -204,7 +204,7 @@ function AgentsPage({ setRoute }) {
       },
     });
     requestAnimationFrame(() => {
-      adminCardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'nearest' });
     });
     globalThis.toast(`${active.display_name} · context refreshed`, { sub: 'Visible context packet updated in local admin', tone: 'accent' });
   };

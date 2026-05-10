@@ -337,7 +337,7 @@ function Sidebar({ route, setRoute, collapsed }) {
         {!collapsed && (
           <div>
             <img className="sb__wordmark" src="../assets/wranngle-wordmark.png" alt="Wranngle"/>
-            <div className="sb__brand-sub">gtm_ops</div>
+            <div className="sb__brand-sub">gtm_ops console</div>
           </div>
         )}
       </div>
@@ -495,7 +495,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
       <div className="tb__crumbs">
         <button className="tb__crumb tb__crumb--brand" disabled={route === 'home'} onClick={() => setRoute('home')}>Wranngle</button>
         <span className="tb__sep">/</span>
-        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops</button>
+        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops console</button>
         <span className="tb__sep">/</span>
         <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
       </div>
@@ -813,6 +813,50 @@ function CommandPalette({ open, setOpen, setRoute }) {
 }
 
 /* ---------- Shared widgets ---------- */
+function scrollConsoleNodeIntoView(node, options = {}) {
+  if (!node?.getBoundingClientRect) return;
+  const { block = 'nearest', behavior = 'auto', padding = 16 } = options;
+  const isScrollable = (el) => {
+    if (!el || el === document.body || el === document.documentElement) return false;
+    const style = globalThis.getComputedStyle?.(el);
+    return Boolean(
+      style
+      && /(auto|scroll)/.test(style.overflowY)
+      && el.scrollHeight > el.clientHeight + 1,
+    );
+  };
+  let container = node.parentElement;
+  while (container && !isScrollable(container)) container = container.parentElement;
+  container = container || document.querySelector('main.scroll');
+  if (!container) return;
+
+  const nodeRect = node.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const topDelta = nodeRect.top - containerRect.top - padding;
+  const bottomDelta = nodeRect.bottom - containerRect.bottom + padding;
+  let nextTop = container.scrollTop;
+
+  if (block === 'start') {
+    nextTop += topDelta;
+  } else if (block === 'center') {
+    nextTop += nodeRect.top - containerRect.top - ((containerRect.height - nodeRect.height) / 2);
+  } else if (topDelta < 0) {
+    nextTop += topDelta;
+  } else if (bottomDelta > 0) {
+    nextTop += bottomDelta;
+  } else {
+    return;
+  }
+
+  const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  const clamped = Math.max(0, Math.min(maxTop, nextTop));
+  if (behavior === 'smooth') {
+    container.scrollTo({ top: clamped, behavior: 'smooth' });
+  } else {
+    container.scrollTop = clamped;
+  }
+}
+
 function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w = 120, label, pointLabels }) {
   const [hovered, setHovered] = useState(null);
   const min = Math.min(...data), max = Math.max(...data);
@@ -821,8 +865,8 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
   const pts = data.map((v, i) => [data.length > 1 ? i * step : w / 2, h - ((v - min) / span) * (h - 4) - 2]);
   const path = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
   const area = `${path} L${w},${h} L0,${h} Z`;
-  const latest = data[data.length - 1];
-  const first = data[0];
+  const latest = data.at(-1);
+  const first = data.at(0);
   const delta = latest - first;
   const labelText = String(label || '');
   const percentLabeled = /(?:%|percent|pct|rate|pass-rate|conversion)/i.test(labelText);
@@ -1190,4 +1234,5 @@ Object.assign(window, {
   Sidebar, Topbar, CommandPalette, ToastHost, Popover,
   Sparkline, Stat, Badge, PageHeader, Card, ConsolePanel, Segmented,
   proposalAmountToThousands, formatProposalTotal, isOpenProposalStage,
+  scrollConsoleNodeIntoView,
 });

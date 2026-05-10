@@ -1292,7 +1292,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
   }, [c?.id]);
   useEffect(() => {
     if (!artifactPanel) return;
-    requestAnimationFrame(() => artifactRef.current?.scrollIntoView({ block:'nearest', behavior:'auto' }));
+    requestAnimationFrame(() => globalThis.scrollConsoleNodeIntoView?.(artifactRef.current, { block:'nearest' }));
   }, [artifactPanel?.path]);
   if (!c) return null;
   return (
@@ -2099,7 +2099,7 @@ function CallsPage({ setRoute }) {
                        }
                        onClick={() => tryOpenCoachingDraft(l)}
                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tryOpenCoachingDraft(l); } }}
-                       ref={(el) => { if (el && playbackIndex === i) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }}
+                       ref={(el) => { if (el && playbackIndex === i) globalThis.scrollConsoleNodeIntoView?.(el, { block: 'nearest', behavior: 'smooth' }); }}
                        style={{cursor: coachingMode ? 'pointer' : 'default'}}>
                     <span className="trans__time">{l.t}</span>
                     <span className={`trans__who trans__who--${l.who}`}>
