@@ -1,4 +1,3 @@
-// @ts-nocheck — migrated from .js (was checkJs:false); incremental tightening tracked separately.
 
 /**
  * Case Study Harvester - Extract case studies from web pages

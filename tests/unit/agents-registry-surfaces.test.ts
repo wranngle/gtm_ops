@@ -36,6 +36,9 @@ type SurfaceBlock = {
 type Agent = {
   key: string;
   agent_id?: string;
+  goal_alignment?: string;
+  first_message?: string;
+  system_prompt?: string;
   surfaces?: Record<string, SurfaceBlock>;
 };
 type Registry = {
@@ -146,5 +149,111 @@ describe('agents-registry surfaces', () => {
       }
     }
     expect(dismissibleSurfaces).toEqual(['sales_coach:coach_dock']);
+  });
+});
+
+// =============================================================================
+// Prompt-content guards — these assert the GTM-motion anchors that the
+// agent prompts MUST keep, so a future "make this prompt more generic"
+// edit can't silently remove the bleed-cost framing, the four-artifact
+// arc, or the IntakeSchema-feeding capture priorities. el-widget.tsx
+// forwards these strings to the ElevenLabs embed at runtime, so a
+// regression here ships to production.
+// =============================================================================
+
+describe('agents-registry prompt content (GTM motion anchors)', () => {
+  it('every agent has a goal_alignment field', () => {
+    for (const a of REG.agents) {
+      expect(
+        a.goal_alignment,
+        `${a.key} is missing a goal_alignment field — operators reading the registry need to see where the agent sits in the GTM motion`,
+      ).toBeTruthy();
+    }
+  });
+
+  describe('sales_coach', () => {
+    it('system_prompt names bleed cost as the persuasion lever', () => {
+      const sc = REG.byKey('sales_coach');
+      expect(sc?.system_prompt).toMatch(/bleed/i);
+      expect(sc?.system_prompt).toMatch(/missed[- ]call/i);
+    });
+
+    it('system_prompt references the four-artifact arc (audit + plan + proposal)', () => {
+      const sc = REG.byKey('sales_coach');
+      expect(sc?.system_prompt).toMatch(/audit/i);
+      expect(sc?.system_prompt).toMatch(/project plan/i);
+      expect(sc?.system_prompt).toMatch(/proposal/i);
+    });
+
+    it('system_prompt forbids pitching a generic "AI assistant"', () => {
+      const sc = REG.byKey('sales_coach');
+      expect(sc?.system_prompt).toMatch(/voice receptionist|service business/i);
+    });
+
+    it('system_prompt asserts coach is NOT Sarah (separation of operator vs prospect)', () => {
+      const sc = REG.byKey('sales_coach');
+      expect(sc?.system_prompt).toMatch(/not\s+(?:the\s+)?(inbound|sarah)/i);
+    });
+
+    it('eval_lab surface has its own firstMessage (not falling back to default)', () => {
+      const lab = REG.surfaceOverrides('sales_coach', 'eval_lab');
+      expect(lab?.firstMessage, 'sales_coach.eval_lab.firstMessage was missing — fell back to operator-facing text in eval mode').toBeTruthy();
+      expect(lab?.firstMessage).toMatch(/eval mode|graded|case study/i);
+    });
+  });
+
+  describe('intake (Sarah)', () => {
+    it('system_prompt explicitly states Sarah IS the product (live demo == live receptionist)', () => {
+      const sarah = REG.byKey('intake');
+      expect(sarah?.system_prompt).toMatch(/product|live demo/i);
+      expect(sarah?.system_prompt).toMatch(/voice receptionist/i);
+    });
+
+    it('system_prompt prioritizes IntakeSchema-feeding capture (volume + ticket value)', () => {
+      const sarah = REG.byKey('intake');
+      expect(sarah?.system_prompt).toMatch(/volume/i);
+      expect(sarah?.system_prompt).toMatch(/ticket value|bleed/i);
+    });
+
+    it('system_prompt forbids Sarah from quoting pricing herself', () => {
+      const sarah = REG.byKey('intake');
+      expect(sarah?.system_prompt).toMatch(/never quote pricing|do not quote/i);
+    });
+
+    it('system_prompt names the speed-to-lead SLA (5-minute window)', () => {
+      const sarah = REG.byKey('intake');
+      expect(sarah?.system_prompt).toMatch(/5[- ]minute|speed[- ]to[- ]lead/i);
+    });
+
+    it('system_prompt scopes to the service-business vertical (HVAC/plumbing/etc.)', () => {
+      const sarah = REG.byKey('intake');
+      expect(sarah?.system_prompt).toMatch(/HVAC/);
+      expect(sarah?.system_prompt).toMatch(/plumbing/i);
+    });
+
+    it('eval_lab surface has its own firstMessage acknowledging graded mode', () => {
+      const lab = REG.surfaceOverrides('intake', 'eval_lab');
+      expect(lab?.firstMessage).toMatch(/eval mode|graded|case study/i);
+    });
+  });
+
+  describe('every operator-facing agent prompt', () => {
+    it('ends with the {{context}} dynamic-variable injection', () => {
+      for (const key of ['sales_coach', 'intake']) {
+        const a = REG.byKey(key);
+        expect(
+          a?.system_prompt?.trim().endsWith('{{context}}'),
+          `${key}.system_prompt must end with {{context}} — the runtime injects the live console state at that anchor`,
+        ).toBe(true);
+      }
+    });
+
+    it('references the operator console context as the source of truth', () => {
+      for (const key of ['sales_coach', 'intake']) {
+        const a = REG.byKey(key);
+        expect(a?.system_prompt).toMatch(/context/i);
+        expect(a?.system_prompt).toMatch(/never invent|do not infer|do not overwrite/i);
+      }
+    });
   });
 });

@@ -1,5 +1,6 @@
 // @ts-nocheck — migrated from .js (was checkJs:false); incremental tightening tracked separately.
 
+
 /**
  * Database Abstraction Layer
  *
