@@ -238,7 +238,7 @@ function App() {
 
   return (
     <>
-      <div className="app" data-collapsed={collapsed}>
+      <div className="app" data-collapsed={collapsed} data-route={route}>
         <Sidebar route={route} setRoute={setConsoleRoute} collapsed={collapsed}/>
         <div className="main">
           <Topbar route={route} setRoute={setConsoleRoute} openPalette={()=>setPaletteOpen(true)}

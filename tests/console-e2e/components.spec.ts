@@ -149,21 +149,22 @@ test.describe('shell', () => {
     await expect(page.locator('.sb__nav[aria-label="ElevenLabs agents"] .sb__agent-orb')).toHaveCount(0);
   });
 
-  test('sidebar brand shows Wranngle / gtm_ops without exposing a version', async ({ openConsole }) => {
+  test('sidebar brand shows Wranngle / gtm_ops console without exposing a version', async ({ openConsole }) => {
     const page = await openConsole();
     // Browser <title> still says "Wranngle \u00b7 gtm_ops console" \u2014 that's
     // the tab title, where the surface name is helpful disambiguation.
-    // The in-app breadcrumb and brand-sub drop the redundant " console"
-    // suffix per the original visual punch list (May 5 04:22 UTC, item
-    // #2: "gtm_ops console > gtm_ops").
+    // The in-app breadcrumb and brand-sub mirror shell-level branding:
+    // Wranngle / gtm_ops console. Keep this explicit for operators who
+    // move between environments, and keep version text out of shell chrome.
     await expect(page).toHaveTitle(/Wranngle\s+\u00b7\s+gtm_ops console/i);
     await expect(page).not.toHaveTitle(/v\d/i);
     await expect(page.locator('.sb__brand .sb__wordmark')).toHaveAttribute('alt', /Wranngle/i);
     await expect(page.locator('.sb__brand .sb__logo--lasso img')).toHaveAttribute('src', /wranngle-lasso\.png/);
-    await expect(page.locator('.sb__brand-sub')).toHaveText('gtm_ops');
+    await expect(page.locator('.sb__brand-sub')).toHaveText('gtm_ops console');
+    await expect(page.locator('.sb__brand-sub')).toHaveCSS('text-transform', 'none');
     await expect(page.locator('.sb__brand')).not.toContainText(/v\d/i);
-    await expect(page.locator('.tb__crumb--workspace')).toHaveText('gtm_ops');
-    await expect(page.locator('.tb__crumbs')).toContainText(/Wranngle\s*\/\s*gtm_ops/i);
+    await expect(page.locator('.tb__crumb--workspace')).toHaveText('gtm_ops console');
+    await expect(page.locator('.tb__crumbs')).toContainText(/Wranngle\s*\/\s*gtm_ops console/i);
     await expect(page.locator('.tb__crumbs')).not.toContainText(/v\d/i);
   });
 
@@ -189,7 +190,7 @@ test.describe('shell', () => {
     };
 
     await page.locator('.sb__item:has-text("Generate")').first().click();
-    await assertReadableButton(page.getByRole('button', { name: /Review PDF sample/i }), 'Generate artifact PDF button');
+    await assertReadableButton(page.getByRole('button', { name: /Review local PDF artifact/i }), 'Generate artifact PDF button');
 
     await page.locator('.sb__item:has-text("Evals")').first().click();
     await assertReadableButton(page.getByRole('button', { name: /Open run plan/i }), 'Evals run plan button');
@@ -197,6 +198,43 @@ test.describe('shell', () => {
     await page.locator('.sb__item:has-text("Agents")').first().click();
     await assertReadableButton(page.getByRole('button', { name: /Workspace settings/i }), 'Agents workspace settings button');
     await assertReadableButton(page.getByRole('link', { name: /ElevenLabs admin/i }), 'Agents ElevenLabs escape hatch');
+  });
+
+  test('drawer and admin jumps stay inside console scrollers', async ({ openConsole, page }) => {
+    const pageErrors: string[] = [];
+    await page.addInitScript(() => {
+      Object.defineProperty(Element.prototype, 'scrollIntoView', {
+        configurable: true,
+        value() {
+          throw new Error('scrollIntoView should not drive console popout navigation');
+        },
+      });
+    });
+    page.on('pageerror', (error) => {
+      if (!error.message.includes('languageCode')) {
+        pageErrors.push(error.message);
+      }
+    });
+
+    await openConsole();
+
+    await page.locator('.sb__item:has-text("Generate")').first().click();
+    await page.getByRole('button', { name: /Use sample brief/i }).click();
+    await page.getByRole('button', { name: /Review local PDF artifact/i }).click();
+    await expect(page.getByRole('region', { name: /Proposal artifact review drawer/i })).toBeVisible();
+
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    await page.locator('[data-testid="eval-header-run-plan-open"]').click();
+    await expect(page.getByRole('region', { name: /Local eval run plan details/i })).toBeVisible();
+
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+    await page.getByRole('button', { name: /Open local admin/i }).first().click();
+    await expect(page.locator('[data-testid="agent-local-admin-focus-status"]')).toContainText(/local admin focused/i);
+    await page.locator('.agent-admin-tab').filter({ hasText: /^Context$/ }).click();
+    await page.locator('[data-testid="agent-refresh-context"]').click();
+    await expect(page.locator('[data-testid="agent-context-sync"]')).toBeVisible();
+
+    expect(pageErrors).toEqual([]);
   });
 
   test('sparkline inspection is granular without flooding the tab order', async ({ openConsole }) => {
@@ -615,8 +653,9 @@ test.describe('topbar', () => {
     await page.locator('.sb__item:has-text("Generate")').first().click();
 
     await page.getByRole('button', { name: /Use sample brief/i }).click();
-    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-sample"]')).toBeVisible();
-    await page.locator('[data-testid="generate-review-path-action-open-artifact-sample"]').click();
+    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-preview"]')).toBeVisible();
+    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-preview"]')).toHaveText(/Open PDF preview/i);
+    await page.locator('[data-testid="generate-review-path-action-open-artifact-preview"]').click();
     const drawer = page.locator('[role="region"][aria-label="Proposal artifact review drawer"]');
     await expect(drawer).toBeVisible();
     await drawer.getByRole('button', { name: /Close proposal artifact review drawer/i }).click();
@@ -627,6 +666,7 @@ test.describe('topbar', () => {
     await expect(page.locator('[data-testid="generate-review-path-step-review"] .artifact-review__path-action')).toBeVisible({
       timeout: 10_000,
     });
+    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-draft"]')).toHaveText(/Open draft PDF/i);
     await page.locator('[data-testid="generate-review-path-action-open-proposals-review"]').click();
     await expect(page.locator('.tb__crumb--active')).toContainText('Proposals');
   });
