@@ -1073,23 +1073,11 @@ function EvalsPage({ setRoute }) {
           className="eval-tool-latency-rollup"
           data-testid="eval-tool-latency-rollup"
           aria-label="Per-tool latency rollup across loaded harness runs"
-          style={{
-            margin:'2px 0 4px',
-            padding:'4px 8px',
-            background:'var(--bg-inset)',
-            borderRadius:'var(--r-md)',
-            border:'1px solid var(--border-1)',
-            display:'flex',
-            flexWrap:'wrap',
-            gap:6,
-            alignItems:'center',
-            fontSize:11,
-          }}
         >
-          <span className="eyebrow eyebrow--accent" style={{fontSize:10}}>
+          <span className="eyebrow eyebrow--accent eval-tool-latency-rollup__caption">
             tool latency · rolling across {normalizedRuns.length} run{normalizedRuns.length === 1 ? '' : 's'}
           </span>
-          <span className="mono dim" style={{fontSize:10}}>
+          <span className="mono dim eval-tool-latency-rollup__budget">
             budget · round-trip p95 ≤ {TOOL_ROUND_TRIP_BUDGET_MS}ms
           </span>
           {toolLatencyRollup.map(row => (
@@ -1100,16 +1088,9 @@ function EvalsPage({ setRoute }) {
               data-tone={row.tone}
               data-call-count={row.schemaTotal}
               data-p95-ms={row.p95 != null ? Math.round(row.p95) : ''}
-              className={`mono ${row.tone === 'critical' ? 'cl-err' : row.tone === 'warn' ? 'cl-warn' : 'cl-ok'}`}
-              style={{
-                padding:'2px 6px',
-                borderRadius:'var(--r-sm)',
-                border:'1px solid var(--border-1)',
-                background:'var(--bg-elev)',
-                whiteSpace:'nowrap',
-              }}
+              className={`mono eval-tool-latency-rollup__chip ${row.tone === 'critical' ? 'cl-err' : row.tone === 'warn' ? 'cl-warn' : 'cl-ok'}`}
             >
-              <span style={{fontWeight:600}}>{row.name}</span>
+              <span className="eval-tool-latency-rollup__chip-name">{row.name}</span>
               <span className="dim"> · n={row.schemaTotal}</span>
               <span className="dim"> · schema {row.schemaRate == null ? '—' : `${Math.round(row.schemaRate * 100)}%`}</span>
               <span> · {row.p95 != null ? `p95 ${evalDuration(Math.round(row.p95))}` : 'no timing'}</span>

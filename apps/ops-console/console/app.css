@@ -3702,6 +3702,37 @@ textarea.form-input { resize: vertical; min-height: 92px; }
 .eval-latency-strip__p95[data-tone="warn"] { color: var(--warn-fg); border-color: rgba(255,158,51,.35); }
 .eval-latency-strip__p95[data-tone="critical"] { color: var(--violet-fg); border-color: rgba(207,60,105,.35); }
 
+/* Per-tool latency rollup — compact horizontal chip strip beneath the
+   eval-latency-strip. Vertical contribution is bounded so the .evals-grid
+   below it lands above the 720px laptop fold (see components.spec.ts:3171).
+   Tone classes (cl-err / cl-warn / cl-ok) come from the global token system. */
+.eval-tool-latency-rollup {
+  margin: 2px 0 4px;
+  padding: 4px 8px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+}
+.eval-tool-latency-rollup__caption,
+.eval-tool-latency-rollup__budget {
+  font-size: 10px;
+}
+.eval-tool-latency-rollup__chip {
+  padding: 2px 6px;
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-sm);
+  background: var(--bg-elev);
+  white-space: nowrap;
+}
+.eval-tool-latency-rollup__chip-name {
+  font-weight: 600;
+}
+
 /* Runs panel error state — actionable, not silent. */
 .eval-runs-error {
   background: linear-gradient(90deg, rgba(207,60,105,.08), transparent 60%);
