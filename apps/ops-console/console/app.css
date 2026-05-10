@@ -243,8 +243,8 @@ a:hover { color: var(--accent-fg); }
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-3);
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  letter-spacing: .02em;
+  text-transform: none;
   margin-top: 1px;
 }
 
@@ -1403,9 +1403,18 @@ a:hover { color: var(--accent-fg); }
 }
 .generate-grid {
   display: grid;
-  grid-template-columns: minmax(250px, .72fr) minmax(280px, .82fr) minmax(400px, 1.1fr);
+  grid-template-columns: minmax(320px, .95fr) minmax(440px, 1.05fr);
+  grid-template-areas:
+    "brief review"
+    "trace review";
   gap: 16px;
   align-items: start;
+}
+.generate-brief-card {
+  grid-area: brief;
+}
+.generate-trace-card {
+  grid-area: trace;
 }
 .generate-brief {
   width: 100%;
@@ -1463,6 +1472,7 @@ a:hover { color: var(--accent-fg); }
   flex-wrap: wrap;
 }
 .generate-review-card {
+  grid-area: review;
   position: sticky;
   top: 96px;
 }
@@ -1493,23 +1503,34 @@ a:hover { color: var(--accent-fg); }
 }
 .artifact-review__packet {
   align-items: flex-start;
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: linear-gradient(135deg, rgba(255,95,0,.10), rgba(207,60,105,.07));
 }
+.generate-review-card .artifact-review__packet {
+  display: grid;
+  gap: 3px;
+}
+.artifact-review__packet-title {
+  display: grid;
+  gap: 3px;
+}
+.generate-review-card .artifact-review__packet-title .eyebrow {
+  line-height: 1.1;
+}
 .artifact-review__packet strong {
-  display: block;
-  margin: 3px 0 4px;
+  display: inline;
+  margin: 0;
   font-family: var(--font-display);
-  font-size: 14px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.15;
 }
 .artifact-review__packet p {
   margin: 0;
   color: var(--text-2);
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: 11px;
+  line-height: 1.3;
 }
 .artifact-review__path {
   display: grid;
@@ -1566,32 +1587,48 @@ a:hover { color: var(--accent-fg); }
   line-height: 1.4;
 }
 .generate-review-card .artifact-review__path > div {
-  position: relative;
-  display: block;
-  padding: 9px 10px 9px 32px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+.generate-review-card .artifact-review__path > div:not(:has(.artifact-review__path-action)) {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.artifact-review__path-copy {
+  min-width: 0;
 }
 .generate-review-card .artifact-review__path > div[data-state="locked"] {
   pointer-events: none;
 }
+.generate-review-card .artifact-review__path {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
 .generate-review-card .artifact-review__path-action {
-  margin-top: 8px;
+  width: auto;
+  margin-top: 0;
+  justify-content: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-spacing: 1px;
+  line-height: 1.2;
+  letter-spacing: .02em;
 }
 .generate-review-card .artifact-review__path p {
   margin-top: 2px;
-  font-size: 10px;
-  line-height: 1.25;
+  font-size: 11px;
+  line-height: 1.3;
 }
 .generate-review-card .artifact-review__path-index {
-  position: absolute;
-  left: 9px;
-  top: 10px;
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   font-size: 9px;
 }
 .artifact-review__quality {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 .artifact-review__quality > div {
@@ -1602,10 +1639,35 @@ a:hover { color: var(--accent-fg); }
   background: var(--bg-inset);
   font-size: 13px;
 }
+.generate-review-card .artifact-review__quality > div {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px;
+  font-size: 12px;
+}
+.generate-review-card .artifact-review__quality > div > span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.generate-review-card .artifact-review__quality .badge {
+  flex: 0 0 auto;
+  padding-inline: 6px;
+  font-size: 9px;
+  letter-spacing: .04em;
+}
 .artifact-review__links .btn {
-  flex: none;
-  justify-content: center;
+  width: 100%;
   min-width: 0;
+  min-height: 40px;
+  justify-content: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-spacing: 1px;
+  line-height: 1.2;
+  letter-spacing: .02em;
 }
 .artifact-review__links {
   display: grid;
@@ -1804,6 +1866,14 @@ a:hover { color: var(--accent-fg); }
   .generate-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+  .generate-grid {
+    grid-template-areas: none;
+  }
+  .generate-brief-card,
+  .generate-trace-card,
+  .generate-review-card {
+    grid-area: auto;
+  }
   .generate-review-card {
     position: static;
   }
@@ -1820,8 +1890,75 @@ a:hover { color: var(--accent-fg); }
   .proposal-review__artifacts {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+@media (min-width: 1261px) and (max-height: 760px) {
+  .page--generate {
+    padding-top: 14px;
+  }
+  .page--generate .ph {
+    margin-bottom: 10px;
+  }
+  .page--generate .ph__sub {
+    margin-top: 2px;
+  }
+  .generate-sequence {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .generate-step {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .generate-step p {
+    line-height: 1.25;
+  }
+  .generate-grid {
+    gap: 12px;
+  }
+  .generate-review-card {
+    top: 76px;
+  }
+  .generate-review-card .card__hd {
+    padding: 10px 14px;
+  }
+  .generate-review-card .card__body {
+    padding: 8px 12px 10px;
+  }
+  .generate-review-card .artifact-review {
+    gap: 3px;
+  }
+  .artifact-review__state {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .generate-review-card .artifact-review__path {
+    gap: 6px;
+  }
+  .generate-review-card .artifact-review__path > div {
+    grid-template-columns: auto minmax(0, 1fr) max-content;
+    gap: 6px;
+    padding: 4px 8px;
+  }
+  .generate-review-card .artifact-review__path strong {
+    font-size: 11px;
+  }
+  .generate-review-card .artifact-review__path p {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .generate-review-card .artifact-review__path-action {
+    margin-top: 0;
+    padding-block: 4px;
+  }
   .artifact-review__links .btn {
-    flex: none;
+    min-height: 36px;
+    padding-block: 5px;
+  }
+  .artifact-review__packet {
+    padding: 8px 10px;
+  }
+  .artifact-review__quality {
+    gap: 8px;
   }
 }
 @media (max-width: 760px) {
@@ -2646,12 +2783,8 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   justify-content: space-between;
   gap: 14px;
   align-items: center;
-  /* Reserve space at the bottom-right for the global .coach-launcher (fixed,
-     bottom: 18px, right: 18px). Without this, on narrow viewports the run-plan
-     summary's bounding box overlaps the launcher pill and the eval-flow spec
-     fails the geometric overlap assertion. */
-  margin: 0 220px 18px 0;
-  padding: 12px 14px;
+  margin: 10px 0 12px;
+  padding: 9px 12px;
   border: 1px solid var(--border);
   border-left: 3px solid var(--sunset-500);
   border-radius: var(--r-md);
@@ -2659,12 +2792,19 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 }
 .eval-run-plan-summary strong {
   display: block;
-  font-size: 13px;
-  line-height: 1.35;
-  margin: 2px 0 4px;
+  font-size: 12px;
+  line-height: 1.3;
+  margin: 1px 0 3px;
 }
 .eval-run-plan-summary [data-testid="eval-harness-manifest-status"] {
   font-size: 10px;
+}
+.eval-run-plan-summary__path {
+  margin-top: 3px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
 }
 .eval-run-plan-summary .btn {
   flex: 0 0 auto;
@@ -2762,6 +2902,52 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   border-radius: var(--r-sm);
   color: var(--text-2);
   font-size: 12px;
+}
+.eval-run-plan__review-path {
+  display: grid;
+  gap: 6px;
+}
+.eval-run-plan__review-path > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: rgba(255,255,255,.02);
+}
+.eval-run-plan__review-path > div[data-state="ready"] {
+  border-color: rgba(255,95,0,.34);
+  background: rgba(255,95,0,.07);
+}
+.eval-run-plan__review-path > div[data-state="blocked"] {
+  border-color: rgba(207,60,105,.30);
+  opacity: .82;
+}
+.eval-run-plan__path-index {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-pill);
+  background: rgba(255,95,0,.14);
+  color: var(--accent-fg);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+}
+.eval-run-plan__review-path strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.eval-run-plan__review-path p {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.35;
 }
 .workflow-tile[data-active="true"] {
   border-color: var(--accent-fg);
@@ -3142,6 +3328,7 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 }
 .el-bars--healthy span { background: var(--healthy); }
 .el-bars--critical span { background: var(--violet-500); }
+.el-bars--neutral span { background: var(--text-3); opacity: .48; }
 .el-bars.is-active span {
   animation: elBarPulse 900ms ease-in-out infinite alternate;
 }
@@ -3399,6 +3586,7 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
   .eval-run-plan-summary {
     align-items: stretch;
     flex-direction: column;
+    margin-right: 0;
   }
   .eval-suite-builder__grid {
     grid-template-columns: minmax(0, 1fr);
@@ -3463,6 +3651,24 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 }
 .coach-launcher:hover { transform: translateY(-1px); border-color: var(--accent-fg); }
 .coach-launcher:focus-visible { outline: 2px solid var(--sunset-500); outline-offset: 2px; }
+/* Dense workbench routes keep the global coach affordance visible without
+   covering local admin controls, artifact review actions, or run-plan CTAs. */
+.app[data-route="generate"] ~ .coach-launcher,
+.app[data-route="evals"] ~ .coach-launcher,
+.app[data-route="agents"] ~ .coach-launcher {
+  top: calc(var(--topbar-h) + 20px);
+  bottom: auto;
+}
+.app[data-route="evals"]:has(.eval-bridge-popout) ~ .coach-launcher {
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+}
+.app[data-route="evals"]:has(.eval-bridge-popout) ~ .coach-launcher .coach-launcher__label {
+  display: none;
+}
 .coach-launcher__orb {
   width: 14px; height: 14px; border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #F97316, #8B5CF6);
@@ -3928,6 +4134,7 @@ a:focus-visible,
   .coach-launcher {
     left: 14px;
     right: auto;
+    top: auto;
     bottom: 72px;
     width: 36px;
     height: 36px;
@@ -3935,12 +4142,39 @@ a:focus-visible,
     padding: 8px;
   }
   .coach-launcher__label { display: none; }
+  .app[data-route="generate"] ~ .coach-launcher,
+  .app[data-route="evals"] ~ .coach-launcher,
+  .app[data-route="agents"] ~ .coach-launcher {
+    top: auto;
+    bottom: 72px;
+  }
 }
 
 @media (max-width: 480px) {
   /* Even tighter — stats stack to single column */
   .stats { grid-template-columns: 1fr; }
   .eval-command-center h2 { font-size: 22px; }
+}
+
+@media (max-width: 360px) {
+  .tb {
+    padding-inline: 8px;
+    gap: 6px;
+  }
+  .tb__actions {
+    gap: 6px;
+  }
+  .tb__run-trigger {
+    width: 38px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+  .tb__run-label,
+  .tb__run-chevron {
+    display: none;
+  }
 }
 
 /* ============================================================

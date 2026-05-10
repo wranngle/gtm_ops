@@ -379,9 +379,38 @@ function EvalsPage({ setRoute }) {
   const activeRun = normalizedRuns.find(r => r.scenario_id === activeRunId) || defaultActiveRun;
   const activeAxes = activeRun?.score?.axes || [];
   const failedAxes = activeAxes.filter(axis => axis.pass === false);
+  const hasActiveRunEvidence = Boolean(activeRun);
   const failedAxesReviewCopy = failedAxes.length > 0
     ? `${failedAxes.length} failed judge ${failedAxes.length === 1 ? 'axis needs' : 'axes need'} review before this prompt ships.`
     : 'No failed axes selected; use the fail filter to inspect the risk surface.';
+  const commandCenterState = hasActiveRunEvidence
+    ? activeRun.verdict || 'ready'
+    : runsState === 'error'
+      ? 'error'
+      : 'loading';
+  const commandCenterEyebrow = hasActiveRunEvidence
+    ? activeRun.verdict === 'fail' ? 'active regression' : 'active run'
+    : runsState === 'error' ? 'run evidence unavailable' : 'loading run evidence';
+  const commandCenterTitle = hasActiveRunEvidence
+    ? evalScenarioTitle(activeRun.scenario_id)
+    : evalScenarioTitle(active?.name || activeId || 'Harness evidence');
+  const commandCenterCopy = hasActiveRunEvidence
+    ? failedAxesReviewCopy
+    : runsState === 'error'
+      ? 'Harness run evidence is unavailable; retry the run panel before reviewing prompt risk.'
+      : 'Loading harness run evidence before judge axes, latency, and transcript risk are summarized.';
+  const commandCenterBadgeTone = activeRun?.verdict === 'fail'
+    ? 'critical'
+    : hasActiveRunEvidence
+      ? 'healthy'
+      : runsState === 'error' ? 'critical' : 'neutral';
+  const commandCenterBadge = activeRun?.verdict || (runsState === 'error' ? 'blocked' : 'loading');
+  const commandCenterScore = hasActiveRunEvidence ? evalPct(activeRun?.score?.weighted) : '--';
+  const commandCenterOrbState = activeRun?.verdict === 'fail' ? 'alert' : hasActiveRunEvidence ? 'talking' : 'idle';
+  const commandCenterBarTone = activeRun?.verdict === 'fail' ? 'critical' : hasActiveRunEvidence ? 'healthy' : 'neutral';
+  const commandCenterBars = hasActiveRunEvidence
+    ? activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.88)
+    : [.18,.22,.2,.24,.19,.21,.18,.23];
   const artifactPayload = runDetail || activeRun || {};
   const artifactAxes = Array.isArray(artifactPayload?.score?.axes) ? artifactPayload.score.axes : activeAxes;
   const artifactFailedAxes = artifactAxes.filter(axis => axis.pass === false);
@@ -518,6 +547,13 @@ function EvalsPage({ setRoute }) {
     const commandId = selectDomainEvalCommandId();
     const command = harnessCommands.find(cmd => cmd.id === commandId) || { id: commandId };
     openHarnessCommand(command);
+  };
+  const toggleDomainEvalRunPlan = () => {
+    if (bridgeOpen) {
+      setBridgeOpen(false);
+      return;
+    }
+    openDomainEvalRunPlan();
   };
   const openActiveArtifactPanel = () => {
     setBridgeOpen(false);
@@ -870,14 +906,14 @@ function EvalsPage({ setRoute }) {
   useEffect(() => {
     if (!bridgeOpen) return;
     requestAnimationFrame(() => {
-      bridgePanelRef.current?.scrollIntoView({ block:'center', behavior:'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(bridgePanelRef.current, { block:'start' });
     });
   }, [bridgeOpen, activeHarnessCommandId]);
 
   useEffect(() => {
     if (!artifactPath) return;
     requestAnimationFrame(() => {
-      artifactPanelRef.current?.scrollIntoView({ block:'start', behavior:'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(artifactPanelRef.current, { block:'start' });
       artifactPanelRef.current?.focus?.({ preventScroll: true });
     });
   }, [artifactPath]);
@@ -906,7 +942,14 @@ function EvalsPage({ setRoute }) {
             globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab:'evals' } }));
             setRoute?.('settings');
           }}><I3.Cog size={12}/>Policy</button>
-          <button className="btn btn--ghost btn--sm" onClick={openDomainEvalRunPlan}><I3.Bracket size={12}/>Run plan</button>
+          <button
+            className="btn btn--ghost btn--sm"
+            data-testid="eval-header-run-plan-open"
+            aria-label={bridgeOpen ? 'Close local eval run plan drawer' : 'Open local eval run plan drawer'}
+            aria-controls="eval-harness-bridge"
+            aria-expanded={bridgeOpen}
+            onClick={toggleDomainEvalRunPlan}
+          ><I3.Bracket size={12}/>{bridgeOpen ? 'Close run plan' : 'Run plan'}</button>
           <button className="btn btn--primary btn--sm" onClick={openSuiteBuilder}><I3.Plus size={12}/>New suite</button>
         </>}
       />
@@ -995,30 +1038,30 @@ function EvalsPage({ setRoute }) {
         </div>
       )}
 
-      <section className="eval-command-center">
+      <section className="eval-command-center" data-testid="eval-command-center" data-state={commandCenterState}>
         <div className="eval-command-center__copy">
-          <div className="eyebrow eyebrow--accent">active regression</div>
-          <h2 data-testid="eval-active-scenario-title">{evalScenarioTitle(activeRun?.scenario_id || active.name)}</h2>
-          <p data-testid="eval-active-regression-review-copy">{failedAxesReviewCopy}</p>
+          <div className="eyebrow eyebrow--accent">{commandCenterEyebrow}</div>
+          <h2 data-testid="eval-active-scenario-title">{commandCenterTitle}</h2>
+          <p data-testid="eval-active-regression-review-copy">{commandCenterCopy}</p>
           <div className="eval-command-center__meta">
-            <Badge tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}>{activeRun?.verdict || 'ready'}</Badge>
-            <span className="mono">{evalPct(activeRun?.score?.weighted)}</span>
+            <Badge tone={commandCenterBadgeTone}>{commandCenterBadge}</Badge>
+            <span className="mono">{commandCenterScore}</span>
             {activeRun?.scenario_id && <span className="mono eval-command-center__scenario-id" data-testid="eval-active-scenario-id">scenario {activeRun.scenario_id}</span>}
             <span className="mono">{activeAgent?.display_name || 'Sales Coach'}</span>
           </div>
         </div>
         <div className="eval-command-center__voice" aria-label="ElevenLabs eval state">
           <window.ElevenUI.Orb
-            state={activeRun?.verdict === 'fail' ? 'alert' : 'talking'}
+            state={commandCenterOrbState}
             size={54}
             color1={activeAgent?.avatar_color_1}
             color2={activeAgent?.avatar_color_2}
             label={`${activeAgent?.display_name || 'ElevenLabs'} eval state`}
           />
           <window.ElevenUI.BarVisualizer
-            active={true}
-            tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}
-            bars={activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.88)}
+            active={hasActiveRunEvidence}
+            tone={commandCenterBarTone}
+            bars={commandCenterBars}
           />
         </div>
       </section>
@@ -1117,10 +1160,14 @@ function EvalsPage({ setRoute }) {
             )}
             {harnessManifestState === 'error' && 'manifest unreachable — run plan is read-only'}
           </div>
+          <div className="eval-run-plan-summary__path" data-testid="eval-run-plan-summary-path">
+            command -&gt; local artifact drawer -&gt; local agent admin
+          </div>
         </div>
         <button
           className="btn btn--ghost btn--sm"
           data-testid="eval-run-plan-open"
+          aria-controls="eval-harness-bridge"
           aria-expanded={bridgeOpen}
           onClick={() => {
             // Toggle: a second click on the surfacing button while the
@@ -1135,13 +1182,19 @@ function EvalsPage({ setRoute }) {
       </section>
 
       {bridgeOpen && (
-        <div ref={bridgePanelRef} className="workflow-popout workflow-popout--single eval-bridge-popout" role="region" aria-label="Local eval run plan details">
+        <div
+          ref={bridgePanelRef}
+          className="workflow-popout workflow-popout--single eval-bridge-popout"
+          data-testid="eval-harness-bridge"
+          role="region"
+          aria-label="Local eval run plan details"
+        >
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
                 <div className="eyebrow eyebrow--accent">local run plan</div>
                 <div className="workflow-popout__title">Manifest command handoff</div>
-                <div className="muted" style={{fontSize:12}}>Manifest: eval-harness.manifest.json. Harness repo: ../voice_ai_agent_evals. Outputs land in logs/eval-harness and the console eval-run artifacts.</div>
+                <div className="muted" style={{fontSize:12}}>Command source: eval-harness.manifest.json. Outputs stay attached to reviewable console run artifacts before any external harness follow-up.</div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close eval run plan" onClick={() => setBridgeOpen(false)}><I3.Close size={14}/></button>
             </div>
@@ -1184,15 +1237,49 @@ function EvalsPage({ setRoute }) {
                       ))}
                     </div>
                   )}
+                  <div className="eval-run-plan__review-path" data-testid="eval-run-plan-review-path" aria-label="Eval run local review path">
+                    <div data-state="ready">
+                      <span className="eval-run-plan__path-index">1</span>
+                      <div>
+                        <strong>Command</strong>
+                        <p>Copy the manifest command without leaving the console.</p>
+                      </div>
+                    </div>
+                    <div data-state={activeRun ? 'ready' : 'blocked'}>
+                      <span className="eval-run-plan__path-index">2</span>
+                      <div>
+                        <strong>Artifact review</strong>
+                        <p>{activeRun ? `${evalScenarioTitle(activeRun.scenario_id)} opens as local evidence.` : 'Load a harness run before opening evidence.'}</p>
+                      </div>
+                    </div>
+                    <div data-state={canOpenEvalAgentAdmin ? 'ready' : 'blocked'}>
+                      <span className="eval-run-plan__path-index">3</span>
+                      <div>
+                        <strong>Agent admin</strong>
+                        <p>ElevenLabs context opens in the local admin wrapper.</p>
+                      </div>
+                    </div>
+                  </div>
                   <div className="eval-run-plan__actions">
                     <button className="btn btn--primary btn--sm" onClick={() => copyHarnessCommand(activeHarnessCommand)}><I3.Doc size={12}/>Copy command</button>
                     <button
                       className="btn btn--ghost btn--sm"
+                      data-testid="eval-run-plan-open-artifact"
                       onClick={openActiveArtifactPanel}
                       title={activeRun?.scenario_id ? `Open ${activeRun.scenario_id} locally` : 'Open selected run artifact locally'}
                     >
                       <I3.Doc size={12}/>
                       Open local run artifact
+                    </button>
+                    <button
+                      className="btn btn--ghost btn--sm"
+                      data-testid="eval-run-plan-open-agent-admin"
+                      disabled={!canOpenEvalAgentAdmin}
+                      title={canOpenEvalAgentAdmin ? 'Open this eval run in local ElevenLabs agent admin' : 'Load a harness run before opening local agent admin'}
+                      onClick={openEvalAgentAdmin}
+                    >
+                      <I3.Bot size={12}/>
+                      Open local agent admin
                     </button>
                   </div>
                 </div>
@@ -3660,8 +3747,8 @@ function GeneratePage({ setRoute }) {
   const reviewPacketId = activeHandoff.kind ? `run_${artifactIdSlug(reviewSubject)}` : 'run_acme_hvac';
   const focusBuyerBrief = React.useCallback(() => {
     requestAnimationFrame(() => {
-      briefRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' });
-      briefRef.current?.focus();
+      globalThis.scrollConsoleNodeIntoView?.(briefRef.current, { block: 'center' });
+      briefRef.current?.focus({ preventScroll: true });
     });
   }, []);
   const invalidateDraftForBriefChange = React.useCallback(() => {
@@ -3693,7 +3780,7 @@ function GeneratePage({ setRoute }) {
 
   // Public demo CTAs can deep-link into the console's artifact review
   // drawer. Treat the query as a one-shot opener so closing/navigating
-  // inside the console does not keep resurrecting the sample packet.
+  // inside the console does not keep resurrecting a local preview artifact.
   React.useEffect(() => {
     try {
       const url = new URL(globalThis.location.href);
@@ -3840,34 +3927,34 @@ function GeneratePage({ setRoute }) {
   const artifacts = {
     pdf: {
       kind: 'PDF',
-      title: reviewReady ? `${reviewSubject} proposal draft` : `${reviewSubject} sample proposal packet`,
+      title: reviewReady ? `${reviewSubject} proposal draft` : `${reviewSubject} proposal packet preview`,
       path: '../assets/sample-proposal.pdf',
       artifactId: reviewPacketId,
       sourceLabel: 'branded PDF renderer',
-      previewTitle: `${reviewReady ? 'Generated' : 'Sample'} proposal PDF review preview`,
-      status: reviewReady ? (isDemoArtifactMode ? 'demo draft ready' : 'draft ready') : 'sample packet',
+      previewTitle: `${reviewReady ? 'Generated' : 'Local'} proposal PDF review preview`,
+      status: reviewReady ? (isDemoArtifactMode ? 'demo draft ready' : 'draft ready') : 'preview artifact',
       gate: reviewReady ? 'operator_review' : 'sequence_required',
       mode: artifactMode,
       summary: reviewReady
         ? (isDemoArtifactMode
           ? `Demo-generated ${reviewSubject} packet replayed from the bundled fixture. The review gate, audit trace, and proposal handoff are real console behavior; buyer send remains blocked.`
           : 'Seven-page branded proposal packet generated from this run. Review pricing, scope, and the AI risk report before buyer send.')
-        : `Synthetic ${reviewSubject} review packet. It previews the artifact shape; run the sequence before treating it as a draft.`,
+        : `Fixture-backed ${reviewSubject} review artifact preview. Run the sequence before treating it as a live draft.`,
     },
     json: {
       kind: 'JSON',
-      title: reviewReady ? `${reviewSubject} source evidence bundle` : `${reviewSubject} sample source evidence packet`,
+      title: reviewReady ? `${reviewSubject} source evidence bundle` : `${reviewSubject} source artifact preview`,
       path: '../fixtures/transcripts/sample-proposal.json',
       artifactId: reviewPacketId,
       sourceLabel: 'buyer evidence bundle',
-      status: reviewReady ? (isDemoArtifactMode ? `demo-bound to ${reviewPacketId}` : `bound to ${reviewPacketId}`) : 'sample evidence',
+      status: reviewReady ? (isDemoArtifactMode ? `demo-bound to ${reviewPacketId}` : `bound to ${reviewPacketId}`) : 'source preview',
       gate: reviewReady ? 'operator_review' : 'sequence_required',
       mode: artifactMode,
       summary: reviewReady
         ? (isDemoArtifactMode
           ? `Demo evidence bundle replayed through the local fixture with ${reviewSubject} review metadata. Use it to inspect the review path; live runs replace this with backend-generated source evidence.`
           : 'Transcript, extracted buyer context, pricing inputs, and checks bound to the generated proposal draft.')
-        : 'Synthetic transcript and buyer context used to preview the source evidence packet before generation.',
+        : `Fixture-backed transcript and buyer context used for local source artifact preview before generation.`,
     },
   };
   const activeArtifact = artifactPanel ? artifacts[artifactPanel] : null;
@@ -3915,7 +4002,7 @@ function GeneratePage({ setRoute }) {
   React.useEffect(() => {
     if (!artifactPanel) return undefined;
     const frame = requestAnimationFrame(() => {
-      artifactPanelRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(artifactPanelRef.current, { block: 'start' });
     });
     return () => cancelAnimationFrame(frame);
   }, [artifactPanel]);
@@ -3990,18 +4077,16 @@ function GeneratePage({ setRoute }) {
     {
       key: 'artifact',
       label: 'Artifact',
-      detail: reviewReady ? `${reviewPacketId} local preview.` : 'Local sample preview.',
+      detail: reviewReady ? `${reviewPacketId} review artifact available locally.` : 'Open local artifact previews before approval.',
       state: activeArtifact ? 'active' : reviewReady ? 'ready' : 'available',
-      action: reviewReady
-        ? { key: 'open-artifact-draft', label: 'Open draft artifact preview' }
-        : { key: 'open-artifact-sample', label: 'Open sample artifact preview' },
+      action: null,
     },
     {
       key: 'review',
       label: 'Review',
       detail: reviewReady ? 'Operator approval in Proposals.' : 'Draft gate locked.',
       state: reviewReady ? 'ready' : 'locked',
-      action: reviewReady ? { key: 'open-proposals-review', label: 'Open proposal review' } : null,
+      action: reviewReady ? { key: 'open-proposals-review', label: 'Open review' } : null,
     },
     {
       key: 'send',
@@ -4043,13 +4128,15 @@ function GeneratePage({ setRoute }) {
     // identity captured by the most-recent handoff is what should drive
     // the routing.
     const handoff = lastHandoffRef.current || {};
-    const reviewProposal =
-      matchById(handoff.proposalId) ||
-      matchByName(handoff.co) ||
-      matchByName(handoff.callCo) ||
-      matchByName('acme') ||
-      proposals.find(p => isOpenProposalStage(p.stage)) ||
-      proposals[0];
+    const reviewProposalCandidates = [
+      matchById(handoff.proposalId),
+      matchByName(handoff.co),
+      matchByName(handoff.callCo),
+      matchByName('acme'),
+      proposals.find(p => isOpenProposalStage(p.stage)),
+      proposals[0],
+    ];
+    const reviewProposal = reviewProposalCandidates.find(Boolean);
     if (!reviewProposal) {
       globalThis.toast('No proposal available to review', { sub: 'demo proposals fixture is empty', tone: 'critical' });
       return;
@@ -4169,7 +4256,7 @@ function GeneratePage({ setRoute }) {
     try {
       const res = await fetch('/fixtures/sample.json');
       const data = await res.json();
-      if (data && data.text) {
+      if (data?.text) {
         invalidateDraftForBriefChange();
         setInputText(data.text);
         setBriefError('');
@@ -4354,44 +4441,47 @@ function GeneratePage({ setRoute }) {
                 </button>
               )}
             </div>
+            <div className="artifact-review__packet" data-testid="generate-review-packet">
+              <div>
+                <div className="artifact-review__packet-title">
+                  <span className="eyebrow eyebrow--accent">review packet</span>
+                  <strong>Proposal packet stays bound to evidence and approval gate.</strong>
+                </div>
+                <p>Preview local artifacts first; approval comes before buyer send.</p>
+              </div>
+            </div>
             <div className="artifact-review__path" aria-label="Proposal review path" data-testid="generate-review-path">
               {reviewPathSteps.map((step, idx) => (
                 <div key={step.label} data-state={step.state} data-testid={`generate-review-path-step-${step.key}`}>
                   <span className="artifact-review__path-index">{idx + 1}</span>
-                  <div>
+                  <div className="artifact-review__path-copy">
                     <strong>{step.label}</strong>
                     <p>{step.detail}</p>
-                    {step.action ? (
-                      <button
-                        type="button"
-                        className="btn btn--ghost btn--xs artifact-review__path-action"
-                        data-testid={`generate-review-path-action-${step.action.key}`}
-                        aria-pressed={step.action.key.includes('artifact') ? artifactPanel === 'pdf' : undefined}
-                        onClick={() => {
-                          if (step.action.key.includes('artifact')) {
-                            openArtifact('pdf');
-                          } else if (step.action.key === 'open-proposals-review') {
-                            reviewInProposals();
-                          }
-                        }}
-                      >
-                        {step.action.label}
-                      </button>
-                    ) : null}
                   </div>
+                  {step.action ? (
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--xs artifact-review__path-action"
+                      data-testid={`generate-review-path-action-${step.action.key}`}
+                      aria-controls={step.action.key.includes('artifact') ? 'generate-artifact-drawer' : undefined}
+                      aria-expanded={step.action.key.includes('artifact') ? artifactPanel === 'pdf' : undefined}
+                      onClick={() => {
+                        if (step.action.key.includes('artifact')) {
+                          openArtifact('pdf');
+                        } else if (step.action.key === 'open-proposals-review') {
+                          reviewInProposals();
+                        }
+                      }}
+                    >
+                      {step.action.label}
+                    </button>
+                  ) : null}
                 </div>
               ))}
             </div>
             <div className="artifact-review__links">
-              <button type="button" className="btn btn--ghost btn--sm" aria-pressed={artifactPanel === 'pdf'} onClick={() => openArtifact('pdf')}><I3.Doc size={12}/>{reviewReady ? 'Preview draft PDF' : 'Review PDF sample'}</button>
-              <button type="button" className="btn btn--ghost btn--sm" aria-pressed={artifactPanel === 'json'} onClick={() => openArtifact('json')}><I3.Bracket size={12}/>{reviewReady ? 'Inspect draft source' : 'Inspect sample source'}</button>
-            </div>
-            <div className="artifact-review__packet">
-              <div>
-                <div className="eyebrow eyebrow--accent">review packet</div>
-                <strong>Proposal, source evidence, and quality gate stay together.</strong>
-                <p>Use the local artifact previews before routing the draft into Proposals for operator approval.</p>
-              </div>
+              <button type="button" className="btn btn--ghost btn--sm" aria-controls="generate-artifact-drawer" aria-expanded={artifactPanel === 'pdf'} onClick={() => openArtifact('pdf')}><I3.Doc size={12}/>Review PDF artifact</button>
+              <button type="button" className="btn btn--ghost btn--sm" aria-controls="generate-artifact-drawer" aria-expanded={artifactPanel === 'json'} onClick={() => openArtifact('json')}><I3.Bracket size={12}/>Inspect source evidence</button>
             </div>
             <div className="artifact-review__quality">
               {[
@@ -4410,7 +4500,7 @@ function GeneratePage({ setRoute }) {
       </div>
 
       {activeArtifact && (
-        <div ref={artifactPanelRef} className="workflow-popout workflow-popout--single generate-artifact-panel" role="region" aria-label="Proposal artifact review drawer">
+        <div id="generate-artifact-drawer" ref={artifactPanelRef} className="workflow-popout workflow-popout--single generate-artifact-panel" role="region" aria-label="Proposal artifact review drawer">
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
