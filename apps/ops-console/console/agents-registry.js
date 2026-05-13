@@ -16,7 +16,7 @@ globalThis.AGENT_REGISTRY = (function () {
       key: 'sales_coach',
       agent_id: 'agent_4101kpsg8y84eyzt1rnm84p3ar72',
       display_name: 'Sales Coach',
-      role: 'Coach + Deal Copilot',
+      role: 'Deal coaching agent',
       description:
         'Stress-tests the Wranngle sales playbook, role-plays adversarial prospects, and gives copilot feedback on the active deal. Loads the current app context as a dynamic variable.',
       // gtm_ops project goal: voice-AI-led GTM motion → presales pipeline →
@@ -55,7 +55,7 @@ globalThis.AGENT_REGISTRY = (function () {
         latency_target: 'sub-300ms turn target',
         data_policy: 'Uses synthetic console context unless a live workspace explicitly injects CRM data.',
         allowed_modes: 'text coaching, voice role-play, deal drill',
-        escalation: 'Route operator to Agents or Settings; do not redirect outside the app except the single ElevenLabs admin link.',
+        escalation: 'Route operator to Agents or Settings; keep prompt, tool, context, and safety edits inside the local console admin.',
       },
       widget: {
         actionText: 'Open Sales Coach',
@@ -101,8 +101,8 @@ globalThis.AGENT_REGISTRY = (function () {
     {
       key: 'intake',
       agent_id: 'agent_7801kqqqhjmcfdsa1m2a8t9w6t5c',
-      display_name: 'Sarah · Intake',
-      role: 'Inbound Lead Qualification',
+      display_name: 'Sarah Intake',
+      role: 'AI receptionist demo',
       description:
         'The Wranngle Lead Specialist. Qualifies inbound prospects, captures pain + budget signal, books discovery calls. Wired to the active lead in the pipeline.',
       // gtm_ops project goal: Sarah IS the product Wranngle sells — an AI
@@ -218,10 +218,17 @@ globalThis.AGENT_REGISTRY = (function () {
 
   function byKey(k) { return agents.find(a => a.key === k); }
   function bySurface(s) { return agents.filter(a => a.surface === s || a.surface === 'global'); }
+  function surfaceLabel(s) {
+    return ({
+      global: 'all pages',
+      pipeline: 'pipeline lead',
+      'admin-only': 'QA only',
+    })[s] || s;
+  }
   function surfaceOverrides(agentKey, surfaceKey) {
     const a = byKey(agentKey);
     return (a && a.surfaces && a.surfaces[surfaceKey]) || null;
   }
 
-  return { agents, byKey, bySurface, surfaceOverrides, SURFACE_KEYS };
+  return { agents, byKey, bySurface, surfaceLabel, surfaceOverrides, SURFACE_KEYS };
 })();

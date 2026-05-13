@@ -1,0 +1,49 @@
+{
+  "route": "console/?route=pipeline",
+  "purpose": "Give operators a dense lead operations board for prioritizing accounts, advancing stages, reviewing artifacts, and handing selected leads to Calls, Proposals, or Sarah intake.",
+  "primaryUsers": ["operator", "sales admin"],
+  "regions": [
+    {
+      "name": "command summary",
+      "intent": "Expose the synthetic-data label, visible lead count, active/high-intent counts, open value, proposal queue, and current selection without a marketing hero."
+    },
+    {
+      "name": "workflow popout",
+      "intent": "Keep saved filters and add-lead intake durable, keyboard reachable, and closeable without covering the board more than necessary."
+    },
+    {
+      "name": "lead board",
+      "intent": "Show a scannable five-stage board by default, with compact cards that preserve score, company context, pain, value/location, intent, and last-touch metadata."
+    },
+    {
+      "name": "lead table",
+      "intent": "Provide the same filtered lead set as a sortable table for comparison-heavy review."
+    },
+    {
+      "name": "lead detail and handoffs",
+      "intent": "Opening a lead keeps artifact review, Calls, Proposals, and local Sarah intake handoffs available without external redirects."
+    }
+  ],
+  "designConstraints": [
+    "Use Wranngle tokens from DESIGN.md and the existing console primitives.",
+    "Keep the route dense, operational, and comparison-oriented; no hero composition, decorative blobs, or marketing copy.",
+    "Scope route-only styling with .page--pipeline or Pipeline-specific selectors.",
+    "Preserve existing lead data behavior, board/table filters, drag-to-stage, add-lead form, artifact review, and route handoffs.",
+    "Make synthetic data status visible in the first route region."
+  ],
+  "states": [
+    "Board view with no selection.",
+    "Board view with selected lead detail and collapsed Sarah intake.",
+    "Table view with sortable headers.",
+    "Filters popout.",
+    "Add lead form with validation errors and submitted draft lead.",
+    "Artifact review drawer inside lead detail."
+  ],
+  "verification": [
+    "console/?route=pipeline renders an accessible h1 and a visible synthetic lead operations summary.",
+    "Board and table toggles continue to switch views.",
+    "Pipeline filters and add-lead controls remain keyboard reachable and visible.",
+    "Selecting a card opens lead detail and the local Sarah handoff without overlap at desktop and mobile widths.",
+    "Lead artifacts open in-console and proposal review handoff targets the matching proposal."
+  ]
+}

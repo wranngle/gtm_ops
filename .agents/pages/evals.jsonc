@@ -1,0 +1,31 @@
+{
+  "route": "console/?route=evals",
+  "purpose": "Review voice-agent regression evidence, select local harness commands, and hand failing runs into local agent admin.",
+  "primaryUsers": ["operator", "reviewer", "admin"],
+  "regions": [
+    {
+      "name": "command center",
+      "intent": "Compactly summarize the active regression, score, scenario id, and agent state with immediate evidence/admin actions."
+    },
+    {
+      "name": "run plan",
+      "intent": "Keep harness command selection and artifact paths inside the console before any external follow-up."
+    },
+    {
+      "name": "evidence grid",
+      "intent": "Prioritize suites, loaded runs, judge axes, latency, tool calls, transcript replay, and local agent context handoff."
+    }
+  ],
+  "designConstraints": [
+    "No visible page title/caption block; the eval workbench starts with actionable controls.",
+    "Use green for pass/improvement and critical color only for fail/regression.",
+    "Keep the command center compact so stats and failing evidence are above the fold on laptop viewports.",
+    "Use ElevenLabs UI primitives for orb, bars, transcript, and voice replay states."
+  ],
+  "verification": [
+    "A failing run opens evidence locally and can hand off to Agents local admin.",
+    "Run plan toggles open/closed and lists manifest commands without overflow.",
+    "Positive pass-rate trends render healthy, not critical/red.",
+    "Command center and stats fit without horizontal overflow at half-page widths."
+  ]
+}

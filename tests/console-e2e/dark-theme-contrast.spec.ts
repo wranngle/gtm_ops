@@ -11,7 +11,7 @@ import AxeBuilderImport from '@axe-core/playwright';
 const AxeBuilder = (AxeBuilderImport as any).default ?? AxeBuilderImport;
 
 const ROUTES = [
-  ['home', 'Mission Control'],
+  ['home', 'Callbacks'],
   ['pipeline', 'Pipeline'],
   ['calls', 'Calls'],
   ['proposals', 'Proposals'],

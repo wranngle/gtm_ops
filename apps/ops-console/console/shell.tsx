@@ -6,26 +6,6 @@
 const { useState, useEffect, useRef, useMemo } = React;
 const I = window.Icon;
 
-const EVAL_ADMIN_HANDOFF_EXTRA_KEYS = [
-  'eval_admin_return_route',
-  'eval_run',
-  'selected_eval_suite',
-  'selected_eval_suite_id',
-  'selected_eval_context',
-  'selected_eval_run',
-  'selected_eval_verdict',
-  'selected_eval_score',
-  'eval_failed_axes',
-  'eval_evidence_path',
-  'agent_admin_panel',
-];
-
-function clearEvalAdminHandoffExtra(extra = {}) {
-  const next = { ...extra };
-  EVAL_ADMIN_HANDOFF_EXTRA_KEYS.forEach(key => { delete next[key]; });
-  return next;
-}
-
 /* ---------- Toast / notification system ---------- */
 const __toastListeners = new Set();
 window.toast = function toast(msg, opts = {}) {
@@ -62,6 +42,47 @@ function pluralizeCount(n, singular, plural) {
   return `${n} ${n === 1 ? singular : (plural || `${singular}s`)}`;
 }
 
+function isConsoleAdmin() {
+  try { return new URLSearchParams(globalThis.location.search).has('admin'); }
+  catch (_) { return false; }
+}
+
+function openSettingsTab(setRoute, tab = 'account', source = 'shell-settings') {
+  const validTabs = ['account', 'integrations', 'evals', 'team', 'billing', 'security'];
+  const nextTab = validTabs.includes(tab) ? tab : 'account';
+  const ctx = globalThis.AppContext?.get?.() || {};
+  globalThis.AppContext?.set?.({
+    extra: {
+      ...(ctx.extra || {}),
+      settings_tab: nextTab,
+      triggered_from: source,
+    },
+  });
+  setRoute?.('settings');
+  globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: nextTab } }));
+  globalThis.requestAnimationFrame?.(() => {
+    globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: nextTab } }));
+  });
+}
+
+function shellIsMissedCall(c) {
+  const outcome = String(c?.outcome || '').toLowerCase();
+  return c?.missed === true || ['voicemail', 'no-answer', 'dropped', 'missed'].includes(outcome);
+}
+
+function shellCallOutcomeLabel(c) {
+  return String(c?.outcome || c?.service || 'call').replace(/[-_]/g, ' ');
+}
+
+function shellCallRiskScore(c) {
+  return (Number(c?.flags) || 0) + (Number(c?.deflections) || 0);
+}
+
+function shellCallWindowFor(c) {
+  if (shellIsMissedCall(c)) return 'missed';
+  return shellCallRiskScore(c) > 0 ? 'flagged' : 'all';
+}
+
 function buildTopbarNotifications(D) {
   const data = D || {};
   const notifications = [];
@@ -84,7 +105,7 @@ function buildTopbarNotifications(D) {
       tone: 'critical',
       title: `${pausedAgent.id} paused${matchedCall?.co ? ` on ${matchedCall.co}` : ''}`,
       sub: matchedCall
-        ? `${matchedCall.outcome || 'needs review'} · ${pluralizeCount(Number(matchedCall.deflections || 0), 'deflection')}`
+        ? `${matchedCall.outcome || 'needs review'} · ${pluralizeCount(Number(matchedCall.deflections || 0), 'handoff try', 'handoff tries')}`
         : pausedAgent.currentTask || 'awaiting human review',
       route: 'calls',
       selection: matchedCall?.id ? { type:'call', id: matchedCall.id } : null,
@@ -195,7 +216,7 @@ function ToastHost() {
    Tab inside while open, and restores focus to the trigger on close.
    This keeps click-outside-to-close behavior (pure aria-modal would
    block that) while giving keyboard users a sane experience. */
-function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320, label }) {
+function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320, label, id }) {
   const [pos, setPos] = useState(null);
   const popRef = useRef(null);
   const previousFocusRef = useRef(null);
@@ -218,8 +239,8 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
           'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="button"]'
         );
         if (focusables.length === 0) { e.preventDefault(); return; }
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+        const first = focusables.item(0);
+        const last = focusables.item(focusables.length - 1);
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault(); last.focus();
         } else if (!e.shiftKey && document.activeElement === last) {
@@ -256,7 +277,7 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
 
   if (!open || !pos) return null;
   return (
-    <div ref={popRef} className="popover" role="dialog" aria-label={label || 'Popover'}
+    <div id={id} ref={popRef} className="popover" role="dialog" aria-label={label || 'Popover'}
          style={{ top: pos.top, left: pos.left, width }}>
       {children}
     </div>
@@ -266,66 +287,117 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
 /* ---------- Sidebar ---------- */
 function Sidebar({ route, setRoute, collapsed }) {
   const D = window.GTM;
-  const isAdmin = (() => {
-    try { return new URLSearchParams(globalThis.location.search).has('admin'); }
-    catch (_) { return false; }
-  })();
-  // Mirror the active agent from AppContext so the sidebar agent rows can
-  // highlight which one is currently loaded in the playground. Without
-  // this, the sidebar listed all agents identically — operator on the
-  // Agents page had no visual cue from the sidebar about which agent the
-  // admin/playground panels were showing.
-  const [activeAgentKey, setActiveAgentKey] = useState(() => {
-    try { return globalThis.AppContext?.get?.()?.extra?.selected_agent_key || null; }
-    catch (_) { return null; }
-  });
-  useEffect(() => {
-    if (!globalThis.AppContext?.subscribe) return undefined;
-    return globalThis.AppContext.subscribe((ctx) => {
-      setActiveAgentKey(ctx?.extra?.selected_agent_key || null);
-    });
-  }, []);
+  const isAdmin = isConsoleAdmin();
+  const appCtx = globalThis.useAppContext();
   const counts = {
     pipeline: D.companies.filter(D.isActivePipelineCompany || (c => !['closed','lost'].includes(c.stage))).length,
     calls: D.calls.filter(c => c.flags > 0).length,
     proposals: D.proposals.filter(p => isOpenProposalStage(p.stage)).length,
     // Use the shared regression predicate so the sidebar badge agrees
-    // with the EvalsPage filter, the regression Stat tile, and the
-    // Mission Control regressions card. Previously this was just
+    // with the EvalsPage filter and regression Stat tile. Previously this was just
     // `s.delta < 0` and undercounted suites whose pass dropped below
     // 0.75 without a recent delta change.
     evals: D.evalSuites.filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75)).length,
   };
-  const items = [
-    { id:'home',      label:'Mission Control', icon:I.Home },
+  const workspaceItems = [
+    { id:'home',      label:'Callbacks', icon:I.Home || I.Phone },
     { id:'generate',  label:'Generate',        icon:I.Plus },
     { id:'pipeline',  label:'Pipeline',        icon:I.Pipeline, count: counts.pipeline },
     { id:'calls',     label:'Calls',           icon:I.Phone,    count: counts.calls },
     { id:'proposals', label:'Proposals',       icon:I.Doc,      count: counts.proposals },
     { id:'evals',     label:'Evals',           icon:I.Beaker,   count: counts.evals || null },
-    { id:'agents',    label:'Agents',          icon:I.Bot },
+    { id:'agents',    label:'Agents',         icon:I.Bot },
     { id:'settings',  label:'Settings',        icon:I.Cog },
   ];
-  const agents = (window.AGENT_REGISTRY?.agents || [])
-    .filter(a => isAdmin || a.surface !== 'admin-only')
-    .map(a => ({
-      id: a.key,
-      label: a.display_name,
-      surface: a.surface,
-      color1: a.avatar_color_1,
-      color2: a.avatar_color_2,
-    }));
-  const selectAgent = (agentKey) => {
-    const ctx = window.AppContext?.get?.() || {};
-    const baseExtra = clearEvalAdminHandoffExtra(ctx.extra || {});
-    window.AppContext?.set?.({
+  const visibleAgents = (globalThis.AGENT_REGISTRY?.agents || [])
+    .filter(agent => isAdmin || agent.surface !== 'admin-only');
+  const activeAgentKey = appCtx?.extra?.selected_agent_key || visibleAgents[0]?.key || null;
+  const defaultWorkspaceAgentKey = isAdmin
+    ? visibleAgents[0]?.key
+    : (visibleAgents.find(agent => agent.key === 'intake')?.key || visibleAgents[0]?.key);
+  const Orb = globalThis.ElevenUI?.Orb;
+  const openWorkspaceRoute = (id) => {
+    if (id === 'agents' && defaultWorkspaceAgentKey) {
+      const extra = { ...(globalThis.AppContext.get().extra || {}) };
+      [
+        'eval_admin_return_route',
+        'eval_run',
+        'selected_eval_suite',
+        'selected_eval_suite_id',
+        'selected_eval_context',
+        'selected_eval_run',
+        'selected_eval_verdict',
+        'selected_eval_score',
+        'eval_failed_axes',
+        'eval_evidence_path',
+        'agent_admin_panel',
+        'phone_setup_preview',
+      ].forEach(key => { delete extra[key]; });
+      globalThis.AppContext.set({
+        extra: {
+          ...extra,
+          selected_agent_key: defaultWorkspaceAgentKey,
+          triggered_from: 'sidebar-agents-route-nav',
+        },
+      });
+    }
+    setRoute(id);
+  };
+  const renderRouteItem = (it) => (
+    <button key={it.id}
+         type="button"
+         className="sb__item"
+         data-testid="sidebar-route"
+         data-route-id={it.id}
+         data-active={route === it.id}
+         aria-label={`${it.ariaLabel || it.label}${it.count != null ? ` ${it.count}` : ''}`}
+         aria-current={route === it.id ? 'page' : undefined}
+         onClick={() => openWorkspaceRoute(it.id)}>
+      <it.icon className="sb__icon" size={16} />
+      <span className="sb__label">
+        {it.label}
+        {it.legacyLabel ? <span className="sr-only"> {it.legacyLabel}</span> : null}
+      </span>
+      {it.count != null && <span className="sb__count">{it.count}</span>}
+    </button>
+  );
+  const openAgent = (agent) => {
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
       extra: {
-        ...baseExtra,
-        selected_agent_key: agentKey,
+        ...(ctx.extra || {}),
+        selected_agent_key: agent.key,
+        selected_runtime_agent_id: agent.agent_id,
+        selected_runtime_agent_name: agent.display_name,
         triggered_from: 'sidebar-agent-nav',
       },
     });
     setRoute('agents');
+  };
+  const renderAgentItem = (agent) => {
+    const surface = globalThis.AGENT_REGISTRY?.surfaceLabel?.(agent.surface) || agent.surface || 'agent';
+    const active = route === 'agents' && activeAgentKey === agent.key;
+    return (
+      <button
+        key={agent.key}
+        type="button"
+        className="sb__item sb__item--agent"
+        data-testid="sidebar-agent-route"
+        data-agent-key={agent.key}
+        data-active={active}
+        aria-label={`${agent.display_name} ${surface}`}
+        aria-current={active ? 'page' : undefined}
+        onClick={() => openAgent(agent)}
+      >
+        {Orb
+          ? <Orb size={18} state={active ? 'talking' : 'idle'} color1={agent.avatar_color_1} color2={agent.avatar_color_2} label={`${agent.display_name} ElevenLabs agent`} />
+          : <span className="dot dot--accent" aria-hidden="true" style={{width:10,height:10}}/>}
+        <span className="sb__label">
+          <span className="sb__agent-name">{agent.display_name}</span>
+          <span className="sb__agent-surface mono dim">{surface}</span>
+        </span>
+      </button>
+    );
   };
 
   return (
@@ -336,71 +408,31 @@ function Sidebar({ route, setRoute, collapsed }) {
         </div>
         {!collapsed && (
           <div>
-            <img className="sb__wordmark" src="../assets/wranngle-wordmark.png" alt="Wranngle"/>
-            <div className="sb__brand-sub">gtm_ops</div>
+            <div className="sb__wordmark-text" aria-label="Wranngle">Wranngle</div>
+            <div className="sb__brand-sub" aria-label="gtm_ops console">gtm_ops console</div>
           </div>
         )}
       </div>
 
       <div className="sb__section">workspace</div>
       <nav className="sb__nav">
-        {items.map(it => (
-          <button key={it.id}
-               type="button"
-               className="sb__item"
-               data-active={route === it.id}
-               aria-label={`${it.label}${it.count != null ? ` ${it.count}` : ''}`}
-               aria-current={route === it.id ? 'page' : undefined}
-               onClick={() => setRoute(it.id)}>
-            <it.icon className="sb__icon" size={16} />
-            <span className="sb__label">{it.label}</span>
-            {it.count != null && <span className="sb__count">{it.count}</span>}
-          </button>
-        ))}
+        {workspaceItems.map(renderRouteItem)}
       </nav>
-
-      <div className="sb__section">agents</div>
+      <div className="sb__section">ElevenLabs</div>
       <nav className="sb__nav" aria-label="ElevenLabs agents">
-        {agents.map(a => {
-          const isActive = route === 'agents' && activeAgentKey === a.id;
-          return (
-            <button key={a.id}
-                 type="button"
-                 className="sb__item"
-                 data-active={isActive}
-                 data-agent-key={a.id}
-                 aria-label={`${a.label} ${a.surface}${isActive ? ' (active in playground)' : ''}`}
-                 aria-current={isActive ? 'true' : undefined}
-                 onClick={() => selectAgent(a.id)}>
-              <span className="sb__icon" aria-hidden="true">
-                <window.ElevenUI.Orb
-                  size={16}
-                  state={isActive ? 'talking' : 'idle'}
-                  color1={a.color1}
-                  color2={a.color2}
-                  label={`${a.label} · ${isActive ? 'active' : 'idle'}`}
-                />
-              </span>
-              <span className="sb__label">{a.label}</span>
-              <span className="mono dim" style={{fontSize: 9}}>{a.surface}</span>
-            </button>
-          );
-        })}
+        {visibleAgents.map(renderAgentItem)}
       </nav>
 
       <button className="sb__footer"
            type="button"
            aria-label="Open My Account settings"
            data-active={route === 'settings'}
-           onClick={() => {
-             setRoute('settings');
-             window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'account' } }));
-           }}>
+           onClick={() => openSettingsTab(setRoute, 'account', 'sidebar-account-footer')}>
         <div className="sb__avatar">RP</div>
         {!collapsed && (
           <div className="sb__user">
             <div className="sb__user-name">Rae Park</div>
-            <div className="sb__user-org">helix · admin</div>
+            <div className="sb__user-org">gtm_ops · helix · admin</div>
           </div>
         )}
       </button>
@@ -410,19 +442,47 @@ function Sidebar({ route, setRoute, collapsed }) {
 
 /* ---------- Topbar ---------- */
 function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setCollapsed }) {
+  const isAdmin = isConsoleAdmin();
   const labels = {
-    home:'Mission Control', generate:'Generate Proposal', pipeline:'Pipeline', calls:'Calls',
+    home:'Callbacks', generate:'Generate', pipeline:'Pipeline', calls:'Calls',
     proposals:'Proposals', evals:'Evals', agents:'Agents', settings:'Settings',
   };
   const [notifOpen, setNotifOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
+  const [proposalOpen, setProposalOpen] = useState(false);
   const [notificationsRead, setNotificationsRead] = useState(false);
   const notifRef = useRef(null);
   const runRef = useRef(null);
+  const proposalRef = useRef(null);
   const D = window.GTM;
-  const proposalRunCall = (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'meeting-booked')
-    || (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'qualified')
-    || (Array.isArray(D.calls) ? D.calls[0] : null);
+  const appCtx = globalThis.useAppContext();
+  const calls = Array.isArray(D.calls) ? D.calls : [];
+  const runTriggerLabel = route === 'evals'
+    ? 'Eval run'
+    : route === 'generate'
+      ? 'Draft path'
+      : route === 'agents'
+        ? 'Test agent'
+        : isAdmin ? 'New run' : 'Call back';
+  const RunTriggerIcon = route === 'evals' ? I.Beaker : route === 'generate' ? I.Doc : route === 'agents' ? I.Bot : I.Phone;
+  const proposalRunCall = calls.find(c => c.outcome === 'meeting-booked')
+    || calls.find(c => c.outcome === 'qualified')
+    || calls[0]
+    || null;
+  const visibleAgents = (globalThis.AGENT_REGISTRY?.agents || [])
+    .filter(agent => isAdmin || agent.surface !== 'admin-only');
+  const defaultAgentKey = isAdmin
+    ? visibleAgents[0]?.key
+    : (visibleAgents.find(agent => agent.key === 'intake')?.key || visibleAgents[0]?.key);
+  const activeAgentKey = visibleAgents.some(agent => agent.key === appCtx.extra?.selected_agent_key)
+    ? appCtx.extra.selected_agent_key
+    : defaultAgentKey;
+  const activeAgent = globalThis.AGENT_REGISTRY?.byKey?.(activeAgentKey) || visibleAgents[0] || null;
+  const activeAgentName = activeAgent?.display_name || 'ElevenLabs agent';
+  const isReceptionistAgent = activeAgent?.key === 'intake';
+  const proposalRunSeedLabel = proposalRunCall
+    ? `${proposalRunCall.co || proposalRunCall.id} · ${proposalRunCall.id || 'latest call'}`
+    : 'No qualified call selected';
   const proposalRunExtra = proposalRunCall ? {
     proposal_seed_source: 'topbar-new-run',
     proposal_seed_call_id: proposalRunCall.id,
@@ -434,13 +494,146 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
   } : {};
 
   const notifs = buildTopbarNotifications(D);
-  const runActions = [
+  const missedCallback = calls.find(c => shellIsMissedCall(c) && c.returned !== true)
+    || calls.find(shellIsMissedCall)
+    || null;
+  const quoteFollowUpCall = calls.find(c => !shellIsMissedCall(c) && /pricing|quote|follow-up|objection/.test(String(c.outcome || '').toLowerCase()))
+    || calls.find(c => !shellIsMissedCall(c) && shellCallRiskScore(c) > 0)
+    || missedCallback
+    || null;
+  const scheduleJobCall = calls.find(c => !shellIsMissedCall(c) && /meeting-booked|qualified|discovery|technical-deep-dive/.test(String(c.outcome || '').toLowerCase()))
+    || quoteFollowUpCall
+    || missedCallback
+    || null;
+  const humanHandoffCall = calls
+    .filter(c => !shellIsMissedCall(c) && !/no-fit|lost|closed|signed/.test(String(c.outcome || '').toLowerCase()))
+    .sort((a, b) => shellCallRiskScore(b) - shellCallRiskScore(a))[0]
+    || quoteFollowUpCall
+    || missedCallback
+    || null;
+  const tradeRunActions = [
+    {
+      icon:I.Phone,
+      label:'Call a missed number',
+      sub: missedCallback ? `${missedCallback.co} · ${missedCallback.when}` : 'no missed calls waiting',
+      route:'calls',
+      toast: missedCallback ? 'Callback queue opened' : 'No missed callbacks waiting',
+      intent:'missed_callback',
+      selection: missedCallback ? { type:'call', id: missedCallback.id } : null,
+      extra:{ call_window:'missed', ...(missedCallback ? { call_workflow:'human-review' } : {}) },
+    },
+    {
+      icon:I.Mail,
+      label:'Send a quote follow-up',
+      sub: quoteFollowUpCall ? `${quoteFollowUpCall.co} · ${shellCallOutcomeLabel(quoteFollowUpCall)}` : 'no quote follow-up candidate',
+      route:'calls',
+      toast:'Quote follow-up opened',
+      intent:'quote_follow_up',
+      selection: quoteFollowUpCall ? { type:'call', id: quoteFollowUpCall.id } : null,
+      extra:{ call_window:shellCallWindowFor(quoteFollowUpCall), call_workflow:'quote-follow-up' },
+    },
+    {
+      icon:I.Calendar,
+      label:'Schedule a job',
+      sub: scheduleJobCall ? `${scheduleJobCall.co} · ${shellCallOutcomeLabel(scheduleJobCall)}` : 'no scheduling candidate',
+      route:'calls',
+      toast:'Scheduling workflow opened',
+      intent:'schedule_job',
+      selection: scheduleJobCall ? { type:'call', id: scheduleJobCall.id } : null,
+      extra:{ call_window:shellCallWindowFor(scheduleJobCall), call_workflow:'schedule-job' },
+    },
+    {
+      icon:I.Cog,
+      label:'Escalate to a human',
+      sub: humanHandoffCall ? `${humanHandoffCall.co} · ${pluralizeCount(shellCallRiskScore(humanHandoffCall), 'risk signal')}` : 'no human handoff candidate',
+      route:'calls',
+      toast:'Human handoff opened',
+      intent:'human_handoff',
+      selection: humanHandoffCall ? { type:'call', id: humanHandoffCall.id } : null,
+      extra:{ call_window:shellCallWindowFor(humanHandoffCall), call_workflow:'human-review' },
+    },
+  ];
+  const proposalRunAction = {
+    icon:I.Doc,
+    label: proposalRunCall ? 'Generate proposal' : 'Open proposal composer',
+    sub: proposalRunCall ? `${proposalRunSeedLabel} · review before buyer send` : 'add buyer proof before the draft engine runs',
+    route:'generate',
+    toast:'Proposal generator opened',
+    intent:'proposal_generation',
+    extra: proposalRunExtra,
+  };
+  const evalRunAction = {
+    icon:I.Beaker,
+    label:'Trigger eval suite',
+    sub:'opens harness bridge · Cmd+E',
+    route:'evals',
+    toast:'Eval harness opened',
+    intent:'eval_suite',
+    extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick' },
+  };
+  const agentRunActions = activeAgent ? [
+    {
+      icon:I.Phone,
+      label: isReceptionistAgent ? 'Preview greeting' : 'Preview opening',
+      sub:`${activeAgentName} · local playback inside Agents`,
+      route:'agents',
+      intent:'agent_preview',
+      extra:{ selected_agent_key: activeAgentKey, phone_setup_preview:true },
+    },
+    {
+      icon:I.Cog,
+      label: isReceptionistAgent ? 'Edit phone setup' : 'Edit local wrapper',
+      sub:`${activeAgentName} · greeting, context, handoff`,
+      route:'agents',
+      intent:'agent_local_setup',
+      extra:{ selected_agent_key: activeAgentKey, agent_admin_panel:'prompt' },
+    },
+    {
+      icon:I.Bot,
+      label:'ElevenLabs settings',
+      sub:'local integration wrapper before dashboard escape',
+      route:'settings',
+      intent:'agent_integration_settings',
+      extra:{ settings_tab:'integrations', integration_name:'ElevenLabs' },
+    },
+  ] : [
+    {
+      icon:I.Bot,
+      label:'Open Agents',
+      sub:'no public agents registered',
+      route:'agents',
+      intent:'agent_route',
+      extra:{},
+    },
+  ];
+  const proposalRunPlan = [
+    {
+      label:'Buyer proof',
+      detail: proposalRunCall ? `Carry ${proposalRunCall.id || 'the call'} into the proof composer.` : 'Paste proof or attach source evidence.',
+    },
+    {
+      label:'Draft engine',
+      detail:'Extract, enrich, price, risk-check, then render the packet.',
+    },
+    {
+      label:'Artifact review',
+      detail:'Open the PDF/source packet locally before approval.',
+    },
+    {
+      label:'Proposals approval',
+      detail:'Buyer send stays blocked until operator review clears.',
+    },
+  ];
+  const runActions = route === 'generate' ? [
+    proposalRunAction,
+  ] : route === 'agents' ? agentRunActions : isAdmin ? [
+    ...tradeRunActions,
     { icon:I.Phone, label:'Outbound discovery', sub:'opens lead intake · agent-01 Hunter', route:'pipeline', toast:'Outbound discovery opened', intent:'outbound_discovery', extra:{ pipeline_panel:'new-lead' } },
     { icon:I.Mail,  label:'Multi-thread sequence', sub:'opens high-intent saved view', route:'pipeline', toast:'Multi-thread sequence opened', intent:'multi_thread_sequence', extra:{ pipeline_panel:'filters', pipeline_filter:'high' } },
-    { icon:I.Doc,   label:'Generate proposal', sub:'prefills buyer proof from latest call', route:'generate', toast:'Proposal generator opened', intent:'proposal_generation', extra: proposalRunExtra },
-    { icon:I.Beaker,label:'Trigger eval suite', sub:'opens harness bridge · Cmd+E', route:'evals', toast:'Eval harness opened', intent:'eval_suite', extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick' } },
+    proposalRunAction,
+    evalRunAction,
     { icon:I.Refresh, label:'Re-score stale leads', sub:'opens pipeline saved views', route:'pipeline', toast:'Lead re-score review opened', intent:'lead_rescore', extra:{ pipeline_panel:'filters', pipeline_filter:'all' } },
-  ];
+  ] : route === 'evals' ? [evalRunAction] : tradeRunActions;
   const openNotification = (n) => {
     // Guard the selection even though notifications are derived from live
     // fixture state. History can still refresh between render and click,
@@ -467,7 +660,10 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
       });
     }
     if (n.extra?.settings_tab) {
-      window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: n.extra.settings_tab } }));
+      openSettingsTab(setRoute, n.extra.settings_tab, 'topbar-notification');
+      setNotifOpen(false);
+      setNotificationsRead(true);
+      return;
     }
     setRoute(n.route);
     setNotifOpen(false);
@@ -476,6 +672,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
   const startRun = (o) => {
     const ctx = window.AppContext.get();
     window.AppContext.set({
+      selection: o.selection || ctx.selection || null,
       extra: {
         ...(ctx.extra || {}),
         ...(o.extra || {}),
@@ -485,37 +682,60 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
     });
     setRoute(o.route);
     setRunOpen(false);
+    setProposalOpen(false);
   };
+  const renderProposalRunPlan = (testId = 'proposal-run-plan') => (
+    <div className="proposal-run-plan" data-testid={testId}>
+      <div className="proposal-run-plan__seed">
+        <span className="eyebrow eyebrow--accent">proposal sequence</span>
+        <strong>{proposalRunSeedLabel}</strong>
+        <p>{proposalRunCall ? 'This starts a review draft from call evidence, not a buyer-send action.' : 'No call evidence is loaded yet; the composer opens empty.'}</p>
+      </div>
+      <ol className="proposal-run-plan__steps" aria-label="Proposal run review path">
+        {proposalRunPlan.map((step, index) => (
+          <li key={step.label}>
+            <span>{index + 1}</span>
+            <div>
+              <strong>{step.label}</strong>
+              <p>{step.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 
   return (
     <header className="tb">
       <button className="btn btn--ghost btn--icon" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar" aria-label="Toggle sidebar">
         <I.Menu size={16} />
       </button>
-      <div className="tb__crumbs">
-        <button className="tb__crumb tb__crumb--brand" disabled={route === 'home'} onClick={() => setRoute('home')}>Wranngle</button>
-        <span className="tb__sep">/</span>
-        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops</button>
-        <span className="tb__sep">/</span>
-        <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
-      </div>
-      {window.GTM?._isDemoFallback && (
-        <span className="tb__demo-pill" role="status" aria-label="Demo data — backend returned no historic runs">
-          <span className="dot dot--accent" style={{width:5,height:5}} aria-hidden="true"/>
-          demo data
-        </span>
-      )}
-
+      <span className="tb__crumb--active sr-only">
+        {labels[route]}
+      </span>
+      <span className="tb__route" data-testid="topbar-route-label" aria-hidden="true">
+        <span className="tb__route-brand">Wranngle</span>
+        <span className="tb__sep tb__sep--brand">/</span>
+        <span className="tb__route-product">gtm_ops console</span>
+        <span className="tb__sep tb__sep--page">/</span>
+        <span className="tb__route-page">{labels[route]}</span>
+      </span>
       <button type="button" className="tb__search" onClick={openPalette}
-              aria-label="Open command palette to search commands, leads, calls, proposals">
+              aria-label="Open command palette">
         <span className="tb__search-icon" aria-hidden="true"><I.Search size={14} /></span>
-        <span className="tb__search-placeholder">Search commands, leads, calls, proposals…</span>
         <span className="tb__kbd" aria-hidden="true">⌘K</span>
       </button>
 
       <div className="tb__actions">
         <button ref={notifRef} className="btn btn--ghost btn--icon tb__bell" title="Notifications" aria-label="Notifications"
-                onClick={() => setNotifOpen(o => !o)}>
+                aria-haspopup="dialog"
+                aria-expanded={notifOpen}
+                aria-controls="topbar-notifications-popover"
+                onClick={() => {
+                  setRunOpen(false);
+                  setProposalOpen(false);
+                  setNotifOpen(o => !o);
+                }}>
           <I.Bell size={16} />
           {!notificationsRead && <span className="tb__bell-dot"/>}
         </button>
@@ -525,26 +745,58 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
                 aria-label="Toggle color theme">
           {theme === 'dark' ? <I.Sun size={16} /> : <I.Moon size={16} />}
         </button>
-        <button ref={runRef} className="btn btn--primary" onClick={() => setRunOpen(o => !o)}>
-          <I.Plus size={14} /> New run <I.ChevronDown size={12} style={{marginLeft:2,opacity:.85}}/>
+        {route === 'generate' && (
+          <button
+            ref={proposalRef}
+            className="btn btn--ghost btn--sm tb__proposal-run-trigger"
+            aria-label="Proposal run plan"
+            aria-haspopup="dialog"
+            aria-controls="topbar-proposal-run-popover"
+            aria-expanded={proposalOpen}
+            title="Proposal run plan"
+            onClick={() => {
+              setNotifOpen(false);
+              setRunOpen(false);
+              setProposalOpen(o => !o);
+            }}
+          >
+            <I.Plus size={12} />
+            <span>Proposal plan</span>
+          </button>
+        )}
+        <button
+          ref={runRef}
+          className="btn btn--primary tb__run-trigger"
+          aria-label={runTriggerLabel}
+          aria-haspopup="dialog"
+          aria-expanded={runOpen}
+          aria-controls="topbar-run-popover"
+          onClick={() => {
+            setNotifOpen(false);
+            setProposalOpen(false);
+            setRunOpen(o => !o);
+          }}
+        >
+          <RunTriggerIcon size={14} />
+          <span className="tb__run-label">{runTriggerLabel}</span>
+          <I.ChevronDown className="tb__run-chevron" size={12} style={{marginLeft:2,opacity:.85}}/>
         </button>
       </div>
 
-      <Popover open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
+      <Popover id="topbar-notifications-popover" open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
         <div className="pop__hd">
           <span>Notifications</span>
           <span className="mono dim" style={{fontSize:10}}>{notificationsRead ? '0 new' : `${notifs.length} new`}</span>
         </div>
         <div className="pop__list">
           {notifs.map(n => (
-            <div key={n.id} className="pop__row" role="button" tabIndex={0}
+            <button key={n.id} type="button" className="pop__row"
                  data-notification-id={n.id}
                  data-notification-route={n.route}
                  data-selection-type={n.selection?.type || ''}
                  data-selection-id={n.selection?.id || ''}
                  aria-label={`${n.act}: ${n.title}`}
-                 onClick={() => openNotification(n)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}>
+                 onClick={() => openNotification(n)}>
               <span className={`dot dot--${n.tone === 'neutral' ? 'idle' : n.tone}`} style={{width:7,height:7,marginTop:6}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{n.title}</div>
@@ -552,29 +804,46 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
               </div>
               <span className="mono dim" style={{fontSize:10}}>{n.t}</span>
               <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
-            </div>
+            </button>
           ))}
         </div>
         <div className="pop__ft">
           <button className="btn btn--ghost btn--xs" onClick={() => { setNotificationsRead(true); setNotifOpen(false); }}>Mark all read</button>
-          <button className="btn btn--ghost btn--xs" onClick={() => { setRoute('settings'); window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } })); setNotifOpen(false); }}>Settings</button>
+          <button className="btn btn--ghost btn--xs" onClick={() => { openSettingsTab(setRoute, 'integrations', 'topbar-notifications-settings'); setNotifOpen(false); }}>Settings</button>
         </div>
       </Popover>
 
-      <Popover open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={300} label="Start a run">
-        <div className="pop__hd"><span>Start a run</span></div>
+      <Popover id="topbar-proposal-run-popover" open={proposalOpen} onClose={() => setProposalOpen(false)} anchorRef={proposalRef} width={360} label="Proposal run plan">
+        <div className="pop__hd"><span>Proposal run plan</span></div>
+        {renderProposalRunPlan()}
+        <div className="pop__list">
+          <button type="button" className="pop__row"
+               data-testid="proposal-run-start"
+               onClick={() => startRun(proposalRunAction)}>
+            <I.Doc size={14} />
+            <div style={{flex:1}}>
+              <div style={{fontSize:13, fontWeight:600}}>{proposalRunAction.label}</div>
+              <div style={{fontSize:11, color:'var(--text-3)'}}>{proposalRunAction.sub}</div>
+            </div>
+            <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
+          </button>
+        </div>
+      </Popover>
+
+      <Popover id="topbar-run-popover" open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={route === 'generate' ? 360 : 300} label={runTriggerLabel}>
+        <div className="pop__hd"><span>{runTriggerLabel}</span></div>
+        {route === 'generate' && renderProposalRunPlan('topbar-run-proposal-plan')}
         <div className="pop__list">
           {runActions.map(o => (
-            <div key={o.label} className="pop__row" role="button" tabIndex={0}
-                 onClick={() => startRun(o)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRun(o); } }}>
+            <button key={o.label} type="button" className="pop__row"
+                 onClick={() => startRun(o)}>
               <o.icon size={14} />
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{o.label}</div>
                 <div style={{fontSize:11, color:'var(--text-3)'}}>{o.sub}</div>
               </div>
               <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
-            </div>
+            </button>
           ))}
         </div>
       </Popover>
@@ -641,15 +910,52 @@ function CommandPalette({ open, setOpen, setRoute }) {
       });
       setRoute('pipeline');
     };
+    const openMissedCallback = () => {
+      const target = (window.GTM?.calls || []).find(c => shellIsMissedCall(c) && c.returned !== true)
+        || (window.GTM?.calls || []).find(shellIsMissedCall)
+        || null;
+      if (!target) {
+        window.toast('No missed callbacks waiting', { sub: 'Every missed call has been answered', tone: 'healthy' });
+        return;
+      }
+      const ctx = window.AppContext.get();
+      window.AppContext.set({
+        selection: { type: 'call', id: target.id },
+        extra: {
+          ...(ctx.extra || {}),
+          call_window: 'missed',
+          call_workflow: 'human-review',
+          run_intent: 'missed_callback',
+          triggered_from: 'command-palette',
+        },
+      });
+      setRoute('calls');
+    };
+    const openPhoneSetup = (extra = {}) => {
+      const ctx = window.AppContext.get();
+      window.AppContext.set({
+        extra: {
+          ...(ctx.extra || {}),
+          selected_agent_key: 'intake',
+          ...extra,
+          triggered_from: 'command-palette',
+        },
+      });
+      setRoute('agents');
+    };
     const base = [
-      { group:'Navigation', icon:I.Home,     label:'Go to Mission Control', meta:'⏎', do: () => setRoute('home') },
+      { group:'Navigation', icon:I.Phone,    label:'Go to Callbacks', meta:'⏎', do: () => setRoute('home') },
+      { group:'Navigation', icon:I.Phone,    label:'Go to Calls',           meta:'⏎', do: () => setRoute('calls') },
+      { group:'Navigation', icon:I.Bot,      label:'Go to Agents', meta:'local admin', do: () => setRoute('agents') },
+      { group:'Navigation', icon:I.Cog,      label:'Go to Settings',        meta:'⏎', do: () => setRoute('settings') },
+      { group:'Actions', icon:I.Phone,   label:'Call back next missed customer', meta:'opens callback', do: openMissedCallback },
+      { group:'Actions', icon:I.Mic,     label:"Edit receptionist greeting", meta:'phone setup', do: () => openPhoneSetup() },
+      { group:'Actions', icon:I.Play,    label:'Test receptionist',          meta:'play greeting', do: () => openPhoneSetup({ phone_setup_preview: true }) },
+      { group:'Actions', icon:I.Cog,     label:'Add after-hours number',     meta:'handoff', do: () => openPhoneSetup({ phone_setup_focus: 'handoff' }) },
       { group:'Navigation', icon:I.Plus,     label:'Go to Generate Proposal', meta:'draft gate', do: () => setRoute('generate') },
       { group:'Navigation', icon:I.Pipeline, label:'Go to Pipeline',        meta:'⏎', do: () => setRoute('pipeline') },
-      { group:'Navigation', icon:I.Phone,    label:'Go to Calls',           meta:'⏎', do: () => setRoute('calls') },
       { group:'Navigation', icon:I.Doc,      label:'Go to Proposals',       meta:'⏎', do: () => setRoute('proposals') },
       { group:'Navigation', icon:I.Beaker,   label:'Go to Evals',           meta:'⏎', do: () => setRoute('evals') },
-      { group:'Navigation', icon:I.Bot,      label:'Go to Agents',          meta:'⏎', do: () => setRoute('agents') },
-      { group:'Navigation', icon:I.Cog,      label:'Go to Settings',        meta:'⏎', do: () => setRoute('settings') },
       { group:'Actions', icon:I.Mic,    label:'Talk to Sales Coach',       meta:'opens dock', do: () => { document.querySelector('.coach-launcher')?.click(); } },
       { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'opens intake', do: openOutboundRun },
       { group:'Actions', icon:I.Bolt,    label:'Trigger eval suite',        meta:'run plan', do: () => {
@@ -755,8 +1061,8 @@ function CommandPalette({ open, setOpen, setRoute }) {
           'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
         );
         if (focusables.length === 0) { e.preventDefault(); return; }
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+        const first = focusables.item(0);
+        const last = focusables.item(focusables.length - 1);
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault(); last.focus();
         } else if (!e.shiftKey && document.activeElement === last) {
@@ -778,8 +1084,17 @@ function CommandPalette({ open, setOpen, setRoute }) {
     <div className="cp-overlay" onClick={() => setOpen(false)}>
       <div ref={dialogRef} className="cp" role="dialog" aria-modal="true" aria-label="Command palette"
            onClick={e => e.stopPropagation()}>
-        <input ref={inputRef} className="cp__input" placeholder="Type a command, lead, or call ID…"
+        <input ref={inputRef} className="cp__input" type="search"
+               placeholder="Type a command, lead, or call ID…"
                aria-label="Search commands, leads, or call IDs"
+               autoComplete="off"
+               autoCorrect="off"
+               autoCapitalize="none"
+               spellCheck={false}
+               data-lpignore="true"
+               data-1p-ignore="true"
+               data-bwignore="true"
+               data-form-type="other"
                value={q} onChange={e => setQ(e.target.value)} />
         <div className="cp__list">
           {Object.entries(groups).map(([g, list]) => (
@@ -789,13 +1104,17 @@ function CommandPalette({ open, setOpen, setRoute }) {
                 idx += 1;
                 const isActive = idx === active;
                 return (
-                  <div key={it.label} className="cp__row" data-active={isActive}
+                  <button key={it.label} type="button" className="cp__row" data-active={isActive}
                        onMouseEnter={() => setActive(idx)}
+                       onFocus={() => setActive(idx)}
+                       onKeyDown={e => {
+                         if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+                       }}
                        onClick={() => { it.do?.(); setOpen(false); }}>
                     <span className="cp__row-icon"><it.icon size={14} /></span>
                     <span>{it.label}</span>
                     <span className="cp__row-meta">{it.meta}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -815,55 +1134,89 @@ function CommandPalette({ open, setOpen, setRoute }) {
 /* ---------- Shared widgets ---------- */
 function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w = 120, label, pointLabels }) {
   const [hovered, setHovered] = useState(null);
-  const min = Math.min(...data), max = Math.max(...data);
-  const span = max - min || 1;
-  const step = data.length > 1 ? w / (data.length - 1) : 0;
-  const pts = data.map((v, i) => [data.length > 1 ? i * step : w / 2, h - ((v - min) / span) * (h - 4) - 2]);
-  const path = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
-  const area = `${path} L${w},${h} L0,${h} Z`;
-  const latest = data[data.length - 1];
-  const first = data[0];
-  const delta = latest - first;
+  const values = Array.isArray(data)
+    ? data.map(value => Number(value)).filter(Number.isFinite)
+    : [];
   const labelText = String(label || '');
+  const seriesLabel = labelText.split(':')[0].trim() || 'Trend';
+
+  if (values.length === 0) {
+    return (
+      <span
+        className="spark-wrap spark-wrap--empty"
+        role="img"
+        aria-label={`${seriesLabel}: no trend data available`}
+      >
+        <svg className="spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+          <line className="spark-empty-line" x1="0" y1={h / 2} x2={w} y2={h / 2} />
+        </svg>
+      </span>
+    );
+  }
+
+  const min = Math.min(...values), max = Math.max(...values);
+  const span = max - min || 1;
+  const pointInset = values.length > 1 ? Math.min(8, w / 2) : 0;
+  const chartLeft = values.length > 1 ? pointInset : w / 2;
+  const chartRight = values.length > 1 ? w - pointInset : w / 2;
+  const step = values.length > 1 ? Math.max(0, chartRight - chartLeft) / (values.length - 1) : 0;
+  const pts = values.map((v, i) => [
+    values.length > 1 ? chartLeft + (i * step) : w / 2,
+    h - ((v - min) / span) * (h - 4) - 2,
+  ]);
+  const path = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
+  const area = `${path} L${chartRight},${h} L${chartLeft},${h} Z`;
+  const latest = values.at(-1);
+  const first = values[0];
+  const delta = latest - first;
   const percentLabeled = /(?:%|percent|pct|rate|pass-rate|conversion)/i.test(labelText);
-  const isPercentSeries = percentLabeled && data.every(v => Number.isFinite(v) && Math.abs(v) <= 1);
+  const isPercentSeries = percentLabeled && values.every(v => Number.isFinite(v) && Math.abs(v) <= 1);
   const rounded = (value, places = 2) => {
     if (!Number.isFinite(value)) return value;
     const factor = 10 ** places;
     const next = Math.round((value + Number.EPSILON) * factor) / factor;
     return Object.is(next, -0) ? 0 : next;
   };
+  const compactNumber = (value, places = 1) => {
+    const next = rounded(value, places);
+    if (!Number.isFinite(next)) return String(value);
+    if (Number.isInteger(next)) return String(next);
+    return next.toFixed(places).replace(/0+$/, '').replace(/\.$/, '');
+  };
   const fmt = (v) => {
-    if (isPercentSeries) return `${Math.round(rounded(v, 4) * 100)}%`;
+    if (isPercentSeries) return `${compactNumber(v * 100, 1)}%`;
     return String(rounded(v, 2));
   };
   const deltaLabel = (value) => {
-    const next = rounded(value, isPercentSeries ? 4 : 2);
+    if (isPercentSeries) {
+      const next = rounded(value * 100, 1);
+      return `${next > 0 ? '+' : ''}${compactNumber(next, 1)} pp`;
+    }
+    const next = rounded(value, 2);
     return `${next > 0 ? '+' : ''}${fmt(next)}`;
   };
-  const seriesLabel = labelText.split(':')[0].trim() || 'Trend';
-  const summary = label || `${seriesLabel}: ${data.length} periods, ${fmt(first)} to ${fmt(latest)}; range ${fmt(min)} to ${fmt(max)}; delta ${deltaLabel(delta)}`;
+  const summary = label || `${seriesLabel}: ${values.length} periods, ${fmt(first)} to ${fmt(latest)}; range ${fmt(min)} to ${fmt(max)}; delta ${deltaLabel(delta)}`;
   const detailedLabels = Array.isArray(pointLabels)
     ? pointLabels
     : [];
   const pointLabel = (i) => {
     const context = detailedLabels[i]
       ? String(detailedLabels[i]).trim()
-      : data.length === 1
+      : values.length === 1
         ? 'single sample'
-        : `point ${i + 1}/${data.length}`;
-    const fallbackRecency = detailedLabels[i] ? '' : i === data.length - 1 ? ' · latest' : '';
-    const movement = i > 0 ? `${deltaLabel(data[i] - data[i - 1])} vs prior` : 'baseline';
-    return `${seriesLabel} · ${context}${fallbackRecency}: ${fmt(data[i])} · ${movement}`;
+        : `point ${i + 1}/${values.length}`;
+    const fallbackRecency = detailedLabels[i] ? '' : i === values.length - 1 ? ' · latest' : '';
+    const movement = i > 0 ? `${deltaLabel(values[i] - values[i - 1])} vs prior` : 'baseline';
+    return `${seriesLabel} · ${context}${fallbackRecency}: ${fmt(values[i])} · ${movement}`;
   };
-  const pointLabelValues = data.map((_, i) => pointLabel(i));
-  const clampIndex = (i) => Math.max(0, Math.min(data.length - 1, i));
-  const tooltipEdge = hovered === 0 ? 'start' : hovered === data.length - 1 ? 'end' : 'middle';
+  const pointLabelValues = values.map((_, i) => pointLabel(i));
+  const clampIndex = (i) => Math.max(0, Math.min(values.length - 1, i));
+  const tooltipEdge = hovered === 0 ? 'start' : hovered === values.length - 1 ? 'end' : 'middle';
   const inspectPointFromX = (clientX, target) => {
     const rect = target.getBoundingClientRect();
-    if (!rect.width || data.length === 0) return;
+    if (!rect.width || values.length === 0) return;
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    setHovered(clampIndex(Math.round(ratio * (data.length - 1))));
+    setHovered(clampIndex(Math.round(ratio * (values.length - 1))));
   };
   const onKeyDown = (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Escape'].includes(e.key)) return;
@@ -877,10 +1230,10 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
       return;
     }
     if (e.key === 'End') {
-      setHovered(data.length - 1);
+      setHovered(values.length - 1);
       return;
     }
-    const current = hovered == null ? data.length - 1 : hovered;
+    const current = hovered == null ? values.length - 1 : hovered;
     const direction = e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 1;
     setHovered(clampIndex(current + direction));
   };
@@ -894,7 +1247,7 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
       onPointerMove={(e) => inspectPointFromX(e.clientX, e.currentTarget)}
       onPointerLeave={() => setHovered(null)}
       onMouseLeave={() => setHovered(null)}
-      onFocus={() => setHovered(v => v == null ? data.length - 1 : v)}
+      onFocus={() => setHovered(v => v == null ? values.length - 1 : v)}
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHovered(null); }}
       onKeyDown={onKeyDown}
     >
@@ -902,6 +1255,13 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
         {fill && <path d={area} fill={color} opacity="0.15" />}
         <path d={path} fill="none" stroke={color} strokeWidth="1.5" />
       </svg>
+      {hovered != null && (
+        <span
+          className="spark-crosshair"
+          aria-hidden="true"
+          style={{ left: `${(pts[hovered][0] / w) * 100}%`, '--spark-color': color }}
+        />
+      )}
       {pts.map((p, i) => (
         <span
           key={i}
@@ -936,7 +1296,7 @@ function statDeltaNumber(delta) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function statDeltaLabel(delta) {
+function statDeltaLabel(delta, unit = 'auto', noun = '') {
   if (delta == null || delta === '') return null;
   const numeric = statDeltaNumber(delta);
   const raw = String(delta).trim().replace(/%$/, '');
@@ -944,14 +1304,29 @@ function statDeltaLabel(delta) {
   const signed = numeric == null
     ? raw
     : `${numeric > 0 ? '+' : ''}${magnitude}`;
+  if (unit === 'count') {
+    const label = noun ? ` ${noun}` : '';
+    return `${signed}${label} vs last week`;
+  }
+  if (unit === 'percent') {
+    return `${signed}% vs last week`;
+  }
+  if (unit === 'points') {
+    return `${signed} pts vs last week`;
+  }
   const suffix = numeric != null && Math.abs(numeric) < 1 ? '' : '%';
   return `${signed}${suffix} vs last week`;
 }
 
-function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accent }) {
+function Stat({ label, value, delta, deltaUnit = 'auto', deltaNoun = '', deltaText: deltaTextOverride, tone, spark, sparkColor, sparkLabels, sparkLabel, accent }) {
   const deltaValue = statDeltaNumber(delta);
-  const deltaText = statDeltaLabel(delta);
+  const deltaText = deltaTextOverride || statDeltaLabel(delta, deltaUnit, deltaNoun);
   const dir = deltaValue > 0 ? 'up' : deltaValue < 0 ? 'down' : null;
+  const trendColor = sparkColor || (deltaValue > 0
+    ? 'var(--healthy)'
+    : deltaValue < 0
+      ? 'var(--violet-500)'
+      : 'var(--sunset-500)');
   return (
     <div className={`stat ${accent ? 'stat--accent' : ''}`}>
       <div className="stat__label">{label}</div>
@@ -967,10 +1342,10 @@ function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accen
         <div className="stat__spark">
           <Sparkline
             data={spark}
-            color={sparkColor || 'var(--sunset-500)'}
+            color={trendColor}
             h={28}
             w={80}
-            label={`${label} trend: current ${value}${delta != null ? `, delta ${delta}` : ''}`}
+            label={sparkLabel || `${label} trend: current ${value}${delta != null ? `, delta ${delta}` : ''}`}
             pointLabels={sparkLabels}
           />
         </div>
@@ -985,26 +1360,27 @@ function Badge({ children, tone = 'neutral' }) {
 
 function PageHeader({ eyebrow, title, sub, actions }) {
   return (
-    <header className="ph">
-      <div>
-        {eyebrow && <div className="ph__eyebrow">{eyebrow}</div>}
-        <h1 id="console-page-title" className="ph__title">{title}</h1>
-        {sub && <div className="ph__sub">{sub}</div>}
-      </div>
+    <header
+      className={`ph ${actions ? 'ph--actions-only' : 'ph--hidden'}`}
+      data-page-title={title || ''}
+      data-page-eyebrow={eyebrow || ''}
+      data-page-sub={sub || ''}
+    >
+      {eyebrow && <span className="sr-only ph__eyebrow">{eyebrow}</span>}
+      <h1 id="console-page-title" className="sr-only ph__title">{title}</h1>
+      {sub && <p className="sr-only ph__sub">{sub}</p>}
       {actions && <div className="ph__actions">{actions}</div>}
     </header>
   );
 }
 
-function Card({ title, action, children, accent, className = '' }) {
+function Card({ title, action, children, accent, className = '', ...rest }) {
   const accentClass = accent ? `card--${accent}` : '';
   return (
-    <div className={`card ${accentClass} ${className}`}>
+    <div className={`card ${accentClass} ${className}`} {...rest}>
       {(title || action) && (
         <div className="card__hd">
-          <div className="card__title">
-            <span className="card__title-bracket">[</span>{title}<span className="card__title-bracket">]</span>
-          </div>
+          <div className="card__title">{title}</div>
           {action}
         </div>
       )}
@@ -1013,14 +1389,14 @@ function Card({ title, action, children, accent, className = '' }) {
   );
 }
 
-/* ConsolePanel — scrolling pipeline log surface used by Mission Control
-   and by the Generate page. Cap is large (200) so a full sequence trace
+/* ConsolePanel — scrolling pipeline log surface used by the Generate page.
+   Cap is large (200) so a full sequence trace
    stays visible; older lines are still bounded so a long-running tab
    does not leak unbounded memory. The body is scrollable and snaps to
    the bottom when new lines arrive (unless the user has scrolled up,
    so they can review history without being yanked away). */
 const CONSOLE_PANEL_CAP = 200;
-function ConsolePanel({ lines, title = 'live · agent.feed' }) {
+function ConsolePanel({ lines, title = 'recent activity' }) {
   const [liveLines, setLiveLines] = React.useState([]);
   const [streamState, setStreamState] = React.useState(() => (window.DEMO_MODE ? 'ready' : 'connecting'));
   const bodyRef = React.useRef(null);

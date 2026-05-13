@@ -1,0 +1,39 @@
+{
+  "route": "console/?route=settings",
+  "purpose": "Manage workspace account, integrations, eval policy, team access, billing, and security without leaving the dense console shell.",
+  "primaryUsers": ["admin", "operator"],
+  "regions": [
+    {
+      "name": "top tabs",
+      "intent": "Use horizontal tabs for settings sections so the content area is not squeezed by a secondary sidebar."
+    },
+    {
+      "name": "account",
+      "intent": "Expose alert consent and delivery routing controls without redundant page titles or public-site parity content."
+    },
+    {
+      "name": "integrations",
+      "intent": "Show recognizable integration logos, connection status, mapping controls, sync contract, and local agent-admin handoff."
+    },
+    {
+      "name": "eval policy",
+      "intent": "Keep regression thresholds, judge consensus, pager routing, save/revert state, and saved timestamp editable in-place."
+    },
+    {
+      "name": "team billing security",
+      "intent": "Keep admin forms compact, labelled, and directly actionable with visible saved or changed state."
+    }
+  ],
+  "designConstraints": [
+    "No visible route title/caption block and no redundant panel title bars for the primary settings panels.",
+    "Use top tabs, not a left settings sidebar.",
+    "Use Wranngle operational console tokens from DESIGN.md; avoid marketing or public-site pricing filler.",
+    "Integration marks should read as real app logos rather than generic two-letter badges."
+  ],
+  "verification": [
+    "Settings tablist is horizontal and remains keyboard navigable.",
+    "Account and Billing do not render public-site parity copy or offerings grids.",
+    "Integration rows render logo SVGs for every configured integration.",
+    "Eval policy, team, billing, and security forms keep labelled controls and pass blocking a11y checks."
+  ]
+}

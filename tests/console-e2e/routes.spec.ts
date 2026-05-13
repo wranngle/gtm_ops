@@ -5,7 +5,7 @@
 import { test, expect, seriousAxeViolations } from './helpers.js';
 
 const ROUTES = [
-  { id: 'home',      label: 'Mission Control', titleHint: /Mission Control/i },
+  { id: 'home',      label: 'Callbacks',       titleHint: /Callbacks/i },
   { id: 'pipeline',  label: 'Pipeline',        titleHint: /Pipeline/i },
   { id: 'calls',     label: 'Calls',           titleHint: /Calls/i },
   { id: 'proposals', label: 'Proposals',       titleHint: /Proposals/i },
@@ -43,12 +43,12 @@ for (const route of ROUTES) {
   });
 }
 
-test('route · Mission Control stat render does not leave navigation on a stale page body', async ({ openConsole }) => {
+test('route · Callbacks stat render does not leave navigation on a stale page body', async ({ openConsole }) => {
   const page = await openConsole();
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
 
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Mission Control/i);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Callbacks/i);
 
   await page.evaluate(() => {
     (window as any).proposalAmountToThousands = undefined;
@@ -57,10 +57,10 @@ test('route · Mission Control stat render does not leave navigation on a stale 
   await page.getByRole('button', { name: /^7D$/i }).click();
   await expect(page.locator('[data-testid="mission-stats"]')).toHaveAttribute('data-range', 'week');
 
-  await page.locator('.sb__item:has-text("Generate")').first().click();
-  await expect(page.locator('.tb__crumb--active')).toContainText('Generate');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Generate Proposal/i);
-  await expect(page.getByRole('heading', { level: 1 })).not.toContainText(/Mission Control/i);
+  await page.locator('.sb__item:has-text("Calls")').first().click();
+  await expect(page.locator('.tb__crumb--active')).toContainText('Calls');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Calls/i);
+  await expect(page.getByRole('heading', { level: 1 })).not.toContainText(/Callbacks/i);
   expect(pageErrors).toEqual([]);
 });
 
@@ -76,7 +76,7 @@ test('route · navigation resets the main scroller instead of landing mid-page',
   await page.locator('.sb__item:has-text("Agents")').first().click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(/Agents/i);
   await expect.poll(async () => main.evaluate((el) => el.scrollTop)).toBe(0);
-  await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+  await expect(page.locator('.page').first()).toBeInViewport();
 });
 
 /* Page wrapper margin/padding consistency.

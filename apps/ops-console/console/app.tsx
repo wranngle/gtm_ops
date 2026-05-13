@@ -103,6 +103,36 @@ function App() {
   }, [route]);
 
   useE(() => {
+    window.scrollConsoleNodeIntoView = (node, options = {}) => {
+      if (!node) return;
+      const scroller = node.closest?.('.scroll') || scrollRef.current || document.querySelector('main.scroll');
+      if (!scroller) return;
+      const nodeBox = node.getBoundingClientRect();
+      const scrollBox = scroller.getBoundingClientRect();
+      const block = options.block || 'start';
+      const margin = Number.isFinite(options.margin) ? options.margin : 12;
+      if (block === 'nearest') {
+        if (nodeBox.top < scrollBox.top + margin) {
+          scroller.scrollTop += nodeBox.top - scrollBox.top - margin;
+        } else if (nodeBox.bottom > scrollBox.bottom - margin) {
+          scroller.scrollTop += nodeBox.bottom - scrollBox.bottom + margin;
+        }
+        return;
+      }
+      if (block === 'center') {
+        const nodeCenter = nodeBox.top + nodeBox.height / 2;
+        const scrollCenter = scrollBox.top + scrollBox.height / 2;
+        scroller.scrollTop += nodeCenter - scrollCenter;
+        return;
+      }
+      scroller.scrollTop += nodeBox.top - scrollBox.top - margin;
+    };
+    return () => {
+      if (window.scrollConsoleNodeIntoView) delete window.scrollConsoleNodeIntoView;
+    };
+  }, []);
+
+  useE(() => {
     const onPop = () => setConsoleRoute(routeFromLocation());
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -134,7 +164,7 @@ function App() {
   useE(() => {
     async function loadData() {
       try {
-        // Cache-bust on demand so the Mission Control "Refresh" button
+        // Cache-bust on demand so the Home "Refresh" button
         // (which dispatches `gtm:refresh-data`) actually re-fetches
         // history instead of being served the existing 304/304-equivalent.
         const cacheBuster = window.GTM._lastRefreshAt ? `?_=${window.GTM._lastRefreshAt}` : '';
@@ -147,12 +177,22 @@ function App() {
           return;
         }
         window.GTM._isDemoFallback = false;
+        const humanizeSlug = (s) => String(s || '')
+          .split(/[-_]+/)
+          .filter(Boolean)
+          .map(w => w[0].toUpperCase() + w.slice(1))
+          .join(' ');
+        const formatMonthlyBleed = (value) => {
+          const n = Number(value);
+          if (!Number.isFinite(n) || n <= 0) return '$0K';
+          return `$${(n / 1000).toFixed(n >= 10_000 ? 0 : 1).replace(/\.0$/, '')}K`;
+        };
         window.GTM.companies = history.map(h => {
           const metadata = readHistoryMetadata(h.metadata);
-          return ({
+          return {
             id: h.slug || h.id,
-            name: metadata.client_name || h.client_slug,
-            industry: metadata.process_name || 'Generated proposal',
+            name: metadata.client_name || humanizeSlug(h.client_slug) || h.client_slug,
+            industry: metadata.process_name || h.project_name || 'Generated proposal',
             size: '-',
             region: '-',
             stage: stageFromHistoryStatus(h.status),
@@ -165,12 +205,12 @@ function App() {
             techStack: [],
             lastTouch: new Date(h.timestamp).toLocaleDateString(),
             nextStep: nextStepFromHistoryStatus(h.status),
-            nextStepWhen: h.status === 'completed' ? 'ready now' : '-',
-            arr: `$${h.monthly_bleed || 0}K`,
+            nextStepWhen: h.status === 'completed' ? 'ready now' : h.status === 'failed' ? 'needs repair' : 'running',
+            arr: formatMonthlyBleed(h.monthly_bleed),
             dealSize: `$${((h.total_price || 0) / 1000).toFixed(1)}K`,
             closeProb: h.status === 'completed' ? 0.72 : h.status === 'failed' ? 0.15 : 0.5,
-            artifacts: h.artifacts || []
-          });
+            artifacts: h.artifacts || [],
+          };
         });
         // Preserve the curated data.js seeds as a baseline so the Banyan /
         // Verdant / Arcadia / Thornfield demo proposals stay visible
@@ -187,11 +227,6 @@ function App() {
         // missing. Production history entries can ship without
         // client_name; rendering the raw slug as the company looks
         // unfinished and contradicts the brand.
-        const humanizeSlug = (s) => String(s || '')
-          .split(/[-_]+/)
-          .filter(Boolean)
-          .map(w => w[0].toUpperCase() + w.slice(1))
-          .join(' ');
         const historyProposals = history.map(h => {
           const metadata = readHistoryMetadata(h.metadata);
           return ({
@@ -222,7 +257,7 @@ function App() {
     }
     loadData();
     // Listen for explicit refresh requests from anywhere in the app
-    // (Mission Control "Refresh" button, future inline refresh
+    // (Home "Refresh" button, future inline refresh
     // affordances). The handler stamps a timestamp on window.GTM so the
     // fetch becomes cache-busted, then re-runs the same loader.
     function onRefresh() {
@@ -235,25 +270,42 @@ function App() {
 
   const collapsed = tw.sidebarCollapsed;
   const setCollapsed = (v) => setTweak('sidebarCollapsed', v);
+  const showDemoBanner = Boolean(window.DEMO_MODE || window.GTM?._isDemoFallback);
+  const demoBannerDetail = window.GTM?._isDemoFallback
+    ? 'Backend returned no history. Showing synthetic demo data.'
+    : 'Synthetic GTM data only. No customer systems connected.';
 
   return (
     <>
-      <div className="app" data-collapsed={collapsed}>
-        <Sidebar route={route} setRoute={setConsoleRoute} collapsed={collapsed}/>
-        <div className="main">
-          <Topbar route={route} setRoute={setConsoleRoute} openPalette={()=>setPaletteOpen(true)}
-                  theme={tw.theme} setTheme={(v) => setTweak('theme', v)}
-                  collapsed={collapsed} setCollapsed={setCollapsed}/>
-          <main ref={scrollRef} className="scroll" key={route} aria-labelledby="console-page-title">
-            {route === 'home' && <HomePage setRoute={setConsoleRoute}/>}
-            {route === 'generate' && <GeneratePage setRoute={setConsoleRoute}/>}
-            {route === 'pipeline' && <PipelinePage setRoute={setConsoleRoute}/>}
-            {route === 'calls' && <CallsPage setRoute={setConsoleRoute}/>}
-            {route === 'evals' && <EvalsPage setRoute={setConsoleRoute}/>}
-            {route === 'proposals' && <ProposalsPage setRoute={setConsoleRoute}/>}
-            {route === 'agents' && <AgentsPage setRoute={setConsoleRoute}/>}
-            {route === 'settings' && <SettingsPage setRoute={setConsoleRoute}/>}
-          </main>
+      <div className="app-shell" data-demo-banner={showDemoBanner ? 'true' : 'false'}>
+        {showDemoBanner && (
+          <div
+            className="demo-banner"
+            data-testid="demo-banner"
+            role="status"
+            aria-label={`Demo mode. ${demoBannerDetail}`}
+          >
+            <span className="demo-banner__label">Demo mode</span>
+            <span className="demo-banner__text">{demoBannerDetail}</span>
+          </div>
+        )}
+        <div className="app" data-collapsed={collapsed} data-route={route}>
+          <Sidebar route={route} setRoute={setConsoleRoute} collapsed={collapsed}/>
+          <div className="main">
+            <Topbar route={route} setRoute={setConsoleRoute} openPalette={()=>setPaletteOpen(true)}
+                    theme={tw.theme} setTheme={(v) => setTweak('theme', v)}
+                    collapsed={collapsed} setCollapsed={setCollapsed}/>
+            <main ref={scrollRef} className="scroll" key={route} aria-labelledby="console-page-title">
+              {route === 'home' && <HomePage setRoute={setConsoleRoute}/>}
+              {route === 'generate' && <GeneratePage setRoute={setConsoleRoute}/>}
+              {route === 'pipeline' && <PipelinePage setRoute={setConsoleRoute}/>}
+              {route === 'calls' && <CallsPage setRoute={setConsoleRoute}/>}
+              {route === 'evals' && <EvalsPage setRoute={setConsoleRoute}/>}
+              {route === 'proposals' && <ProposalsPage setRoute={setConsoleRoute}/>}
+              {route === 'agents' && <AgentsPage setRoute={setConsoleRoute}/>}
+              {route === 'settings' && <SettingsPage setRoute={setConsoleRoute}/>}
+            </main>
+          </div>
         </div>
       </div>
 

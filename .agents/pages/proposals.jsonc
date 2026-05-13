@@ -1,0 +1,49 @@
+{
+  "route": "console/?route=proposals",
+  "purpose": "Review proposal packets, inspect PDF/source/audit artifacts, track blockers, and re-send buyer packets only after the operator sees the gate state.",
+  "primaryUsers": ["operator", "reviewer"],
+  "regions": [
+    {
+      "name": "review queue controls",
+      "intent": "Keep All/Open filtering and Generate handoff available without turning the page into a hero or overview dashboard."
+    },
+    {
+      "name": "queue summary strip",
+      "intent": "Summarize open gates, blockers, accepted sections, and signed count from live proposal state."
+    },
+    {
+      "name": "proposal queue",
+      "intent": "List proposals with stage, blockers, value, send/view metadata, and keyboard-selectable rows."
+    },
+    {
+      "name": "active packet detail",
+      "intent": "Show the selected buyer, review gate, value, section progress, blockers, resend receipt, and valid next actions."
+    },
+    {
+      "name": "artifact review panel",
+      "intent": "Preserve local PDF preview, source evidence JSON, audit packet state, packet metadata, and blocker handoff actions."
+    },
+    {
+      "name": "resend workflow",
+      "intent": "Validate recipient email, capture CC/note, toast the typed recipient, close on send, and leave a per-proposal receipt."
+    },
+    {
+      "name": "sections ledger",
+      "intent": "Show accepted, redline, and pending sections derived from the active proposal rather than static filler rows."
+    }
+  ],
+  "designConstraints": [
+    "Dense operational console, not a marketing hero.",
+    "Use Wranngle tokens and existing Card, Badge, Button, Segmented, and artifact drawer primitives.",
+    "No decorative orbs/blobs and no negative letter spacing.",
+    "The artifact viewer and resend gate must remain reachable from the active packet detail.",
+    "The queue and detail panels must collapse without horizontal overflow at mobile width."
+  ],
+  "verification": [
+    "All/Open filters use live proposal state and keep sidebar counts aligned.",
+    "Selecting a proposal updates detail, section rows, blocker actions, and review packet metadata.",
+    "Review packet opens three selectable artifacts; source evidence renders JSON instead of an iframe.",
+    "Re-send validates email, toasts the typed recipient, closes the form, and shows the receipt.",
+    "No serious or critical axe violations on console/?route=proposals."
+  ]
+}

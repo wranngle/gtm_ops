@@ -51,6 +51,16 @@ globalThis.buildAgentContext = function buildAgentContext(ctx) {
     const next = Number(value);
     return Number.isFinite(next) ? next : null;
   };
+  const knownLeadValue = (value) => {
+    const text = String(value ?? '').trim();
+    return text && !['-', '—', 'n/a', 'na', 'none', 'unknown'].includes(text.toLowerCase())
+      ? text
+      : '';
+  };
+  const pushKnownLeadLine = (key, value) => {
+    const text = knownLeadValue(value);
+    if (text) lines.push(`${key}: ${text}`);
+  };
   const evalRunScore = (run) => (
     numericScore(run?.score?.weighted) ??
     numericScore(run?.score) ??
@@ -81,13 +91,14 @@ globalThis.buildAgentContext = function buildAgentContext(ctx) {
         lines.push('');
         lines.push('## active_lead');
         lines.push(`name: ${lead.name}`);
-        lines.push(`industry: ${lead.industry}`);
-        lines.push(`size: ${lead.size}`);
-        lines.push(`region: ${lead.region}`);
+        pushKnownLeadLine('industry', lead.industry);
+        pushKnownLeadLine('size', lead.size);
+        pushKnownLeadLine('region', lead.region);
         lines.push(`stage: ${lead.stage}`);
         lines.push(`score: ${lead.score}/100  intent: ${lead.intent}  ICP: ${lead.icp}`);
         lines.push(`pain: ${lead.pain}`);
-        lines.push(`stack: ${(lead.techStack || []).join(', ')}`);
+        const techStack = Array.isArray(lead.techStack) ? lead.techStack : [];
+        if (techStack.length > 0) lines.push(`stack: ${techStack.join(', ')}`);
         lines.push(`deal_size: ${lead.dealSize}  current_arr: ${lead.arr}  close_prob: ${lead.closeProb}`);
         lines.push(`next_step: ${lead.nextStep} (${lead.nextStepWhen})`);
       }
@@ -226,6 +237,43 @@ function installConvaiEscapeHatchGuard(el) {
   };
 }
 
+function isUsefulConvaiText(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  return normalized && !/^powered by elevenagents$/i.test(normalized);
+}
+
+function isInspectableConvaiNode(node) {
+  if (!node || !(node instanceof Element)) return false;
+  if (node.closest('[hidden],[aria-hidden="true"],[data-gtm-suppressed-external-banner]')) {
+    return false;
+  }
+  const style = getComputedStyle(node);
+  return style.display !== 'none' && style.visibility !== 'hidden';
+}
+
+function convaiHasUsefulSurface(el) {
+  const root = el?.shadowRoot;
+  if (!root) {
+    // Some widgets use a closed shadow root. In that case the browser may
+    // still paint a complete vendor UI even though the console cannot inspect
+    // it, so do not flag it as blank.
+    return true;
+  }
+
+  const usefulText = Array.from(root.querySelectorAll('*'))
+    .filter(node => !['STYLE', 'SCRIPT', 'TEMPLATE'].includes(node.tagName))
+    .filter(isInspectableConvaiNode)
+    .some(node => isUsefulConvaiText(node.textContent));
+  if (usefulText) return true;
+
+  const usefulControl = root.querySelector(
+    'button,input,textarea,select,[role="button"],[role="textbox"],[role="switch"],[role="tab"],[contenteditable="true"]',
+  );
+  if (usefulControl && isInspectableConvaiNode(usefulControl)) return true;
+
+  return false;
+}
+
 /* ConvaiWidget — declarative React wrapper around <elevenlabs-convai>.
    Updates dynamic-variables JSON whenever the app context changes. */
 globalThis.ConvaiWidget = function ConvaiWidget({
@@ -279,6 +327,7 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   const effectiveSyntaxHighlightTheme = syntaxHighlightTheme ?? surfaceOv.syntaxHighlightTheme;
   const [ready, setReady] = React.useState(isConvaiReady());
   const [unreachable, setUnreachable] = React.useState(false);
+  const [renderStalled, setRenderStalled] = React.useState(false);
   const [configError, setConfigError] = React.useState(() => (
     agent_id ? _convaiConfigErrors.get(agent_id)?.message || null : null
   ));
@@ -294,12 +343,14 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     });
     globalThis.dispatchEvent(new CustomEvent('gtm:route', { detail: { route: 'agents' } }));
   };
+  const renderConvaiHost = (child) => React.createElement('div', { className: 'convai-host' }, child);
 
   React.useEffect(() => { loadConvaiWidget(); }, []);
 
   React.useEffect(() => {
     installConvaiErrorBridge();
     if (!agent_id) return undefined;
+    setRenderStalled(false);
     // ALWAYS sync configError to the current agent's cached error (or clear
     // it). The previous version only set on hit, never cleared, so an error
     // for a prior agent stayed sticky across agent-picker switches and
@@ -437,6 +488,25 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       containerRef.current.innerHTML = '';
       containerRef.current.append(el);
     }
+    setRenderStalled(false);
+    const checkUsefulSurface = () => {
+      if (!widgetRef.current || widgetRef.current !== el) return false;
+      if (convaiHasUsefulSurface(el)) {
+        setRenderStalled(false);
+        return true;
+      }
+
+      return false;
+    };
+    let observer = null;
+    if (el.shadowRoot) {
+      observer = new MutationObserver(checkUsefulSurface);
+      observer.observe(el.shadowRoot, { childList: true, subtree: true, characterData: true });
+    }
+    const stallCheck = setTimeout(() => {
+      if (!checkUsefulSurface()) setRenderStalled(true);
+    }, 3200);
+    const watchForLateRender = setInterval(checkUsefulSurface, 1000);
     const stopEscapeHatchGuard = installConvaiEscapeHatchGuard(el);
     applyContainedHostLayout();
     const hostLayoutRaf = requestAnimationFrame(applyContainedHostLayout);
@@ -445,6 +515,9 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       .catch(() => {});
     onMount && onMount(el);
     return () => {
+      clearTimeout(stallCheck);
+      clearInterval(watchForLateRender);
+      observer?.disconnect();
       cancelAnimationFrame(hostLayoutRaf);
       stopEscapeHatchGuard();
       el.removeEventListener('elevenlabs-convai:call', onCall);
@@ -477,7 +550,7 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   }, [ctx, effectiveTextOnly]);
 
   if (unreachable) {
-    return React.createElement('div', {
+    return renderConvaiHost(React.createElement('div', {
       className: 'convai-mount convai-mount--unreachable',
       role: 'alert',
       'aria-live': 'polite',
@@ -495,16 +568,16 @@ globalThis.ConvaiWidget = function ConvaiWidget({
         style: { marginTop: 12, display: 'inline-flex' },
         onClick: () => openLocalAgentAdmin('convai-fallback', 'context'),
       }, 'Open local admin')
-    )
+    ))
     );
   }
   if (!ready) {
-    return React.createElement('div', { className: 'convai-mount convai-mount--loading', 'aria-busy': 'true' },
+    return renderConvaiHost(React.createElement('div', { className: 'convai-mount convai-mount--loading', 'aria-busy': 'true' },
       React.createElement('div', { className: 'convai-fallback' },
         React.createElement('div', { className: 'mono dim', style: { fontSize: 11 } },
           'Loading ElevenLabs widget…')
       )
-    );
+    ));
   }
   // The convai-mount holds the imperative <elevenlabs-convai> element
   // (the create-effect calls innerHTML='' on it to swap the embed in/out,
@@ -531,6 +604,24 @@ globalThis.ConvaiWidget = function ConvaiWidget({
       className: 'btn btn--primary btn--sm',
       style: { marginTop: 12, display: 'inline-flex' },
       onClick: () => openLocalAgentAdmin('convai-config-error', 'context'),
+    }, 'Open local admin')
+    ),
+    !configError && renderStalled && React.createElement('div', {
+      className: 'convai-fallback convai-fallback--overlay',
+      role: 'alert',
+      'aria-live': 'polite',
+      'data-testid': 'convai-render-stalled',
+    },
+    React.createElement('div', { className: 'convai-fallback__title' }, 'ElevenLabs session shell is empty'),
+    React.createElement('div', { className: 'convai-fallback__body' },
+      reg ? `${reg.display_name} mounted the official ` : 'The official ',
+      React.createElement('code', null, 'elevenlabs-convai'),
+      ' element, but it did not render usable controls or transcript text. Use the local wrapper while the embed binding is repaired.'
+    ),
+    React.createElement('button', {
+      className: 'btn btn--primary btn--sm',
+      style: { marginTop: 12, display: 'inline-flex' },
+      onClick: () => openLocalAgentAdmin('convai-render-stalled', 'context'),
     }, 'Open local admin')
     )
   );

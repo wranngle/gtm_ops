@@ -121,6 +121,57 @@ function convertMarkdownToHtml(obj) {
   return obj;
 }
 
+function collectUnresolvedLlmPlaceholders(value, pathPrefix = '') {
+  const placeholders = [];
+
+  function visit(node, currentPath) {
+    if (typeof node === 'string') {
+      if (node.includes('[LLM_PLACEHOLDER:')) {
+        placeholders.push({
+          path: currentPath || '<root>',
+          value: node
+        });
+      }
+
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      for (const [index, item] of node.entries()) {
+        visit(item, `${currentPath}[${index}]`);
+      }
+
+      return;
+    }
+
+    if (node && typeof node === 'object') {
+      for (const [key, item] of Object.entries(node)) {
+        visit(item, currentPath ? `${currentPath}.${key}` : key);
+      }
+    }
+  }
+
+  visit(value, pathPrefix);
+  return placeholders;
+}
+
+function collectPipelineNarrativePlaceholders(schema = {}) {
+  return collectUnresolvedLlmPlaceholders({
+    audit_report: schema.audit_report,
+    proposal: schema.proposal,
+    project_plan: schema.project_plan
+  });
+}
+
+function formatPlaceholderGateError(placeholders, reason) {
+  const sample = placeholders
+    .slice(0, 8)
+    .map(placeholder => placeholder.path)
+    .join(', ');
+  const suffix = placeholders.length > 8 ? `, and ${placeholders.length - 8} more` : '';
+  return `${reason}; ${placeholders.length} unresolved LLM placeholder(s): ${sample}${suffix}`;
+}
+
 const COLORS = {
   reset: '\u001B[0m',
   bright: '\u001B[1m',
@@ -763,6 +814,8 @@ function formatProjectPlanForRender(plan) {
  * Orchestrates the full presales document generation flow
  */
 export class UnifiedPipeline {
+  schema: any;
+
   constructor(options = {}) {
     this.stats = {
       startTime: null,
@@ -2088,10 +2141,28 @@ export class UnifiedPipeline {
     this.log.data('Groq API (fallback)', hasGroq ? 'Available' : 'Not configured');
     this.log.data('Primary Model', 'gemini-3-flash-preview');
 
-    // Skip LLM Fill entirely if no API keys available (allows testing without LLM)
+    const placeholdersBeforeFill = collectPipelineNarrativePlaceholders(this.schema);
+    this.log.data('Unresolved Placeholders', placeholdersBeforeFill.length);
+
+    // Skip LLM Fill only when the schema is already clean.
     if (!hasGemini && !hasGroq) {
+      if (placeholdersBeforeFill.length > 0) {
+        this.log.list('Unresolved Placeholder Paths', placeholdersBeforeFill.map(placeholder => placeholder.path), 10);
+        const errorMessage = formatPlaceholderGateError(
+          placeholdersBeforeFill,
+          'LLM fill requires GEMINI_API_KEY or GROQ_API_KEY'
+        );
+        this.log.error(errorMessage);
+        this.stats.stages.llmFill = {
+          failed: true,
+          reason: 'No API keys',
+          unresolvedPlaceholders: placeholdersBeforeFill.length
+        };
+        throw new Error(errorMessage);
+      }
+
       this.log.warn('No LLM API keys configured - skipping narrative generation');
-      this.log.subStepDone('Stage skipped (placeholders retained)');
+      this.log.subStepDone('Stage skipped (no placeholders)');
       this.stats.stages.llmFill = { skipped: true, reason: 'No API keys' };
       return;
     }
@@ -2176,6 +2247,23 @@ export class UnifiedPipeline {
 
     // Log final totals
     this.log.subStep('LLM fill summary');
+    const remainingPlaceholders = collectPipelineNarrativePlaceholders(this.schema);
+    if (remainingPlaceholders.length > 0) {
+      this.log.list('Unresolved Placeholder Paths', remainingPlaceholders.map(placeholder => placeholder.path), 10);
+      const errorMessage = formatPlaceholderGateError(
+        remainingPlaceholders,
+        'LLM fill completed with unresolved placeholders'
+      );
+      this.log.error(errorMessage);
+      this.stats.stages.llmFill = {
+        failed: true,
+        apiCalls: totalApiCalls,
+        tokensUsed: totalTokens,
+        unresolvedPlaceholders: remainingPlaceholders.length
+      };
+      throw new Error(errorMessage);
+    }
+
     this.log.data('Total API Calls', totalApiCalls);
     this.log.data('Total Tokens', totalTokens.toLocaleString());
     const estimatedCost = (totalTokens / 1_000_000) * 0.075; // Rough Gemini Flash pricing

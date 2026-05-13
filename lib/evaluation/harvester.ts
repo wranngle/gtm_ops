@@ -12,7 +12,30 @@
  */
 
 import { generateCaseStudyId } from '../schemas/case-study.schema.js';
+import type { Vendor } from '../schemas/case-study.schema.js';
 import { createCaseStudy } from './corpus.js';
+
+type JsonObject = Record<string, any>;
+
+type HarvestOptions = {
+  autoSave?: boolean;
+  holdout?: boolean;
+  harvestedBy?: string;
+  id?: string | null;
+  maxRetries?: number;
+  title?: string | null;
+};
+
+type HarvestSource = {
+  url: string;
+  title?: string | null;
+  vendor?: Vendor | null;
+  published_date?: string | null;
+};
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 // =============================================================================
 // Extraction Prompt
@@ -121,13 +144,13 @@ const VENDOR_PATTERNS = {
 /**
  * Detect vendor from URL
  */
-export function detectVendor(url) {
+export function detectVendor(url: string): Vendor {
   const urlLower = url.toLowerCase();
 
   for (const [vendor, patterns] of Object.entries(VENDOR_PATTERNS)) {
     for (const pattern of patterns) {
       if (urlLower.includes(pattern)) {
-        return vendor;
+        return vendor as Vendor;
       }
     }
   }
@@ -147,7 +170,7 @@ export function detectVendor(url) {
  * - Puppeteer for JS-rendered pages
  * - API calls for structured data sources
  */
-async function fetchPageContent(_url) {
+async function fetchPageContent(_url: string): Promise<string> {
   // For now, this is a placeholder that requires manual content input
   // In production, integrate with WebFetch or similar
 
@@ -167,7 +190,7 @@ async function fetchPageContent(_url) {
  * @param {object} options - Extraction options
  * @returns {object} Extracted PROBLEM/SOLUTION structure
  */
-async function extractWithLLM(content, options = {}) {
+async function extractWithLLM(content: string, options: HarvestOptions = {}): Promise<JsonObject> {
   const { maxRetries = 2 } = options;
 
   // Truncate very long content
@@ -179,7 +202,7 @@ async function extractWithLLM(content, options = {}) {
 
   // Use the project's LLM service
   try {
-    const { LLMExecutor } = await import('../../src/services/llm.js');
+    const { LLMExecutor } = await import('../../src/services/llm.js') as any;
 
     const executor = new LLMExecutor({
       task: 'case-study-extraction',
@@ -199,9 +222,10 @@ async function extractWithLLM(content, options = {}) {
     }
 
     return JSON.parse(jsonMatch[0]);
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = errorMessage(error);
     // Fallback: return structure with raw content for manual extraction
-    console.warn(`LLM extraction failed: ${error.message}`);
+    console.warn(`LLM extraction failed: ${message}`);
     console.warn('Returning template for manual extraction');
 
     return {
@@ -226,10 +250,10 @@ async function extractWithLLM(content, options = {}) {
       },
       meta: {
         quality_score: 1,
-        quality_notes: `LLM extraction failed: ${error.message}. Manual entry required.`,
+        quality_notes: `LLM extraction failed: ${message}. Manual entry required.`,
         domain_tags: [],
       },
-      _extraction_error: error.message,
+      _extraction_error: message,
     };
   }
 }
@@ -245,7 +269,7 @@ async function extractWithLLM(content, options = {}) {
  * @param {object} options - Harvesting options
  * @returns {object} Harvested case study (not yet saved)
  */
-export async function harvestFromUrl(url, options = {}) {
+export async function harvestFromUrl(url: string, options: HarvestOptions = {}): Promise<JsonObject> {
   const { autoSave = false } = options;
 
   // Detect vendor
@@ -274,7 +298,7 @@ export async function harvestFromUrl(url, options = {}) {
   };
 
   if (autoSave) {
-    return await createCaseStudy(caseStudy);
+    return await createCaseStudy(caseStudy) as JsonObject;
   }
 
   return {
@@ -292,7 +316,7 @@ export async function harvestFromUrl(url, options = {}) {
  * @param {object} options - Harvesting options
  * @returns {object} Harvested case study
  */
-export async function harvestFromContent(content, sourceInfo, options = {}) {
+export async function harvestFromContent(content: string, sourceInfo: HarvestSource, options: HarvestOptions = {}): Promise<JsonObject> {
   const { autoSave = false, id = null } = options;
 
   // Validate source info
@@ -324,7 +348,7 @@ export async function harvestFromContent(content, sourceInfo, options = {}) {
   };
 
   if (autoSave) {
-    return await createCaseStudy(caseStudy);
+    return await createCaseStudy(caseStudy) as JsonObject;
   }
 
   return {
@@ -340,7 +364,7 @@ export async function harvestFromContent(content, sourceInfo, options = {}) {
  * @param {object} data - Complete case study data
  * @returns {object} Created case study
  */
-export async function createManualCaseStudy(data) {
+export async function createManualCaseStudy(data: JsonObject): Promise<unknown> {
   return await createCaseStudy(data);
 }
 
@@ -355,8 +379,8 @@ export async function createManualCaseStudy(data) {
  * @param {object} options - Harvesting options
  * @returns {Array} Results for each URL
  */
-export async function batchHarvest(sources, options = {}) {
-  const results = [];
+export async function batchHarvest(sources: HarvestSource[], options: HarvestOptions = {}): Promise<JsonObject[]> {
+  const results: JsonObject[] = [];
 
   for (const source of sources) {
     try {
@@ -369,11 +393,11 @@ export async function batchHarvest(sources, options = {}) {
         success: true,
         case_study: result,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       results.push({
         url: source.url,
         success: false,
-        error: error.message,
+        error: errorMessage(error),
       });
     }
   }
@@ -388,8 +412,8 @@ export async function batchHarvest(sources, options = {}) {
 /**
  * Validate extracted case study quality
  */
-export function validateExtraction(caseStudy) {
-  const issues = [];
+export function validateExtraction(caseStudy: JsonObject): { valid: boolean; issues: string[]; quality_score: number } {
+  const issues: string[] = [];
 
   // Check problem completeness
   if (!caseStudy.problem?.industry || caseStudy.problem.industry === 'MANUAL_ENTRY_REQUIRED') {
@@ -429,8 +453,8 @@ export function validateExtraction(caseStudy) {
 /**
  * Suggest improvements for low-quality extractions
  */
-export function suggestImprovements(caseStudy) {
-  const suggestions = [];
+export function suggestImprovements(caseStudy: JsonObject): string[] {
+  const suggestions: string[] = [];
   const validation = validateExtraction(caseStudy);
 
   if (!validation.valid) {

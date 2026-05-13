@@ -57,6 +57,10 @@ function sanitizeSlug(name) {
     .replaceAll(/^-|-$/g, '');
 }
 
+function getResearchConfidence(research) {
+  return Number.isFinite(research?.confidence) ? research.confidence : 0;
+}
+
 /**
  * Comprehensive n8n native node database
  * Updated December 2025 based on n8n documentation
@@ -606,9 +610,10 @@ This research report was auto-generated during pipeline execution because no cac
     integrationSlugs.push(slug);
 
     // Add to table
-    combinedMarkdown += `| ${name} | ${research.has_native_node || research.has_native_n8n_node ? 'Yes' : 'No'} | ${research.auth_type || 'unknown'} | ${research.api_documentation_url ? 'Yes' : 'No'} | ${Math.round((research.confidence || 0.7) * 100)}% |\n`;
+    const confidence = getResearchConfidence(research);
+    combinedMarkdown += `| ${name} | ${research.has_native_node || research.has_native_n8n_node ? 'Yes' : 'No'} | ${research.auth_type || 'unknown'} | ${research.api_documentation_url ? 'Yes' : 'No'} | ${Math.round(confidence * 100)}% |\n`;
 
-    totalConfidence += (research.confidence || 0.7);
+    totalConfidence += confidence;
     totalComplexity += (research.complexity?.score || 5);
 
     // Add to integration lookup
@@ -636,7 +641,7 @@ This research report was auto-generated during pipeline execution because no cac
           created_at: research.research_date || date,
           complexity_score: research.complexity?.score || 5,
           effort_tier: research.complexity?.tier || 'moderate',
-          confidence: research.confidence || 0.7,
+          confidence,
           base_hours: research.effort_recommendation?.base_hours || research.estimated_hours || 8,
           generated: true
         };
@@ -721,7 +726,7 @@ ${(research.gotchas || ['No known issues']).map(g => `- ${g}`).join('\n')}
   index.stats.integrations_covered = Object.keys(index.integration_lookup).length;
 
   // Calculate average confidence
-  const confidences = Object.values(index.research_files).map(r => r.confidence || 0.7);
+  const confidences = Object.values(index.research_files).map(r => Number.isFinite(r.confidence) ? r.confidence : 0);
   index.stats.average_confidence = Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length * 100) / 100;
 
   writeFileSync(indexPath, JSON.stringify(index, null, 2));

@@ -24,6 +24,10 @@ logs/
 old/
 temp/
 
+# Generated integration research cache
+context/generated-research/*
+!context/generated-research/README.md
+
 # CSV-validator demo runtime state
 examples/csv-validator/queue/in_progress/*
 !examples/csv-validator/queue/in_progress/.gitkeep

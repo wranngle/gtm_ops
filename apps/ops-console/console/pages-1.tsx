@@ -1,5 +1,5 @@
 /* ============================================================
-   Pages: Home (Mission Control), Pipeline, Calls
+   Pages: Home, Pipeline, Calls
    ============================================================ */
 
 const I2 = window.Icon;
@@ -31,16 +31,88 @@ function pageFormatProposalTotal(totalK) {
   return `$${totalK.toFixed(Math.abs(totalK) >= 100 ? 0 : 1).replace(/\.0$/, '')}K`;
 }
 
+function pageKnownMetaValue(value) {
+  const text = String(value ?? '').trim();
+  return text && !['-', '—', 'n/a', 'na', 'none', 'unknown'].includes(text.toLowerCase())
+    ? text
+    : '';
+}
+
+function pageJoinMeta(parts, fallback = 'Awaiting enrichment') {
+  const known = parts.map(pageKnownMetaValue).filter(Boolean);
+  return known.length ? known.join(' · ') : fallback;
+}
+
+function pageCompanySizeLabel(size) {
+  const text = pageKnownMetaValue(size);
+  if (!text) return '';
+  return /(?:people|employees|headcount|ppl)$/i.test(text) ? text : `${text} ppl`;
+}
+
+function pageCompanySummary(c) {
+  return pageJoinMeta([c?.industry, pageCompanySizeLabel(c?.size)]);
+}
+
+function pageDealLocationSummary(c) {
+  const region = pageKnownMetaValue(c?.region).split(',')[0];
+  return pageJoinMeta([c?.dealSize, region], pageKnownMetaValue(c?.dealSize) || 'Deal size pending');
+}
+
+function pageRelativeHours(when) {
+  const text = String(when || '').trim().toLowerCase();
+  if (!text || ['now', 'today'].includes(text)) return 0;
+  const match = text.match(/(\d+(?:\.\d+)?)\s*([mhdw])/i);
+  if (match) {
+    const value = Number.parseFloat(match[1]);
+    const unit = match[2].toLowerCase();
+    if (unit === 'm') return value / 60;
+    if (unit === 'h') return value;
+    if (unit === 'd') return value * 24;
+    if (unit === 'w') return value * 24 * 7;
+  }
+  if (/yesterday/.test(text)) return 24;
+  if (/tomorrow|mon|tue|wed|thu|fri|sat|sun/.test(text)) return Number.POSITIVE_INFINITY;
+  return Number.POSITIVE_INFINITY;
+}
+
+function pageIsMissedCall(c) {
+  const outcome = String(c?.outcome || '').toLowerCase();
+  return c?.missed === true || ['voicemail', 'no-answer', 'dropped', 'missed'].includes(outcome);
+}
+
+function humanCallOutcome(c) {
+  const outcome = String(c?.outcome || 'missed').toLowerCase();
+  if (outcome === 'voicemail') return 'left a voicemail';
+  if (outcome === 'no-answer' || outcome === 'missed') return 'we missed the call';
+  if (outcome === 'dropped') return 'call dropped';
+  return outcome.replace(/[-_]/g, ' ');
+}
+
+function pageAttentionLabel(item, callbackLabel, reviewLabel) {
+  return item?.isMissed ? callbackLabel : reviewLabel;
+}
+
+function page1OmitKeys(source, keys) {
+  const blocked = new Set(keys);
+  const next = {};
+  Object.keys(source || {}).forEach(key => {
+    if (!blocked.has(key)) next[key] = source[key];
+  });
+  return next;
+}
+
 /* ------------------------------------------------------------ */
-/* MISSION CONTROL (home) */
+/* TODAY (home) */
 /* ------------------------------------------------------------ */
 function HomePage({ setRoute }) {
   const D = window.GTM;
-  const { stats, sparks, feed, agents, companies, evalSuites } = D;
-  const liveCalls = D.calls.slice(0, 3);
+  const { stats, sparks, agents, companies } = D;
+  const isAdmin = (() => {
+    try { return new URLSearchParams(globalThis.location.search).has('admin'); }
+    catch (_) { return false; }
+  })();
   const hotLeads = [...companies].sort((a, b) => b.score - a.score).slice(0, 5);
   const [range, setRange] = useState('today');
-  const [queueMode, setQueueMode] = useState('active');
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState(() => Date.now());
   const buildSparkLabels = (series, cadence = 'point') => {
@@ -81,8 +153,8 @@ function HomePage({ setRoute }) {
   // Derive the attention surface from live fixture state instead of the
   // previous hardcoded "agent-03 paused on Arcadia call · pricing objection
   // (3 deflections)" strings + hardcoded CALL-2417 review handoff. The banner
-  // surfaces whichever agent is currently paused, the call that's blocking
-  // them, and the proposal at risk — flip any of those upstream and the
+  // surfaces whichever agent is currently paused and the call that's blocking
+  // them — flip either upstream and the
   // banner now updates instead of lying.
   const attentionItem = (() => {
     const pausedAgent = (agents || []).find(a => a.status === 'paused');
@@ -94,17 +166,16 @@ function HomePage({ setRoute }) {
       callList.find(c => c.co && taskBlob.includes(String(c.co).toLowerCase().split(' ')[0])) ||
       callList.slice().sort((a, b) => (Number(b.flags || 0) + Number(b.deflections || 0)) - (Number(a.flags || 0) + Number(a.deflections || 0)))[0];
     const companyName = matchedCall?.co || '';
-    const matchedProposal = (D.proposals || []).find(
-      p => p.co && companyName && String(p.co).toLowerCase().includes(String(companyName).toLowerCase().split(' ')[0])
-    );
     return {
       agentId: pausedAgent.id,
       agentName: pausedAgent.name,
       callId: matchedCall?.id,
       callOutcome: matchedCall?.outcome || 'unknown',
       callDeflections: Number(matchedCall?.deflections || 0),
+      callFlags: Number(matchedCall?.flags || 0),
+      callWho: matchedCall?.who || '',
+      isMissed: matchedCall ? pageIsMissedCall(matchedCall) : false,
       companyName,
-      proposalAmount: matchedProposal?.amount,
       bannerId: `${pausedAgent.id}-${matchedCall?.id || 'no-call'}-attention`,
     };
   })();
@@ -115,17 +186,23 @@ function HomePage({ setRoute }) {
     if (!attentionItem) return;
     const until = Date.now() + durationMs;
     setSnoozedBanners(s => ({ ...s, [ATTENTION_BANNER_ID]: until }));
-    window.toast(`Attention snoozed · ${label}`, {
-      sub: `${attentionItem.agentId} will retry ${attentionItem.callOutcome} · until ${new Date(until).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
+    window.toast(`${pageAttentionLabel(attentionItem, 'Callback', 'Handoff')} snoozed · ${label}`, {
+      sub: pageAttentionLabel(
+        attentionItem,
+        `We'll text the customer back while you decide · until ${new Date(until).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
+        `${attentionItem.agentId} review is parked until ${new Date(until).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`
+      ),
       tone: 'warn',
     });
   };
   const unsnoozeAttention = () => {
     setSnoozedBanners(s => {
-      const { [ATTENTION_BANNER_ID]: _, ...rest } = s;
-      return rest;
+      return page1OmitKeys(s, [ATTENTION_BANNER_ID]);
     });
-    window.toast('Attention restored', { sub: 'banner is visible again', tone: 'accent' });
+    window.toast(`${pageAttentionLabel(attentionItem, 'Callback', 'Handoff')} restored`, {
+      sub: pageAttentionLabel(attentionItem, 'customer is back in the callback queue', 'call review is back in the human queue'),
+      tone: 'accent',
+    });
   };
   // Re-render once when the snooze expires so the banner reappears
   // automatically without the operator clicking anything.
@@ -135,8 +212,7 @@ function HomePage({ setRoute }) {
     const t = setTimeout(() => {
       setSnoozedBanners(s => {
         if (s[ATTENTION_BANNER_ID] === snoozeExpiry) {
-          const { [ATTENTION_BANNER_ID]: _, ...rest } = s;
-          return rest;
+          return page1OmitKeys(s, [ATTENTION_BANNER_ID]);
         }
         return s;
       });
@@ -144,52 +220,113 @@ function HomePage({ setRoute }) {
     return () => clearTimeout(t);
   }, [snoozeExpiry, isAttentionSnoozed]);
 
-  // Live agent feed: seed the ConsolePanel via the gtm:stream channel it
-  // already listens to, so the "live · agent.feed" title is honest. The
-  // static fixture (frozen 14:41:08 timestamps that never advanced) now
-  // streams in on mount with a small stagger; subsequent dispatches from
-  // anywhere in the app (Sync context, eval lab, etc.) flow into the
-  // same panel without us reinventing the feed wheel.
-  useEffect(() => {
-    if (!Array.isArray(feed) || feed.length === 0) return undefined;
-    // Reset the live panel first so remounts don't double-stack.
-    window.dispatchEvent(new CustomEvent('gtm:stream-reset'));
-    const cancellers = [];
-    // Reverse so the oldest entry lands first; the panel auto-scrolls
-    // and the newest visually pins to the bottom (matches the snapshot's
-    // implied chronology).
-    feed.slice(0, 8).slice().reverse().forEach((line, idx) => {
-      const t = setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('gtm:stream', {
-          detail: { msg: line.txt, level: line.level || 'info' },
-        }));
-      }, 80 + idx * 40);
-      cancellers.push(() => clearTimeout(t));
-    });
-    return () => { cancellers.forEach(fn => fn()); };
-  }, [feed]);
-
-  // Derive the PageHeader sub from real state so the headline can't lie.
-  // Previously this was hardcoded `Three agents. Forty-seven open tasks.
-  // One thing wants your attention.` — the agent count was a literal "3"
-  // even when history loaded fewer/more agents, the task count was a
-  // literal 47 forever, and "one thing wants your attention" stayed put
-  // even after the operator snoozed the banner.
+  // Derive the PageHeader sub from concrete operator work, not from an
+  // abstract AI ops cockpit. The first screen should explain the day:
+  // callbacks owed, missed calls, customers waiting, and whether a human
+  // handoff is waiting.
   const pluralize = (n, singular, plural) => `${n} ${n === 1 ? singular : (plural || `${singular}s`)}`;
-  const openTaskCount = (agents || []).reduce((sum, a) => sum + (Number(a.tasks) || 0), 0);
   const attentionCount = (attentionItem && !isAttentionSnoozed) ? 1 : 0;
-  const missionSub = (() => {
-    const parts = [
-      pluralize((agents || []).length, 'agent'),
-      `${pluralize(openTaskCount, 'open task')}`,
-    ];
-    if (attentionCount === 0) {
-      parts.push('all attention items snoozed');
-    } else {
-      parts.push(`${pluralize(attentionCount, 'thing')} ${attentionCount === 1 ? 'wants' : 'want'} your attention`);
+  const callList = D.calls || [];
+  const missedCalls = callList
+    .filter(pageIsMissedCall)
+    .slice()
+    .sort((a, b) => pageRelativeHours(a.when) - pageRelativeHours(b.when));
+  const callbacksOwed = missedCalls.filter(c => c.returned !== true);
+  const missedToday = missedCalls.filter(c => pageRelativeHours(c.when) <= 24);
+  const missedWeek = missedCalls.filter(c => pageRelativeHours(c.when) <= 24 * 7);
+  const missedMonth = missedCalls.filter(c => pageRelativeHours(c.when) <= 24 * 30);
+  const recentCalls = callList.filter(c => pageRelativeHours(c.when) <= 24);
+  const returnedWithinOneHour = missedCalls.filter(c => c.returned === true && Number(c.returnedAfterMinutes || 9999) <= 60).length;
+  const returnedMissed = missedCalls.filter(c => c.returned === true);
+  const callbacksDueCount = callbacksOwed.length;
+  const recoveryCases = [
+    ...callbacksOwed.map(c => {
+      return {
+        id: c.id,
+        type: 'call',
+        title: `${c.co} · ${String(c.service || c.outcome || 'missed call').replace(/[-_]/g, ' ')}`,
+        meta: `${c.when} · ${c.who} · ${String(c.outcome || 'missed').replace(/[-_]/g, ' ')}`,
+        wait: c.when || 'now',
+        tone: pageRelativeHours(c.when) > 1 ? 'warn' : 'accent',
+      };
+    }),
+  ].slice(0, 6);
+  const missionSub = [
+    `${pluralize(callbacksDueCount, 'callback')} owed`,
+    `${pluralize(missedToday.length, 'missed call')} today`,
+    `${pluralize(callbacksDueCount, 'customer')} waiting`,
+    attentionCount === 0 ? 'judgment clear' : `${pluralize(attentionCount, 'call')} needs your judgment`,
+  ].join(' · ');
+  const commandFacts = [
+    { label: 'callbacks', value: callbacksDueCount.toLocaleString(), tone: callbacksDueCount > 0 ? 'warn' : 'healthy' },
+    { label: 'missed today', value: missedToday.length.toLocaleString(), tone: missedToday.length > 0 ? 'warn' : 'healthy' },
+    { label: 'waiting', value: callbacksDueCount.toLocaleString(), tone: callbacksDueCount > 0 ? 'warn' : 'healthy' },
+    { label: 'returned', value: returnedMissed.length.toLocaleString(), tone: returnedMissed.length > 0 ? 'healthy' : 'neutral' },
+    { label: 'returned <1h', value: `${returnedWithinOneHour}/${returnedMissed.length || missedCalls.length}`, tone: returnedWithinOneHour > 0 ? 'healthy' : 'neutral' },
+  ];
+  const alignSparkLatest = (series, currentValue) => {
+    const base = Array.isArray(series) && series.length > 0 ? series : [currentValue];
+    const current = Number(currentValue);
+    if (!Number.isFinite(current)) return base;
+    const latest = Number(base[base.length - 1]);
+    if (!Number.isFinite(latest)) return base.map((value, index) => index === base.length - 1 ? current : Number(value) || 0);
+    if (latest === current) return base;
+    if (latest === 0) return base.map(() => current);
+    const scale = current / latest;
+    const next = base.map(value => {
+      const scaled = Math.round((Number(value) || 0) * scale);
+      return Math.max(0, scaled);
+    });
+    next[next.length - 1] = current;
+    return next;
+  };
+  const alignRatioSparkLatest = (series, currentValue) => {
+    const base = Array.isArray(series) && series.length > 0 ? series : [currentValue];
+    const current = Number(currentValue);
+    if (!Number.isFinite(current)) return base;
+    const minValue = Math.min(...base);
+    const maxValue = Math.max(...base);
+    const span = maxValue - minValue || 1;
+    const floor = Math.max(0, current - 0.35);
+    const next = base.map(value => {
+      const ratio = (Number(value) - minValue) / span;
+      return Math.round((floor + ratio * (current - floor)) * 100) / 100;
+    });
+    next[next.length - 1] = current;
+    return next;
+  };
+  const waitingSpark = alignSparkLatest(sparks.calls, callbacksDueCount);
+  const missedSpark = alignSparkLatest(sparks.calls, range === 'today' ? missedToday.length : range === 'week' ? missedWeek.length : missedMonth.length);
+  const owedSpark = alignSparkLatest(sparks.qualified, callbacksOwed.length);
+  const returnedCallsSpark = alignSparkLatest(sparks.qualified, returnedMissed.length);
+  const returnedRatio = returnedWithinOneHour / (returnedMissed.length || missedCalls.length || 1);
+  const returnedRatioSpark = alignRatioSparkLatest(sparks.score, returnedRatio);
+  const openRecoveryCase = (item, source = 'today-recovery-case') => {
+    if (!item) return;
+    const ctx = window.AppContext.get();
+    if (item.type === 'proposal') {
+      window.AppContext.set({
+        selection: { type: 'proposal', id: item.id },
+        extra: {
+          ...(ctx.extra || {}),
+          triggered_from: source,
+        },
+      });
+      setRoute('proposals');
+      return;
     }
-    return parts.join(' · ');
-  })();
+    const targetCall = (D.calls || []).find(c => c.id === item.id);
+    window.AppContext.set({
+      selection: { type: 'call', id: item.id },
+      extra: {
+        ...(ctx.extra || {}),
+        call_window: pageIsMissedCall(targetCall) ? 'missed' : 'flagged',
+        ...(source === 'today-recovery-next' ? { call_workflow: 'human-review' } : {}),
+        triggered_from: source,
+      },
+    });
+    setRoute('calls');
+  };
   const reviewAttentionNow = () => {
     if (!attentionItem) return;
     const ctx = window.AppContext.get();
@@ -208,11 +345,24 @@ function HomePage({ setRoute }) {
     });
     setRoute('calls');
   };
+  const openHotLead = (company, source = 'today-hot-lead') => {
+    if (!company?.id) return;
+    const ctx = window.AppContext.get();
+    window.AppContext.set({
+      selection: { type: 'lead', id: company.id },
+      extra: {
+        ...(ctx.extra || {}),
+        pipeline_filter: 'all',
+        triggered_from: source,
+      },
+    });
+    setRoute('pipeline');
+  };
 
   return (
-    <div className="page">
+    <div className="page page--home" data-screen-label="Callbacks">
       <PageHeader
-        title="Mission Control"
+        title="Callbacks"
         sub={missionSub}
         actions={<>
           <Segmented value={range} onChange={(v) => setRange(v)} options={[
@@ -230,41 +380,49 @@ function HomePage({ setRoute }) {
           <span className="mono dim" data-testid="mission-last-refresh" style={{fontSize:10}}>
             as of {new Date(lastRefreshAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}
           </span>
-          <button className="btn" onClick={() => {
-            window.AppContext.set({
-              extra: {
-                ...(window.AppContext.get().extra || {}),
-                evals_bridge_open: true,
-                eval_harness_command_id: 'eval-quick',
-                run_intent: 'eval_suite',
-                eval_suite_scope: 'all',
-                triggered_from: 'mission-run-all-evals',
-              },
-            });
-            setRoute('evals');
-          }}><I2.Bolt size={14}/>Run all evals</button>
         </>}
       />
+
+      <section className="home-command-strip" data-testid="home-command-center" aria-label="Callback summary">
+        <div className="home-command-strip__pulse">
+          <span className={`dot ${attentionCount > 0 ? 'dot--warn' : 'dot--accent'}`} />
+          <span className="mono">callback queue</span>
+        </div>
+        <div className="home-command-strip__copy">
+          <div className="home-command-strip__kicker">missed calls today</div>
+          <p>{missionSub}</p>
+        </div>
+        <div className="home-command-strip__facts">
+          {commandFacts.map(f => (
+            <div key={f.label} className={`home-fact home-fact--${f.tone}`}>
+              <span>{f.label}</span>
+              <strong>{f.value}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Attention banner — derived from live state; hidden while snoozed
           OR when no agent is currently paused. */}
       {attentionItem && !isAttentionSnoozed ? (
         <div
-          className="card card--violet attention-banner"
+          className="card card--violet attention-banner home-attention"
           data-testid="attention-banner"
           data-attention-banner-id={ATTENTION_BANNER_ID}
         >
           <span className="dot dot--critical attention-banner__dot"/>
           <div className="attention-banner__copy">
             <div className="attention-banner__title">
-              {attentionItem.agentId} paused on {attentionItem.companyName || 'unknown'} call
-              {attentionItem.callOutcome ? ` · ${attentionItem.callOutcome}` : ''}
-              {attentionItem.callDeflections > 0 ? ` (${attentionItem.callDeflections} deflection${attentionItem.callDeflections === 1 ? '' : 's'})` : ''}
+              {attentionItem.companyName || 'Caller'}: {attentionItem.callOutcome ? attentionItem.callOutcome.replace(/[-_]/g, ' ') : 'call'} — {pageAttentionLabel(attentionItem, 'needs callback', 'needs human review')}
             </div>
             <div className="attention-banner__meta">
-              Awaiting human review
+              {pageAttentionLabel(
+                attentionItem,
+                `Your receptionist captured a message${attentionItem.callWho ? ` from ${attentionItem.callWho}` : ''} — they're waiting on a callback.`,
+                `${attentionItem.agentName || attentionItem.agentId} paused after ${pluralize(attentionItem.callDeflections, 'handoff try', 'handoff tries')} and ${pluralize(attentionItem.callFlags, 'flag')} — review the call evidence.`
+              )}
               {attentionItem.callId ? ` · ${attentionItem.callId}` : ''}
-              {attentionItem.proposalAmount ? ` · ${attentionItem.proposalAmount} proposal at risk` : ''}
+              {attentionItem.proposalAmount ? ` · ${attentionItem.proposalAmount} on the table` : ''}
             </div>
           </div>
           <div className="attention-banner__actions">
@@ -282,12 +440,12 @@ function HomePage({ setRoute }) {
         </div>
       ) : isAttentionSnoozed && attentionItem ? (
         <div
-          className="card attention-banner attention-banner--snoozed"
+          className="card attention-banner attention-banner--snoozed home-attention"
           data-testid="attention-snoozed"
         >
           <span className="dot dot--idle attention-banner__dot"/>
           <div className="attention-banner__copy">
-            <strong>Attention snoozed</strong> · {attentionItem.agentId} / {attentionItem.companyName || 'unknown'} · resumes at <span className="mono" data-testid="attention-snoozed-until">{new Date(snoozeExpiry).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+            <strong>{pageAttentionLabel(attentionItem, 'Callback', 'Handoff')} snoozed</strong> · {attentionItem.companyName || 'caller'} · resumes at <span className="mono" data-testid="attention-snoozed-until">{new Date(snoozeExpiry).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
           </div>
           <div className="attention-banner__actions">
             <button
@@ -301,287 +459,271 @@ function HomePage({ setRoute }) {
 
       {/* Stats row — labels re-scope with the Range segmented control,
           so picking 7d / 30d doesn't silently keep claiming "today".
-          Counts are scaled by a per-range multiplier; ratios stay flat. */}
+          The row now stays on operator recovery work instead of mixing in
+          internal eval telemetry. */}
       {(() => null)()}
-      {/* Pipeline tile derives its value from each active company's
-          dealSize rather than a frozen literal '$8.42M' — see Stat below. */}
-      <div className="stats" data-testid="mission-stats" data-range={range} style={{marginBottom:18}}>
+      <div className="stats home-stats" data-testid="mission-stats" data-range={range}>
         <Stat
-          label="Pipeline"
-          value={(() => {
-            const isActive = D.isActivePipelineCompany || (c => !['closed','lost'].includes(c.stage));
-            const totalK = (D.companies || [])
-              .filter(isActive)
-              .reduce((sum, c) => sum + pageProposalAmountToThousands(c.dealSize), 0);
-            return totalK > 0 ? pageFormatProposalTotal(totalK) : stats.pipeline;
-          })()}
-          delta={stats.pipelineDelta}
-          spark={sparks.pipeline}
-          sparkLabels={buildSparkLabels(sparks.pipeline, 'day')}
+          label="Waiting on you"
+          value={callbacksDueCount}
+          delta={stats.callsTodayDelta}
+          deltaUnit="count"
+          deltaNoun="customers"
+          spark={waitingSpark}
+          sparkLabels={buildSparkLabels(waitingSpark, 'hour')}
           accent
         />
         <Stat
-          label={`Calls · ${range === 'today' ? 'today' : range === 'week' ? '7d' : '30d'}`}
+          label={`Missed · ${range === 'today' ? 'today' : range === 'week' ? '7d' : '30d'}`}
           value={(() => {
-            // Today's count derives from the live D.calls "when" strings —
-            // any call not stamped with 'd' or 'w' suffix happened within
-            // the last 24h. The frozen 47 literal claimed today-volume that
-            // didn't match the visible call list (which was 6 sub-day calls).
-            const callList = (D.calls || []);
-            const todayCount = callList.filter(c => !/\b\d+\s*[dw]\b/i.test(String(c.when || ''))).length;
-            const baseToday = todayCount > 0 ? todayCount : stats.callsToday;
-            if (range === 'today') return baseToday;
-            if (range === 'week') return Math.round(baseToday * 7);
-            return Math.round(baseToday * 30);
+            if (range === 'today') return missedToday.length;
+            if (range === 'week') return missedWeek.length;
+            return missedMonth.length;
           })()}
           delta={stats.callsTodayDelta}
-          spark={sparks.calls}
-          sparkLabels={buildSparkLabels(sparks.calls, range === 'today' ? 'hour' : 'day')}
-          sparkColor="var(--violet-500)"
+          deltaUnit="count"
+          deltaNoun="calls"
+          spark={missedSpark}
+          sparkLabels={buildSparkLabels(missedSpark, range === 'today' ? 'hour' : 'day')}
         />
-        <Stat label={`Qualified · ${range === 'today' ? 'today' : range === 'week' ? '7d' : '30d'}`}
-              value={range === 'today' ? Math.round(stats.qualifiedThisWeek / 7) : range === 'week' ? stats.qualifiedThisWeek : Math.round(stats.qualifiedThisWeek * (30 / 7))}
+        <Stat label={`Callbacks owed · ${range === 'today' ? 'today' : range === 'week' ? '7d' : '30d'}`}
+              value={callbacksOwed.length}
               delta={stats.qualifiedThisWeekDelta}
-              tone="healthy"
-              spark={sparks.qualified}
-              sparkLabels={buildSparkLabels(sparks.qualified, 'opportunity')}
+              deltaUnit="count"
+              deltaNoun="callbacks"
+              tone={callbacksOwed.length > 0 ? 'warn' : 'healthy'}
+              spark={owedSpark}
+              sparkLabels={buildSparkLabels(owedSpark, 'callback')}
               sparkColor="var(--healthy)" />
         <Stat
-          label="Avg call score"
-          value={(() => {
-            // Average across the live calls fixture rather than the frozen
-            // 7.6 literal — picking a different range or adding a call
-            // would otherwise leave the headline score stuck.
-            const callList = (D.calls || []).filter(c => Number.isFinite(Number(c.score)));
-            if (callList.length === 0) return stats.avgScore.toFixed(1);
-            const avg = callList.reduce((s, c) => s + Number(c.score), 0) / callList.length;
-            return avg.toFixed(1);
-          })()}
+          label="Returned within 1h"
+          value={`${returnedWithinOneHour}/${returnedMissed.length || missedCalls.length}`}
           delta={stats.avgScoreDelta}
-          spark={sparks.score}
-          sparkLabels={buildSparkLabels(sparks.score, 'score-step')}
+          spark={returnedRatioSpark}
+          sparkLabel={`Returned within 1h rate trend: current ${Math.round(returnedRatio * 100)}%`}
+          sparkLabels={buildSparkLabels(returnedRatioSpark, 'return window')}
           sparkColor="var(--healthy)"
         />
         <Stat
-          label="Eval pass rate"
-          value={(() => {
-            // Run-weighted average of every eval suite's pass rate, instead
-            // of the frozen 0.847 literal. A spike in compliance-phi runs or
-            // a regression in objection-pricing should move this headline.
-            const suites = (D.evalSuites || []).filter(s => Number.isFinite(Number(s.pass)) && Number.isFinite(Number(s.runs)));
-            const totalRuns = suites.reduce((s, e) => s + Number(e.runs), 0);
-            if (totalRuns <= 0) return `${(stats.evalPassRate*100).toFixed(1)}%`;
-            const weighted = suites.reduce((s, e) => s + Number(e.pass) * Number(e.runs), 0) / totalRuns;
-            return `${(weighted*100).toFixed(1)}%`;
-          })()}
-          delta={`+${(stats.evalPassRateDelta*100).toFixed(1)}`}
-          spark={sparks.evalPass}
-          sparkLabels={buildSparkLabels(sparks.evalPass, 'run')}
-          sparkColor="var(--sunset-300)"
+          label="Returned calls"
+          value={returnedMissed.length}
+          delta={stats.qualifiedThisWeekDelta}
+          deltaUnit="count"
+          deltaNoun="calls"
+          spark={returnedCallsSpark}
+          sparkLabels={buildSparkLabels(returnedCallsSpark, 'return')}
+          sparkColor="var(--healthy)"
         />
       </div>
 
-      <div className="split split--2" style={{marginBottom:18}}>
-        {/* Agents column */}
-        <div>
-          <Card title={(() => {
-            // Derive the in-flight count from the queue state + live
-            // agents fixture so the card title doesn't claim more agents
-            // are running than actually exist (especially when queueMode
-            // is paused — claiming "agents · in flight" while the queue
-            // is paused is inconsistent with the row badges below).
-            const list = agents || [];
-            if (queueMode === 'paused') return `agents · 0 of ${list.length} in flight`;
-            const active = list.filter(a => a.status === 'active').length;
-            return `agents · ${active} of ${list.length} in flight`;
-          })()} action={<div className="hstack"><Badge tone={queueMode === 'active' ? 'healthy' : 'warn'}>{queueMode}</Badge><button className="btn btn--xs btn--ghost" onClick={() => {
-            const ctx = window.AppContext.get();
-            window.AppContext.set({ extra: { ...(ctx.extra || {}), triggered_from: 'mission-configure' } });
-            setRoute('agents');
-          }}>configure →</button></div>}>
-            <div className="vstack" style={{gap:14}}>
-              {agents.map(a => {
-                const openAgent = () => {
-                  const ctx = window.AppContext.get();
-                  window.AppContext.set({
-                    extra: {
-                      ...(ctx.extra || {}),
-                      selected_runtime_agent_id: a.id,
-                      selected_runtime_agent_name: a.name,
-                      // Hop directly to the History tab — runtime agents
-                      // (Hunter / Closer / Watcher) are a different concept
-                      // from the registry's ElevenLabs ConvAI agents, so
-                      // the playground can't switch to them. The History
-                      // tab is where their context surfaces. Without this
-                      // hop, "Open Hunter" landed on Prompt and the
-                      // operator saw nothing about Hunter — the click
-                      // looked inert.
-                      agent_admin_panel: 'history',
-                      triggered_from: 'mission-agents-in-flight',
-                    },
-                  });
-                  setRoute('agents');
-                };
-                // When the queue is paused, each agent row must reflect that
-                // state — not show its own per-agent literal status. Otherwise
-                // clicking "Pause queue" only flips the header badge while the
-                // rows below keep claiming "active", which lies to the operator.
-                const displayStatus = queueMode === 'paused' ? 'paused' : a.status;
-                const statusTone = displayStatus === 'active' ? 'healthy' : 'warn';
+      <div className="home-grid">
+        {/* Recovery queue */}
+        <div className="home-primary-rail">
+          <Card
+            className="home-card home-card--agents"
+            title={`Missed — call them back · ${recoveryCases.length}`}
+            action={(
+              <div className="hstack">
+                <Badge tone={recoveryCases.length > 0 ? 'warn' : 'healthy'}>
+                  {recoveryCases.length > 0 ? 'needs review' : 'clear'}
+                </Badge>
+                <button
+                  className="btn btn--xs btn--ghost"
+                  disabled={recoveryCases.length === 0}
+                  onClick={() => openRecoveryCase(recoveryCases[0], 'today-recovery-next')}
+                >Open next →</button>
+              </div>
+            )}
+          >
+            <div className="home-agent-list">
+              {recoveryCases.map(item => {
+                const openCase = () => openRecoveryCase(item);
                 return (
-                <div key={a.id}
-                     className="agent-flight-row inspectable"
-                     data-testid="agent-flight-row"
-                     data-agent-id={a.id}
-                     data-agent-status={displayStatus}
-                     data-popout={`${a.name} · ${displayStatus} · ${a.currentTask}`}
+                <div key={`${item.type}-${item.id}`}
+                     className="home-agent-row home-recovery-row inspectable"
+                     data-testid="recovery-case-row"
+                     data-case-id={item.id}
+                     data-case-type={item.type}
+                     data-popout={`${item.title} · ${item.meta}`}
                      role="button"
                      tabIndex={0}
-                     aria-label={`Open ${a.name} in Agents page`}
-                     onClick={openAgent}
-                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAgent(); } }}
-                     style={{display:'grid', gridTemplateColumns:'auto 1fr auto auto', gap:14, alignItems:'center', paddingBottom:14, borderBottom:'1px dashed var(--border)', cursor:'pointer'}}>
-                  <div style={{width:36, height:36, borderRadius:9, background:'var(--bg-inset)', display:'grid',placeItems:'center', border:'1px solid var(--border)'}}>
-                    <I2.Bot size={18}/>
+                     aria-label={`Open ${item.title}`}
+                     onClick={openCase}
+                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCase(); } }}>
+                  <div className="home-agent-row__icon">
+                    {item.type === 'proposal' ? <I2.Doc size={18}/> : <I2.Phone size={18}/>}
                   </div>
-                  <div>
-                    <div style={{fontWeight:600, fontSize:14, display:'flex', alignItems:'center', gap:8}}>
-                      {a.name}
-                      <span className={`badge badge--${statusTone}`}>
-                        <span className={`dot dot--${displayStatus === 'active' ? 'accent' : 'warn'}`} style={{width:5,height:5}}/>
-                        {displayStatus}
+                  <div className="home-agent-row__main">
+                    <div className="home-agent-row__title">
+                      {item.title}
+                      <span className={`badge badge--${item.tone}`}>
+                        callback
                       </span>
                     </div>
-                    <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>
-                      {a.role}
-                    </div>
-                    <div style={{fontSize:12, color:'var(--text-2)', marginTop:6}}>
-                      {/* When the queue is paused, the displayed task line
-                          must reflect that — "Drafting recap → kestrelbio"
-                          while the queue is paused is a state lie. Prefix
-                          with "Paused — last task:" so the operator sees
-                          both the pause AND what was in flight when paused. */}
-                      {queueMode === 'paused' ? `Paused — last task: ${a.currentTask}` : a.currentTask}
+                    <div className="mono home-agent-row__role">
+                      {item.meta}
                     </div>
                   </div>
-                  <div style={{textAlign:'right'}}>
-                    <div className="mono num" style={{fontSize:18, fontWeight:700}}>{a.tasks}</div>
-                    <div className="eyebrow">tasks</div>
-                  </div>
-                  <div style={{textAlign:'right', minWidth:60}}>
-                    <div className="mono num" style={{fontSize:18, fontWeight:700, color: 'var(--healthy-fg)'}}>{(a.success*100).toFixed(0)}%</div>
-                    <div className="eyebrow">success</div>
+                  <div className="home-agent-row__metric">
+                    <div className="mono num">{item.wait || 'now'}</div>
+                    <div className="eyebrow">waiting</div>
                   </div>
                 </div>
                 );
               })}
+              {recoveryCases.length === 0 && (
+                <div className="muted" data-testid="recovery-case-empty" style={{padding:'14px 8px', textAlign:'center', fontSize:12}}>
+                  No missed calls waiting on a callback.
+                </div>
+              )}
             </div>
 
-            <div style={{marginTop:14, display:'flex', gap:8}}>
-              <button className="btn btn--ghost btn--sm" style={{flex:1}} aria-pressed={queueMode === 'active'} onClick={() => {
-                setQueueMode('active');
-                // Toast facts derive from the live agents fixture instead
-                // of the previous hardcoded "throttled 80%" claim, which
-                // referenced a throttle state that doesn't exist anywhere
-                // in the code.
-                const list = agents || [];
-                const avgSuccess = list.length
-                  ? Math.round(list.reduce((s, a) => s + (Number(a.success) || 0), 0) / list.length * 100)
-                  : 0;
-                window.toast('All agents resumed', {
-                  sub: `${list.length} agent${list.length === 1 ? '' : 's'} active · avg success ${avgSuccess}%`,
-                });
-              }}><I2.Play size={12}/>Resume all</button>
-              <button className="btn btn--ghost btn--sm" style={{flex:1}} aria-pressed={queueMode === 'paused'} onClick={() => {
-                setQueueMode('paused');
-                const list = agents || [];
-                const inFlight = list.reduce((s, a) => s + (Number(a.tasks) || 0), 0);
-                window.toast('Queue paused', {
-                  sub: `${inFlight} in-flight task${inFlight === 1 ? '' : 's'} will finish before idle`,
-                  tone: 'warn',
-                });
-              }}><I2.Pause size={12}/>Pause queue</button>
-              <button className="btn btn--ghost btn--sm" data-testid="mission-new-agent" style={{flex:1}} onClick={() => {
+            <div className="home-agent-actions">
+              <button className="btn btn--ghost btn--sm" data-testid="today-open-calls" onClick={() => {
                 const ctx = window.AppContext.get();
-                window.AppContext.set({ extra: { ...(ctx.extra || {}), triggered_from: 'mission-new-agent', new_agent_intent: true } });
+                const target = callbacksOwed[0] || missedCalls[0] || null;
+                window.AppContext.set({
+                  selection: target ? { type: 'call', id: target.id } : ctx.selection,
+                  extra: { ...(ctx.extra || {}), call_window: 'missed', triggered_from: 'today-open-calls' },
+                });
+                setRoute('calls');
+              }}><I2.Phone size={12}/>Call log</button>
+              {isAdmin && <button className="btn btn--ghost btn--sm" data-testid="today-open-proposals" onClick={() => setRoute('proposals')}><I2.Doc size={12}/>Estimates queue</button>}
+              <button className="btn btn--ghost btn--sm" data-testid="today-test-sarah" onClick={() => {
+                const ctx = window.AppContext.get();
+                window.AppContext.set({ extra: { ...(ctx.extra || {}), selected_agent_key: 'intake', phone_setup_preview: true, triggered_from: 'today-test-sarah' } });
                 setRoute('agents');
-              }}><I2.Sparkle size={12}/>New agent</button>
+              }}><I2.Mic size={12}/>Hear greeting</button>
             </div>
           </Card>
 
-          <div style={{marginTop:18}}>
+          {isAdmin && <div>
             <Card
-              title={`hot leads · top ${hotLeads.length} by score`}
+              className="home-card home-card--leads"
+              title="Best opportunities right now"
               action={<button
                 className="btn btn--ghost btn--xs"
                 data-testid="hot-leads-see-all"
                 onClick={() => setRoute('pipeline')}
-              >see all {companies.length} →</button>}
+              >See full pipeline →</button>}
             >
-              <div className="vstack" style={{gap:0}}>
+              <div className="home-lead-list">
                 {hotLeads.map(c => (
-                  <div key={c.id} style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:14, alignItems:'center', padding:'10px 0', borderBottom:'1px dashed var(--border)'}}>
-                    <div>
-                      <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
-                      <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:1}}>{c.industry} · {c.size} ppl</div>
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="home-lead-row home-lead-row--button"
+                    data-testid="hot-lead-row"
+                    data-company-id={c.id}
+                    aria-label={`Open ${c.name} in pipeline`}
+                    onClick={() => openHotLead(c)}
+                  >
+                    <div className="home-lead-row__main">
+                      <div className="home-lead-row__name">{c.name}</div>
+                      <div className="mono home-lead-row__meta" data-testid="hot-lead-meta">{pageCompanySummary(c)}</div>
                     </div>
                     <Badge tone={c.intent === 'high' ? 'accent' : c.intent === 'med' ? 'warn' : 'neutral'}>{c.intent} intent</Badge>
-                    <div style={{width:80}}>
+                    <div className="home-lead-row__score">
                       <div className="progress"><div className={`progress__fill progress__fill--${c.score >= 80 ? 'healthy' : c.score >= 70 ? 'accent' : 'warn'}`} style={{width:`${c.score}%`}}/></div>
-                      <div className="mono num" style={{fontSize:10, color:'var(--text-3)', textAlign:'right', marginTop:2}}>{c.score}/100</div>
+                      <div className="mono num">{c.score}/100</div>
                     </div>
-                    <button className="btn btn--ghost btn--icon" aria-label={`Open ${c.name} in pipeline`} onClick={()=>setRoute('pipeline')}><I2.ArrowRight size={12}/></button>
-                  </div>
+                    <span className="btn btn--ghost btn--icon" aria-hidden="true"><I2.ArrowRight size={12}/></span>
+                  </button>
                 ))}
               </div>
             </Card>
-          </div>
+          </div>}
         </div>
 
-        {/* Console column */}
-        <div className="vstack" style={{gap:18}}>
-          <ConsolePanel lines={null} title="live · agent.feed" data-testid="mc-feed-panel" />
-
-          <Card title="next 24h · scheduled" data-testid="mc-schedule">
-            <div className="timeline" data-testid="mc-schedule-list">
-              {(() => {
-                // Derive the 24h schedule from real companies' nextStep
-                // fields instead of a hardcoded JSX list. The hardcoded
-                // version named agent-01/02 + leads (Helix, Banyan,
-                // Kestrel) that didn't always exist in the live tree;
-                // worse, "in 12m" never ticked down. Now we walk the
-                // actual companies with near-term next-steps and take
-                // the first five — the first is rendered active so the
-                // bullet styling still has a "now" anchor.
-                const NEAR_TERM = /(^|\s)(today|tomorrow|tmrw|tonight|in\s+\d+|\d{1,2}:\d{2}|mon|tue|wed|thu|fri|sat|sun|now)/i;
-                const candidates = (companies || [])
-                  .filter(c => c?.nextStep && c?.nextStepWhen && c.nextStepWhen !== '-' && NEAR_TERM.test(c.nextStepWhen))
-                  .slice(0, 5);
-                if (candidates.length === 0) {
-                  return (
-                    <div className="dim mono" data-testid="mc-schedule-empty" style={{fontSize:11, padding:'12px 6px', textAlign:'center'}}>
-                      No near-term next-steps queued.
+        {/* Right rail */}
+        <div className="home-secondary-rail">
+          <Card
+            className="home-card home-card--calls"
+            title="Last 24 hours"
+            action={<button className="btn btn--ghost btn--xs" onClick={() => setRoute('calls')}>Call log →</button>}
+          >
+            <div className="home-lead-list" data-testid="today-calls-list">
+              {recentCalls.slice(0, 5).map(c => {
+                const openCall = () => {
+                  const ctx = window.AppContext.get();
+                  window.AppContext.set({
+                    selection: { type: 'call', id: c.id },
+                    extra: {
+                      ...(ctx.extra || {}),
+                      call_window: pageIsMissedCall(c) ? 'missed' : Number(c.flags || 0) > 0 ? 'flagged' : 'all',
+                      triggered_from: 'today-calls-list',
+                    },
+                  });
+                  setRoute('calls');
+                };
+                return (
+                  <div
+                    key={c.id}
+                    className="home-lead-row inspectable"
+                    data-testid="today-call-row"
+                    data-call-id={c.id}
+                    data-popout={`${c.co} · ${c.who} · ${String(c.outcome || 'call').replace(/[-_]/g, ' ')}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${c.co} call`}
+                    onClick={openCall}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openCall();
+                      }
+                    }}
+                  >
+                    <div className="home-lead-row__main">
+                      <div className="home-lead-row__name">{c.co}</div>
+                      <div className="mono home-lead-row__meta">{c.when} · {c.who}</div>
                     </div>
-                  );
-                }
-                return candidates.map((c, i) => (
+                    <Badge tone={Number(c.flags || 0) > 0 ? 'warn' : c.outcome === 'meeting-booked' ? 'healthy' : 'accent'}>
+                      {String(c.outcome || 'call').replace(/[-_]/g, ' ')}
+                    </Badge>
+                    <div className="home-lead-row__score">
+                      <div className="progress">
+                        <div className={`progress__fill progress__fill--${Number(c.score || 0) >= 8 ? 'healthy' : Number(c.score || 0) >= 7 ? 'accent' : 'warn'}`} style={{width:`${Math.max(0, Math.min(100, Number(c.score || 0) * 10))}%`}}/>
+                      </div>
+                      <div className="mono num">{Number(c.score || 0).toFixed(1)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              {recentCalls.length === 0 && (
+                <div className="muted" data-testid="today-calls-empty" style={{padding:'14px 8px', textAlign:'center', fontSize:12}}>
+                  No calls logged in the last 24 hours.
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="home-card home-card--schedule" title="Callbacks owed" data-testid="mc-schedule">
+            <div className="timeline" data-testid="mc-schedule-list">
+              {callbacksOwed.length === 0 ? (
+                <div className="dim mono" data-testid="mc-schedule-empty" style={{fontSize:11, padding:'12px 6px', textAlign:'center'}}>
+                  No callbacks owed.
+                </div>
+              ) : callbacksOwed.slice(0, 5).map((c, i) => (
                   <div
                     key={c.id}
                     className={`tl-step ${i === 0 ? 'tl-step--active' : ''}`}
                     data-testid="mc-schedule-step"
-                    data-company-id={c.id}
+                    data-call-id={c.id}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Open ${c.name} in pipeline`}
+                    aria-label={`Open ${c.co} callback`}
                     onClick={() => {
                       window.AppContext.set({
-                        selection: { type: 'lead', id: c.id },
+                        selection: { type: 'call', id: c.id },
                         extra: {
                           ...(window.AppContext.get().extra || {}),
-                          triggered_from: 'mission-schedule',
+                          call_window: 'missed',
+                          call_workflow: 'human-review',
+                          triggered_from: 'today-callbacks-owed',
                         },
                       });
-                      setRoute('pipeline');
+                      setRoute('calls');
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -593,90 +735,14 @@ function HomePage({ setRoute }) {
                   >
                     <div className="tl-step__bullet">{i + 1}</div>
                     <div className="tl-step__body">
-                      <div className="tl-step__title">{c.nextStep} · {c.name}</div>
-                      <div className="tl-step__sub">{c.nextStepWhen} · {c.owner}</div>
+                      <div className="tl-step__title">{c.co} · {c.service || String(c.outcome || 'missed call').replace(/[-_]/g, ' ')}</div>
+                      <div className="tl-step__sub">{c.when} · {c.who}</div>
                     </div>
                   </div>
-                ));
-              })()}
+                ))}
             </div>
           </Card>
 
-          <Card title={(() => {
-            // Card title carries the live regression count so the operator
-            // can see at a glance whether the watch list is full or empty
-            // without having to scan the rows below.
-            const count = (evalSuites || [])
-              .filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75)).length;
-            return `evals · regressions watch · ${count}`;
-          })()} data-testid="mc-regressions-card">
-            <div className="vstack" style={{gap:10}} data-testid="mc-regressions-list">
-              {(() => {
-                // Real regressions only — `slice(0,4)` was just taking
-                // the first four suites in fixture order regardless of
-                // status. A 99% suite could occupy a "regression" slot
-                // while a -10% one sat below. Now we filter for
-                // suites that are actually regressing (delta < 0 or
-                // pass < 0.75), sort by severity, and cap at four.
-                const score = (s) => {
-                  const deltaPart = (s.delta ?? 0) < 0 ? (s.delta ?? 0) : 0;
-                  const passPart = (s.pass ?? 1) < 0.75 ? (s.pass - 1) : 0;
-                  return deltaPart + passPart * 0.5;
-                };
-                const regressions = (evalSuites || [])
-                  .filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75))
-                  .slice()
-                  .sort((a, b) => score(a) - score(b))
-                  .slice(0, 4);
-                if (regressions.length === 0) {
-                  return (
-                    <div data-testid="mc-regressions-empty" className="muted" style={{padding:'10px 6px', fontSize:12, textAlign:'center'}}>
-                      No regressions tracked · all suites stable.
-                    </div>
-                  );
-                }
-                return regressions.map(s => (
-                  <div key={s.id}
-                       className="inspectable eval-watch-row"
-                       data-testid="mc-regression-row"
-                       data-suite-id={s.id}
-                       data-popout={`${s.name}: ${(s.pass * 100).toFixed(1)}% pass rate, ${s.runs.toLocaleString()} runs, owner ${s.owner}`}
-                       role="button"
-                       tabIndex={0}
-                       aria-label={`Open ${s.name} regression in Evals`}
-                       onClick={() => {
-                         window.AppContext.set({
-                           selection: { type: 'eval', id: s.id },
-                           extra: {
-                             ...(window.AppContext.get().extra || {}),
-                             triggered_from: 'mission-regressions-watch',
-                             suite_filter: 'regressions',
-                           },
-                         });
-                         setRoute('evals');
-                       }}
-                       onKeyDown={(e) => {
-                         if (e.key === 'Enter' || e.key === ' ') {
-                           e.preventDefault();
-                           e.currentTarget.click();
-                         }
-                       }}
-                       style={{display:'grid', gridTemplateColumns:'1fr auto 60px', gap:10, alignItems:'center', cursor:'pointer'}}>
-                    <div>
-                      <div style={{fontSize:12, fontWeight:600}}>{s.name}</div>
-                      <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{s.runs.toLocaleString()} runs · {s.latest}</div>
-                    </div>
-                    <div className="mono num" style={{fontSize:13, fontWeight:700, color: s.pass >= 0.85 ? 'var(--healthy)' : s.pass >= 0.75 ? 'var(--sunset-300)' : 'var(--violet-500)'}}>
-                      {(s.pass*100).toFixed(1)}%
-                    </div>
-                    <div className={`mono num ${s.delta > 0 ? 'cl-ok' : s.delta < 0 ? 'cl-err' : 'dim'}`} style={{fontSize:11, textAlign:'right'}}>
-                      {s.delta > 0 ? '▲' : s.delta < 0 ? '▼' : '·'} {(Math.abs(s.delta)*100).toFixed(1)}
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-          </Card>
         </div>
       </div>
     </div>
@@ -805,8 +871,7 @@ function PipelinePage({ setRoute }) {
       }
       if (!extra.pipeline_panel && !extra.pipeline_filter) return;
       const latest = window.AppContext.get().extra || {};
-      const { pipeline_panel, pipeline_filter, ...rest } = latest;
-      window.AppContext.set({ extra: rest });
+      window.AppContext.set({ extra: page1OmitKeys(latest, ['pipeline_panel', 'pipeline_filter']) });
     };
     applyPipelineIntent(window.AppContext.get());
     return window.AppContext.subscribe(applyPipelineIntent);
@@ -823,21 +888,33 @@ function PipelinePage({ setRoute }) {
     return true;
   });
 
+  const isActivePipelineCompany = D.isActivePipelineCompany || (c => !['closed','lost'].includes(c.stage));
+  const activeLeads = allCompanies.filter(isActivePipelineCompany);
+  const highIntentLeads = activeLeads.filter(c => c.intent === 'high');
+  const proposalLeads = allCompanies.filter(c => effectiveStage(c) === 'proposal');
+  const openValueK = activeLeads.reduce((sum, c) => sum + pageProposalAmountToThousands(c.dealSize), 0);
+  const selectedLead = allCompanies.find(c => c.id === selected);
+  const stageCounts = D.stages.map(stage => ({
+    ...stage,
+    count: filtered.filter(c => effectiveStage(c) === stage.id).length,
+  }));
+  const visibleValueK = filtered.reduce((sum, c) => sum + pageProposalAmountToThousands(c.dealSize), 0);
+
   return (
-    <div className="page">
+    <div className="page page--wide page--pipeline">
       <PageHeader
         title="Pipeline"
+        eyebrow="demo lead recovery"
         sub={(() => {
           // Derive from live state. The previous "Cards re-score on every
           // signal" promise referenced a re-scoring loop that doesn't
           // exist in the demo — scores in the fixture are static.
           const all = allCompanies || D.companies || [];
-          const isActive = D.isActivePipelineCompany || (c => !['closed','lost'].includes(c.stage));
-          const active = all.filter(isActive).length;
-          const high = all.filter(c => c.intent === 'high' && isActive(c)).length;
+          const active = activeLeads.length;
+          const high = highIntentLeads.length;
           const drafts = all.filter(c => c._draft).length;
           const draftSuffix = drafts > 0 ? ` · ${drafts} draft${drafts === 1 ? '' : 's'}` : '';
-          return `${all.length} leads · ${active} active · ${high} high-intent${draftSuffix}. Drag a card across stage columns to advance the deal.`;
+          return `${all.length} leads · ${active} active · ${high} high-intent${draftSuffix}. Drag cards across stage columns to advance deals.`;
         })()}
         actions={<>
           <Segmented value={filter} onChange={setFilter} options={[
@@ -854,8 +931,43 @@ function PipelinePage({ setRoute }) {
         </>}
       />
 
+      <section className="pipeline-command" aria-labelledby="pipeline-command-title">
+        <div className="pipeline-command__copy">
+          <div className="eyebrow eyebrow--accent">[DEMO] lead recovery</div>
+          <h2 id="pipeline-command-title">Missed-call pipeline</h2>
+          <p>Track service callers from triage through proposal review. Open a lead when there is call evidence, a draft packet, or a human follow-up to complete.</p>
+        </div>
+        <div className="pipeline-command__metrics" aria-label="Pipeline summary">
+          <div className="pipeline-metric">
+            <span>leads</span>
+            <strong className="mono num">{filtered.length}</strong>
+            <small>{filter} view</small>
+          </div>
+          <div className="pipeline-metric">
+            <span>open</span>
+            <strong className="mono num">{activeLeads.length}</strong>
+            <small>{highIntentLeads.length} high intent</small>
+          </div>
+          <div className="pipeline-metric">
+            <span>open value</span>
+            <strong className="mono num">{pageFormatProposalTotal(openValueK)}</strong>
+            <small>{pageFormatProposalTotal(visibleValueK)} visible</small>
+          </div>
+          <div className="pipeline-metric">
+            <span>proposals</span>
+            <strong className="mono num">{proposalLeads.length}</strong>
+            <small>review queue</small>
+          </div>
+          <div className="pipeline-metric pipeline-metric--selected">
+            <span>active lead</span>
+            <strong>{selectedLead?.name || 'None'}</strong>
+            <small>{selectedLead ? `${selectedLead.score}/100 · ${selectedLead.owner}` : 'choose a card'}</small>
+          </div>
+        </div>
+      </section>
+
       {(filterEditorOpen || newLeadOpen) && (
-        <div className="workflow-popout" role="region" aria-label="Pipeline workflow panel">
+        <div className="workflow-popout pipeline-workflow-popout" role="region" aria-label="Pipeline workflow panel">
           <button className="workflow-popout__close btn btn--ghost btn--icon" aria-label="Close pipeline workflow panel" onClick={() => { setFilterEditorOpen(false); setNewLeadOpen(false); }}><I2.Close size={14}/></button>
           {filterEditorOpen && (
             <div className="workflow-popout__pane">
@@ -863,12 +975,12 @@ function PipelinePage({ setRoute }) {
               <div className="workflow-popout__title">Pipeline filters</div>
               <div className="workflow-popout__grid" data-testid="pipeline-filters-grid">
                 {(() => {
-                  const isActive = D.isActivePipelineCompany || (c => !['closed','lost'].includes(c.stage));
-                  const total = (D.companies || []).length;
-                  const activeCount = (D.companies || []).filter(isActive).length;
+                  const isActive = isActivePipelineCompany;
+                  const total = (allCompanies || []).length;
+                  const activeCount = (allCompanies || []).filter(isActive).length;
                   const archivedCount = total - activeCount;
-                  const mineCount = (D.companies || []).filter(c => c.owner === 'agent-01').length;
-                  const highCount = (D.companies || []).filter(c => c.intent === 'high').length;
+                  const mineCount = (allCompanies || []).filter(c => c.owner === 'agent-01').length;
+                  const highCount = (allCompanies || []).filter(c => c.intent === 'high').length;
                   const views = [
                     { label: 'All', value: 'all',  sub: `${total} companies (${activeCount} active · ${archivedCount} closed/lost)` },
                     { label: 'My book', value: 'mine', sub: `${mineCount} accounts owned by agent-01` },
@@ -962,11 +1074,28 @@ function PipelinePage({ setRoute }) {
         </div>
       )}
 
-      {view === 'kanban' && <PipelineKanban companies={filtered} stages={D.stages} onSelect={setSelected} selected={selected} effectiveStage={effectiveStage} onDropToStage={onDropToStage}/>}
-      {view === 'table' && <PipelineTable companies={filtered} onSelect={setSelected} selected={selected}/>}
+      <section className="pipeline-board-shell" aria-label="Pipeline lead board">
+        <div className="pipeline-board-shell__head">
+          <div>
+            <div className="eyebrow">stage load</div>
+            <div className="pipeline-board-shell__title">{view === 'kanban' ? 'Board' : 'Sortable table'} · {filtered.length} leads</div>
+          </div>
+          <div className="pipeline-stage-strip" aria-label="Visible leads by stage">
+            {stageCounts.map(stage => (
+              <span key={stage.id} data-stage-id={stage.id}>
+                <span className={`dot dot--${stage.accent === 'sunset' ? 'accent' : stage.accent === 'violet' ? 'critical' : stage.accent === 'healthy' ? 'healthy' : 'idle'}`}/>
+                <span>{stage.label}</span>
+                <strong className="mono num">{stage.count}</strong>
+              </span>
+            ))}
+          </div>
+        </div>
+        {view === 'kanban' && <PipelineKanban companies={filtered} stages={D.stages} onSelect={setSelected} selected={selected} effectiveStage={effectiveStage} onDropToStage={onDropToStage}/>}
+        {view === 'table' && <PipelineTable companies={filtered} onSelect={setSelected} selected={selected}/>}
+      </section>
 
-      {selected && <LeadDetail company={D.companies.find(c=>c.id===selected)} onClose={()=>setSelected(null)} setRoute={setRoute}/>}
-      {selected && <IntakeAgentPanel company={D.companies.find(c=>c.id===selected)} />}
+      {selected && <LeadDetail company={selectedLead} onClose={()=>setSelected(null)} setRoute={setRoute}/>}
+      {selected && <IntakeAgentPanel company={selectedLead} />}
     </div>
   );
 }
@@ -982,10 +1111,7 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
     <div className="pipe">
       {stages.map(stage => {
         const cards = companies.filter(c => effectiveStage(c) === stage.id);
-        const sum = cards.reduce((acc, c) => {
-          const n = parseFloat(c.dealSize.replace(/[^\d.]/g, ''));
-          return acc + n;
-        }, 0);
+        const sum = cards.reduce((acc, c) => acc + pageProposalAmountToThousands(c.dealSize), 0);
         return (
           <div
             key={stage.id}
@@ -1012,7 +1138,7 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
                 <span className={`dot dot--${stage.accent === 'sunset' ? 'accent' : stage.accent === 'violet' ? 'critical' : stage.accent === 'healthy' ? 'healthy' : 'idle'}`}/>
                 {stage.label}
               </div>
-              <div className="pipe__col-cnt">{cards.length} · ${sum}K</div>
+              <div className="pipe__col-cnt">{cards.length} · {pageFormatProposalTotal(sum)}</div>
             </div>
             <div className="pipe__col-body">
               {cards.map(c => (
@@ -1043,11 +1169,12 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
                      style={{borderColor: selected === c.id ? 'var(--sunset-500)' : undefined, cursor:'grab'}}>
                   <div className="pipe__card-co">
                     <span>{c.name}</span>
-                    <span className="mono num" style={{fontSize:11, color:'var(--text-3)'}}>{c.score}</span>
+                    <span className="pipe__score mono num">{c.score}</span>
                   </div>
+                  <div className="pipe__card-context">{pageCompanySummary(c)}</div>
                   <div className="pipe__card-pain">{c.pain}</div>
                   <div className="pipe__card-meta">
-                    <span>{c.dealSize} · {c.region.split(',')[0]}</span>
+                    <span>{pageDealLocationSummary(c)}</span>
                     <span style={{display:'flex', alignItems:'center', gap:4}}>
                       <span className={`dot dot--${c.intent === 'high' ? 'accent' : c.intent === 'med' ? 'warn' : 'idle'}`} style={{width:5,height:5}}/>
                       {c.lastTouch}
@@ -1055,7 +1182,14 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
                   </div>
                 </div>
               ))}
-              {cards.length === 0 && <div className="dim mono" style={{fontSize:11, padding:'14px 6px', textAlign:'center'}}>— empty —</div>}
+              {cards.length === 0 && (
+                <div className="pipe__empty" data-testid="pipe-stage-empty">
+                  <div>
+                    <strong>Ready for drop</strong>
+                    <span>No {stage.label.toLowerCase()} leads in this view.</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -1072,10 +1206,7 @@ function PipelineTable({ companies, onSelect, selected }) {
   const [sortKey, setSortKey] = useState('score');
   const [sortDir, setSortDir] = useState('desc');
   const INTENT_RANK = { high: 3, med: 2, low: 1 };
-  const parseDeal = (s) => {
-    const n = parseFloat(String(s || '').replace(/[^\d.]/g, ''));
-    return Number.isFinite(n) ? n : 0;
-  };
+  const parseDeal = (s) => pageProposalAmountToThousands(s);
   const SORTABLE = [
     { key: 'name',      label: 'Company',    get: c => String(c.name || '').toLowerCase(), align: 'left' },
     { key: 'stage',     label: 'Stage',      get: c => String(c.stage || '').toLowerCase(), align: 'left' },
@@ -1193,6 +1324,17 @@ function artifactTypeLabel(type) {
   return String(type || 'artifact').replace(/_/g, ' ');
 }
 
+function artifactReviewLocator(artifact, company) {
+  const leadSlug = String(company?.id || company?.name || 'lead')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'lead';
+  const rawPath = String(artifact?.path || '').trim();
+  const filename = rawPath.split('/').filter(Boolean).pop()
+    || `${String(artifact?.type || 'artifact').replace(/_/g, '-')}.artifact`;
+  return `local-review://pipeline/${leadSlug}/${filename}`;
+}
+
 function LeadDetail({ company: c, onClose, setRoute }) {
   // Treat the side panel as a non-modal dialog: announce it as a region,
   // move focus to the close button on open so keyboard users know it
@@ -1231,18 +1373,19 @@ function LeadDetail({ company: c, onClose, setRoute }) {
     } catch (err) {
       setArtifactPayload({
         error: err?.message || String(err),
-        source: href,
+        source: artifactReviewLocator(artifact, c),
       });
       setArtifactState('error');
     }
   };
-  const copyArtifactPath = async (artifact) => {
-    if (!artifact?.path) return;
+  const copyReviewLocator = async (artifact) => {
+    if (!artifact) return;
+    const locator = artifactReviewLocator(artifact, c);
     try {
-      await navigator.clipboard?.writeText?.(artifact.path);
-      window.toast('Artifact path copied', { sub: artifact.path, tone:'accent' });
+      await navigator.clipboard?.writeText?.(locator);
+      window.toast('Review locator copied', { sub: locator, tone:'accent' });
     } catch (_) {
-      window.toast('Artifact path', { sub: artifact.path, tone:'accent' });
+      window.toast('Review locator', { sub: locator, tone:'accent' });
     }
   };
   const openProposalReview = () => {
@@ -1292,11 +1435,11 @@ function LeadDetail({ company: c, onClose, setRoute }) {
   }, [c?.id]);
   useEffect(() => {
     if (!artifactPanel) return;
-    requestAnimationFrame(() => artifactRef.current?.scrollIntoView({ block:'nearest', behavior:'auto' }));
+    requestAnimationFrame(() => globalThis.scrollConsoleNodeIntoView?.(artifactRef.current, { block:'nearest' }));
   }, [artifactPanel?.path]);
   if (!c) return null;
   return (
-    <div role="dialog" aria-label={`Lead detail · ${c.name}`}
+    <div className="lead-detail-panel" role="dialog" aria-label={`Lead detail · ${c.name}`}
          style={{position:'fixed', right:18, top:74, bottom:18, width:420, background:'var(--bg-elev)', border:'1px solid var(--border-strong)', borderRadius:'var(--r-lg)', boxShadow:'var(--shadow-lg)', zIndex:50, display:'flex', flexDirection:'column', overflow:'hidden'}}>
       <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <div>
@@ -1352,7 +1495,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
               <div>
                 <div className="eyebrow eyebrow--accent">reviewable artifact</div>
                 <strong>{artifactTypeLabel(artifactPanel.type)} · {c.name}</strong>
-                <p>Repo path: <code className="mono">{artifactPanel.path}</code></p>
+                <p>Review locator: <code className="mono" data-testid="lead-artifact-locator">{artifactReviewLocator(artifactPanel, c)}</code></p>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close lead artifact review drawer" onClick={() => setArtifactPanel(null)}><I2.Close size={14}/></button>
             </div>
@@ -1366,8 +1509,8 @@ function LeadDetail({ company: c, onClose, setRoute }) {
                   onClick={() => openArtifactReview(a)}
                 >
                   <span>{artifactTypeLabel(a.type)}</span>
-                  <code>{a.path}</code>
-                  <Badge tone={artifactPreviewHref(a) ? 'accent' : 'neutral'}>{artifactPreviewHref(a) ? 'preview' : 'record'}</Badge>
+                  <code>{artifactReviewLocator(a, c)}</code>
+                  <Badge tone={artifactPreviewHref(a) ? 'accent' : 'neutral'}>{artifactPreviewHref(a) ? 'review' : 'record'}</Badge>
                 </button>
               ))}
             </div>
@@ -1376,8 +1519,8 @@ function LeadDetail({ company: c, onClose, setRoute }) {
               {artifactState === 'loading' && <div className="lead-artifact-empty">Loading source evidence...</div>}
               {artifactState === 'summary' && (
                 <div className="lead-artifact-empty">
-                  <strong>{artifactTypeLabel(artifactPanel.type)} path recorded</strong>
-                  <span>This run exposes the artifact path but does not ship a public fixture for inline preview.</span>
+                  <strong>{artifactTypeLabel(artifactPanel.type)} review record</strong>
+                  <span>This artifact is attached to the lead record. Use Proposals to review the packet before buyer-facing follow-up.</span>
                 </div>
               )}
               {(artifactState === 'ready' || artifactState === 'error') && (
@@ -1386,7 +1529,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
             </div>
 
             <div className="lead-artifact-actions">
-              <button className="btn btn--ghost btn--sm" onClick={() => copyArtifactPath(artifactPanel)}><I2.Doc size={12}/>Copy repo path</button>
+              <button className="btn btn--ghost btn--sm" onClick={() => copyReviewLocator(artifactPanel)}><I2.Doc size={12}/>Copy review locator</button>
               <button className="btn btn--primary btn--sm" onClick={openProposalReview}>Open proposal review <I2.ArrowRight size={12}/></button>
             </div>
           </section>
@@ -1406,24 +1549,39 @@ function LeadDetail({ company: c, onClose, setRoute }) {
 function IntakeAgentPanel({ company }) {
   const reg = window.AGENT_REGISTRY?.byKey('intake');
   if (!reg) return null;
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const widget = reg.widget || {};
+  const panelStyle = {
+    position:'fixed',
+    right:454,
+    top:74,
+    width:380,
+    background:'var(--bg-elev)',
+    border:'1px solid var(--border-strong)',
+    borderRadius:'var(--r-lg)',
+    boxShadow:'var(--shadow-lg)',
+    zIndex:49,
+    display:'flex',
+    flexDirection:'column',
+    overflow:'hidden',
+    ...(open ? { bottom:18 } : { maxHeight:'calc(100vh - 92px)' }),
+  };
   return (
-    <div style={{position:'fixed', right:454, top:74, bottom:18, width:380, background:'var(--bg-elev)', border:'1px solid var(--border-strong)', borderRadius:'var(--r-lg)', boxShadow:'var(--shadow-lg)', zIndex:49, display:'flex', flexDirection:'column', overflow:'hidden'}} role="region" aria-label="Intake agent panel">
+    <div className="intake-agent-panel" data-state={open ? 'expanded' : 'collapsed'} style={panelStyle} role="region" aria-label="Intake agent panel">
       <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10}}>
         <window.ElevenUI.Orb
           size={28}
           state="idle"
           color1={reg.avatar_color_1}
           color2={reg.avatar_color_2}
-          label={`${reg.display_name} intake state`}
+          label="Receptionist intake state"
         />
         <div style={{flex:1}}>
-          <div style={{fontSize:13, fontWeight:700}}>{reg.display_name}</div>
-          <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{reg.role} · loaded with {company?.name || 'no lead'}</div>
+          <div style={{fontSize:13, fontWeight:700}}>Your receptionist</div>
+          <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>phone intake · loaded with {company?.name || 'no lead'}</div>
         </div>
         <button className="btn btn--ghost btn--xs" onClick={()=>setOpen(o=>!o)} aria-expanded={open}>
-          {open ? 'Collapse' : widget.actionText || 'Talk to Sarah'}
+          {open ? 'Collapse' : 'Talk to receptionist'}
         </button>
       </div>
       {open && (
@@ -1442,7 +1600,7 @@ function IntakeAgentPanel({ company }) {
       )}
       {!open && (
         <div style={{padding:'14px 18px', fontSize:12, color:'var(--text-2)', lineHeight:1.5}}>
-          <strong>Sarah is embedded here, not redirected.</strong> Expand the official ElevenLabs widget to qualify {company?.name || 'the selected lead'}, capture urgency, and prepare SMS/email handoff fields.
+          <strong>Your receptionist is staged locally, not redirected.</strong> Open the call widget when this lead needs live intake; the lead detail stays readable until then.
         </div>
       )}
     </div>
@@ -1457,7 +1615,7 @@ function CallsPage({ setRoute }) {
   const initialSelection = window.AppContext.get().selection;
   const [activeId, setActiveId] = useState(initialSelection?.type === 'call' ? initialSelection.id : 'CALL-2419');
   const [callWindow, setCallWindow] = useState('all');
-  const [coachingMode, setCoachingMode] = useState(false);
+  const [coachingMode, setCoachingMode] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [callWorkflow, setCallWorkflow] = useState(null);
   // Recap email composer state — `recap draft` workflow used to be a
@@ -1562,21 +1720,21 @@ function CallsPage({ setRoute }) {
     setBookingForm(buildBookingDraft(active));
     setCallWorkflow({ kind: 'calendar hold', title: `Book security review · ${active.co}` });
   };
-  const openProposalV3 = () => {
+  const openNextProposalDraft = () => {
     // Carry the active call's context into Generate so the
-    // context handoff is truly actionable: click "Generate proposal v3"
+    // context handoff is truly actionable: click "Draft next proposal"
     // should move directly into the sequence with a pre-filled brief.
     const ctx = window.AppContext.get();
     window.AppContext.set({
       extra: {
         ...(ctx.extra || {}),
-        triggered_from: 'call-generate-proposal-v3',
-        proposal_v3_call_id: active.id,
-        proposal_v3_call_co: active.co,
-        proposal_v3_call_who: active.who,
-        proposal_v3_call_outcome: active.outcome,
-        proposal_v3_call_score: active.score,
-        proposal_v3_call_duration: active.duration,
+        triggered_from: 'call-draft-next-proposal',
+        proposal_draft_call_id: active.id,
+        proposal_draft_call_co: active.co,
+        proposal_draft_call_who: active.who,
+        proposal_draft_call_outcome: active.outcome,
+        proposal_draft_call_score: active.score,
+        proposal_draft_call_duration: active.duration,
       },
     });
     setRoute('generate');
@@ -1673,6 +1831,18 @@ function CallsPage({ setRoute }) {
     const existing = coachingNotes.find(n => n.callId === activeId && n.transcriptKey === key);
     setCoachingDraft({ key, time: l.t, who: l.who, line: l.txt });
     setCoachingDraftText(existing?.note || '');
+    const ctx = window.AppContext.get();
+    window.AppContext.set({
+      extra: {
+        ...(ctx.extra || {}),
+        coaching_mode: true,
+        selected_call_line_key: key,
+        selected_call_line_time: l.t,
+        selected_call_line_speaker: l.who,
+        selected_call_line_text: l.txt,
+        triggered_from: 'call-transcript-line',
+      },
+    });
   };
   const cancelCoachingDraft = () => { setCoachingDraft(null); setCoachingDraftText(''); };
   const saveCoachingNote = () => {
@@ -1702,6 +1872,15 @@ function CallsPage({ setRoute }) {
     });
     setCoachingDraft(null);
     setCoachingDraftText('');
+    const ctx = window.AppContext.get();
+    window.AppContext.set({
+      extra: {
+        ...(ctx.extra || {}),
+        coaching_note_saved_at: new Date().toISOString(),
+        coaching_note_last: trimmed,
+        triggered_from: 'call-coaching-note-save',
+      },
+    });
   };
   const removeCoachingNote = (note) => {
     setCoachingNotes(prev => prev.filter(n => n.id !== note.id));
@@ -1741,13 +1920,41 @@ function CallsPage({ setRoute }) {
     });
   };
   const active = D.calls.find(c => c.id === activeId) || D.calls[0];
-  const visibleCalls = callWindow === 'flagged' ? D.calls.filter(c => c.flags > 0) : D.calls;
+  const visibleCalls = callWindow === 'missed'
+    ? D.calls.filter(pageIsMissedCall)
+    : callWindow === 'flagged'
+      ? D.calls.filter(c => c.flags > 0)
+      : D.calls;
+  const totalCalls = (D.calls || []).length;
+  const flaggedCalls = (D.calls || []).filter(c => Number(c.flags || 0) > 0).length;
+  const activeHasTranscript = active.id === 'CALL-2419';
+  const activeAxisCount = activeHasTranscript && D.callScores ? D.callScores.length : 0;
+  const scoredCalls = (D.calls || []).filter(c => Number.isFinite(Number(c.score)));
+  const teamAvgScore = scoredCalls.length === 0
+    ? null
+    : (scoredCalls.reduce((s, c) => s + Number(c.score), 0) / scoredCalls.length).toFixed(1);
+  const activeOutcomeTone = (() => {
+    const o = String(active.outcome || '').toLowerCase();
+    if (/booked|qualified|approved|technical-deep-dive/.test(o)) return 'healthy';
+    if (/follow-up|discovery|recap/.test(o)) return 'accent';
+    if (/objection|pricing|stalled/.test(o)) return 'warn';
+    if (/no-fit|lost|cancel|declined/.test(o)) return 'critical';
+    return 'neutral';
+  })();
 
   // Publish active call to AppContext for the sales coach.
   useEffect(() => {
-    window.AppContext.set({ selection: { type:'call', id: activeId }});
+    const ctx = window.AppContext.get();
+    window.AppContext.set({
+      selection: { type:'call', id: activeId },
+      extra: {
+        ...(ctx.extra || {}),
+        coaching_mode: coachingMode,
+        selected_call_id: activeId,
+      },
+    });
     return () => { window.AppContext.set({ selection: null }); };
-  }, [activeId]);
+  }, [activeId, coachingMode]);
   useEffect(() => window.AppContext.subscribe((ctx) => {
     if (ctx.selection?.type === 'call' && D.calls.some(c => c.id === ctx.selection.id)) {
       setActiveId(ctx.selection.id);
@@ -1762,11 +1969,25 @@ function CallsPage({ setRoute }) {
           sub: 'Draft includes procurement owner, security review ask, and unresolved objections.',
         };
       }
+      if (intent === 'quote-follow-up') {
+        return {
+          kind: 'quote follow-up',
+          title: `Quote follow-up · ${call?.co || 'selected call'}`,
+          sub: 'Draft a short callback note with price, next step, and owner.',
+        };
+      }
       if (intent === 'security-review') {
         return {
           kind: 'calendar hold',
           title: `Security review for ${call?.co || 'selected call'}`,
           sub: '30-minute hold with buyer, security reviewer, and operator owner.',
+        };
+      }
+      if (intent === 'schedule-job') {
+        return {
+          kind: 'calendar hold',
+          title: `Schedule job · ${call?.co || 'selected call'}`,
+          sub: 'Hold a visit time and send the customer a clear confirmation.',
         };
       }
       if (intent === 'human-review') {
@@ -1781,6 +2002,7 @@ function CallsPage({ setRoute }) {
     const applyCallIntent = (ctx) => {
       const extra = ctx.extra || {};
       if (!extra.call_workflow && !extra.call_window) return;
+      if (extra.call_window === 'missed') setCallWindow('missed');
       if (extra.call_window === 'flagged') setCallWindow('flagged');
       if (extra.call_window === 'all') setCallWindow('all');
       const selectedCall = ctx.selection?.type === 'call'
@@ -1792,15 +2014,15 @@ function CallsPage({ setRoute }) {
         if (workflow.kind === 'calendar hold') setBookingForm(buildBookingDraft(selectedCall));
         setCallWorkflow(workflow);
       }
-      const { call_workflow, call_window, ...rest } = extra;
-      window.AppContext.set({ extra: rest });
+      const latestExtra = window.AppContext.get().extra || extra;
+      window.AppContext.set({ extra: page1OmitKeys(latestExtra, ['call_workflow', 'call_window']) });
     };
     applyCallIntent(window.AppContext.get());
     return window.AppContext.subscribe(applyCallIntent);
   }, [activeId]);
 
   return (
-    <div className="calls-page page page--wide">
+    <div className="calls-page page page--wide page--calls">
       <PageHeader
         title="Calls"
         sub={(() => {
@@ -1811,7 +2033,7 @@ function CallsPage({ setRoute }) {
           const total = (D.calls || []).length;
           const scoredAxisCount = D.callScores ? D.callScores.length : 0;
           const flagged = (D.calls || []).filter(c => Number(c.flags || 0) > 0).length;
-          return `${total} call${total === 1 ? '' : 's'} on file · 1 scored on the ${scoredAxisCount}-axis rubric (CALL-2419) · ${flagged} flagged. Flip Coaching mode to attach notes to any line.`;
+          return `${total} call${total === 1 ? '' : 's'} on file · 1 scored on the ${scoredAxisCount}-axis rubric (CALL-2419) · ${flagged} flagged. Coaching mode is on by default for line-level notes.`;
         })()}
         actions={<>
           <button className="btn btn--ghost btn--sm" aria-pressed={callWindow === 'flagged'} onClick={() => setCallWindow(v => v === 'flagged' ? 'all' : 'flagged')}><I2.Filter size={12}/>{callWindow === 'flagged' ? 'All calls' : 'Flagged'}</button>
@@ -1819,16 +2041,57 @@ function CallsPage({ setRoute }) {
         </>}
       />
 
-      {(coachingMode || callWorkflow) && (
-        <div className="workflow-popout" role="region" aria-label="Call workflow panel">
-          <button className="workflow-popout__close btn btn--ghost btn--icon" aria-label="Close call workflow panel" onClick={() => { setCoachingMode(false); setCallWorkflow(null); }}><I2.Close size={14}/></button>
-          {coachingMode && (
-            <div className="workflow-popout__pane">
-              <div className="eyebrow eyebrow--accent">coaching mode</div>
-              <div className="workflow-popout__title">{active.id} notes armed</div>
-              <div className="muted" style={{fontSize:12}}>Transcript rows now create coaching notes against {active.co}. Flagged lines are prioritized for the sales coach context.</div>
-            </div>
-          )}
+      <section className="calls-review-rail" aria-label="Calls review status">
+        <div className="calls-review-rail__active">
+          <div className="eyebrow eyebrow--accent">active review</div>
+          <div className="calls-active-title">
+            <I2.Phone size={15}/>
+            <span className="mono">{active.id}</span>
+            <span>{active.co}</span>
+          </div>
+          <div className="calls-active-meta">
+            <span>{active.who}</span>
+            <span>{active.duration}</span>
+            <span>{active.when}</span>
+          </div>
+        </div>
+        <div className="calls-review-rail__stats" aria-label="Calls summary">
+          <div className="calls-mini-stat">
+            <span>calls</span>
+            <strong>{totalCalls}</strong>
+          </div>
+          <div className="calls-mini-stat">
+            <span>flagged</span>
+            <strong>{flaggedCalls}</strong>
+          </div>
+          <div className="calls-mini-stat">
+            <span>score</span>
+            <strong>{active.score.toFixed(1)}</strong>
+          </div>
+          <div className="calls-mini-stat">
+            <span>axes</span>
+            <strong>{activeAxisCount || 'n/a'}</strong>
+          </div>
+        </div>
+        <div className="calls-review-rail__state">
+          <span className="calls-mode-pill" data-active={coachingMode ? 'true' : 'false'} data-testid="calls-coaching-state">
+            <I2.Mic size={12}/>
+            {coachingMode ? 'Coaching on' : 'Coaching off'}
+          </span>
+          <span className="calls-mode-pill" data-active={activeHasTranscript ? 'true' : 'false'}>
+            <I2.Doc size={12}/>
+            {activeHasTranscript ? 'Transcript ready' : 'No transcript'}
+          </span>
+          <span className="calls-mode-pill" data-tone={activeOutcomeTone}>
+            <I2.Flag size={12}/>
+            {active.outcome}
+          </span>
+        </div>
+      </section>
+
+      {callWorkflow && (
+        <div className="workflow-popout workflow-popout--calls" role="region" aria-label="Call workflow panel">
+          <button className="workflow-popout__close btn btn--ghost btn--icon" aria-label="Close call workflow panel" onClick={() => { setCallWorkflow(null); }}><I2.Close size={14}/></button>
           {callWorkflow && callWorkflow.kind === 'human review' && (
             <div className="workflow-popout__pane" data-testid="call-human-review-panel">
               <div className="eyebrow eyebrow--accent">{callWorkflow.kind}</div>
@@ -1841,13 +2104,13 @@ function CallsPage({ setRoute }) {
                 </div>
                 <div className="workflow-tile" role="group" aria-label="Objection summary">
                   <span>Pricing objection</span>
-                  <span>{active.deflections} deflection{active.deflections === 1 ? '' : 's'} · transcript already filtered to flagged calls</span>
+                  <span>{active.deflections} handoff tr{active.deflections === 1 ? 'y' : 'ies'} · transcript already filtered to flagged calls</span>
                 </div>
               </div>
               <div className="hstack" style={{gap:8, flexWrap:'wrap', justifyContent:'flex-end', marginTop:12}}>
                 <button type="button" className="btn btn--ghost btn--sm" onClick={openProcurementRecap}><I2.Mail size={12}/>{sentRecaps[active.id] ? 'Re-draft recap' : 'Draft recap'}</button>
                 <button type="button" className="btn btn--ghost btn--sm" data-testid="call-booking-open" onClick={openBookingDraft}><I2.Calendar size={12}/>{bookedReviews[active.id] ? 'Re-hold review' : 'Hold review'}</button>
-                <button type="button" className="btn btn--primary btn--sm" onClick={openProposalV3}><I2.Doc size={12}/>Generate proposal v3</button>
+                <button type="button" className="btn btn--primary btn--sm" onClick={openNextProposalDraft}><I2.Doc size={12}/>Draft next proposal</button>
               </div>
             </div>
           )}
@@ -1972,34 +2235,39 @@ function CallsPage({ setRoute }) {
 
       <div className="calls-grid">
         {/* Call list */}
-        <Card title={`recent · ${visibleCalls.length} ${callWindow === 'flagged' ? 'flagged' : 'sorted by recency'}`} className="card--accent calls-grid__list" >
-          <div className="vstack" style={{gap:6}}>
+        <Card title={`queue · ${visibleCalls.length} ${callWindow === 'missed' ? 'missed' : callWindow === 'flagged' ? 'flagged' : 'by recency'}`} className="card--accent calls-grid__list calls-list" >
+          <div className="calls-list__items">
             {visibleCalls.length === 0 && (
-              <div className="muted" data-testid="calls-list-empty" style={{padding:'18px 8px', fontSize:12, textAlign:'center'}}>
-                {callWindow === 'flagged'
+              <div className="calls-list__empty muted" data-testid="calls-list-empty">
+                {callWindow === 'missed'
+                  ? 'No missed calls right now.'
+                  : callWindow === 'flagged'
                   ? 'No flagged calls right now. Toggle Flagged off to see all calls.'
                   : 'No calls on file yet.'}
               </div>
             )}
             {visibleCalls.map(c => (
               <div key={c.id}
+                   className="call-row"
                    role="button"
                    tabIndex={0}
                    aria-pressed={activeId === c.id}
+                   data-active={activeId === c.id ? 'true' : 'false'}
+                   data-flagged={c.flags > 0 ? 'true' : 'false'}
                    onClick={()=>setActiveId(c.id)}
-                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(c.id); } }}
-                   style={{padding:10, borderRadius:8, cursor:'pointer', border:'1px solid', borderColor: activeId === c.id ? 'var(--sunset-500)' : 'transparent', background: activeId === c.id ? 'var(--bg-selected)' : 'transparent'}}>
-                <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
-                  <span className="mono" style={{fontSize:11, color:'var(--accent-fg)', fontWeight:600}}>{c.id}</span>
-                  <span className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{c.when}</span>
+                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(c.id); } }}>
+                <div className="call-row__top">
+                  <span className="mono call-row__id">{c.id}</span>
+                  <span className="mono call-row__when">{c.when}</span>
                 </div>
-                <div style={{fontSize:13, fontWeight:600, marginBottom:2}}>{c.co}</div>
-                <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{c.who}</div>
-                <div style={{display:'flex', gap:6, marginTop:6, alignItems:'center'}}>
+                <div className="call-row__company">{c.co}</div>
+                <div className="mono call-row__person">{c.who}</div>
+                <div className="call-row__meta">
                   <Badge tone={c.score >= 8 ? 'healthy' : c.score >= 7 ? 'accent' : c.score >= 5 ? 'warn' : 'critical'}>
                     {c.score.toFixed(1)}
                   </Badge>
-                  <span className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{c.duration}</span>
+                  <span className="mono call-row__duration">{c.duration}</span>
+                  <span className="call-row__outcome">{c.outcome}</span>
                   {c.flags > 0 && <span className="badge badge--critical" style={{marginLeft:'auto'}}><I2.Flag size={9}/>{c.flags}</span>}
                 </div>
               </div>
@@ -2017,8 +2285,8 @@ function CallsPage({ setRoute }) {
                   : null;
                 const bookingReceipt = bookedReviews[active.id];
                 return (
-                  <div style={{display:'flex', gap:6, alignItems:'center'}}>
-                    <span className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{active.duration}</span>
+                  <div className="calls-transcript-actions">
+                    <span className="mono calls-transcript-actions__duration">{active.duration}</span>
                     {callNotes.length > 0 && (
                       <span data-testid="coaching-notes-count">
                         <Badge tone="accent">{callNotes.length} note{callNotes.length === 1 ? '' : 's'}</Badge>
@@ -2064,12 +2332,11 @@ function CallsPage({ setRoute }) {
               every other call until per-call transcripts ship. */}
           {active.id !== 'CALL-2419' && (
             <div
-              className="trans calls-grid__trans-scroll"
+              className="trans calls-grid__trans-scroll calls-transcript-empty"
               data-testid="trans-empty"
               aria-label="Call transcript unavailable"
-              style={{padding:'24px 16px', display:'flex', alignItems:'center', justifyContent:'center'}}
             >
-              <div className="muted" style={{fontSize:13, textAlign:'center', maxWidth:380}}>
+              <div className="muted">
                 <strong>{active.id}</strong> has no transcript on file yet.<br/>
                 <span className="mono" style={{fontSize:11}}>
                   Pick {active.co !== 'Banyan Health' ? <code>CALL-2419 · Banyan Health</code> : 'another call'} from the list to walk a transcript, or wait for the live ConvAI session to capture one.
@@ -2077,7 +2344,7 @@ function CallsPage({ setRoute }) {
               </div>
             </div>
           )}
-          {active.id === 'CALL-2419' && <div className="trans calls-grid__trans-scroll" aria-label="Call transcript">
+          {active.id === 'CALL-2419' && <div className="trans calls-grid__trans-scroll calls-transcript-scroll" aria-label="Call transcript">
             {D.transcriptBanyan.map((l,i) => {
               const key = transcriptKeyFor(l);
               const savedNote = noteByLineKey(key);
@@ -2099,7 +2366,7 @@ function CallsPage({ setRoute }) {
                        }
                        onClick={() => tryOpenCoachingDraft(l)}
                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tryOpenCoachingDraft(l); } }}
-                       ref={(el) => { if (el && playbackIndex === i) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }}
+                       ref={(el) => { if (el && playbackIndex === i) globalThis.scrollConsoleNodeIntoView?.(el, { block: 'nearest', behavior: 'smooth' }); }}
                        style={{cursor: coachingMode ? 'pointer' : 'default'}}>
                     <span className="trans__time">{l.t}</span>
                     <span className={`trans__who trans__who--${l.who}`}>
@@ -2107,7 +2374,7 @@ function CallsPage({ setRoute }) {
                     </span>
                     <span className="trans__txt">{l.txt}</span>
                     {savedNote && (
-                      <span className="trans__note-marker" aria-hidden="true" title={`Note: ${savedNote.note}`}>📝</span>
+                      <span className="trans__note-marker" aria-hidden="true" title={`Note: ${savedNote.note}`}><I2.Doc size={12}/></span>
                     )}
                   </div>
                   {isComposing && (
@@ -2146,21 +2413,17 @@ function CallsPage({ setRoute }) {
 
         {/* Scorecard + actions */}
         <div className="vstack calls-grid__side">
-          <Card title={`scorecard · ${active.id === 'CALL-2419' ? `${D.callScores.length} axes` : 'overall only'}`} accent="accent">
-            <div style={{textAlign:'center', marginBottom:14, paddingBottom:14, borderBottom:'1px solid var(--border)'}}>
+          <Card title={`scorecard · ${activeHasTranscript ? `${D.callScores.length} axes` : 'overall only'}`} accent="accent" className="calls-scorecard">
+            <div className="calls-scorecard__overall">
               <div className="eyebrow">overall</div>
               <div
-                style={{fontFamily:'var(--font-display)', fontSize:48, fontWeight:800, color: 'var(--healthy-fg)', lineHeight:1}}
+                className="calls-scorecard__score"
                 data-testid="scorecard-overall"
               >
                 {active.score.toFixed(1)}
               </div>
               <div className="mono" style={{fontSize:10, color:'var(--text-3)'}} data-testid="scorecard-team-avg">
-                vs team avg {(() => {
-                  const scored = D.calls.filter(c => Number.isFinite(Number(c.score)));
-                  if (scored.length === 0) return '--';
-                  return (scored.reduce((s, c) => s + Number(c.score), 0) / scored.length).toFixed(1);
-                })()}
+                vs team avg {teamAvgScore || '--'}
               </div>
             </div>
             {/* The 7 axes in D.callScores are scored against the Banyan
@@ -2169,7 +2432,7 @@ function CallsPage({ setRoute }) {
                 a different call's overall score would lie about what each
                 axis actually measured. The team-avg + per-call overall
                 above stay derived; only the axis breakdown is gated. */}
-            {active.id === 'CALL-2419' ? D.callScores.map(s => (
+            {activeHasTranscript ? D.callScores.map(s => (
               <div key={s.axis}
                    className="axis inspectable"
                    data-popout={`${s.axis}: ${s.score.toFixed(1)} score, ${s.weight}% weight. ${s.detail}`}>
@@ -2190,9 +2453,9 @@ function CallsPage({ setRoute }) {
             )}
           </Card>
 
-          <Card title="signals" >
-            <div className="vstack" style={{gap:6, fontSize:12}}>
-              <div style={{display:'flex',justifyContent:'space-between'}}>
+          <Card title="signals" className="calls-signals">
+            <div className="calls-signal-list">
+              <div className="calls-signal-row">
                 <span className="muted">Talk ratio</span>
                 {(() => {
                   // Discovery rule of thumb: rep should be ≤ ~40% of talk
@@ -2210,7 +2473,7 @@ function CallsPage({ setRoute }) {
                   );
                 })()}
               </div>
-              <div style={{display:'flex',justifyContent:'space-between'}}>
+              <div className="calls-signal-row">
                 <span className="muted">Sentiment</span>
                 {(() => {
                   // Derive sign + tone from the live value. Hardcoded `+`
@@ -2227,8 +2490,8 @@ function CallsPage({ setRoute }) {
                   );
                 })()}
               </div>
-              <div style={{display:'flex',justifyContent:'space-between'}}>
-                <span className="muted">Deflections</span>
+              <div className="calls-signal-row">
+                <span className="muted">Handoff tries</span>
                 {(() => {
                   // Same tone-by-value logic as the sentiment + talk-ratio
                   // rows. Zero deflections is healthy; 1–2 warn (some
@@ -2240,23 +2503,12 @@ function CallsPage({ setRoute }) {
                   );
                 })()}
               </div>
-              <div style={{display:'flex',justifyContent:'space-between'}}>
+              <div className="calls-signal-row">
                 <span className="muted">Outcome</span>
                 {(() => {
-                  // Tone derives from the outcome string. Hardcoding
-                  // tone="accent" rendered "no-fit" and "pricing-objection"
-                  // in healthy/orange colors — same green-everything bug
-                  // as the sentiment fix above.
-                  const o = String(active.outcome || '').toLowerCase();
-                  const tone =
-                    /booked|qualified|approved|technical-deep-dive/.test(o) ? 'healthy' :
-                    /follow-up|discovery|recap/.test(o) ? 'accent' :
-                    /objection|pricing|stalled/.test(o) ? 'warn' :
-                    /no-fit|lost|cancel|declined/.test(o) ? 'critical' :
-                    'neutral';
                   return (
-                    <span data-testid="signal-outcome" data-outcome-tone={tone}>
-                      <Badge tone={tone}>{active.outcome}</Badge>
+                    <span data-testid="signal-outcome" data-outcome-tone={activeOutcomeTone}>
+                      <Badge tone={activeOutcomeTone}>{active.outcome}</Badge>
                     </span>
                   );
                 })()}
@@ -2264,26 +2516,23 @@ function CallsPage({ setRoute }) {
             </div>
           </Card>
 
-          <Card title="suggested next">
-            <div className="vstack" style={{gap:8}}>
+          <Card title="suggested next" className="calls-next-actions">
+            <div className="calls-next-actions__list">
               <button
-                className="btn btn--primary btn--sm"
+                className="btn btn--primary btn--sm calls-next-actions__button"
                 data-testid="call-procurement-recap-open"
-                style={{width:'100%', justifyContent:'flex-start'}}
                 onClick={openProcurementRecap}
               ><I2.Mail size={12}/>Send recap to procurement</button>
               <button
-                className="btn btn--sm"
+                className="btn btn--sm calls-next-actions__button"
                 data-testid="call-book-security-review"
-                style={{width:'100%', justifyContent:'flex-start'}}
                 onClick={openBookingDraft}
               ><I2.Calendar size={12}/>Book security review</button>
               <button
-                className="btn btn--ghost btn--sm"
-                data-testid="call-generate-proposal-v3"
-                style={{width:'100%', justifyContent:'flex-start'}}
-                onClick={openProposalV3}
-              ><I2.Doc size={12}/>Generate proposal v3</button>
+                className="btn btn--ghost btn--sm calls-next-actions__button"
+                data-testid="call-draft-next-proposal"
+                onClick={openNextProposalDraft}
+              ><I2.Doc size={12}/>Draft next proposal</button>
             </div>
           </Card>
         </div>

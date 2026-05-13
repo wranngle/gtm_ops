@@ -1133,7 +1133,7 @@ export async function executeLLMJson(
     console.warn('⚠️ JSON parsing failed:', (parseError as Error).message);
     console.warn('   Raw content starts with:', result.content.slice(0, 100));
 
-    // Return empty object instead of raw string to prevent downstream errors
-    return {};
+    const excerpt = result.content.slice(0, 500).replaceAll(/\s+/g, ' ').trim();
+    throw new Error(`LLM JSON parsing failed: ${(parseError as Error).message}. Raw content excerpt: ${excerpt}`);
   }
 }

@@ -6,7 +6,7 @@ import { test, expect, smokeClickAll } from './helpers.js';
 
 const ROUTES = ['home', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'settings'];
 const LABELS: Record<string, string> = {
-  home: 'Mission Control',
+  home: 'Callbacks',
   pipeline: 'Pipeline',
   calls: 'Calls',
   proposals: 'Proposals',

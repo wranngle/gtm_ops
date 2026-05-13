@@ -91,6 +91,18 @@ window.GTM = (function () {
 
   /* ---------- Calls / Transcripts ---------- */
   const calls = [
+    { id:'CALL-2422', co:'Horizon HVAC', co_id:'horizon-hvac', who:'Maya Lewis · homeowner',
+      duration:'00:00', when:'22m ago', outcome:'voicemail',
+      score:0, sentiment:0, talkRatio:0, deflections:0, flags:1,
+      missed:true, returned:false, value:'$1.8K', service:'No-cool repair' },
+    { id:'CALL-2421', co:'Summit Plumbing', co_id:'summit-plumbing', who:'Rafael Ortiz · property manager',
+      duration:'00:00', when:'1h ago', outcome:'no-answer',
+      score:0, sentiment:0, talkRatio:0, deflections:0, flags:1,
+      missed:true, returned:false, value:'$0.95K', service:'Water heater leak' },
+    { id:'CALL-2420', co:'Cedar Electric', co_id:'cedar-electric', who:'Nina Patel · restaurant owner',
+      duration:'00:00', when:'3h ago', outcome:'dropped',
+      score:0, sentiment:0, talkRatio:0, deflections:0, flags:0,
+      missed:true, returned:true, returnedAfterMinutes:42, value:'$2.4K', service:'Panel outage' },
     { id:'CALL-2419', co:'Banyan Health', co_id:'banyan', who:'Priya Mendel · VP Operations',
       duration:'34:12', when:'45m ago', outcome:'meeting-booked',
       score:8.7, sentiment:0.72, talkRatio:0.34, deflections:0, flags:1 },
@@ -228,7 +240,7 @@ window.GTM = (function () {
       runtime:'4d 12h', tasks:312, success:0.764 },
   ];
 
-  // Shared regression predicate. The sidebar count, the Mission Control
+  // Shared regression predicate. The sidebar count, the Home
   // regressions card, the EvalsPage filter, and the regression-count
   // Stat tile all need to agree on what "regressing" means — without
   // a shared helper, the sidebar was using `delta < 0` while everywhere

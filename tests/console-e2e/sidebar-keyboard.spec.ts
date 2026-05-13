@@ -8,7 +8,7 @@
 import { test, expect } from './helpers.js';
 
 const WORKSPACE_ITEMS = [
-  'Mission Control',
+  'Callbacks',
   'Generate',
   'Pipeline',
   'Calls',
@@ -62,6 +62,6 @@ test('collapsed sidebar keeps workspace and agent controls named', async ({ open
     await expect(page.getByRole('button', { name: new RegExp(`^${label}(?: \\d+)?$`) })).toBeVisible();
   }
 
-  await expect(page.getByRole('button', { name: /^Sales Coach global$/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Sarah · Intake pipeline$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Sales Coach all pages$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Sarah Intake pipeline lead$/ })).toBeVisible();
 });

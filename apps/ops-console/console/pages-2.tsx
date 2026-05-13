@@ -4,6 +4,15 @@
 
 const I3 = globalThis.Icon;
 
+function page2OmitKeys(source, keys) {
+  const blocked = new Set(keys);
+  const next = {};
+  Object.keys(source || {}).forEach(key => {
+    if (!blocked.has(key)) next[key] = source[key];
+  });
+  return next;
+}
+
 /* ------------------------------------------------------------ */
 /* EVALS */
 /* ------------------------------------------------------------ */
@@ -22,6 +31,12 @@ function evalScoreTone(score) {
   if (score >= 0.82) return 'healthy';
   if (score >= 0.65) return 'warn';
   return 'critical';
+}
+
+function evalAggregateTone(score) {
+  if (score == null) return 'neutral';
+  if (score >= 0.82) return 'healthy';
+  return 'warn';
 }
 
 function evalSuiteWeightedPassRate(suites) {
@@ -71,6 +86,15 @@ function evalReviewContextLabel(run, suite) {
   return suite?.name || suite?.id || 'Selected eval context';
 }
 
+function evalArtifactReviewLocator(run) {
+  const scenario = String(run?.scenario_id || run?.id || 'selected-run')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'selected-run';
+  return `local-review://eval-runs/${scenario}/result.json`;
+}
+
 /* The bridge to voice_ai_agent_evals is sourced live from
    /api/eval-harness-manifest, which serves the root
    eval-harness.manifest.json (also read by voice_ai_agent_evals
@@ -85,16 +109,6 @@ function formatHarnessTimeout(ms) {
   if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
   return `${Math.round(ms / 60_000)}m`;
 }
-
-const WRANNGLE_OFFERINGS = [
-  { name:'Core Agent', price:'$250/mo', coverage:'Voice answering, lead scoring, SMS/email handoff, transcripts, 1k min baseline.' },
-  { name:'Elite Agent', price:'$500/mo', coverage:'Voice + web chat + two-way SMS, custom ElevenLabs voice, booking, transfer, unified inbox.' },
-  { name:'Landing Page', price:'$900 + optional care', coverage:'One-page lead capture, n8n form routing, SEO, Cloudflare deploy, owned source.' },
-  { name:'Business Site', price:'$3,500 + care', coverage:'Multi-page site, CMS/analytics, lead capture, Lighthouse target, Cloudflare delivery.' },
-  { name:'gtm_ops Trial', price:'$0 / 14 days', coverage:'Five proposals, demo data, branded PDF, Gemini extraction, no-card trial.' },
-  { name:'gtm_ops Plus', price:'$20/mo', coverage:'50 proposals, branded PDFs, workspace branding, intake forms, audit log, n8n webhook.' },
-  { name:'gtm_ops Pro', price:'$99/mo', coverage:'Unlimited proposals, SSO, RBAC, custom domain, exportable audit chain, priority SLA.' },
-];
 
 const INTEGRATION_CONNECTIONS = [
   {
@@ -124,7 +138,7 @@ const INTEGRATION_CONNECTIONS = [
     status:'connected',
     sub:'#gtm-ops · 14 channels watched',
     icon:'#',
-    what:'Operator alerting and command surface for run failures, hot leads, and approval gates.',
+    what:'Operator alerts for run failures, hot leads, and approvals that need attention.',
     canDo:['Send eval regression alerts', 'Post proposal-ready approvals', 'Listen for slash-command run triggers'],
     scopes:['post messages', 'read configured channels', 'slash commands'],
     sync:'event subscription + retry queue',
@@ -191,12 +205,14 @@ const INTEGRATION_CONNECTIONS = [
     sub:'Sales Coach + Sarah agents · ConvAI widgets embedded',
     icon:'EL',
     what:'Conversational AI voice/chat runtime for Sarah intake and the Sales Coach copilot.',
-    canDo:['Embed official ConvAI widgets in-console', 'Inject active route/deal/eval context as dynamic variables', 'Expose one explicit admin link for advanced ElevenLabs settings'],
+    canDo:['Embed official ConvAI widgets in-console', 'Inject active route/deal/eval context as dynamic variables', 'Expose local prompt, tools, context, and safety admin controls'],
     scopes:['public agent embed IDs', 'dynamic variables', 'client tools'],
     sync:'widget runtime loaded from official embed package',
     automations:'Agent asks to navigate -> openConsoleRoute; agent confirms action -> showToast.',
   },
 ];
+
+const ELEVENLABS_AGENTS_DASHBOARD_URL = 'https://elevenlabs.io/app/agents';
 
 function parseEvalJson(value, fallback) {
   if (value == null) return fallback;
@@ -290,6 +306,38 @@ function evalAgentKeyForRun(run, suite) {
   return 'sales_coach';
 }
 
+function evalSuiteIdForRun(run, suites) {
+  const rows = Array.isArray(suites) ? suites : [];
+  if (!run || rows.length === 0) return null;
+  const explicitId = run.suite_id || run.suiteId || run.suite || run.eval_suite_id;
+  if (explicitId && rows.some(s => s.id === explicitId)) return explicitId;
+  const text = [
+    run.scenario_id,
+    run.case_study_id,
+    run.prompt_tag,
+    ...(Array.isArray(run.score?.axes) ? run.score.axes.map(axis => `${axis.name || ''} ${axis.detail || ''}`) : []),
+  ].join(' ').toLowerCase();
+  const pick = (id) => rows.some(s => s.id === id) ? id : null;
+  if (/price|pricing|knowledge.?base|kb|tier|objection|refund/.test(text)) return pick('objection-pricing');
+  if (/multi.?thread|stakeholder|tool.?loop|schedule_appointment|send_confirmation/.test(text)) return pick('multithread');
+  if (/phi|hipaa|compliance|scope|handoff|policy|billing dispute/.test(text)) return pick('compliance-phi');
+  if (/closing|mutual action|next.?step|commit/.test(text)) return pick('closing-mutual');
+  if (/recap|recall|summary/.test(text)) return pick('recap-quality');
+  return pick('discovery-q1') || rows[0]?.id || null;
+}
+
+function evalRunsForSuite(runs, suite, suites) {
+  if (!suite || !Array.isArray(runs)) return [];
+  return runs.filter(run => evalSuiteIdForRun(run, suites) === suite.id);
+}
+
+function evalBestRunForSuite(runs, suite, suites, preferredFilter = 'all') {
+  const matches = evalRunsForSuite(runs, suite, suites);
+  if (matches.length === 0) return null;
+  const filtered = preferredFilter === 'all' ? matches : matches.filter(run => run.verdict === preferredFilter);
+  return filtered.find(run => run.verdict === 'fail') || filtered[0] || matches.find(run => run.verdict === 'fail') || matches[0];
+}
+
 // Build axis-by-axis labels for a Sparkline series (hoisted to module scope
 // because EvalsPage references it before its old in-component declaration —
 // `const` arrow functions are NOT hoisted, so the inline def threw a
@@ -307,6 +355,39 @@ function buildEvalSparkLabels(series, cadence = 'sample') {
   });
 }
 
+function buildLoadedEvalPassTrend(runs) {
+  const rows = (Array.isArray(runs) ? runs : [])
+    .filter(run => run?.verdict === 'pass' || run?.verdict === 'fail')
+    .slice()
+    .sort((a, b) => {
+      const ta = new Date(a.started_at || 0).getTime();
+      const tb = new Date(b.started_at || 0).getTime();
+      return ta - tb;
+    });
+  let passed = 0;
+  return rows.map((run, i) => {
+    if (run.verdict === 'pass') passed += 1;
+    return passed / (i + 1);
+  });
+}
+
+function buildLoadedEvalPassLabels(runs) {
+  const rows = (Array.isArray(runs) ? runs : [])
+    .filter(run => run?.verdict === 'pass' || run?.verdict === 'fail')
+    .slice()
+    .sort((a, b) => {
+      const ta = new Date(a.started_at || 0).getTime();
+      const tb = new Date(b.started_at || 0).getTime();
+      return ta - tb;
+    });
+  const total = Math.max(1, rows.length);
+  return rows.map((run, i) => {
+    const age = total - i - 1;
+    const marker = i === total - 1 ? 'latest loaded run' : `${age} loaded run${age === 1 ? '' : 's'} ago`;
+    return `${run.verdict} · ${run.scenario_id || run.id || 'unnamed scenario'} · ${marker}`;
+  });
+}
+
 function EvalsPage({ setRoute }) {
   const D = globalThis.GTM;
   const initialSelection = globalThis.AppContext.get().selection;
@@ -319,7 +400,7 @@ function EvalsPage({ setRoute }) {
   const visibleEvalAgentLabel = `${visibleEvalAgents.length} ElevenLabs agent${visibleEvalAgents.length === 1 ? '' : 's'}${isAdmin ? ' · admin' : ''}`;
   const defaultSuiteAgentKey = visibleEvalAgents[0]?.key || 'sales_coach';
   // Honor `extra.suite_filter` from the AppContext handoff (e.g.,
-  // Mission Control "regressions watch" → setRoute('evals') sets
+  // Home "regressions watch" → setRoute('evals') sets
   // suite_filter='regressions'). Without this, the click looked like it
   // routed but the filter silently stayed on 'all' and the operator
   // had to toggle it manually.
@@ -353,6 +434,8 @@ function EvalsPage({ setRoute }) {
   const [draftSuites, setDraftSuites] = useState([]);
   const [suiteBuilderOpen, setSuiteBuilderOpen] = useState(false);
   const [suiteBuilderError, setSuiteBuilderError] = useState('');
+  const suiteNameInputRef = React.useRef(null);
+  const suiteScenarioInputRef = React.useRef(null);
   const [suiteDraft, setSuiteDraft] = useState({
     name: '',
     agentKey: defaultSuiteAgentKey,
@@ -376,12 +459,58 @@ function EvalsPage({ setRoute }) {
   const normalizedRuns = useMemo(() => runs.map(normalizeEvalRun), [runs]);
   const visibleRuns = useMemo(() => normalizedRuns.filter(r => runFilter === 'all' || r.verdict === runFilter), [normalizedRuns, runFilter]);
   const defaultActiveRun = visibleRuns.find(r => r.verdict === 'fail') || visibleRuns[0] || normalizedRuns.find(r => r.verdict === 'fail') || normalizedRuns[0] || null;
-  const activeRun = normalizedRuns.find(r => r.scenario_id === activeRunId) || defaultActiveRun;
+  const isActiveDraftSuite = Boolean(active?.draft);
+  const activeRunCandidate = normalizedRuns.find(r => r.scenario_id === activeRunId) || null;
+  const activeRunCandidateSuiteId = activeRunCandidate ? evalSuiteIdForRun(activeRunCandidate, allEvalSuites) : null;
+  const activeRun = isActiveDraftSuite
+    ? null
+    : activeRunCandidate && activeRunCandidateSuiteId === active?.id
+      ? activeRunCandidate
+      : evalBestRunForSuite(normalizedRuns, active, allEvalSuites, runFilter) || defaultActiveRun;
   const activeAxes = activeRun?.score?.axes || [];
   const failedAxes = activeAxes.filter(axis => axis.pass === false);
+  const hasActiveRunEvidence = Boolean(activeRun);
   const failedAxesReviewCopy = failedAxes.length > 0
     ? `${failedAxes.length} failed judge ${failedAxes.length === 1 ? 'axis needs' : 'axes need'} review before this prompt ships.`
     : 'No failed axes selected; use the fail filter to inspect the risk surface.';
+  const commandCenterState = isActiveDraftSuite
+    ? 'draft'
+    : hasActiveRunEvidence
+    ? activeRun.verdict || 'ready'
+    : runsState === 'error'
+      ? 'error'
+      : 'loading';
+  const commandCenterEyebrow = isActiveDraftSuite
+    ? 'draft suite queued'
+    : hasActiveRunEvidence
+    ? activeRun.verdict === 'fail' ? 'active regression' : 'active run'
+    : runsState === 'error' ? 'run evidence unavailable' : 'loading run evidence';
+  const commandCenterTitle = isActiveDraftSuite
+    ? active?.name || 'Draft eval suite'
+    : hasActiveRunEvidence
+    ? evalScenarioTitle(activeRun.scenario_id)
+    : evalScenarioTitle(active?.name || activeId || 'Harness evidence');
+  const commandCenterCopy = isActiveDraftSuite
+    ? `No run evidence exists for this draft yet. Copy the manifest command, run the harness, then attach the resulting artifact before opening local agent admin.`
+    : hasActiveRunEvidence
+    ? failedAxesReviewCopy
+    : runsState === 'error'
+      ? 'Harness run evidence is unavailable; retry the run panel before reviewing prompt risk.'
+      : 'Loading harness run evidence before judge axes, latency, and transcript risk are summarized.';
+  const commandCenterBadgeTone = activeRun?.verdict === 'fail'
+    ? 'critical'
+    : isActiveDraftSuite
+      ? 'neutral'
+      : hasActiveRunEvidence
+      ? 'healthy'
+      : runsState === 'error' ? 'critical' : 'neutral';
+  const commandCenterBadge = isActiveDraftSuite ? 'draft' : activeRun?.verdict || (runsState === 'error' ? 'blocked' : 'loading');
+  const commandCenterScore = isActiveDraftSuite ? evalPct(active?.targetPass || active?.pass) : hasActiveRunEvidence ? evalPct(activeRun?.score?.weighted) : '--';
+  const commandCenterOrbState = activeRun?.verdict === 'fail' ? 'alert' : hasActiveRunEvidence ? 'talking' : 'idle';
+  const commandCenterBarTone = activeRun?.verdict === 'fail' ? 'critical' : hasActiveRunEvidence ? 'healthy' : 'neutral';
+  const commandCenterBars = hasActiveRunEvidence
+    ? activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.88)
+    : [.18,.22,.2,.24,.19,.21,.18,.23];
   const artifactPayload = runDetail || activeRun || {};
   const artifactAxes = Array.isArray(artifactPayload?.score?.axes) ? artifactPayload.score.axes : activeAxes;
   const artifactFailedAxes = artifactAxes.filter(axis => axis.pass === false);
@@ -392,6 +521,7 @@ function EvalsPage({ setRoute }) {
   const artifactVerdict = artifactPayload.verdict || activeRun?.verdict || 'unknown';
   const artifactScore = artifactPayload.score?.weighted ?? activeRun?.score?.weighted;
   const artifactDuration = artifactPayload.duration_ms ?? activeRun?.duration_ms;
+  const artifactReviewLocator = evalArtifactReviewLocator(artifactPayload || activeRun);
   const activeAgentKey = active?.draft && active.agentKey ? active.agentKey : evalAgentKeyForRun(activeRun, active);
   const activeAgent = globalThis.AGENT_REGISTRY.byKey(activeAgentKey) || globalThis.AGENT_REGISTRY.byKey('sales_coach');
   const activeEvalReviewContext = evalReviewContextLabel(activeRun, active);
@@ -415,6 +545,7 @@ function EvalsPage({ setRoute }) {
     (worst, r) => (Number.isFinite(r.duration_ms) && (worst == null || r.duration_ms > worst.duration_ms)) ? r : worst,
     null,
   );
+  const slowestRunTitle = slowestRun ? evalScenarioTitle(slowestRun.scenario_id) : '';
   // Latency budget thresholds mirror the harness scenario YAML axes
   // (ttfb_p95_ms / end_to_first_audio_p95_ms / total_turn_p95_ms). These
   // are conservative GTM-tier defaults; tone goes critical when avg blows
@@ -495,9 +626,25 @@ function EvalsPage({ setRoute }) {
     : evalSuiteWeightedPassRate(realEvalSuites) ?? D.stats?.evalPassRate ?? null;
   const displayedRegressionCount = normalizedRuns.length > 0 ? failCount : suiteRegressionCount;
   const displayedRunCount = normalizedRuns.length > 0 ? normalizedRuns.length : fallbackRunCount;
+  const loadedEvalPassTrend = buildLoadedEvalPassTrend(normalizedRuns);
+  const passTrendSeries = loadedEvalPassTrend.length > 0 ? loadedEvalPassTrend : D.sparks.evalPass;
+  const passTrendDelta = Array.isArray(passTrendSeries) && passTrendSeries.length > 1
+    ? passTrendSeries[passTrendSeries.length - 1] - passTrendSeries[0]
+    : 0;
+  const passTrendLabels = loadedEvalPassTrend.length > 0
+    ? buildLoadedEvalPassLabels(normalizedRuns)
+    : buildEvalSparkLabels(D.sparks.evalPass, 'suite run');
+  const passTrendSourceLabel = loadedEvalPassTrend.length > 0
+    ? `${passCount}/${normalizedRuns.length} loaded harness results`
+    : 'suite-library pass-rate trend';
   const evalHeaderRunLabel = normalizedRuns.length > 0
     ? `${normalizedRuns.length.toLocaleString()} loaded result${normalizedRuns.length === 1 ? '' : 's'} · ${fallbackRunCount.toLocaleString()} suite-library runs`
     : `${fallbackRunCount.toLocaleString()} suite-library runs`;
+  const runFilterLabels = { all:'all runs', fail:'failures', pass:'passes' };
+  const runFilterLabel = runFilterLabels[runFilter] || `${runFilter} runs`;
+  const evalRunFilterSummary = normalizedRuns.length > 0
+    ? `${runFilterLabel} · ${visibleRuns.length.toLocaleString()} of ${normalizedRuns.length.toLocaleString()}`
+    : `${runFilterLabel} · no runs loaded`;
   const selectDomainEvalCommandId = () => {
     const domainCommand = harnessCommands.find(cmd => cmd.id === 'eval-quick')
       || harnessCommands.find(cmd => Array.isArray(cmd.tags) && cmd.tags.includes('domain-eval'));
@@ -519,10 +666,39 @@ function EvalsPage({ setRoute }) {
     const command = harnessCommands.find(cmd => cmd.id === commandId) || { id: commandId };
     openHarnessCommand(command);
   };
-  const openActiveArtifactPanel = () => {
+  const toggleDomainEvalRunPlan = () => {
+    if (bridgeOpen) {
+      setBridgeOpen(false);
+      return;
+    }
+    openDomainEvalRunPlan();
+  };
+  const toggleFailureRuns = () => {
+    if (runFilter === 'fail') {
+      setRunFilter('all');
+      globalThis.toast('All harness runs shown', { sub:'showing pass and fail results', tone:'accent' });
+      return;
+    }
+    setRunFilter('fail');
+    globalThis.toast('Regression filter applied', { sub:'showing failing harness runs', tone:'warn' });
+  };
+  const openEvalArtifactPanelForRun = (run) => {
+    if (!run) return false;
     setBridgeOpen(false);
     setSuiteBuilderOpen(false);
-    setArtifactPath(activeRun?.result_path || '../fixtures/eval-runs.json');
+    setArtifactPath(evalArtifactReviewLocator(run));
+    return true;
+  };
+  const openActiveArtifactPanel = () => {
+    if (!activeRun) {
+      const commandId = activeHarnessCommandId || selectDomainEvalCommandId();
+      if (commandId) setActiveHarnessCommandId(commandId);
+      setArtifactPath(null);
+      setSuiteBuilderOpen(false);
+      setBridgeOpen(true);
+      return;
+    }
+    openEvalArtifactPanelForRun(activeRun);
   };
   const openSuiteBuilder = () => {
     setBridgeOpen(false);
@@ -578,7 +754,15 @@ function EvalsPage({ setRoute }) {
     const name = suiteDraft.name.trim();
     const scenario = suiteDraft.scenario.trim();
     if (!name || !scenario) {
-      setSuiteBuilderError('Suite name and scenario focus are required.');
+      setSuiteBuilderError(!name && !scenario
+        ? 'Suite name and scenario focus are required before a draft can enter the run plan.'
+        : !name
+          ? 'Suite name is required before a draft can enter the run plan.'
+          : 'Scenario focus is required before a draft can enter the run plan.');
+      requestAnimationFrame(() => {
+        const target = !name ? suiteNameInputRef.current : suiteScenarioInputRef.current;
+        target?.focus?.({ preventScroll: true });
+      });
       return;
     }
     const agent = visibleEvalAgents.find(a => a.key === suiteDraft.agentKey) || visibleEvalAgents[0] || {};
@@ -619,6 +803,7 @@ function EvalsPage({ setRoute }) {
     });
     const commandId = selectDomainEvalCommandId();
     setActiveId(draft.id);
+    setActiveRunId(null);
     setActiveHarnessCommandId(commandId);
     setRerunTarget({
       id: draft.id,
@@ -682,12 +867,44 @@ function EvalsPage({ setRoute }) {
         selected_eval_verdict: activeRun?.verdict || 'unknown',
         selected_eval_score: typeof activeRunScore === 'number' ? evalPct(activeRunScore) : '--',
         eval_failed_axes: failedAxes.map(axis => axis.name || axis.id || 'unnamed_axis').join(', ') || 'none',
-        eval_evidence_path: activeRun?.result_path || '../fixtures/eval-runs.json',
+        eval_evidence_path: evalArtifactReviewLocator(activeRun),
         eval_admin_return_route: 'evals',
         triggered_from: 'eval-agent-admin',
       },
     });
     setRoute?.('agents');
+  };
+  const syncActiveEvalContextEvidence = () => {
+    if (!activeRun) {
+      globalThis.toast('Load a harness run first', {
+        sub: 'Context sync needs a concrete harness run and local evidence path.',
+        tone: 'warn',
+      });
+      return;
+    }
+    const prevExtra = globalThis.AppContext.get().extra || {};
+    globalThis.AppContext.set({
+      extra: {
+        ...prevExtra,
+        selected_agent_key: activeAgentKey,
+        eval_run: activeRun || null,
+        selected_eval_suite: activeEvalReviewContext,
+        selected_eval_suite_id: active?.id || activeId,
+        selected_eval_context: activeEvalReviewContext,
+        selected_eval_run: activeRun?.scenario_id || 'none',
+        selected_eval_verdict: activeRun?.verdict || 'unknown',
+        selected_eval_score: evalPct(activeRun?.score?.weighted),
+        eval_failed_axes: failedAxes.map(axis => axis.name || axis.id || 'unnamed_axis').join(', ') || 'none',
+        eval_evidence_path: evalArtifactReviewLocator(activeRun),
+        triggered_from: 'evals-sync',
+      },
+    });
+    openEvalArtifactPanelForRun(activeRun);
+    setLastSyncedAt(new Date());
+    globalThis.toast('Context & evidence synced', {
+      sub: `${activeRun?.scenario_id || activeId} armed as dynamic_variables; evidence drawer open`,
+      tone: 'accent',
+    });
   };
   const hasActiveEvalRun = Boolean(activeRun);
   const canOpenEvalAgentAdmin = hasActiveEvalRun;
@@ -736,6 +953,20 @@ function EvalsPage({ setRoute }) {
   const [runsError, setRunsError] = useState(null);
   const [runsReloadToken, setRunsReloadToken] = useState(0);
   const reloadEvalRuns = () => setRunsReloadToken(n => n + 1);
+  const suiteNameInvalid = Boolean(suiteBuilderError && !suiteDraft.name.trim());
+  const suiteScenarioInvalid = Boolean(suiteBuilderError && !suiteDraft.scenario.trim());
+  const selectEvalRun = React.useCallback((run) => {
+    if (!run?.scenario_id) return;
+    setActiveRunId(run.scenario_id);
+    const suiteId = evalSuiteIdForRun(run, allEvalSuites);
+    if (suiteId) setActiveId(suiteId);
+  }, [allEvalSuites]);
+  const selectEvalSuite = React.useCallback((suite) => {
+    if (!suite?.id) return;
+    setActiveId(suite.id);
+    const run = evalBestRunForSuite(normalizedRuns, suite, allEvalSuites, runFilter);
+    if (run?.scenario_id) setActiveRunId(run.scenario_id);
+  }, [normalizedRuns, allEvalSuites, runFilter]);
 
   // Consume the `suite_filter` handoff key once so re-navigating to
   // Evals later doesn't keep snapping back to 'regressions'. Read on
@@ -744,8 +975,7 @@ function EvalsPage({ setRoute }) {
     const ctx = globalThis.AppContext.get();
     const extra = ctx?.extra || {};
     if (extra.suite_filter == null) return;
-    const { suite_filter, ...rest } = extra;
-    globalThis.AppContext.set({ extra: rest });
+    globalThis.AppContext.set({ extra: page2OmitKeys(extra, ['suite_filter']) });
   }, []);
 
   useEffect(() => {
@@ -805,16 +1035,24 @@ function EvalsPage({ setRoute }) {
 
   useEffect(() => {
     if (normalizedRuns.length === 0) return;
+    if (isActiveDraftSuite) return;
     if (activeRunId && normalizedRuns.some(r => r.scenario_id === activeRunId)) return;
     const firstRegression = normalizedRuns.find(r => r.verdict === 'fail');
-    setActiveRunId((firstRegression || normalizedRuns[0]).scenario_id);
-  }, [normalizedRuns, activeRunId]);
+    const nextRun = firstRegression || normalizedRuns[0];
+    setActiveRunId(nextRun.scenario_id);
+    if (initialSelection?.type !== 'eval') {
+      const suiteId = evalSuiteIdForRun(nextRun, allEvalSuites);
+      if (suiteId) setActiveId(suiteId);
+    }
+  }, [normalizedRuns, activeRunId, allEvalSuites, initialSelection?.type, isActiveDraftSuite]);
 
   useEffect(() => globalThis.AppContext.subscribe((ctx) => {
     if (ctx.selection?.type === 'eval' && D.evalSuites.some(s => s.id === ctx.selection.id)) {
-      setActiveId(ctx.selection.id);
+      if (ctx.selection.id === activeId) return;
+      const suite = allEvalSuites.find(s => s.id === ctx.selection.id);
+      if (suite) selectEvalSuite(suite);
     }
-  }), []);
+  }), [D.evalSuites, activeId, allEvalSuites, selectEvalSuite]);
 
   useEffect(() => {
     const applyEvalsIntent = (ctx) => {
@@ -826,8 +1064,7 @@ function EvalsPage({ setRoute }) {
       setSuiteBuilderOpen(false);
       setBridgeOpen(true);
       const latest = globalThis.AppContext.get().extra || {};
-      const { evals_bridge_open, ...rest } = latest;
-      globalThis.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({ extra: page2OmitKeys(latest, ['evals_bridge_open']) });
     };
     applyEvalsIntent(globalThis.AppContext.get());
     return globalThis.AppContext.subscribe(applyEvalsIntent);
@@ -870,31 +1107,41 @@ function EvalsPage({ setRoute }) {
   useEffect(() => {
     if (!bridgeOpen) return;
     requestAnimationFrame(() => {
-      bridgePanelRef.current?.scrollIntoView({ block:'center', behavior:'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(bridgePanelRef.current, { block:'start' });
     });
   }, [bridgeOpen, activeHarnessCommandId]);
 
   useEffect(() => {
     if (!artifactPath) return;
     requestAnimationFrame(() => {
-      artifactPanelRef.current?.scrollIntoView({ block:'start', behavior:'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(artifactPanelRef.current, { block:'start' });
       artifactPanelRef.current?.focus?.({ preventScroll: true });
     });
   }, [artifactPath]);
 
   return (
     <div className="page page--evals">
-      <PageHeader
-        eyebrow={`${evalHeaderRunLabel} · ${visibleEvalAgentLabel}`}
-        title="Evals"
-        sub="One native console for voice-agent regressions: scenario coverage, judge evidence, transcript replay, and the agent admin context that caused the behavior."
-        actions={<>
+      <h1 id="console-page-title" className="sr-only ph__title">Evals</h1>
+
+      <section className="eval-control-rail" data-testid="eval-control-rail" aria-label="Evals command controls">
+        <div className="eval-control-rail__filters">
           <Segmented value={runFilter} onChange={setRunFilter} options={[
             { value:'all', label:'All' },
             { value:'fail', label:'Fail' },
             { value:'pass', label:'Pass' },
           ]} />
-          <button className="btn btn--ghost btn--sm" onClick={openActiveArtifactPanel}><I3.Doc size={12}/>Artifacts</button>
+          <span className="mono eval-control-rail__chip">{evalHeaderRunLabel}</span>
+          <span className="mono eval-control-rail__chip">{visibleEvalAgentLabel}</span>
+        </div>
+        <div className="eval-control-rail__actions">
+          <button
+            className="btn btn--ghost btn--sm"
+            data-testid="eval-header-artifacts-open"
+            aria-label="Open evaluation artifact drawer"
+            aria-controls="eval-artifact-panel"
+            aria-expanded={Boolean(artifactPath)}
+            onClick={openActiveArtifactPanel}
+          ><I3.Doc size={12}/>Artifacts</button>
           <button className="btn btn--ghost btn--sm" onClick={() => {
             globalThis.AppContext.set({
               extra: {
@@ -906,10 +1153,21 @@ function EvalsPage({ setRoute }) {
             globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab:'evals' } }));
             setRoute?.('settings');
           }}><I3.Cog size={12}/>Policy</button>
-          <button className="btn btn--ghost btn--sm" onClick={openDomainEvalRunPlan}><I3.Bracket size={12}/>Run plan</button>
-          <button className="btn btn--primary btn--sm" onClick={openSuiteBuilder}><I3.Plus size={12}/>New suite</button>
-        </>}
-      />
+          <button
+            className="btn btn--ghost btn--sm"
+            data-testid="eval-header-run-plan-open"
+            aria-label={bridgeOpen ? 'Close local eval run plan drawer' : 'Open local eval run plan drawer'}
+            aria-controls="eval-harness-bridge"
+            aria-expanded={bridgeOpen}
+            onClick={toggleDomainEvalRunPlan}
+          ><I3.Bracket size={12}/>{bridgeOpen ? 'Close run plan' : 'Run plan'}</button>
+          <button
+            className="btn btn--primary btn--sm"
+            data-testid="eval-new-suite-open"
+            onClick={openSuiteBuilder}
+          ><I3.Plus size={12}/>New suite</button>
+        </div>
+      </section>
 
       {suiteBuilderOpen && (
         <div className="workflow-popout workflow-popout--single eval-suite-builder" role="region" aria-label="New eval suite builder" data-testid="eval-suite-builder">
@@ -928,13 +1186,20 @@ function EvalsPage({ setRoute }) {
               <label className="field">
                 <span className="field__label">Suite name</span>
                 <input
+                  ref={suiteNameInputRef}
                   className="input"
                   data-testid="eval-suite-builder-name"
                   aria-label="Suite name"
-                  placeholder="Refund objection stress"
+                  aria-describedby="eval-suite-builder-name-hint"
+                  aria-invalid={suiteNameInvalid}
+                  placeholder="Name this suite"
                   value={suiteDraft.name}
-                  onChange={(e) => setSuiteDraft(d => ({ ...d, name: e.target.value }))}
+                  onChange={(e) => {
+                    setSuiteBuilderError('');
+                    setSuiteDraft(d => ({ ...d, name: e.target.value }));
+                  }}
                 />
+                <span id="eval-suite-builder-name-hint" className="field__hint">Local draft label; the harness command is selected after save.</span>
               </label>
               <label className="field">
                 <span className="field__label">ElevenLabs agent</span>
@@ -943,7 +1208,10 @@ function EvalsPage({ setRoute }) {
                   data-testid="eval-suite-builder-agent"
                   aria-label="ElevenLabs agent"
                   value={suiteDraft.agentKey}
-                  onChange={(e) => setSuiteDraft(d => ({ ...d, agentKey: e.target.value }))}
+                  onChange={(e) => {
+                    setSuiteBuilderError('');
+                    setSuiteDraft(d => ({ ...d, agentKey: e.target.value }));
+                  }}
                 >
                   {visibleEvalAgents.map(a => (
                     <option key={a.key} value={a.key}>{a.display_name}</option>
@@ -957,7 +1225,10 @@ function EvalsPage({ setRoute }) {
                   data-testid="eval-suite-builder-owner"
                   aria-label="Owner"
                   value={suiteDraft.owner}
-                  onChange={(e) => setSuiteDraft(d => ({ ...d, owner: e.target.value }))}
+                  onChange={(e) => {
+                    setSuiteBuilderError('');
+                    setSuiteDraft(d => ({ ...d, owner: e.target.value }));
+                  }}
                 />
               </label>
               <label className="field">
@@ -967,7 +1238,10 @@ function EvalsPage({ setRoute }) {
                   data-testid="eval-suite-builder-target"
                   aria-label="Target pass rate"
                   value={suiteDraft.passTarget}
-                  onChange={(e) => setSuiteDraft(d => ({ ...d, passTarget: e.target.value }))}
+                  onChange={(e) => {
+                    setSuiteBuilderError('');
+                    setSuiteDraft(d => ({ ...d, passTarget: e.target.value }));
+                  }}
                 >
                   <option value="0.85">85%</option>
                   <option value="0.90">90%</option>
@@ -977,13 +1251,20 @@ function EvalsPage({ setRoute }) {
               <label className="field eval-suite-builder__scenario">
                 <span className="field__label">Scenario focus</span>
                 <textarea
+                  ref={suiteScenarioInputRef}
                   className="textarea"
                   data-testid="eval-suite-builder-scenario"
                   aria-label="Scenario focus"
-                  placeholder="Caller asks for refund terms after a missed appointment; agent must acknowledge, collect details, and escalate without inventing policy."
+                  aria-describedby="eval-suite-builder-scenario-hint"
+                  aria-invalid={suiteScenarioInvalid}
+                  placeholder="Describe caller behavior and success criteria"
                   value={suiteDraft.scenario}
-                  onChange={(e) => setSuiteDraft(d => ({ ...d, scenario: e.target.value }))}
+                  onChange={(e) => {
+                    setSuiteBuilderError('');
+                    setSuiteDraft(d => ({ ...d, scenario: e.target.value }));
+                  }}
                 />
+                <span id="eval-suite-builder-scenario-hint" className="field__hint">No fixture copy here; write the failure mode the next run should prove.</span>
               </label>
             </div>
             {suiteBuilderError && <div className="eval-suite-builder__error" role="alert">{suiteBuilderError}</div>}
@@ -995,30 +1276,63 @@ function EvalsPage({ setRoute }) {
         </div>
       )}
 
-      <section className="eval-command-center">
+      <section className="eval-command-center" data-testid="eval-command-center" data-state={commandCenterState}>
         <div className="eval-command-center__copy">
-          <div className="eyebrow eyebrow--accent">active regression</div>
-          <h2 data-testid="eval-active-scenario-title">{evalScenarioTitle(activeRun?.scenario_id || active.name)}</h2>
-          <p data-testid="eval-active-regression-review-copy">{failedAxesReviewCopy}</p>
+          <div className="eyebrow eyebrow--accent">{commandCenterEyebrow}</div>
+          <h2 data-testid="eval-active-scenario-title">{commandCenterTitle}</h2>
+          <p data-testid="eval-active-regression-review-copy">{commandCenterCopy}</p>
           <div className="eval-command-center__meta">
-            <Badge tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}>{activeRun?.verdict || 'ready'}</Badge>
-            <span className="mono">{evalPct(activeRun?.score?.weighted)}</span>
+            <Badge tone={commandCenterBadgeTone}>{commandCenterBadge}</Badge>
+            <span className="mono">{commandCenterScore}</span>
             {activeRun?.scenario_id && <span className="mono eval-command-center__scenario-id" data-testid="eval-active-scenario-id">scenario {activeRun.scenario_id}</span>}
+            {active?.name && <span className="mono eval-command-center__suite-id" data-testid="eval-active-suite-context">suite {active.name}</span>}
             <span className="mono">{activeAgent?.display_name || 'Sales Coach'}</span>
           </div>
+          {hasActiveRunEvidence && (
+            <div className="eval-command-center__actions" aria-label="Active eval local review actions">
+	              <button
+	                type="button"
+	                className="btn btn--primary btn--sm"
+	                data-testid="eval-command-center-review-evidence"
+	                aria-controls={artifactPath ? 'eval-artifact-panel' : undefined}
+	                onClick={openActiveArtifactPanel}
+	              >
+                <I3.Doc size={12}/>
+                Review evidence
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                data-testid="eval-command-center-sync-context"
+                onClick={syncActiveEvalContextEvidence}
+              >
+                <I3.Refresh size={12}/>
+                Sync context &amp; evidence
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                data-testid="eval-command-center-open-agent-admin"
+                onClick={openEvalAgentAdmin}
+              >
+                <I3.Bot size={12}/>
+                Open local agent admin
+              </button>
+            </div>
+          )}
         </div>
         <div className="eval-command-center__voice" aria-label="ElevenLabs eval state">
           <window.ElevenUI.Orb
-            state={activeRun?.verdict === 'fail' ? 'alert' : 'talking'}
+            state={commandCenterOrbState}
             size={54}
             color1={activeAgent?.avatar_color_1}
             color2={activeAgent?.avatar_color_2}
             label={`${activeAgent?.display_name || 'ElevenLabs'} eval state`}
           />
           <window.ElevenUI.BarVisualizer
-            active={true}
-            tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}
-            bars={activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.88)}
+            active={hasActiveRunEvidence}
+            tone={commandCenterBarTone}
+            bars={commandCenterBars}
           />
         </div>
       </section>
@@ -1029,14 +1343,15 @@ function EvalsPage({ setRoute }) {
         <Stat
           label="Pass rate"
           value={evalPct(displayedPassRate)}
-          tone={evalScoreTone(displayedPassRate)}
-          spark={D.sparks.evalPass}
-          sparkLabels={buildEvalSparkLabels(D.sparks.evalPass, 'suite run')}
-          sparkColor="var(--healthy)"
+          tone={evalAggregateTone(displayedPassRate)}
+          spark={passTrendSeries}
+          sparkLabels={passTrendLabels}
+          sparkColor={passTrendDelta < 0 ? 'var(--warning)' : 'var(--healthy)'}
+          sparkLabel={`Pass rate trend: ${passTrendSourceLabel}`}
           accent
         />
         <Stat label="Regressions" value={displayedRegressionCount} tone={displayedRegressionCount > 0 ? 'critical' : 'healthy'} />
-        <Stat label="Mean score" value={meanScore == null ? '74%' : evalPct(meanScore)} tone={evalScoreTone(meanScore)} />
+        <Stat label="Mean score" value={meanScore == null ? '74%' : evalPct(meanScore)} tone={evalAggregateTone(meanScore)} />
         <Stat
           label="Avg latency"
           value={avgLatencyMs == null ? '--' : evalDuration(Math.round(avgLatencyMs))}
@@ -1062,7 +1377,11 @@ function EvalsPage({ setRoute }) {
           )}
           {slowestRun && (
             <span className="mono">
-              slowest: <strong data-testid="eval-slowest-scenario">{slowestRun.scenario_id}</strong> · <span data-testid="eval-slowest-duration">{evalDuration(slowestRun.duration_ms)}</span>
+              slowest: <strong
+                data-testid="eval-slowest-scenario"
+                data-scenario-id={slowestRun.scenario_id}
+                title={`scenario ${slowestRun.scenario_id}`}
+              >{slowestRunTitle}</strong> · <span data-testid="eval-slowest-duration">{evalDuration(slowestRun.duration_ms)}</span>
             </span>
           )}
         </div>
@@ -1110,17 +1429,25 @@ function EvalsPage({ setRoute }) {
                 ? `${activeHarnessCommand?.name || activeHarnessCommandId} selected`
                 : 'No harness command queued.'}
           </strong>
-          <div className="mono dim" data-testid="eval-harness-manifest-status">
+          <div
+            className="mono dim"
+            data-testid="eval-harness-manifest-status"
+            data-schema-version={harnessManifest?.schema_version || ''}
+          >
             {harnessManifestState === 'loading' && 'loading eval-harness.manifest.json…'}
             {harnessManifestState === 'ready' && harnessManifest && (
-              <>manifest · {harnessManifest.schema_version} · {harnessCommands.length} commands</>
+              <>manifest ready · {harnessCommands.length} local commands</>
             )}
             {harnessManifestState === 'error' && 'manifest unreachable — run plan is read-only'}
+          </div>
+          <div className="eval-run-plan-summary__path" data-testid="eval-run-plan-summary-path">
+            command -&gt; local artifact drawer -&gt; local agent admin
           </div>
         </div>
         <button
           className="btn btn--ghost btn--sm"
           data-testid="eval-run-plan-open"
+          aria-controls="eval-harness-bridge"
           aria-expanded={bridgeOpen}
           onClick={() => {
             // Toggle: a second click on the surfacing button while the
@@ -1135,13 +1462,19 @@ function EvalsPage({ setRoute }) {
       </section>
 
       {bridgeOpen && (
-        <div ref={bridgePanelRef} className="workflow-popout workflow-popout--single eval-bridge-popout" role="region" aria-label="Local eval run plan details">
+        <div
+          ref={bridgePanelRef}
+          className="workflow-popout workflow-popout--single eval-bridge-popout"
+          data-testid="eval-harness-bridge"
+          role="region"
+          aria-label="Local eval run plan details"
+        >
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
                 <div className="eyebrow eyebrow--accent">local run plan</div>
                 <div className="workflow-popout__title">Manifest command handoff</div>
-                <div className="muted" style={{fontSize:12}}>Manifest: eval-harness.manifest.json. Harness repo: ../voice_ai_agent_evals. Outputs land in logs/eval-harness and the console eval-run artifacts.</div>
+                <div className="muted" style={{fontSize:12}}>Command source: eval-harness.manifest.json. Outputs stay attached to reviewable console run artifacts before any external harness follow-up.</div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close eval run plan" onClick={() => setBridgeOpen(false)}><I3.Close size={14}/></button>
             </div>
@@ -1174,6 +1507,29 @@ function EvalsPage({ setRoute }) {
                         : 'no artifact declared'}
                     </Badge>
                   </div>
+                  <div className="eval-run-plan__actions">
+                    <button className="btn btn--primary btn--sm" onClick={() => copyHarnessCommand(activeHarnessCommand)}><I3.Doc size={12}/>Copy command</button>
+                    <button
+                      className="btn btn--ghost btn--sm"
+                      data-testid="eval-run-plan-open-artifact"
+                      disabled={!activeRun}
+                      onClick={openActiveArtifactPanel}
+                      title={activeRun?.scenario_id ? `Open ${activeRun.scenario_id} locally` : 'Run the harness before a local artifact exists'}
+                    >
+                      <I3.Doc size={12}/>
+                      Open local run artifact
+                    </button>
+                    <button
+                      className="btn btn--ghost btn--sm"
+                      data-testid="eval-run-plan-open-agent-admin"
+                      disabled={!canOpenEvalAgentAdmin}
+                      title={canOpenEvalAgentAdmin ? 'Open this eval run in local ElevenLabs agent admin' : 'Load a harness run before opening local agent admin'}
+                      onClick={openEvalAgentAdmin}
+                    >
+                      <I3.Bot size={12}/>
+                      Open local agent admin
+                    </button>
+                  </div>
                   {Array.isArray(activeHarnessCommand.artifacts) && activeHarnessCommand.artifacts.length > 0 && (
                     <div className="eval-run-plan__artifacts">
                       {activeHarnessCommand.artifacts.map(artifact => (
@@ -1184,16 +1540,28 @@ function EvalsPage({ setRoute }) {
                       ))}
                     </div>
                   )}
-                  <div className="eval-run-plan__actions">
-                    <button className="btn btn--primary btn--sm" onClick={() => copyHarnessCommand(activeHarnessCommand)}><I3.Doc size={12}/>Copy command</button>
-                    <button
-                      className="btn btn--ghost btn--sm"
-                      onClick={openActiveArtifactPanel}
-                      title={activeRun?.scenario_id ? `Open ${activeRun.scenario_id} locally` : 'Open selected run artifact locally'}
-                    >
-                      <I3.Doc size={12}/>
-                      Open local run artifact
-                    </button>
+                  <div className="eval-run-plan__review-path" data-testid="eval-run-plan-review-path" aria-label="Eval run local review path">
+                    <div data-state="ready">
+                      <span className="eval-run-plan__path-index">1</span>
+                      <div>
+                        <strong>Command</strong>
+                        <p>Copy the manifest command without leaving the console.</p>
+                      </div>
+                    </div>
+                    <div data-state={activeRun ? 'ready' : 'blocked'}>
+                      <span className="eval-run-plan__path-index">2</span>
+                      <div>
+                        <strong>Artifact review</strong>
+                        <p>{activeRun ? `${evalScenarioTitle(activeRun.scenario_id)} opens as local evidence.` : 'Load a harness run before opening evidence.'}</p>
+                      </div>
+                    </div>
+                    <div data-state={canOpenEvalAgentAdmin ? 'ready' : 'blocked'}>
+                      <span className="eval-run-plan__path-index">3</span>
+                      <div>
+                        <strong>Agent admin</strong>
+                        <p>ElevenLabs context opens in the local admin wrapper.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1224,11 +1592,13 @@ function EvalsPage({ setRoute }) {
 
       {artifactPath && (
         <div
+          id="eval-artifact-panel"
           ref={artifactPanelRef}
           className="workflow-popout workflow-popout--single eval-artifact-panel"
           role="region"
           aria-label="Evaluation artifact drawer"
           data-testid="eval-artifact-panel"
+          data-review-locator={artifactPath || ''}
           tabIndex={-1}
         >
           <div className="workflow-popout__pane">
@@ -1260,8 +1630,8 @@ function EvalsPage({ setRoute }) {
                   <code className="mono">{evalDuration(artifactDuration)}</code>
                 </div>
                 <div>
-                  <span className="eyebrow">local path</span>
-                  <code className="mono" data-testid="eval-artifact-path">{artifactPath}</code>
+                  <span className="eyebrow">review locator</span>
+                  <code className="mono" data-testid="eval-artifact-path">{artifactReviewLocator}</code>
                 </div>
               </div>
               <div className="eval-artifact-review__axes" aria-label="Judge axis evidence">
@@ -1306,20 +1676,37 @@ function EvalsPage({ setRoute }) {
                 data-active={activeId === s.id}
                 data-draft={s.draft ? 'true' : 'false'}
                 style={{paddingLeft: activeId === s.id ? 10 : 4}}>
-                <button className="eval-suite-row__select" aria-pressed={activeId === s.id} onClick={()=>setActiveId(s.id)}>
-                  <div>
-                    <div style={{fontSize:13, fontWeight:600, marginBottom:2}}>{s.name}</div>
-                    <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>
-                      {s.draft ? `draft · ${s.agentName || s.owner} · target ${evalPct(s.targetPass || s.pass)}` : `${s.runs.toLocaleString()} runs · last ${s.latest} · ${s.owner}`}
+                <button className="eval-suite-row__select" aria-pressed={activeId === s.id} onClick={()=>selectEvalSuite(s)}>
+                  <div className="eval-suite-row__copy">
+                    <div className="eval-suite-row__title">{s.name}</div>
+                    <div
+                      className="mono eval-suite-row__meta"
+                      aria-label={s.draft
+                        ? `draft suite, ${s.agentName || s.owner}, target ${evalPct(s.targetPass || s.pass)}`
+                        : `${s.runs.toLocaleString()} runs, last ${s.latest}, owner ${s.owner}`}
+                    >
+                      {s.draft ? (
+                        <>
+                          <span className="eval-suite-row__meta-item">draft</span>
+                          <span className="eval-suite-row__meta-item">{s.agentName || s.owner}</span>
+                          <span className="eval-suite-row__meta-item">target {evalPct(s.targetPass || s.pass)}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="eval-suite-row__meta-item">{s.runs.toLocaleString()} runs</span>
+                          <span className="eval-suite-row__meta-item">last {s.latest}</span>
+                          <span className="eval-suite-row__meta-item">owner {s.owner}</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div>
+                  <div className="eval-suite-row__metric">
                     <div className="progress" style={{marginBottom:4}}>
                       <div className={`progress__fill progress__fill--${s.draft || s.pass >= 0.85 ? 'healthy' : s.pass >= 0.75 ? 'accent' : 'warn'}`} style={{width:`${(s.draft ? (s.targetPass || s.pass || 0) : s.pass) * 100}%`}}/>
                     </div>
                     <div className="mono num" style={{fontSize:11, color:'var(--text-2)'}}>{s.draft ? 'draft' : `${(s.pass*100).toFixed(1)}%`}</div>
                   </div>
-                  <div className={`mono num ${s.delta > 0 ? 'cl-ok' : s.delta < 0 ? 'cl-err' : 'dim'}`} style={{fontSize:12, fontWeight:600, textAlign:'right'}}>
+                  <div className={`eval-suite-row__delta mono num ${s.delta > 0 ? 'cl-ok' : s.delta < 0 ? 'cl-err' : 'dim'}`}>
                     {s.draft ? 'new' : `${s.delta > 0 ? '▲' : s.delta < 0 ? '▼' : '·'} ${(Math.abs(s.delta)*100).toFixed(1)}%`}
                   </div>
                 </button>
@@ -1372,17 +1759,22 @@ function EvalsPage({ setRoute }) {
             )}
           </Card>
 
-          <Card title={`harness runs${normalizedRuns.length > 0 ? ` · ${normalizedRuns.length}` : ''}`} action={
+          <Card title={`harness runs · ${runFilterLabel}${normalizedRuns.length > 0 ? ` · ${visibleRuns.length}` : ''}`} action={
             <span className="hstack" style={{gap:8, alignItems:'center'}}>
+              <span className="mono dim" data-testid="eval-runs-filter-summary" style={{fontSize:10}}>
+                {evalRunFilterSummary}
+              </span>
               <span data-testid="eval-runs-source-badge">
                 <Badge
                   tone={runsState === 'live' ? 'healthy' : runsState === 'fixture' ? 'accent' : runsState === 'loading' ? 'neutral' : runsState === 'error' ? 'critical' : 'neutral'}
                 >{runsState}</Badge>
               </span>
-              <button className="btn btn--ghost btn--xs" onClick={() => {
-                setRunFilter('fail');
-                globalThis.toast('Regression filter applied', { sub:'showing failing harness runs', tone:'warn' });
-              }}><I3.Flag size={10}/>failures</button>
+              <button
+                className="btn btn--ghost btn--xs"
+                data-testid="eval-runs-filter-toggle"
+                aria-pressed={runFilter === 'fail'}
+                onClick={toggleFailureRuns}
+              ><I3.Flag size={10}/>{runFilter === 'fail' ? 'show all runs' : 'show failures'}</button>
             </span>
           }>
             <div className="eval-run-list" role="group" aria-label="Evaluation harness runs">
@@ -1416,12 +1808,12 @@ function EvalsPage({ setRoute }) {
                   data-popout={`${r.scenario_id}: ${r.verdict}, ${evalPct(r.score.weighted)} score, ${(r.score.axes || []).filter(axis => axis.pass === false).length} failed axes`}
                   data-verdict={r.verdict}
                   data-active={activeRun?.scenario_id === r.scenario_id}
-                  onClick={() => setActiveRunId(r.scenario_id)}
+                  onClick={() => selectEvalRun(r)}
                 >
                   <button
                     className="eval-run-row__select"
                     aria-pressed={activeRun?.scenario_id === r.scenario_id}
-                    onClick={(e) => { e.stopPropagation(); setActiveRunId(r.scenario_id); }}
+                    onClick={(e) => { e.stopPropagation(); selectEvalRun(r); }}
                   >
                     <div>
                       <div className="eval-run-row__title">{evalScenarioTitle(r.scenario_id)}</div>
@@ -1439,13 +1831,12 @@ function EvalsPage({ setRoute }) {
                     >{Number.isFinite(r.duration_ms) ? evalDuration(r.duration_ms) : '--'}</div>
                     <div className="eval-score-pill" data-tone={evalScoreTone(r.score.weighted)}>{evalPct(r.score.weighted)}</div>
                   </button>
-                  {r.result_path && (
-                    <button
-                      className="btn btn--ghost btn--icon"
-                      aria-label={`Inspect result for ${r.scenario_id}`}
-                      onClick={(e) => { e.stopPropagation(); setActiveRunId(r.scenario_id); setArtifactPath(r.result_path); }}
-                    ><I3.Bracket size={12}/></button>
-                  )}
+                  <button
+                    className="btn btn--ghost btn--icon"
+                    aria-label={`Review local evidence for ${r.scenario_id}`}
+                    title="Review local evidence"
+                    onClick={(e) => { e.stopPropagation(); selectEvalRun(r); openEvalArtifactPanelForRun(r); }}
+                  ><I3.Bracket size={12}/></button>
                 </div>
               ))}
             </div>
@@ -1607,32 +1998,7 @@ function EvalsPage({ setRoute }) {
                   disabled={!canSyncEvalEvidence}
                   title={canSyncEvalEvidence ? 'Sync this harness run into agent context and open its evidence drawer' : 'Load a harness run before syncing context and evidence'}
                   aria-label={canSyncEvalEvidence ? 'Sync selected eval run context and evidence' : 'Context and evidence sync unavailable until a harness run loads'}
-                  onClick={() => {
-                    if (!activeRun) return;
-                    const prevExtra = globalThis.AppContext.get().extra || {};
-                    globalThis.AppContext.set({
-                      extra: {
-                        ...prevExtra,
-                        selected_agent_key: activeAgentKey,
-                        eval_run: activeRun || null,
-                        selected_eval_suite: activeEvalReviewContext,
-                        selected_eval_suite_id: active?.id || activeId,
-                        selected_eval_context: activeEvalReviewContext,
-                        selected_eval_run: activeRun?.scenario_id || 'none',
-                        selected_eval_verdict: activeRun?.verdict || 'unknown',
-                        selected_eval_score: evalPct(activeRun?.score?.weighted),
-                        eval_failed_axes: failedAxes.map(axis => axis.name || axis.id || 'unnamed_axis').join(', ') || 'none',
-                        eval_evidence_path: activeRun?.result_path || '../fixtures/eval-runs.json',
-                        triggered_from: 'evals-sync',
-                      },
-                    });
-                    setArtifactPath(activeRun?.result_path || '../fixtures/eval-runs.json');
-                    setLastSyncedAt(new Date());
-                    globalThis.toast('Context & evidence synced', {
-                      sub: `${activeRun?.scenario_id || activeId} armed as dynamic_variables; evidence drawer open`,
-                      tone: 'accent',
-                    });
-                  }}
+                  onClick={syncActiveEvalContextEvidence}
                 ><I3.Refresh size={12}/>Sync context &amp; evidence</button>
                 {lastSyncedAt && (
                   <span
@@ -1721,15 +2087,16 @@ function ProposalsPage({ setRoute }) {
   const [reviewArtifactKey, setReviewArtifactKey] = useState('proposal');
   const [reviewArtifactPayload, setReviewArtifactPayload] = useState(null);
   const [reviewArtifactState, setReviewArtifactState] = useState('idle');
+  const proposalWorkflowRef = useRef(null);
   const active = D.proposals.find(p => p.id === activeId) || D.proposals[0];
   const proposalReviewPacket = (proposal) => {
     const rawArtifacts = Array.isArray(proposal?.artifacts) ? proposal.artifacts : [];
     const findArtifact = (type) => rawArtifacts.find(a => a?.type === type);
-    const fallbackPdf = '../assets/sample-proposal.pdf';
-    const fallbackJson = '../fixtures/transcripts/sample-proposal.json';
-    const usableWebPath = (artifact, fallback) => {
+    const usableWebPath = (artifact) => {
       const webPath = String(artifact?.webPath || '').trim();
-      return webPath && webPath !== '#' ? webPath : fallback;
+      if (!webPath || webPath === '#') return '';
+      if (/sample-proposal\.(?:pdf|json)(?:$|\?)/i.test(webPath)) return '';
+      return webPath;
     };
     const pdf = findArtifact('pdf');
     const json = findArtifact('json');
@@ -1739,21 +2106,21 @@ function ProposalsPage({ setRoute }) {
         key: 'proposal',
         label: 'Proposal PDF',
         sourcePath: pdf?.path || `review/${proposal?.id || 'proposal'}/proposal.pdf`,
-        previewPath: usableWebPath(pdf, fallbackPdf),
+        previewPath: usableWebPath(pdf),
         state: proposal?.stage === 'signed' ? 'sent' : (proposal?.blockers?.length ? 'needs review' : 'ready'),
       },
       {
         key: 'source',
         label: 'Source evidence',
         sourcePath: json?.path || `review/${proposal?.id || 'proposal'}/source-evidence.json`,
-        previewPath: usableWebPath(json, fallbackJson),
+        previewPath: usableWebPath(json),
         state: 'bound',
       },
       {
         key: 'audit',
         label: 'Audit packet',
         sourcePath: audit?.path || `review/${proposal?.id || 'proposal'}/audit-report.pdf`,
-        previewPath: usableWebPath(audit, fallbackPdf),
+        previewPath: usableWebPath(audit),
         state: proposal?.auditScore ? `score ${proposal.auditScore}` : 'pending',
       },
     ];
@@ -1768,6 +2135,26 @@ function ProposalsPage({ setRoute }) {
   const activeReview = proposalReviewPacket(active);
   const selectedReviewArtifact = activeReview.items.find(item => item.key === reviewArtifactKey) || activeReview.pdf;
   const selectedReviewIsJson = selectedReviewArtifact.key === 'source' || /\.json(?:$|\?)/i.test(String(selectedReviewArtifact.previewPath || ''));
+  const localProposalArtifactPayload = (proposal, artifact, review) => ({
+    artifact_id: `${review.packetId}:${artifact.key}`,
+    proposal_id: proposal.id,
+    buyer: proposal.co,
+    artifact: artifact.label,
+    source_path: artifact.sourcePath,
+    status: artifact.key === 'source' ? 'source_evidence_bound' : 'local_review_sheet',
+    stage: proposal.stage,
+    gate: review.gate,
+    annual_value: proposal.amount,
+    owner: proposal.owner,
+    sent: proposal.sent,
+    viewed: proposal.viewed,
+    section_progress: {
+      accepted: proposal.accepted,
+      total: proposal.sections,
+    },
+    blockers: Array.isArray(proposal.blockers) ? proposal.blockers : [],
+    note: 'Generated in-console from the selected proposal record; no shared sample artifact is used.',
+  });
 
   const defaultRecipient = (proposal) => {
     if (!proposal?.co) return '';
@@ -1849,6 +2236,12 @@ function ProposalsPage({ setRoute }) {
   const openProposalCount = D.proposals.filter(p => isOpenProposalStage(p.stage)).length;
   const proposalTotal = formatProposalTotal(D.proposals.reduce((sum, p) => sum + proposalAmountToThousands(p.amount), 0));
   const proposalListLabel = filter;
+  const blockedProposalCount = D.proposals.filter(p => Array.isArray(p.blockers) && p.blockers.length > 0).length;
+  const blockerCount = D.proposals.reduce((s, p) => s + (Array.isArray(p.blockers) ? p.blockers.length : 0), 0);
+  const signedProposalCount = D.proposals.filter(p => String(p.stage || '').toLowerCase() === 'signed').length;
+  const totalSections = D.proposals.reduce((sum, p) => sum + (Number(p.sections) || 0), 0);
+  const acceptedSections = D.proposals.reduce((sum, p) => sum + (Number(p.accepted) || 0), 0);
+  const acceptanceRate = totalSections > 0 ? Math.round((acceptedSections / totalSections) * 100) : 0;
 
   // Publish active proposal so the sales coach can copilot it.
   useEffect(() => {
@@ -1877,6 +2270,11 @@ function ProposalsPage({ setRoute }) {
       setReviewArtifactState('idle');
       return undefined;
     }
+    if (!selectedReviewArtifact.previewPath) {
+      setReviewArtifactPayload(localProposalArtifactPayload(active, selectedReviewArtifact, activeReview));
+      setReviewArtifactState('ready');
+      return undefined;
+    }
     let cancelled = false;
     setReviewArtifactState('loading');
     fetch(selectedReviewArtifact.previewPath)
@@ -1899,9 +2297,17 @@ function ProposalsPage({ setRoute }) {
       });
     return () => { cancelled = true; };
   }, [proposalWorkflow?.kind, selectedReviewArtifact.key, selectedReviewArtifact.previewPath, selectedReviewIsJson]);
+  useEffect(() => {
+    if (!proposalWorkflow) return undefined;
+    const frame = requestAnimationFrame(() => {
+      globalThis.scrollConsoleNodeIntoView?.(proposalWorkflowRef.current, { block:'start', margin:18 });
+      proposalWorkflowRef.current?.focus?.({ preventScroll:true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [proposalWorkflow?.kind, active.id]);
 
   return (
-    <div className="page">
+    <div className="page page--proposals">
       <PageHeader
         eyebrow={`${D.proposals.length} proposals · ${openProposalCount} open · ${proposalTotal} total`}
         title="Proposals"
@@ -1923,72 +2329,125 @@ function ProposalsPage({ setRoute }) {
         </>}
       />
 
-      <div className="split split--2">
+      <section className="proposals-command-strip" aria-label="Proposal review queue">
+        <div className="proposal-kpi">
+          <span className="eyebrow eyebrow--accent">open review</span>
+          <strong>{openProposalCount}</strong>
+          <span>open approvals</span>
+        </div>
+        <div className="proposal-kpi" data-state={blockedProposalCount > 0 ? 'blocked' : 'clear'}>
+          <span className="eyebrow eyebrow--accent">blockers</span>
+          <strong>{blockerCount}</strong>
+          <span>{blockedProposalCount} proposal{blockedProposalCount === 1 ? '' : 's'}</span>
+        </div>
+        <div className="proposal-kpi">
+          <span className="eyebrow eyebrow--accent">accepted</span>
+          <strong>{acceptanceRate}%</strong>
+          <span>{acceptedSections}/{totalSections} sections</span>
+        </div>
+        <div className="proposal-kpi">
+          <span className="eyebrow eyebrow--accent">signed</span>
+          <strong>{signedProposalCount}</strong>
+          <span>{proposalTotal} reviewed</span>
+        </div>
+      </section>
+
+      <div className="split split--2 proposals-workbench">
         <Card title={`${proposalListLabel} proposals · ${filtered.length}`} className="card--accent proposals-list-card">
-          <div className="vstack" style={{gap:0}}>
-            {filtered.map(p => (
-              <div key={p.id}
-                className="inspectable"
-                data-testid="proposal-row"
-                data-active={activeId === p.id ? 'true' : 'false'}
-                data-popout={`${p.id}: ${p.co}, ${p.amount}, ${p.stage}, ${p.accepted}/${p.sections} sections accepted`}
-                role="button"
-                tabIndex={0}
-                aria-pressed={activeId === p.id}
-                onClick={()=>setActiveId(p.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(p.id); } }}
-                style={{padding:'14px 4px', borderBottom:'1px dashed var(--border)', display:'grid', gridTemplateColumns:'1fr auto', gap:12, cursor:'pointer', borderLeft: activeId === p.id ? '2px solid var(--sunset-500)' : '2px solid transparent', paddingLeft: activeId === p.id ? 10 : 4}}>
-                <div>
-                  <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
-                    <span className="mono" style={{fontSize:11, color:'var(--accent-fg)', fontWeight:600}}>{p.id}</span>
-                    <Badge tone={p.stage === 'signed' ? 'healthy' : p.stage === 'legal' || p.stage === 'redlines' ? 'warn' : 'accent'}>{p.stage}</Badge>
-                    {p.blockers.length > 0 && <Badge tone="critical">{p.blockers.length} blocker{p.blockers.length > 1 ? 's' : ''}</Badge>}
+          <div className="proposal-queue" role="list" aria-label={`${proposalListLabel} proposal queue`}>
+            {filtered.map(p => {
+              const rowBlockers = Array.isArray(p.blockers) ? p.blockers : [];
+              return (
+              <div key={p.id} role="listitem" className="proposal-queue-item">
+                <button
+                  type="button"
+                  className="inspectable proposal-queue-row"
+                  data-testid="proposal-row"
+                  data-active={activeId === p.id ? 'true' : 'false'}
+                  data-popout={`${p.id}: ${p.co}, ${p.amount}, ${p.stage}, ${p.accepted}/${p.sections} sections accepted`}
+                  aria-label={`Select proposal ${p.id} for ${p.co}`}
+                  aria-pressed={activeId === p.id}
+                  onClick={()=>setActiveId(p.id)}
+                >
+                  <div className="proposal-queue-row__main">
+                    <div className="proposal-queue-row__meta">
+                      <span className="mono proposal-queue-row__id">{p.id}</span>
+                      <Badge tone={p.stage === 'signed' ? 'healthy' : p.stage === 'legal' || p.stage === 'redlines' ? 'warn' : 'accent'}>{p.stage}</Badge>
+                      {rowBlockers.length > 0 && <Badge tone="critical">{rowBlockers.length} blocker{rowBlockers.length > 1 ? 's' : ''}</Badge>}
+                    </div>
+                    <div className="proposal-queue-row__company">{p.co}</div>
+                    <div className="mono proposal-queue-row__activity">
+                      sent {p.sent} · viewed {p.viewed} · {p.accepted}/{p.sections} sections accepted
+                    </div>
                   </div>
-                  <div style={{fontSize:14, fontWeight:600, marginBottom:2}}>{p.co}</div>
-                  <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>
-                    sent {p.sent} · viewed {p.viewed} · {p.accepted}/{p.sections} sections accepted
+                  <div className="proposal-queue-row__value">
+                    <div className="mono num">{p.amount}</div>
+                    <div className="eyebrow">value</div>
                   </div>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <div className="mono num" style={{fontSize:18, fontWeight:700, fontFamily:'var(--font-display)'}}>{p.amount}</div>
-                  <div className="eyebrow">value</div>
-                </div>
+                </button>
               </div>
-            ))}
+            );})}
           </div>
         </Card>
 
-        <div className="vstack" style={{gap:18}}>
-          <Card title={`detail · ${active.id}`} accent={active.blockers.length > 0 ? 'violet' : 'accent'}>
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14}}>
+        <div className="proposals-review-stack">
+          <Card
+            title={`detail · ${active.id}`}
+            accent={activeBlockerCount > 0 ? 'violet' : 'accent'}
+            className="proposal-detail-card"
+            data-testid="proposal-detail-card"
+          >
+            <div className="proposal-detail__head">
               <div>
-                <div style={{fontSize:18, fontWeight:700, fontFamily:'var(--font-display)'}}>{active.co}</div>
-                <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>{active.id} · owner {active.owner}</div>
+                <div className="proposal-detail__company">{active.co}</div>
+                <div className="mono proposal-detail__meta">{active.id} · owner {active.owner} · gate {activeReview.gate}</div>
               </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontFamily:'var(--font-display)', fontSize:32, fontWeight:800, color:'var(--accent-fg)'}}>{active.amount}</div>
+              <div className="proposal-detail__amount">
+                <div>{active.amount}</div>
                 <div className="eyebrow">annual</div>
               </div>
             </div>
 
-            <div className="eyebrow" style={{marginBottom:8}}>Section progress · {active.accepted}/{active.sections}</div>
-            <div style={{display:'flex', gap:4, marginBottom:18}}>
+            <div className="proposal-detail__facts" aria-label={`${active.id} review facts`}>
+              <div>
+                <span className="eyebrow">stage</span>
+                <strong>{active.stage}</strong>
+              </div>
+              <div>
+                <span className="eyebrow">viewed</span>
+                <strong>{active.viewed}</strong>
+              </div>
+              <div>
+                <span className="eyebrow">sent</span>
+                <strong>{active.sent}</strong>
+              </div>
+              <div>
+                <span className="eyebrow">packet</span>
+                <strong>{activeReview.packetId}</strong>
+              </div>
+            </div>
+
+            <div className="proposal-progress-label">
+              <span className="eyebrow">Section progress · {active.accepted}/{active.sections}</span>
+              <span className="mono">{Math.round((active.accepted / Math.max(active.sections, 1)) * 100)}%</span>
+            </div>
+            <div className="proposal-progress" aria-hidden="true">
               {Array.from({length:active.sections}).map((_,i)=>(
-                <div key={i} style={{flex:1, height:8, borderRadius:2, background: i < active.accepted ? 'var(--healthy)' : 'var(--bg-inset)', border: '1px solid var(--border)'}}/>
+                <div key={i} data-state={i < active.accepted ? 'accepted' : 'open'}/>
               ))}
             </div>
 
-            {active.blockers.length > 0 && (
-              <>
-                <div className="eyebrow eyebrow--accent" style={{marginBottom:8}}>Blockers · {active.blockers.length}</div>
-                <div className="vstack" style={{gap:6, marginBottom:14}}>
-                  {active.blockers.map((b,i)=>(
-                    <div key={i} style={{padding:10, background:'rgba(207,60,105,.08)', borderLeft:'2px solid var(--violet-500)', borderRadius:'var(--r-md)', fontSize:13}}>
+            {activeBlockerCount > 0 && (
+              <div className="proposal-blockers">
+                <div className="eyebrow eyebrow--accent">Blockers · {activeBlockerCount}</div>
+                <div className="proposal-blockers__list">
+                  {activeBlockers.map((b,i)=>(
+                    <div key={i} className="proposal-blocker">
                       {b}
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
 
             {(() => {
@@ -2000,22 +2459,20 @@ function ProposalsPage({ setRoute }) {
                   className="proposal-resend-receipt"
                   data-testid="proposal-resend-receipt"
                   data-recipient={receipt.recipient}
-                  style={{display:'flex', alignItems:'center', gap:8, padding:'8px 10px', marginTop:10, background:'rgba(80,180,120,.10)', borderLeft:'2px solid var(--healthy-fg, #3d6a40)', borderRadius:'var(--r-md)', fontSize:12}}
                 >
                   <Badge tone="healthy">re-sent @ {stamp}</Badge>
-                  <span className="mono" style={{color:'var(--text-2)', fontSize:11}}>
+                  <span className="mono">
                     to {receipt.recipient}{receipt.ccCount ? ` · cc ${receipt.ccCount}` : ''}
                   </span>
                 </div>
               );
             })()}
-            <div style={{display:'flex', gap:8, marginTop:14}}>
-              <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={openProposalReview}><I3.Eye size={12}/>Review packet</button>
-              <button className="btn btn--ghost btn--sm" style={{flex:1}} data-testid="proposal-resend-open" onClick={openResend}><I3.Mail size={12}/>{resentProposals[active.id] ? 'Re-send again' : 'Re-send'}</button>
+            <div className="proposal-detail__actions">
+              <button className="btn btn--ghost btn--sm" onClick={openProposalReview}><I3.Eye size={12}/>Review packet</button>
+              <button className="btn btn--ghost btn--sm" data-testid="proposal-resend-open" onClick={openResend}><I3.Mail size={12}/>{resentProposals[active.id] ? 'Re-send again' : 'Re-send'}</button>
               {(() => (
                 <button
                   className="btn btn--primary btn--sm"
-                  style={{flex:1}}
                   data-testid="proposal-address-blockers"
                   data-blocker-count={activeBlockerCount}
                   disabled={activeBlockerCount === 0}
@@ -2027,7 +2484,13 @@ function ProposalsPage({ setRoute }) {
           </Card>
 
           {proposalWorkflow && (
-            <div className="workflow-popout workflow-popout--single" role="region" aria-label="Proposal workflow panel">
+            <div
+              ref={proposalWorkflowRef}
+              className="workflow-popout workflow-popout--single"
+              role="region"
+              aria-label="Proposal workflow panel"
+              tabIndex={-1}
+            >
               <div className="workflow-popout__pane">
                 <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
                   <div>
@@ -2098,7 +2561,60 @@ function ProposalsPage({ setRoute }) {
                           )}
                         </>
                       ) : (
-                        <iframe title={`${active.co} ${selectedReviewArtifact.label} review preview`} src={selectedReviewArtifact.previewPath}></iframe>
+                        selectedReviewArtifact.previewPath ? (
+                          <iframe title={`${active.co} ${selectedReviewArtifact.label} review preview`} src={selectedReviewArtifact.previewPath}></iframe>
+                        ) : (
+                          <div className="proposal-pdf-preview" data-testid="proposal-pdf-bound-preview">
+                            <div className="proposal-pdf-preview__chrome">
+                              <span className="mono">wranngle / gtm_ops</span>
+                              <span className="mono">{activeReview.mode}</span>
+                            </div>
+                            <div className="proposal-pdf-preview__sheet">
+                              <div className="proposal-pdf-preview__masthead">
+                                <div>
+                                  <span className="eyebrow eyebrow--accent">{selectedReviewArtifact.label}</span>
+                                  <h3 data-testid="proposal-review-pdf-title">{active.co}</h3>
+                                  <p>{active.id} · {activeReview.packetId} · {active.stage}</p>
+                                </div>
+                                <div className="proposal-pdf-preview__amount">
+                                  <strong>{active.amount}</strong>
+                                  <span>annual</span>
+                                </div>
+                              </div>
+                              <div className="proposal-pdf-preview__grid">
+                                <div>
+                                  <span className="eyebrow">review gate</span>
+                                  <strong>{activeReview.gate}</strong>
+                                </div>
+                                <div>
+                                  <span className="eyebrow">sections accepted</span>
+                                  <strong>{active.accepted}/{active.sections}</strong>
+                                </div>
+                                <div>
+                                  <span className="eyebrow">owner</span>
+                                  <strong>{active.owner}</strong>
+                                </div>
+                              </div>
+                              <div className="proposal-pdf-preview__block">
+                                <span className="eyebrow eyebrow--accent">review notes</span>
+                                <p>
+                                  This preview is assembled from the selected proposal record so the packet identity,
+                                  blockers, and approval gate match the proposal under review.
+                                </p>
+                              </div>
+                              <div className="proposal-pdf-preview__block">
+                                <span className="eyebrow">open blockers</span>
+                                {activeBlockerCount > 0 ? (
+                                  <ul>
+                                    {activeBlockers.map(blocker => <li key={blocker}>{blocker}</li>)}
+                                  </ul>
+                                ) : (
+                                  <p>No blockers are open on this packet.</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
                       )}
                     </div>
                     <div className="artifact-drawer__actions">
@@ -2117,8 +2633,7 @@ function ProposalsPage({ setRoute }) {
                 )}
                 {proposalWorkflow.kind === 'send' && (
                   <form
-                    className="vstack proposal-resend-form"
-                    style={{gap:12, marginTop:10}}
+                    className="proposal-resend-form"
                     onSubmit={submitResend}
                     aria-label={`Re-send ${active.id} form`}
                     data-testid="proposal-resend-form"
@@ -2135,7 +2650,7 @@ function ProposalsPage({ setRoute }) {
                       />
                     </label>
                     <label className="form-row">
-                      <span className="form-row__label">CC <span className="mono dim" style={{fontSize:10}}>· comma-separated</span></span>
+                      <span className="form-row__label">CC <span className="mono dim">· comma-separated</span></span>
                       <input
                         type="text"
                         className="form-input"
@@ -2155,7 +2670,7 @@ function ProposalsPage({ setRoute }) {
                         onChange={(e) => setResendForm(f => ({ ...f, note: e.target.value }))}
                       />
                     </label>
-                    <div className="hstack" style={{gap:8, justifyContent:'flex-end'}}>
+                    <div className="proposal-resend-form__actions">
                       <button type="button" className="btn btn--ghost btn--sm" onClick={() => setProposalWorkflow(null)}>Cancel</button>
                       <button type="submit" className="btn btn--primary btn--sm" data-testid="proposal-resend-send"><I3.Mail size={12}/>Send</button>
                     </div>
@@ -2166,7 +2681,7 @@ function ProposalsPage({ setRoute }) {
           )}
 
           <Card title={`proposal sections · ${active.accepted}/${active.sections}`}>
-            <div className="vstack" style={{gap:0}} data-testid="proposal-sections-list">
+            <div className="proposal-sections-list" data-testid="proposal-sections-list">
               {/* Section list now derives from the active proposal:
                   - first N (accepted) cells = canonical accepted-section names
                   - remaining cells = real blocker names from the proposal,
@@ -2206,18 +2721,12 @@ function ProposalsPage({ setRoute }) {
                   className="inspectable proposal-section-row"
                   data-testid="proposal-section-row"
                   data-status={s.status}
-                  data-popout={`${s.n}: ${s.status}, owner ${s.who}`}
-                  style={{display:'grid', gridTemplateColumns:'auto 1fr auto auto', gap:10, alignItems:'center', padding:'8px 0', borderBottom:'1px dashed var(--border)'}}>
-                  <div style={{
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: s.status === 'accepted' ? 'var(--healthy)' : 'var(--bg-inset)',
-                    border: s.status === 'redline' ? '2px solid var(--violet-500)' : (s.status === 'pending' ? '1px dashed var(--border)' : 'none'),
-                    display: 'grid', placeItems: 'center', fontSize: 10, color: 'white',
-                  }}>
+                  data-popout={`${s.n}: ${s.status}, owner ${s.who}`}>
+                  <div className="proposal-section-row__dot" data-status={s.status}>
                     {s.status === 'accepted' && '✓'}
                   </div>
-                  <div style={{fontSize:13}}>{s.n}</div>
-                  <span className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{s.who}</span>
+                  <div className="proposal-section-row__name">{s.n}</div>
+                  <span className="mono proposal-section-row__owner">{s.who}</span>
                   <Badge tone={s.status === 'accepted' ? 'healthy' : s.status === 'redline' ? 'critical' : 'neutral'}>{s.status}</Badge>
                 </div>
               ))}
@@ -2253,6 +2762,7 @@ function SettingsPage({ setRoute }) {
     globalThis.addEventListener('gtm:settings-tab', onSettingsTab);
     return () => globalThis.removeEventListener('gtm:settings-tab', onSettingsTab);
   }, []);
+  const activeTabLabel = tabs.find(t => t.id === tab)?.label || 'My Account';
   useEffect(() => {
     if (pendingFocusTab.current !== tab) return;
     const next = pendingFocusTab.current;
@@ -2294,17 +2804,24 @@ function SettingsPage({ setRoute }) {
   }
 
   return (
-    <div className="page">
-      <PageHeader eyebrow="workspace · helix" title="Settings"
-        sub="The controls behind the autonomy."
-        actions={
+    <div className="page page--settings">
+      <h1 id="console-page-title" className="sr-only">Settings</h1>
+
+      <section className="settings-command-strip" data-testid="settings-command-strip" aria-label="Settings overview">
+        <div className="settings-command-strip__status">
+          <span className="settings-command-strip__chip settings-command-strip__chip--accent">workspace · helix</span>
+          <span className="settings-command-strip__chip">active section · {activeTabLabel}</span>
+          <span className="settings-command-strip__chip">changes saved in session</span>
+        </div>
+        <div className="settings-command-strip__actions">
           <button className="btn btn--ghost btn--sm" onClick={() => setRoute && setRoute('agents')}>
             <I3.Bot size={12}/>Manage agents →
           </button>
-        }/>
+        </div>
+      </section>
 
       <div className="settings-grid">
-        <div className="settings-nav" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
+        <div className="settings-nav" role="tablist" aria-label="Settings sections" aria-orientation="horizontal" data-testid="settings-top-tabs">
           {tabs.map((t, idx) => (
             <div key={t.id}
               ref={(el) => { tabRefs.current[t.id] = el; }}
@@ -2325,11 +2842,11 @@ function SettingsPage({ setRoute }) {
           ))}
         </div>
 
-        <div role="tabpanel"
+        <div className="settings-panel" role="tabpanel"
           id={`settings-panel-${tab}`}
           aria-labelledby={`settings-tab-${tab}`}
           tabIndex={0}>
-          {tab === 'integrations' && <IntegrationsSettings/>}
+          {tab === 'integrations' && <IntegrationsSettings setRoute={setRoute}/>}
           {tab === 'evals' && <EvalPolicySettings/>}
           {tab === 'team' && <TeamSettings/>}
           {tab === 'billing' && <BillingSettings/>}
@@ -2341,7 +2858,40 @@ function SettingsPage({ setRoute }) {
   );
 }
 
-function IntegrationsSettings() {
+function IntegrationIcon({ name }) {
+  const key = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const common = { viewBox:'0 0 40 40', role:'img', 'aria-label': `${name} logo` };
+  if (name === 'Salesforce') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><path d="M14 27c-5 0-8-3-8-7 0-3 2-6 5-7 2-5 8-7 13-4 2-2 6-2 8 1 4 0 7 4 7 8 0 5-4 9-10 9H14Z"/><text x="20" y="23" textAnchor="middle">SF</text></svg></span>;
+  }
+  if (name === 'Slack') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><rect x="8" y="17" width="15" height="6" rx="3"/><rect x="17" y="8" width="6" height="15" rx="3"/><rect x="17" y="26" width="15" height="6" rx="3"/><rect x="26" y="17" width="6" height="15" rx="3"/></svg></span>;
+  }
+  if (name === 'HubSpot') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><circle cx="19" cy="22" r="7"/><circle cx="30" cy="12" r="4"/><circle cx="11" cy="10" r="3"/><path d="M24 17l4-3M16 16l-4-4M19 8v6"/></svg></span>;
+  }
+  if (name === 'Snowflake') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><path d="M20 7v26M9 13l22 14M31 13L9 27M14 9l6 6 6-6M14 31l6-6 6 6"/></svg></span>;
+  }
+  if (name === 'ElevenLabs') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><rect x="10" y="9" width="4" height="22" rx="2"/><rect x="18" y="6" width="4" height="28" rx="2"/><rect x="26" y="11" width="4" height="18" rx="2"/></svg></span>;
+  }
+  if (name === 'Gong') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><circle cx="20" cy="20" r="6"/><path d="M8 20c3-7 8-11 12-11s9 4 12 11c-3 7-8 11-12 11S11 27 8 20Z"/></svg></span>;
+  }
+  if (name === 'Outreach') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><circle cx="20" cy="20" r="12"/><path d="M20 11v9l7 5"/></svg></span>;
+  }
+  if (name === 'Clay') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><rect x="8" y="8" width="24" height="24" rx="8"/><path d="M25 15a8 8 0 1 0 0 10"/></svg></span>;
+  }
+  if (name === 'Krisp') {
+    return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><path d="M9 21c4-8 6-8 10 0s6 8 12 0"/><path d="M9 28h22M9 12h22"/></svg></span>;
+  }
+  return <span className={`integration-logo integration-logo--${key}`} data-testid="integration-logo"><svg {...common}><circle cx="20" cy="20" r="13"/><text x="20" y="25" textAnchor="middle">{String(name || '?').slice(0, 2).toUpperCase()}</text></svg></span>;
+}
+
+function IntegrationsSettings({ setRoute }) {
   // Live status per integration; flipping disconnect/connect mutates this
   // map so the connected-count and the row badges actually reflect operator
   // actions instead of the static fixture.
@@ -2364,6 +2914,7 @@ function IntegrationsSettings() {
   const [savedActions, setSavedActions] = useState(buildActionMap);
   const [draftActions, setDraftActions] = useState(buildActionMap);
   const [lastTestSync, setLastTestSync] = useState({});
+  const [integrationEvents, setIntegrationEvents] = useState({});
   const [activeName, setActiveName] = useState(() => {
     const requestedName = globalThis.AppContext.get().extra?.integration_name;
     return INTEGRATION_CONNECTIONS.some(c => c.name === requestedName) ? requestedName : null;
@@ -2380,6 +2931,20 @@ function IntegrationsSettings() {
     ? Object.values(draftFor(activeConfig.name)).filter(Boolean).length
     : 0;
 
+  const recordIntegrationEvent = (name, title, detail, tone = 'neutral') => {
+    const at = new Date();
+    setIntegrationEvents(prev => ({
+      ...prev,
+      [name]: [{
+        id: `${name}-${at.getTime()}-${title}`,
+        title,
+        detail,
+        tone,
+        at: at.toISOString(),
+      }, ...(prev[name] || [])].slice(0, 5),
+    }));
+  };
+
   const onToggleAction = (name, action, checked) => {
     setDraftActions(prev => ({
       ...prev,
@@ -2393,6 +2958,12 @@ function IntegrationsSettings() {
       return;
     }
     setSavedActions(prev => ({ ...prev, [activeConfig.name]: { ...draftFor(activeConfig.name) } }));
+    recordIntegrationEvent(
+      activeConfig.name,
+      'Mapping saved',
+      `${enabledCount}/${activeConfig.canDo.length} actions permitted for this connector.`,
+      'accent',
+    );
     globalThis.toast(`${activeConfig.name} mapping saved`, {
       sub: `${enabledCount}/${activeConfig.canDo.length} actions permitted`,
       tone: 'accent',
@@ -2407,6 +2978,12 @@ function IntegrationsSettings() {
     if (!activeConfig) return;
     const stamp = new Date();
     setLastTestSync(prev => ({ ...prev, [activeConfig.name]: stamp.toISOString() }));
+    recordIntegrationEvent(
+      activeConfig.name,
+      'Test sync completed',
+      `Connectivity and schema check passed at ${stamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}.`,
+      'accent',
+    );
     globalThis.toast(`${activeConfig.name} test sync ok`, {
       sub: `last sync ${stamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`,
       tone: 'accent',
@@ -2415,28 +2992,55 @@ function IntegrationsSettings() {
   const onConnect = () => {
     if (!activeConfig) return;
     setStatusMap(prev => ({ ...prev, [activeConfig.name]: 'syncing' }));
+    recordIntegrationEvent(activeConfig.name, 'OAuth handshake started', 'Connector is waiting for provider authorization.', 'warn');
     globalThis.toast(`${activeConfig.name} connecting…`, { sub: 'OAuth handshake started', tone: 'accent' });
     setTimeout(() => {
       setStatusMap(prev => ({ ...prev, [activeConfig.name]: 'connected' }));
+      recordIntegrationEvent(activeConfig.name, 'Connected', 'Provider session is active; mapping controls are available.', 'accent');
       globalThis.toast(`${activeConfig.name} connected`, { sub: 'mapping ready to configure', tone: 'accent' });
     }, 320);
   };
   const onDisconnect = () => {
     if (!activeConfig) return;
     setStatusMap(prev => ({ ...prev, [activeConfig.name]: 'disabled' }));
+    recordIntegrationEvent(activeConfig.name, 'Disconnected', 'OAuth tokens revoked; sync and mapping save are blocked.', 'warn');
     globalThis.toast(`${activeConfig.name} disconnected`, { sub: 'OAuth tokens revoked', tone: 'warn' });
+  };
+  const openElevenLabsLocalAdmin = () => {
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
+      extra: {
+        ...(ctx.extra || {}),
+        selected_agent_key: 'sales_coach',
+        agent_admin_panel: 'context',
+        triggered_from: 'settings-elevenlabs-local-admin',
+      },
+    });
+    setRoute?.('agents');
+  };
+  const recordElevenLabsEscape = () => {
+    recordIntegrationEvent(
+      'ElevenLabs',
+      'Dashboard escape opened',
+      'Vendor dashboard opened from the single settings escape hatch after local admin was surfaced.',
+      'warn',
+    );
   };
 
   return (
-    <Card title={`integrations · ${connectedCount} of ${INTEGRATION_CONNECTIONS.length} connected`}>
+    <Card className="settings-card settings-card--integrations">
+      <div className="settings-panel-summary">
+        <span className="eyebrow eyebrow--accent">integrations</span>
+        <Badge tone="healthy">{connectedCount} of {INTEGRATION_CONNECTIONS.length} connected</Badge>
+      </div>
       <div className="vstack" style={{gap:10}}>
         {INTEGRATION_CONNECTIONS.map(c => {
           const status = statusMap[c.name];
           const isConnected = status === 'connected' || status === 'syncing';
           return (
             <div key={c.name} className="integration-row inspectable" data-popout={`${c.name}: ${c.what}`} data-testid="integration-row" data-status={status}>
-              <div style={{width:36, height:36, background:'var(--bg-elev)', border:'1px solid var(--border)', borderRadius:8, display:'grid', placeItems:'center', fontFamily:'var(--font-display)', fontWeight:700, fontSize:14, color:'var(--accent-fg)'}}>{c.icon}</div>
-              <div>
+              <IntegrationIcon name={c.name}/>
+              <div className="integration-row__copy">
                 <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
                 <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{c.sub}</div>
               </div>
@@ -2444,6 +3048,7 @@ function IntegrationsSettings() {
               <button
                 className="btn btn--ghost btn--sm"
                 data-testid="integration-open"
+                aria-label={`${isConnected ? 'Configure' : 'Connect'} ${c.name} integration`}
                 aria-expanded={activeName === c.name}
                 onClick={() => setActiveName(c.name)}
               >{isConnected ? 'Configure' : 'Connect'}</button>
@@ -2455,6 +3060,7 @@ function IntegrationsSettings() {
         const status = statusMap[activeConfig.name];
         const isConnected = status === 'connected' || status === 'syncing';
         const lastTest = lastTestSync[activeConfig.name];
+        const events = integrationEvents[activeConfig.name] || [];
         return (
           <div className="workflow-popout workflow-popout--single settings-config-popout" role="region" aria-label={`${activeConfig.name} configuration`}>
             <form className="workflow-popout__pane" onSubmit={(e) => { e.preventDefault(); onSaveActions(); }} aria-label={`${activeConfig.name} mapping form`}>
@@ -2501,6 +3107,76 @@ function IntegrationsSettings() {
                   <div className="eyebrow">automation</div>
                   <p className="muted" style={{fontSize:12}}>{activeConfig.automations}</p>
                 </div>
+              </div>
+              {activeConfig.name === 'ElevenLabs' && (
+                <div
+                  className="integration-local-admin"
+                  data-testid="integration-elevenlabs-local-admin"
+                >
+                  <div>
+                    <div className="eyebrow eyebrow--accent">local agent admin</div>
+                    <strong>Open the in-console wrapper before using the dashboard.</strong>
+                    <p>Prompt, tools, context, and safety review stay inside gtm_ops; the Agents page now keeps those edits in the local admin surface.</p>
+                    <p data-testid="integration-elevenlabs-escape-note">One explicit dashboard escape hatch lives here for vendor-only edits after local review.</p>
+                  </div>
+                  <div className="integration-local-admin__actions">
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--sm"
+                      data-testid="integration-open-elevenlabs-local-admin"
+                      onClick={openElevenLabsLocalAdmin}
+                    ><I3.Bot size={12}/>Open local agent admin</button>
+                    <a
+                      className="btn btn--ghost btn--sm btn--external integration-elevenlabs-escape"
+                      data-testid="integration-elevenlabs-escape"
+                      href={ELEVENLABS_AGENTS_DASHBOARD_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Open ElevenLabs Agents dashboard in a new tab"
+                      onClick={recordElevenLabsEscape}
+                    ><I3.ArrowUpRight size={12}/>Open ElevenLabs dashboard</a>
+                  </div>
+                </div>
+              )}
+              <div
+                className="integration-operation-log"
+                data-testid="integration-operation-log"
+                aria-live="polite"
+                aria-label={`${activeConfig.name} local operation log`}
+              >
+                <div className="integration-operation-log__head">
+                  <span className="eyebrow">operation log</span>
+                  <span className="mono dim">
+                    {events.length > 0
+                      ? `${events.length} local event${events.length === 1 ? '' : 's'}`
+                      : 'no local events yet'}
+                  </span>
+                </div>
+                {events.length > 0 ? events.map(event => (
+                  <div
+                    key={event.id}
+                    className="integration-operation-event"
+                    data-testid="integration-operation-event"
+                    data-tone={event.tone}
+                  >
+                    <span
+                      className={`dot dot--${event.tone === 'warn' ? 'warn' : event.tone === 'critical' ? 'critical' : event.tone === 'accent' ? 'accent' : 'idle'}`}
+                      style={{width:7,height:7}}
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <strong>{event.title}</strong>
+                      <p>{event.detail}</p>
+                    </div>
+                    <time className="mono dim" dateTime={event.at}>
+                      {new Date(event.at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}
+                    </time>
+                  </div>
+                )) : (
+                  <div className="integration-operation-empty">
+                    Connect, save, or test sync to leave visible local evidence here.
+                  </div>
+                )}
               </div>
               <div className="hstack" style={{marginTop:12, justifyContent:'space-between'}}>
                 <div className="hstack" style={{gap:8}}>
@@ -2551,28 +3227,9 @@ function IntegrationsSettings() {
   );
 }
 
-function WranngleOfferingsParity() {
-  return (
-    <Card title="wranngle.com offerings parity">
-      <div className="offerings-grid">
-        {WRANNGLE_OFFERINGS.map(item => (
-          <div key={item.name} className="offering-row">
-            <div>
-              <div style={{fontWeight:700, fontSize:13}}>{item.name}</div>
-              <div className="mono dim" style={{fontSize:10}}>{item.price}</div>
-            </div>
-            <Badge tone="healthy">covered</Badge>
-            <p>{item.coverage}</p>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 function EvalPolicySettings() {
   return (
-    <Card title="eval · policy">
+    <Card className="settings-card settings-card--evals">
       <EvalPolicyForm/>
     </Card>
   );
@@ -2997,7 +3654,7 @@ function AccountSettings() {
   };
   return (
     <div className="vstack" style={{gap:18}}>
-      <Card title="account · alert consent" className="card--accent">
+      <Card className="card--accent settings-card settings-card--account">
         <div className="account-settings-grid">
           <div>
             <div className="eyebrow eyebrow--accent">operator</div>
@@ -3053,13 +3710,11 @@ function AccountSettings() {
         </div>
       </Card>
 
-      <Card title={(() => {
-        const list = Object.values(deliveryRules);
-        const silent = list.filter(r => Object.values(r.channels).every(v => !v)).length;
-        return silent > 0
-          ? `account delivery rules · ${silent} silent`
-          : `account delivery rules · ${list.length} configured`;
-      })()}>
+      <Card className="settings-card settings-card--delivery">
+        <div className="settings-panel-summary">
+          <span className="eyebrow eyebrow--accent">delivery rules</span>
+          <Badge tone="accent">{Object.values(deliveryRules).length} configured</Badge>
+        </div>
         <div className="workflow-popout__grid">
           {Object.values(deliveryRules).map(rule => {
             const isOpen = activeRuleId === rule.id;
@@ -3104,13 +3759,12 @@ function AccountSettings() {
         </div>
       </Card>
 
-      <WranngleOfferingsParity/>
     </div>
   );
 }
 
-/* gtm_ops SaaS tiers — kept in lockstep with wranngle.com / data/offerings.ts.
-   If the website tiers move, update this list and the matching parity test. */
+/* Account plan options used by the console billing panel. Keep limits,
+   prices, and usage copy aligned with the billing contract below. */
 const GTM_OPS_TIERS = [
   {
     id: 'trial',
@@ -3227,8 +3881,8 @@ function BillingSettings() {
         </div>
       </Card>
       {planOpen && (
-        <Card title="change plan · gtm_ops tiers">
-          <div className="muted" style={{fontSize:12, marginBottom:12}}>Tiers mirror wranngle.com. Annual saves 17% vs monthly.</div>
+        <Card title="plan options">
+          <div className="muted" style={{fontSize:12, marginBottom:12}}>Choose the plan for this workspace. Annual saves 17% vs monthly.</div>
           <div className="tier-grid" data-testid="billing-tier-grid">
             {GTM_OPS_TIERS.map(tier => {
               const active = tier.id === currentTierId;
@@ -3324,7 +3978,6 @@ function BillingSettings() {
           })()}
         </div>
       </Card>
-      <WranngleOfferingsParity/>
     </div>
   );
 }
@@ -3361,6 +4014,7 @@ function SecuritySettings() {
     generation: 3,
     generatedLabel: 'today 08:12 AM',
   });
+  const [recoveryArtifact, setRecoveryArtifact] = useState(null);
   const [auditEvents, setAuditEvents] = useState(AUDIT_DEFAULTS);
   const dirty =
     form.ssoProvider !== savedPolicy.ssoProvider ||
@@ -3375,6 +4029,20 @@ function SecuritySettings() {
   const audit = (act, who = 'rae@helix.io') => {
     const stamp = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
     setAuditEvents(prev => [{ t: stamp, who, act }, ...prev].slice(0, 5));
+  };
+  const buildRecoveryCodes = (batchId, generation, count = 10) => {
+    const hashChunk = (seed) => {
+      let hash = 0x811c9dc5;
+      for (const ch of seed) {
+        hash ^= ch.charCodeAt(0);
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+      }
+      return hash.toString(36).toUpperCase().padStart(6, '0').slice(-6);
+    };
+    return Array.from({ length: count }, (_, i) => {
+      const index = String(i + 1).padStart(2, '0');
+      return `WR-${index}-${hashChunk(`${batchId}:${generation}:${i}:a`)}-${hashChunk(`${batchId}:${generation}:${i}:b`)}`;
+    });
   };
 
   const onSubmit = (e) => {
@@ -3426,12 +4094,43 @@ function SecuritySettings() {
       generation: nextGeneration,
       generatedLabel: stamp.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }),
     };
+    const codes = buildRecoveryCodes(nextBatch.id, nextGeneration, nextBatch.count);
     setRecoveryBatch(nextBatch);
+    setRecoveryArtifact({
+      ...nextBatch,
+      codes,
+      generatedAt: stamp.toLocaleString([], { dateStyle:'medium', timeStyle:'short' }),
+      copiedAt: null,
+      storedAt: null,
+      visible: true,
+    });
     audit(`regenerated recovery code batch ${nextBatch.id}`);
     globalThis.toast(`${nextBatch.count} new recovery codes generated`, {
-      sub: `${nextBatch.id} active · previous codes invalidated`,
+      sub: `${nextBatch.id} active · review artifact opened`,
       tone: 'accent',
     });
+  };
+  const copyRecoveryArtifact = async () => {
+    if (!recoveryArtifact?.visible) return;
+    const copiedAt = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const body = [
+      `gtm_ops recovery code artifact ${recoveryArtifact.id}`,
+      `generated ${recoveryArtifact.generatedAt}`,
+      '',
+      ...recoveryArtifact.codes,
+    ].join('\n');
+    try { await navigator.clipboard?.writeText?.(body); }
+    catch (_) { /* clipboard can be unavailable in locked-down browsers */ }
+    setRecoveryArtifact(prev => prev ? { ...prev, copiedAt } : prev);
+    audit(`copied recovery code artifact ${recoveryArtifact.id}`);
+    globalThis.toast('Recovery codes copied', { sub: `${recoveryArtifact.id} · store them before closing`, tone:'accent' });
+  };
+  const markRecoveryStored = () => {
+    if (!recoveryArtifact) return;
+    const storedAt = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    setRecoveryArtifact(prev => prev ? { ...prev, storedAt, visible: false } : prev);
+    audit(`marked recovery code artifact stored ${recoveryArtifact.id}`);
+    globalThis.toast('Recovery artifact stored', { sub: `${recoveryArtifact.id} · one-time codes hidden`, tone:'healthy' });
   };
 
   return (
@@ -3572,7 +4271,7 @@ function SecuritySettings() {
           <div className="hstack" style={{justifyContent:'space-between', gap:12, padding:'8px 0'}}>
             <div>
               <div style={{fontSize:13, fontWeight:600}}>Regenerate recovery codes</div>
-              <div className="muted" style={{fontSize:12}}>Invalidates the current set; download the new codes immediately.</div>
+              <div className="muted" style={{fontSize:12}}>Invalidates the current set and opens a one-time local review artifact.</div>
               <div className="mono dim" data-testid="sec-recovery-status" style={{fontSize:10, marginTop:4}}>
                 {recoveryBatch.id} · {recoveryBatch.count} codes · generated {recoveryBatch.generatedLabel}
               </div>
@@ -3585,6 +4284,52 @@ function SecuritySettings() {
               onClick={onRegenerateRecovery}
             >Regenerate</button>
           </div>
+          {recoveryArtifact && (
+            <div className="recovery-artifact" data-testid="sec-recovery-artifact" data-state={recoveryArtifact.storedAt ? 'stored' : recoveryArtifact.copiedAt ? 'copied' : 'review'}>
+              <div className="recovery-artifact__header">
+                <div>
+                  <span className="eyebrow eyebrow--accent">recovery artifact</span>
+                  <strong>{recoveryArtifact.id}</strong>
+                  <p>Copy these one-time codes into the password manager, then mark the artifact stored. Codes are hidden after storage confirmation.</p>
+                </div>
+                <Badge tone={recoveryArtifact.storedAt ? 'healthy' : recoveryArtifact.copiedAt ? 'accent' : 'warn'}>
+                  {recoveryArtifact.storedAt ? 'stored' : recoveryArtifact.copiedAt ? 'copied' : 'review now'}
+                </Badge>
+              </div>
+              {recoveryArtifact.visible ? (
+                <div className="recovery-artifact__codes" data-testid="sec-recovery-code-list" aria-label="Generated recovery codes">
+                  {recoveryArtifact.codes.map(code => <code key={code}>{code}</code>)}
+                </div>
+              ) : (
+                <div className="recovery-artifact__hidden" data-testid="sec-recovery-codes-hidden">
+                  Codes hidden after storage confirmation. Regenerate again if this packet was not captured.
+                </div>
+              )}
+              <div className="recovery-artifact__footer">
+                <span className="mono dim" data-testid="sec-recovery-artifact-status">
+                  generated {recoveryArtifact.generatedAt}
+                  {recoveryArtifact.copiedAt ? ` · copied ${recoveryArtifact.copiedAt}` : ''}
+                  {recoveryArtifact.storedAt ? ` · stored ${recoveryArtifact.storedAt}` : ''}
+                </span>
+                <div className="hstack" style={{gap:8}}>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    data-testid="sec-copy-recovery-codes"
+                    disabled={!recoveryArtifact.visible}
+                    onClick={copyRecoveryArtifact}
+                  >Copy codes</button>
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--sm"
+                    data-testid="sec-store-recovery-codes"
+                    disabled={Boolean(recoveryArtifact.storedAt)}
+                    onClick={markRecoveryStored}
+                  >{recoveryArtifact.storedAt ? 'Stored' : 'Mark stored'}</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -3612,8 +4357,9 @@ function GeneratePage({ setRoute }) {
   const [artifactState, setArtifactState] = React.useState('idle');
   const [briefError, setBriefError] = React.useState('');
   const [addressBlockersBanner, setAddressBlockersBanner] = React.useState(null);
-  const [proposalV3Banner, setProposalV3Banner] = React.useState(null);
+  const [proposalDraftBanner, setProposalDraftBanner] = React.useState(null);
   const [newRunBanner, setNewRunBanner] = React.useState(null);
+  const [publicSampleArtifact, setPublicSampleArtifact] = React.useState(false);
   // Captures the most-recent handoff context so reviewInProposals can route
   // to the matching proposal even after the visible banner auto-clears on
   // reviewReady. Without this, the route handoff lost the buyer identity
@@ -3622,6 +4368,7 @@ function GeneratePage({ setRoute }) {
   const lastHandoffRef = React.useRef(null);
   const generationIdRef = React.useRef(0);
   const briefRef = React.useRef(null);
+  const fileInputRef = React.useRef(null);
   const artifactPanelRef = React.useRef(null);
   const artifactIdSlug = (value) => {
     const slug = String(value || '')
@@ -3631,11 +4378,21 @@ function GeneratePage({ setRoute }) {
       .replace(/_+/g, '_');
     return slug || 'proposal';
   };
+  const briefBuyerName = (() => {
+    const match = String(inputText || '').match(/^\s*(?:CLIENT|BUYER|COMPANY)\s*:\s*([^\n]+)/im);
+    if (!match) return '';
+    return match[1]
+      .replace(/\s*\([^)]*\)\s*$/g, '')
+      .replace(/\s+(?:services|service company|llc|inc\.?|corp\.?|corporation)$/i, '')
+      .trim();
+  })();
+  const hasProofText = Boolean(inputText.trim());
+  const sampleProofActive = publicSampleArtifact || /^\s*CLIENT\s*:\s*Acme HVAC Services/im.test(inputText);
   const activeHandoff = lastHandoffRef.current || {};
   const reviewSubject = (() => {
     if (activeHandoff.kind === 'address-blockers') return activeHandoff.co || activeHandoff.proposalId || 'Proposal';
-    if (activeHandoff.kind === 'proposal-v3' || activeHandoff.kind === 'new-run') return activeHandoff.callCo || activeHandoff.callId || 'Proposal';
-    return 'Acme HVAC';
+    if (activeHandoff.kind === 'call-proposal-draft' || activeHandoff.kind === 'new-run') return activeHandoff.callCo || activeHandoff.callId || 'Proposal';
+    return briefBuyerName || (hasProofText ? 'Operator brief' : sampleProofActive ? 'Acme HVAC' : 'Unbound review packet');
   })();
   const reviewSignal = (() => {
     if (activeHandoff.kind === 'address-blockers') {
@@ -3644,7 +4401,7 @@ function GeneratePage({ setRoute }) {
         ? `${blockers} buyer ${blockers === 1 ? 'blocker' : 'blockers'} carried from proposal review`
         : 'proposal review requested without blocker detail';
     }
-    if (activeHandoff.kind === 'proposal-v3' || activeHandoff.kind === 'new-run') {
+    if (activeHandoff.kind === 'call-proposal-draft' || activeHandoff.kind === 'new-run') {
       const parts = [
         activeHandoff.callId,
         activeHandoff.callOutcome,
@@ -3652,19 +4409,33 @@ function GeneratePage({ setRoute }) {
       ].filter(Boolean);
       return parts.length > 0 ? parts.join(' · ') : 'qualified call context carried from the console';
     }
-    return '22% after-hours voicemail · 40% no-callback · pilot approved';
+    if (sampleProofActive) return '22% after-hours voicemail · 40% no-callback · pilot approved';
+    return hasProofText ? 'operator-supplied buyer proof' : 'waiting for buyer proof';
   })();
   const reviewContextSource = activeHandoff.kind
     ? 'console handoff · selected buyer context'
-    : 'sample brief · regional HVAC contractor · TX';
-  const reviewPacketId = activeHandoff.kind ? `run_${artifactIdSlug(reviewSubject)}` : 'run_acme_hvac';
+    : sampleProofActive
+      ? 'demo proof · regional HVAC contractor · TX'
+      : hasProofText
+        ? 'operator-supplied buyer proof'
+        : 'unbound preview · no buyer loaded';
+  const reviewPacketId = activeHandoff.kind
+    ? `run_${artifactIdSlug(reviewSubject)}`
+    : sampleProofActive
+      ? 'run_acme_hvac'
+      : briefBuyerName
+        ? `run_${artifactIdSlug(briefBuyerName)}`
+        : hasProofText
+          ? 'run_operator_brief'
+          : 'run_unbound_preview';
   const focusBuyerBrief = React.useCallback(() => {
     requestAnimationFrame(() => {
-      briefRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' });
-      briefRef.current?.focus();
+      globalThis.scrollConsoleNodeIntoView?.(briefRef.current, { block: 'center' });
+      briefRef.current?.focus({ preventScroll: true });
     });
   }, []);
   const invalidateDraftForBriefChange = React.useCallback(() => {
+    setPublicSampleArtifact(false);
     if (!reviewReady && !isGenerating && !artifactPanel) return;
     generationIdRef.current += 1;
     setIsGenerating(false);
@@ -3677,6 +4448,82 @@ function GeneratePage({ setRoute }) {
       tone: 'warn',
     });
   }, [artifactPanel, isGenerating, reviewReady]);
+  const [attachedFiles, setAttachedFiles] = React.useState([]);
+  const [attachmentPickerNote, setAttachmentPickerNote] = React.useState('');
+  const isReadableAttachment = (file) => (
+    /^text\//i.test(file.type || '') ||
+    /\.(txt|md|markdown|json|jsonl|csv|tsv|log)$/i.test(file.name || '')
+  );
+  const readAttachment = (file) => new Promise((resolve) => {
+    const base = {
+      id: `${file.name}-${file.size}-${file.lastModified}`,
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      lastModified: file.lastModified,
+      includedInBrief: false,
+    };
+    if (!isReadableAttachment(file)) {
+      resolve(base);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve({
+      ...base,
+      includedInBrief: true,
+      text: String(reader.result || '').slice(0, 24000),
+    });
+    reader.onerror = () => resolve(base);
+    reader.readAsText(file);
+  });
+  const handleFileAttach = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) {
+      setAttachmentPickerNote('No file attached yet. Choose a source file or paste buyer proof below.');
+      return;
+    }
+    const loaded = await Promise.all(files.map(readAttachment));
+    setAttachedFiles(prev => {
+      const seen = new Set(prev.map(f => f.id));
+      return [...prev, ...loaded.filter(f => !seen.has(f.id))];
+    });
+    const readable = loaded.filter(f => f.includedInBrief && f.text);
+    if (readable.length > 0) {
+      const attachmentText = readable.map(f => [
+        `--- attachment: ${f.name} (${Math.round(f.size / 1024)} KB) ---`,
+        f.text,
+      ].join('\n')).join('\n\n');
+      setInputText(prev => `${prev.trim() ? `${prev.trim()}\n\n` : ''}${attachmentText}`);
+    }
+    invalidateDraftForBriefChange();
+    setBriefError('');
+    setAttachmentPickerNote(
+      `${files.length} file${files.length === 1 ? '' : 's'} attached to this review packet. ${
+        readable.length > 0
+          ? `${readable.length} text attachment${readable.length === 1 ? '' : 's'} appended to buyer proof.`
+          : 'Binary metadata will travel with the run packet.'
+      }`
+    );
+    globalThis.toast(`${files.length} file${files.length === 1 ? '' : 's'} attached`, {
+      sub: readable.length > 0 ? `${readable.length} text attachment${readable.length === 1 ? '' : 's'} added to buyer proof` : 'binary metadata added to the run packet',
+      tone: 'accent',
+    });
+    event.target.value = '';
+  };
+  const requestFileAttach = () => {
+    setAttachmentPickerNote('File picker requested. Choose PDF, JSON, TXT, CSV, or log evidence; buyer send stays gated.');
+    fileInputRef.current?.click();
+  };
+  const removeAttachedFile = (fileId) => {
+    const nextCount = attachedFiles.filter(f => f.id !== fileId).length;
+    setAttachedFiles(prev => prev.filter(f => f.id !== fileId));
+    setAttachmentPickerNote(
+      nextCount > 0
+        ? `${nextCount} file${nextCount === 1 ? '' : 's'} still attached to this review packet.`
+        : 'All attachments removed. Add buyer proof before running the draft engine.'
+    );
+    invalidateDraftForBriefChange();
+  };
 
   // Clear handoff banners as soon as the operator successfully generates
   // a review draft. The banners exist to label "this brief came from a
@@ -3687,18 +4534,19 @@ function GeneratePage({ setRoute }) {
   React.useEffect(() => {
     if (!reviewReady) return;
     setAddressBlockersBanner(null);
-    setProposalV3Banner(null);
+    setProposalDraftBanner(null);
     setNewRunBanner(null);
   }, [reviewReady]);
 
   // Public demo CTAs can deep-link into the console's artifact review
   // drawer. Treat the query as a one-shot opener so closing/navigating
-  // inside the console does not keep resurrecting the sample packet.
+  // inside the console does not keep resurrecting a local preview artifact.
   React.useEffect(() => {
     try {
       const url = new URL(globalThis.location.href);
       const requestedArtifact = url.searchParams.get('artifact');
       if (requestedArtifact === 'pdf' || requestedArtifact === 'json') {
+        setPublicSampleArtifact(true);
         setArtifactPanel(requestedArtifact);
         url.searchParams.delete('artifact');
         globalThis.history.replaceState(globalThis.history.state, '', `${url.pathname}${url.search}${url.hash}`);
@@ -3732,33 +4580,40 @@ function GeneratePage({ setRoute }) {
       setBriefError('');
       setReviewReady(false);
       setArtifactPanel(null);
+      setPublicSampleArtifact(false);
       setAddressBlockersBanner({ proposalId, co, blockers });
       lastHandoffRef.current = { kind: 'address-blockers', proposalId, co, blockers };
       // Clear the handoff so re-navigating to Generate doesn't keep
       // re-prefilling the textarea.
-      const { triggered_from, address_blockers_proposal_id, address_blockers_co, address_blockers_list, ...rest } = extra;
-      globalThis.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({
+        extra: page2OmitKeys(extra, [
+          'triggered_from',
+          'address_blockers_proposal_id',
+          'address_blockers_co',
+          'address_blockers_list',
+        ]),
+      });
     };
     applyAddressBlockersHandoff(globalThis.AppContext.get());
     return globalThis.AppContext.subscribe(applyAddressBlockersHandoff);
   }, []);
 
-  // Consume the "Generate proposal v3" handoff from CallsPage. Pre-fills
+  // Consume the "Draft next proposal" handoff from CallsPage. Pre-fills
   // the brief textarea with the active call's metadata so the toast's
   // "agent-02 context carries this call" claim is actually true.
   React.useEffect(() => {
-    const applyProposalV3Handoff = (ctx) => {
+    const applyCallProposalDraftHandoff = (ctx) => {
       const extra = ctx?.extra || {};
-      if (extra.triggered_from !== 'call-generate-proposal-v3') return;
-      const callId = String(extra.proposal_v3_call_id || '').trim();
-      const callCo = String(extra.proposal_v3_call_co || '').trim();
-      const callWho = String(extra.proposal_v3_call_who || '').trim();
-      const callOutcome = String(extra.proposal_v3_call_outcome || '').trim();
-      const callScore = extra.proposal_v3_call_score;
-      const callDuration = String(extra.proposal_v3_call_duration || '').trim();
+      if (!['call-draft-next-proposal', 'call-generate-proposal-v3'].includes(extra.triggered_from)) return;
+      const callId = String(extra.proposal_draft_call_id || extra.proposal_v3_call_id || '').trim();
+      const callCo = String(extra.proposal_draft_call_co || extra.proposal_v3_call_co || '').trim();
+      const callWho = String(extra.proposal_draft_call_who || extra.proposal_v3_call_who || '').trim();
+      const callOutcome = String(extra.proposal_draft_call_outcome || extra.proposal_v3_call_outcome || '').trim();
+      const callScore = extra.proposal_draft_call_score ?? extra.proposal_v3_call_score;
+      const callDuration = String(extra.proposal_draft_call_duration || extra.proposal_v3_call_duration || '').trim();
       if (!callId && !callCo) return;
       const prefilled = [
-        `CONTEXT: Generating proposal v3 from ${callId || 'most recent call'} with ${callCo || 'the active buyer'}.`,
+        `CONTEXT: Drafting the next proposal from ${callId || 'the most recent call'} with ${callCo || 'the active buyer'}.`,
         '',
         `Call signal:`,
         `  · who: ${callWho || 'buyer stakeholder'}`,
@@ -3772,21 +4627,32 @@ function GeneratePage({ setRoute }) {
       setBriefError('');
       setReviewReady(false);
       setArtifactPanel(null);
-      setProposalV3Banner({ callId, callCo, callWho, callOutcome, callScore });
-      lastHandoffRef.current = { kind: 'proposal-v3', callId, callCo, callWho, callOutcome, callScore };
-      const {
-        triggered_from,
-        proposal_v3_call_id, proposal_v3_call_co, proposal_v3_call_who,
-        proposal_v3_call_outcome, proposal_v3_call_score, proposal_v3_call_duration,
-        ...rest
-      } = extra;
-      globalThis.AppContext.set({ extra: rest });
+      setPublicSampleArtifact(false);
+      setProposalDraftBanner({ callId, callCo, callWho, callOutcome, callScore });
+      lastHandoffRef.current = { kind: 'call-proposal-draft', callId, callCo, callWho, callOutcome, callScore };
+      globalThis.AppContext.set({
+        extra: page2OmitKeys(extra, [
+          'triggered_from',
+          'proposal_draft_call_id',
+          'proposal_draft_call_co',
+          'proposal_draft_call_who',
+          'proposal_draft_call_outcome',
+          'proposal_draft_call_score',
+          'proposal_draft_call_duration',
+          'proposal_v3_call_id',
+          'proposal_v3_call_co',
+          'proposal_v3_call_who',
+          'proposal_v3_call_outcome',
+          'proposal_v3_call_score',
+          'proposal_v3_call_duration',
+        ]),
+      });
     };
-    applyProposalV3Handoff(globalThis.AppContext.get());
-    return globalThis.AppContext.subscribe(applyProposalV3Handoff);
+    applyCallProposalDraftHandoff(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyCallProposalDraftHandoff);
   }, []);
 
-  // Consume the topbar "New run -> Generate proposal" handoff. That
+  // Consume the topbar "New task -> Generate proposal" handoff. That
   // action advertises buyer proof from an existing call, so the Generate
   // page must not land on an empty composer.
   React.useEffect(() => {
@@ -3816,70 +4682,156 @@ function GeneratePage({ setRoute }) {
       setBriefError('');
       setReviewReady(false);
       setArtifactPanel(null);
+      setPublicSampleArtifact(false);
       setNewRunBanner({ callId, callCo, callWho, callOutcome, callScore });
       lastHandoffRef.current = { kind: 'new-run', callId, callCo, callWho, callOutcome, callScore };
-      const {
-        triggered_from,
-        proposal_seed_source,
-        proposal_seed_call_id,
-        proposal_seed_call_co,
-        proposal_seed_call_who,
-        proposal_seed_call_outcome,
-        proposal_seed_call_score,
-        proposal_seed_call_duration,
-        ...rest
-      } = extra;
-      globalThis.AppContext.set({ extra: rest });
+      globalThis.AppContext.set({
+        extra: page2OmitKeys(extra, [
+          'triggered_from',
+          'proposal_seed_source',
+          'proposal_seed_call_id',
+          'proposal_seed_call_co',
+          'proposal_seed_call_who',
+          'proposal_seed_call_outcome',
+          'proposal_seed_call_score',
+          'proposal_seed_call_duration',
+        ]),
+      });
     };
     applyNewRunHandoff(globalThis.AppContext.get());
     return globalThis.AppContext.subscribe(applyNewRunHandoff);
   }, []);
 
+  const hasAttachment = attachedFiles.length > 0;
+  const hasBrief = Boolean(inputText.trim() || hasAttachment);
+  const sampleArtifactPreviewOnly = publicSampleArtifact && !hasBrief && !activeHandoff.kind;
+  const readableAttachmentCount = attachedFiles.filter(f => f.includedInBrief).length;
   const isDemoArtifactMode = Boolean(globalThis.DEMO_MODE);
   const artifactMode = isDemoArtifactMode ? 'demo sequence' : 'live backend';
+  const artifactHasBuyerProof = Boolean(activeHandoff.kind || sampleProofActive || hasBrief);
+  const artifactIsUnbound = !artifactHasBuyerProof;
+  const artifactPreviewReady = Boolean(reviewReady || sampleArtifactPreviewOnly);
+  const pendingArtifactPath = artifactIsUnbound
+    ? 'pending: buyer proof required before render'
+    : 'pending: run sequence required before render';
+  const reviewArtifactLocator = (kind) => (
+    artifactPreviewReady
+      ? `local-review://${reviewPacketId}/${kind === 'pdf' ? 'proposal.pdf' : 'source-evidence.json'}`
+      : pendingArtifactPath
+  );
   const artifacts = {
     pdf: {
       kind: 'PDF',
-      title: reviewReady ? `${reviewSubject} proposal draft` : `${reviewSubject} sample proposal packet`,
-      path: '../assets/sample-proposal.pdf',
+      title: reviewReady
+        ? `${reviewSubject} proposal draft`
+        : sampleArtifactPreviewOnly
+          ? `${reviewSubject} proposal packet preview`
+          : artifactHasBuyerProof
+            ? `${reviewSubject} packet requirements`
+            : 'Unbound proposal packet requirements',
+      path: artifactPreviewReady ? '../assets/sample-proposal.pdf' : '',
+      displayPath: reviewArtifactLocator('pdf'),
+      previewAvailable: artifactPreviewReady,
       artifactId: reviewPacketId,
-      sourceLabel: 'branded PDF renderer',
-      previewTitle: `${reviewReady ? 'Generated' : 'Sample'} proposal PDF review preview`,
-      status: reviewReady ? (isDemoArtifactMode ? 'demo draft ready' : 'draft ready') : 'sample packet',
+      sourceLabel: artifactIsUnbound
+        ? 'PDF renderer waiting on buyer proof'
+        : sampleArtifactPreviewOnly
+          ? 'demo artifact preview'
+        : artifactPreviewReady
+          ? 'branded PDF renderer'
+          : 'draft engine waiting to render PDF',
+      previewTitle: `${reviewReady ? 'Generated' : 'Local'} proposal PDF review preview`,
+      status: reviewReady
+        ? (isDemoArtifactMode ? 'demo draft ready' : 'draft ready')
+        : sampleArtifactPreviewOnly
+          ? 'demo preview only'
+          : artifactHasBuyerProof ? 'sequence required' : 'requirements',
       gate: reviewReady ? 'operator_review' : 'sequence_required',
       mode: artifactMode,
       summary: reviewReady
         ? (isDemoArtifactMode
-          ? `Demo-generated ${reviewSubject} packet replayed from the bundled fixture. The review gate, audit trace, and proposal handoff are real console behavior; buyer send remains blocked.`
+          ? `Demo-generated ${reviewSubject} packet replayed through the local review sequence. The review gate, audit trace, and proposal handoff are real console behavior; buyer send remains blocked.`
           : 'Seven-page branded proposal packet generated from this run. Review pricing, scope, and the AI risk report before buyer send.')
-        : `Synthetic ${reviewSubject} review packet. It previews the artifact shape; run the sequence before treating it as a draft.`,
+        : sampleArtifactPreviewOnly
+          ? `Demo-proof ${reviewSubject} review artifact preview. Load proof or run a fresh sequence before buyer approval.`
+          : artifactHasBuyerProof
+            ? 'Buyer proof is loaded, but no PDF artifact exists yet. Run the sequence to bind evidence, pricing, risk, and the approval gate.'
+          : 'Unbound artifact requirements. Load demo proof or paste buyer context before a buyer packet exists.',
     },
     json: {
       kind: 'JSON',
-      title: reviewReady ? `${reviewSubject} source evidence bundle` : `${reviewSubject} sample source evidence packet`,
-      path: '../fixtures/transcripts/sample-proposal.json',
+      title: reviewReady
+        ? `${reviewSubject} source evidence bundle`
+        : sampleArtifactPreviewOnly
+          ? `${reviewSubject} source artifact preview`
+          : artifactHasBuyerProof
+            ? `${reviewSubject} source requirements`
+            : 'Unbound source evidence requirements',
+      path: artifactPreviewReady ? '../fixtures/transcripts/sample-proposal.json' : '',
+      displayPath: reviewArtifactLocator('json'),
+      previewAvailable: artifactPreviewReady,
       artifactId: reviewPacketId,
-      sourceLabel: 'buyer evidence bundle',
-      status: reviewReady ? (isDemoArtifactMode ? `demo-bound to ${reviewPacketId}` : `bound to ${reviewPacketId}`) : 'sample evidence',
+      sourceLabel: artifactIsUnbound
+        ? 'buyer evidence not loaded'
+        : sampleArtifactPreviewOnly
+          ? 'demo source preview'
+        : artifactPreviewReady
+          ? 'buyer evidence bundle'
+          : 'draft engine waiting to bind source evidence',
+      status: reviewReady
+        ? (isDemoArtifactMode ? `demo-bound to ${reviewPacketId}` : `bound to ${reviewPacketId}`)
+        : sampleArtifactPreviewOnly
+          ? 'demo preview only'
+          : artifactHasBuyerProof ? 'sequence required' : 'requirements',
       gate: reviewReady ? 'operator_review' : 'sequence_required',
       mode: artifactMode,
       summary: reviewReady
         ? (isDemoArtifactMode
-          ? `Demo evidence bundle replayed through the local fixture with ${reviewSubject} review metadata. Use it to inspect the review path; live runs replace this with backend-generated source evidence.`
+          ? `Demo evidence bundle replayed through the local review sequence with ${reviewSubject} review metadata. Use it to inspect the review path; live runs replace this with backend-generated source evidence.`
           : 'Transcript, extracted buyer context, pricing inputs, and checks bound to the generated proposal draft.')
-        : 'Synthetic transcript and buyer context used to preview the source evidence packet before generation.',
+        : sampleArtifactPreviewOnly
+          ? 'Demo transcript and buyer context are open as a preview-only artifact. Generate a fresh draft before buyer approval.'
+          : artifactHasBuyerProof
+            ? 'Buyer proof is loaded, but source evidence has not been bound to a generated draft yet. Run the sequence first.'
+          : 'Source evidence requirements are waiting on buyer proof; no source preview exists yet.',
     },
   };
   const activeArtifact = artifactPanel ? artifacts[artifactPanel] : null;
+  const pdfReviewChecks = [
+    { label: 'Buyer evidence', state: artifactIsUnbound ? 'missing' : sampleArtifactPreviewOnly ? 'preview' : reviewReady ? 'bound' : 'loaded' },
+    { label: 'Pricing math', state: reviewReady ? 'check' : 'pending' },
+    { label: 'Risk report', state: reviewReady ? 'review' : 'pending' },
+    { label: 'Brand polish', state: reviewReady ? 'renderer' : 'pending' },
+  ];
   const artifactSourcePreview = (() => {
     if (!activeArtifact) return null;
     const base = {
       artifact_id: activeArtifact.artifactId,
       review_subject: reviewSubject,
-      source_path: activeArtifact.path,
+      source_path: activeArtifact.displayPath || activeArtifact.path,
       gate: activeArtifact.gate,
       buyer_send: 'blocked_until_operator_review',
     };
+    if (!activeHandoff.kind && !sampleProofActive && !hasBrief) {
+      return {
+        ...base,
+        evidence: {
+          packet_type: 'unbound_preview',
+          status: 'waiting_for_buyer_proof',
+          note: 'No buyer proof is loaded. Load demo proof, paste buyer context, or attach source evidence before reviewing a buyer packet.',
+        },
+      };
+    }
+    if (!activeArtifact.previewAvailable) {
+      return {
+        ...base,
+        evidence: {
+          packet_type: 'sequence_required',
+          status: 'run_sequence_before_artifact_preview',
+          note: 'Buyer proof is loaded, but the PDF/source artifact does not exist until the draft engine completes.',
+        },
+      };
+    }
     if (!activeHandoff.kind) {
       return {
         ...base,
@@ -3894,6 +4846,13 @@ function GeneratePage({ setRoute }) {
         buyer: reviewSubject,
         signal: reviewSignal,
         context_source: reviewContextSource,
+        review_metadata: {
+          review_subject: reviewSubject,
+          review_packet_id: activeArtifact.artifactId,
+          review_gate: activeArtifact.gate,
+          artifact_mode: activeArtifact.mode,
+          buyer_send: 'blocked_until_operator_review',
+        },
         carried_handoff: {
           kind: activeHandoff.kind,
           call_id: activeHandoff.callId || null,
@@ -3915,7 +4874,7 @@ function GeneratePage({ setRoute }) {
   React.useEffect(() => {
     if (!artifactPanel) return undefined;
     const frame = requestAnimationFrame(() => {
-      artifactPanelRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+      globalThis.scrollConsoleNodeIntoView?.(artifactPanelRef.current, { block: 'start' });
     });
     return () => cancelAnimationFrame(frame);
   }, [artifactPanel]);
@@ -3923,6 +4882,10 @@ function GeneratePage({ setRoute }) {
     setArtifactPayload(null);
     if (!activeArtifact || activeArtifact.kind !== 'JSON') {
       setArtifactState('idle');
+      return undefined;
+    }
+    if (!activeArtifact.previewAvailable || !activeArtifact.path) {
+      setArtifactState('ready');
       return undefined;
     }
     let cancelled = false;
@@ -3938,7 +4901,7 @@ function GeneratePage({ setRoute }) {
         if (cancelled) return;
         setArtifactPayload({
           artifact_id: activeArtifact.artifactId,
-          source_path: activeArtifact.path,
+          source_path: activeArtifact.displayPath || activeArtifact.path,
           gate: activeArtifact.gate,
           status: 'preview_unavailable',
           error: err?.message || 'Unable to load artifact preview',
@@ -3946,23 +4909,107 @@ function GeneratePage({ setRoute }) {
         setArtifactState('error');
       });
     return () => { cancelled = true; };
-  }, [activeArtifact?.kind, activeArtifact?.path, activeArtifact?.artifactId, activeArtifact?.gate]);
+  }, [activeArtifact?.kind, activeArtifact?.path, activeArtifact?.displayPath, activeArtifact?.previewAvailable, activeArtifact?.artifactId, activeArtifact?.gate]);
 
-  const hasBrief = Boolean(inputText.trim());
+  const buyerCommandState = activeHandoff.kind
+    ? 'handoff'
+    : sampleArtifactPreviewOnly
+      ? 'preview'
+      : hasBrief
+        ? 'ready'
+        : 'missing';
+  const buyerCommandValue = activeHandoff.kind
+    ? reviewSubject
+    : sampleArtifactPreviewOnly
+      ? 'Demo proof packet'
+      : briefBuyerName || (hasBrief ? 'operator brief' : 'No buyer loaded');
+  const buyerCommandMeta = activeHandoff.kind
+    ? reviewContextSource
+    : sampleArtifactPreviewOnly
+      ? 'demo packet preview · load proof to regenerate'
+      : briefBuyerName
+      ? reviewContextSource
+      : hasBrief
+        ? 'buyer name not parsed from proof'
+        : 'load demo proof or paste buyer proof';
+  const proofSourceLabel = activeHandoff.kind
+    ? 'console handoff'
+    : sampleProofActive
+      ? 'demo proof loaded'
+      : hasBrief
+        ? 'operator supplied'
+        : sampleArtifactPreviewOnly
+          ? 'demo artifact preview'
+          : 'empty composer';
+  const draftStateLabel = isGenerating
+    ? 'running'
+    : reviewReady
+      ? 'ready for review'
+      : hasBrief
+        ? 'ready to run'
+        : sampleArtifactPreviewOnly
+          ? 'load proof to run'
+          : 'needs proof';
+  const commandStripItems = [
+    {
+      label: 'buyer proof',
+      value: hasBrief
+        ? sampleProofActive
+          ? 'demo proof loaded'
+          : (hasAttachment ? `${attachedFiles.length} file${attachedFiles.length === 1 ? '' : 's'} attached` : 'brief ready')
+        : sampleArtifactPreviewOnly
+          ? 'demo artifact open'
+          : 'proof missing',
+      meta: hasAttachment
+        ? `${readableAttachmentCount} text attachment${readableAttachmentCount === 1 ? '' : 's'} included`
+        : sampleProofActive
+          ? 'synthetic buyer proof bound to local review packet'
+        : sampleArtifactPreviewOnly
+          ? 'reviewable preview · proof not loaded into draft engine'
+          : 'paste notes or attach source files',
+      state: hasBrief ? 'ready' : sampleArtifactPreviewOnly ? 'preview' : 'missing',
+      tone: hasBrief ? 'healthy' : sampleArtifactPreviewOnly ? 'accent' : 'neutral',
+    },
+    {
+      label: 'active buyer',
+      value: buyerCommandValue,
+      meta: buyerCommandMeta,
+      state: buyerCommandState,
+      tone: activeHandoff.kind || briefBuyerName ? 'accent' : hasBrief ? 'warn' : 'neutral',
+    },
+    {
+      label: 'packet',
+      value: reviewPacketId,
+      meta: reviewReady ? 'artifact bound to this run' : 'preview id until sequence completes',
+      state: reviewReady ? 'ready' : 'preview',
+      tone: reviewReady ? 'healthy' : 'neutral',
+    },
+    {
+      label: 'buyer send',
+      value: reviewReady ? 'approval gate' : 'blocked',
+      meta: reviewReady ? 'Proposals approval required before buyer send' : 'no send path until approval',
+      state: reviewReady ? 'gated' : 'locked',
+      tone: reviewReady ? 'warn' : 'neutral',
+    },
+  ];
   const draftButtonLabel = isGenerating
     ? 'Generating draft'
     : reviewReady
       ? 'Regenerate review draft'
       : hasBrief
         ? 'Generate review draft'
-        : 'Add buyer proof first';
+        : sampleArtifactPreviewOnly
+          ? 'Load demo proof'
+          : 'Add buyer proof';
   const lowerDraftButtonLabel = isGenerating
     ? 'Sequence running...'
     : reviewReady
       ? 'Regenerate review draft'
       : hasBrief
         ? 'Generate review draft'
-        : 'Add buyer proof first';
+        : sampleArtifactPreviewOnly
+          ? 'Load demo proof'
+          : 'Add buyer proof';
   const sequenceSteps = [
     {
       n: '01',
@@ -3986,22 +5033,51 @@ function GeneratePage({ setRoute }) {
       tone: reviewReady ? 'accent' : 'neutral',
     },
   ];
+  const artifactReviewDetail = reviewReady
+    ? `${reviewPacketId} PDF and source artifacts are available locally.`
+    : sampleArtifactPreviewOnly
+      ? 'Demo review artifact is open; load proof to run a fresh sequence.'
+      : artifactHasBuyerProof
+        ? 'Buyer proof is loaded; run the sequence to render PDF/source artifacts.'
+      : 'Inspect packet requirements; no PDF/source preview exists until buyer proof is loaded.';
+  const artifactReviewActionLabel = reviewReady ? 'Review artifact' : 'Inspect requirements';
+  const pendingReviewMessage = artifactHasBuyerProof
+    ? 'Run the sequence to create the proposal review packet.'
+    : 'Add buyer proof before this packet can be reviewed.';
+  const readyReviewMessage = `${reviewSubject} draft is ready for operator review. Packet ${reviewPacketId} stays gated in Proposals.`;
+  const packetReviewCopy = artifactHasBuyerProof
+    ? reviewReady
+      ? 'Review PDF/source artifacts locally first; approval happens in Proposals before buyer send.'
+      : 'Buyer proof is loaded. Run the sequence to create PDF/source artifacts; approval happens in Proposals before buyer send.'
+    : 'Requirements are visible here; PDF/source artifacts appear after buyer proof is attached and the sequence completes, then approval happens in Proposals.';
+  const pdfArtifactActionLabel = reviewReady
+    ? 'Review PDF artifact'
+    : sampleArtifactPreviewOnly
+      ? 'Preview demo PDF'
+      : 'Inspect PDF requirements';
+  const sourceArtifactActionLabel = reviewReady
+    ? 'Inspect source evidence'
+    : sampleArtifactPreviewOnly
+      ? 'Preview demo source'
+      : 'Inspect source requirements';
   const reviewPathSteps = [
     {
       key: 'artifact',
       label: 'Artifact',
-      detail: reviewReady ? `${reviewPacketId} local preview.` : 'Local sample preview.',
-      state: activeArtifact ? 'active' : reviewReady ? 'ready' : 'available',
-      action: reviewReady
-        ? { key: 'open-artifact-draft', label: 'Open draft artifact preview' }
-        : { key: 'open-artifact-sample', label: 'Open sample artifact preview' },
+      detail: artifactReviewDetail,
+      state: activeArtifact ? 'active' : reviewReady ? 'ready' : 'pending',
+      action: { key: reviewReady || sampleArtifactPreviewOnly ? 'open-artifact-preview' : 'inspect-artifact-requirements', label: artifactReviewActionLabel },
     },
     {
       key: 'review',
       label: 'Review',
-      detail: reviewReady ? 'Operator approval in Proposals.' : 'Draft gate locked.',
+      detail: reviewReady
+        ? 'Operator approval in Proposals.'
+        : artifactHasBuyerProof
+          ? 'Draft gate waits for sequence output.'
+          : 'Draft gate locked until buyer proof is loaded.',
       state: reviewReady ? 'ready' : 'locked',
-      action: reviewReady ? { key: 'open-proposals-review', label: 'Open proposal review' } : null,
+      action: reviewReady ? { key: 'open-proposals-review', label: 'Open review' } : null,
     },
     {
       key: 'send',
@@ -4038,18 +5114,53 @@ function GeneratePage({ setRoute }) {
       return proposals.find(p => `${p.id} ${p.co}`.toLowerCase().includes(n)) || null;
     };
     const matchById = (id) => (id ? proposals.find(p => p.id === id) : null);
+    const matchByPacket = (id) => (id ? proposals.find(p => p.executionId === id) : null);
+    const localDraftId = `DRAFT-${artifactIdSlug(reviewSubject).replace(/_/g, '-').toUpperCase()}`;
+    const createLocalReviewProposal = () => {
+      const existingDraft = matchById(localDraftId) || matchByPacket(reviewPacketId);
+      if (existingDraft) return existingDraft;
+      const draft = {
+        id: localDraftId,
+        co: reviewSubject,
+        amount: sampleProofActive ? '$24K' : '$0K',
+        stage: 'review',
+        sent: 'not sent',
+        viewed: '0 times',
+        sections: 7,
+        accepted: 0,
+        blockers: [],
+        owner: activeHandoff.kind === 'call-proposal-draft' || activeHandoff.kind === 'new-run'
+          ? 'agent-02'
+          : 'operator',
+        executionId: reviewPacketId,
+        artifacts: [],
+      };
+      globalThis.GTM.proposals = [draft, ...proposals];
+      return draft;
+    };
     // Read from lastHandoffRef rather than the live banner state — the
     // banners auto-clear when reviewReady becomes true, but the buyer
     // identity captured by the most-recent handoff is what should drive
     // the routing.
     const handoff = lastHandoffRef.current || {};
-    const reviewProposal =
-      matchById(handoff.proposalId) ||
-      matchByName(handoff.co) ||
-      matchByName(handoff.callCo) ||
-      matchByName('acme') ||
-      proposals.find(p => isOpenProposalStage(p.stage)) ||
-      proposals[0];
+    let reviewProposal = null;
+    if (!handoff.kind && reviewReady) {
+      reviewProposal = createLocalReviewProposal();
+    }
+    const reviewProposalCandidates = [
+      matchById(handoff.proposalId),
+      matchByName(handoff.co),
+      matchByName(handoff.callCo),
+      matchByName('acme'),
+      matchByPacket(reviewPacketId),
+    ];
+    reviewProposal = reviewProposal || reviewProposalCandidates.find(Boolean);
+    if (!reviewProposal) {
+      reviewProposal = createLocalReviewProposal();
+    }
+    if (!reviewProposal) {
+      reviewProposal = proposals.find(p => isOpenProposalStage(p.stage)) || proposals[0];
+    }
     if (!reviewProposal) {
       globalThis.toast('No proposal available to review', { sub: 'demo proposals fixture is empty', tone: 'critical' });
       return;
@@ -4086,8 +5197,8 @@ function GeneratePage({ setRoute }) {
   };
 
   const handleGenerate = async () => {
-    if (!inputText.trim()) {
-      setBriefError('Paste buyer context or load the HVAC sample before generating a review draft.');
+    if (!inputText.trim() && attachedFiles.length === 0) {
+      setBriefError('Paste buyer context, attach buyer proof, or load demo proof before generating a review draft.');
       focusBuyerBrief();
       return globalThis.toast('Input required', { sub: 'Buyer proof is required before the draft engine runs.', tone: 'critical' });
     }
@@ -4101,9 +5212,17 @@ function GeneratePage({ setRoute }) {
     setArtifactState('idle');
     globalThis.dispatchEvent(new CustomEvent('gtm:stream-reset'));
     stream('pipeline.start: review draft requested · validating buyer brief');
-    const payload = JSON.stringify({ input: inputText });
+    const payload = JSON.stringify({
+      input: inputText,
+      attachments: attachedFiles.map(f => ({
+        name: f.name,
+        type: f.type,
+        size: f.size,
+        includedInBrief: f.includedInBrief,
+        text: f.text,
+      })),
+    });
     stream(`request.posting: POST /api/generate · ${payload.length} bytes${globalThis.DEMO_MODE ? ' · DEMO_MODE' : ''}`);
-    globalThis.toast('Sequence Initializing...', { tone: 'accent' });
     const generateRequest = () => fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4123,7 +5242,6 @@ function GeneratePage({ setRoute }) {
         stream(`pipeline.complete: artifact_id=${reviewPacketId} · 7 pages · ready for review`, 'ok');
         setIsGenerating(false);
         setReviewReady(true);
-        globalThis.toast('Proposal generated', { sub: `${reviewSubject} · 7 pages · ready to review`, tone: 'accent' });
       }, cumulative + 200);
     };
 
@@ -4148,6 +5266,11 @@ function GeneratePage({ setRoute }) {
     try {
       const res = await generateRequest();
       stream(`request.response: HTTP ${res.status} ${res.statusText || ''}`.trim(), res.ok ? 'ok' : 'warn');
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        const bodySummary = detail ? ` · ${detail.slice(0, 180)}` : '';
+        throw new Error(`HTTP ${res.status} ${res.statusText || 'generation failed'}${bodySummary}`);
+      }
       // In live mode the backend keeps the stream open; the console
       // still unlocks the review surface after a short grace period so the
       // operator is not trapped behind transport latency.
@@ -4169,19 +5292,110 @@ function GeneratePage({ setRoute }) {
     try {
       const res = await fetch('/fixtures/sample.json');
       const data = await res.json();
-      if (data && data.text) {
+      if (data?.text) {
         invalidateDraftForBriefChange();
         setInputText(data.text);
+        setPublicSampleArtifact(true);
         setBriefError('');
-        focusBuyerBrief();
       }
     } catch (e) {
       invalidateDraftForBriefChange();
       setInputText("CLIENT: Acme HVAC Services\n\nCONTEXT: Regional HVAC contractor (~30 employees, residential + light commercial). 22% of after-hours calls go to voicemail; 40% of those callers do not call back the next day.\n\nGOAL: Voice agent that answers after-hours, gathers caller details (name, address, urgency, problem class), and SMS-routes urgency-tagged dispatches to the on-call tech.\n\nSTACK: HouseCallPro for dispatch, Twilio for inbound SMS, Outlook 365 calendars. No current AI surface.\n\nBUDGET SIGNAL: Comparable peers spending $1.5–2.5k/mo on dispatch tooling. Owner has approved 1 quarter pilot if ROI math holds (target payback < 6 months).\n\nCOMPLIANCE: No PHI. Standard call-recording disclosure required (TX two-party).\n\nDEMO ASK: Generate proposal + SOW + AI risk report.");
+      setPublicSampleArtifact(true);
       setBriefError('');
-      focusBuyerBrief();
     }
   };
+  const handleDraftAction = () => {
+    if (!hasBrief && !isGenerating) {
+      if (sampleArtifactPreviewOnly) {
+        autoSample();
+        return;
+      }
+      focusBuyerBrief();
+      return;
+    }
+    handleGenerate();
+  };
+
+  const artifactReviewCard = (
+    <Card
+      title="artifact review"
+      action={
+        <button className="btn btn--primary btn--sm generate-review-cta" disabled={!reviewReady} onClick={reviewInProposals}>
+          Review in Proposals
+        </button>
+      }
+      accent={reviewReady ? 'accent' : undefined}
+      className="generate-review-card"
+    >
+      <div className="artifact-review">
+        <div className="artifact-review__state" data-testid="generate-review-state">
+          <Badge tone={reviewReady ? 'healthy' : 'neutral'}>{reviewReady ? 'ready' : 'waiting'}</Badge>
+          <span>{reviewReady ? readyReviewMessage : pendingReviewMessage}</span>
+          {!reviewReady && (
+            <button type="button" className="btn btn--ghost btn--xs artifact-review__jump" onClick={sampleArtifactPreviewOnly ? autoSample : focusBuyerBrief}>
+              {hasBrief ? 'Edit buyer proof' : sampleArtifactPreviewOnly ? 'Load demo proof' : 'Add buyer proof'}
+            </button>
+          )}
+        </div>
+        <div className="artifact-review__path" aria-label="Proposal review path" data-testid="generate-review-path">
+          {reviewPathSteps.map((step, idx) => (
+            <div key={step.label} data-state={step.state} data-testid={`generate-review-path-step-${step.key}`}>
+              <span className="artifact-review__path-index">{idx + 1}</span>
+              <div className="artifact-review__path-copy">
+                <strong>{step.label}</strong>
+                <p>{step.detail}</p>
+              </div>
+              {step.action ? (
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--xs artifact-review__path-action"
+                  data-testid={`generate-review-path-action-${step.action.key}`}
+                  aria-controls={step.action.key.includes('artifact') ? 'generate-artifact-drawer' : undefined}
+                  aria-expanded={step.action.key.includes('artifact') ? artifactPanel === 'pdf' : undefined}
+                  aria-pressed={step.action.key.includes('artifact') ? artifactPanel === 'pdf' : undefined}
+                  onClick={() => {
+                    if (step.action.key.includes('artifact')) {
+                      openArtifact('pdf');
+                    } else if (step.action.key === 'open-proposals-review') {
+                      reviewInProposals();
+                    }
+                  }}
+                >
+                  {step.action.label}
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        <div className="artifact-review__links">
+          <button type="button" className="btn btn--ghost btn--sm" data-testid="generate-review-pdf-action" aria-controls="generate-artifact-drawer" aria-expanded={artifactPanel === 'pdf'} aria-pressed={artifactPanel === 'pdf'} onClick={() => openArtifact('pdf')}><I3.Doc size={12}/>{pdfArtifactActionLabel}</button>
+          <button type="button" className="btn btn--ghost btn--sm" data-testid="generate-review-source-action" aria-controls="generate-artifact-drawer" aria-expanded={artifactPanel === 'json'} aria-pressed={artifactPanel === 'json'} onClick={() => openArtifact('json')}><I3.Bracket size={12}/>{sourceArtifactActionLabel}</button>
+        </div>
+        <div className="artifact-review__packet" data-testid="generate-review-packet">
+          <div>
+            <div className="artifact-review__packet-title">
+              <span className="eyebrow eyebrow--accent">review packet</span>
+              <strong>Proposal packet stays bound to evidence and approval gate.</strong>
+            </div>
+            <p>{packetReviewCopy}</p>
+          </div>
+        </div>
+        <div className="artifact-review__quality">
+          {[
+            { label:'Pricing math', state: reviewReady ? 'checked' : 'pending' },
+            { label:'Risk report', state: reviewReady ? 'checked' : 'pending' },
+            { label:'PDF polish', state: 'needs review' },
+          ].map(q => (
+            <div key={q.label}>
+              <span>{q.label}</span>
+              <Badge tone={q.state === 'checked' ? 'healthy' : q.state === 'needs review' ? 'warn' : 'neutral'}>{q.state}</Badge>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="page page--generate">
@@ -4190,11 +5404,12 @@ function GeneratePage({ setRoute }) {
         title="Generate Proposal"
         sub="Paste buyer context, generate a review draft, and keep the operator gate in the console. Nothing sends until the draft is reviewed."
         actions={<>
-          <button className="btn btn--ghost btn--sm" onClick={autoSample}><I3.Doc size={12}/>Use sample brief</button>
+          <button className="btn btn--ghost btn--sm" onClick={autoSample}><I3.Doc size={12}/>Load demo proof</button>
           <button
             className="btn btn--primary btn--sm"
-            onClick={handleGenerate}
-            disabled={!hasBrief || isGenerating}
+            onClick={handleDraftAction}
+            disabled={isGenerating}
+            aria-controls={!hasBrief ? 'generate-buyer-proof' : undefined}
             aria-describedby={hasBrief ? undefined : 'generate-brief-required-note'}
             title={hasBrief ? undefined : 'Buyer proof is required before the draft engine runs.'}
           >
@@ -4202,6 +5417,24 @@ function GeneratePage({ setRoute }) {
           </button>
         </>}
       />
+
+      <section className="generate-command-strip" aria-label="Generate run command strip" data-testid="generate-command-strip">
+        {commandStripItems.map(item => (
+          <div
+            key={item.label}
+            className="generate-command-strip__item"
+            data-state={item.state}
+            data-testid={`generate-command-item-${item.label.replace(/\s+/g, '-')}`}
+          >
+            <div className="generate-command-strip__label">
+              <span>{item.label}</span>
+              <Badge tone={item.tone}>{item.state}</Badge>
+            </div>
+            <strong>{item.value}</strong>
+            <p>{item.meta}</p>
+          </div>
+        ))}
+      </section>
 
       <section className="generate-sequence" aria-label="Proposal generation sequence" data-testid="generate-sequence">
         {sequenceSteps.map(step => (
@@ -4217,17 +5450,12 @@ function GeneratePage({ setRoute }) {
       </section>
 
       <div className="generate-grid">
-        <Card title="buyer brief" className="card--accent generate-brief-card">
+        {artifactReviewCard}
+
+        <Card title="buyer proof composer" className="card--accent generate-brief-card">
           {newRunBanner && (
-            <div className="generate-handoff-banner" data-testid="generate-new-run-banner" role="status" style={{
-              padding: '10px 12px',
-              marginBottom: 12,
-              borderLeft: '3px solid var(--sunset-500)',
-              background: 'rgba(255,95,0,.06)',
-              borderRadius: 'var(--r-md)',
-              fontSize: 12,
-            }}>
-              <div style={{fontWeight: 700, marginBottom: 4}}>
+            <div className="generate-handoff-banner" data-testid="generate-new-run-banner" role="status">
+              <div className="generate-handoff-banner__title">
                 New proposal run seeded from {newRunBanner.callId || 'latest qualified call'}
                 {newRunBanner.callCo ? ` · ${newRunBanner.callCo}` : ''}
               </div>
@@ -4238,29 +5466,21 @@ function GeneratePage({ setRoute }) {
               <button
                 type="button"
                 className="btn btn--ghost btn--xs"
-                style={{marginTop: 8}}
                 data-testid="generate-new-run-dismiss"
                 onClick={() => setNewRunBanner(null)}
               >Dismiss banner</button>
             </div>
           )}
           {addressBlockersBanner && (
-            <div className="generate-handoff-banner" data-testid="generate-address-blockers-banner" role="status" style={{
-              padding: '10px 12px',
-              marginBottom: 12,
-              borderLeft: '3px solid var(--sunset-500)',
-              background: 'rgba(255,95,0,.06)',
-              borderRadius: 'var(--r-md)',
-              fontSize: 12,
-            }}>
-              <div style={{fontWeight: 700, marginBottom: 4}}>
+            <div className="generate-handoff-banner" data-testid="generate-address-blockers-banner" role="status">
+              <div className="generate-handoff-banner__title">
                 Addressing blockers from {addressBlockersBanner.proposalId || 'active proposal'}
                 {addressBlockersBanner.co ? ` · ${addressBlockersBanner.co}` : ''}
               </div>
               {addressBlockersBanner.blockers.length > 0 ? (
-                <ul data-testid="generate-address-blockers-list" style={{margin: '4px 0 0 18px', padding: 0}}>
+                <ul className="generate-handoff-banner__list" data-testid="generate-address-blockers-list">
                   {addressBlockersBanner.blockers.map((b, i) => (
-                    <li key={i} style={{listStyle: 'disc'}}>{b}</li>
+                    <li key={i}>{b}</li>
                   ))}
                 </ul>
               ) : (
@@ -4269,39 +5489,46 @@ function GeneratePage({ setRoute }) {
               <button
                 type="button"
                 className="btn btn--ghost btn--xs"
-                style={{marginTop: 8}}
                 data-testid="generate-address-blockers-dismiss"
                 onClick={() => setAddressBlockersBanner(null)}
               >Dismiss banner</button>
             </div>
           )}
-          {proposalV3Banner && (
-            <div className="generate-handoff-banner" data-testid="generate-proposal-v3-banner" role="status" style={{
-              padding: '10px 12px',
-              marginBottom: 12,
-              borderLeft: '3px solid var(--sunset-500)',
-              background: 'rgba(255,95,0,.06)',
-              borderRadius: 'var(--r-md)',
-              fontSize: 12,
-            }}>
-              <div style={{fontWeight: 700, marginBottom: 4}}>
-                Generating proposal v3 from {proposalV3Banner.callId || 'active call'}
-                {proposalV3Banner.callCo ? ` · ${proposalV3Banner.callCo}` : ''}
+          {proposalDraftBanner && (
+            <div className="generate-handoff-banner" data-testid="generate-proposal-draft-banner" role="status">
+              <div className="generate-handoff-banner__title">
+                Drafting next proposal from {proposalDraftBanner.callId || 'active call'}
+                {proposalDraftBanner.callCo ? ` · ${proposalDraftBanner.callCo}` : ''}
               </div>
-              <div className="muted" data-testid="generate-proposal-v3-summary">
-                {proposalV3Banner.callWho || 'stakeholder'} · {proposalV3Banner.callOutcome || 'outcome unknown'}
-                {typeof proposalV3Banner.callScore === 'number' ? ` · ${proposalV3Banner.callScore.toFixed(1)} / 10` : ''}
+              <div className="muted" data-testid="generate-proposal-draft-summary">
+                {proposalDraftBanner.callWho || 'stakeholder'} · {proposalDraftBanner.callOutcome || 'outcome unknown'}
+                {typeof proposalDraftBanner.callScore === 'number' ? ` · ${proposalDraftBanner.callScore.toFixed(1)} / 10` : ''}
               </div>
               <button
                 type="button"
                 className="btn btn--ghost btn--xs"
-                style={{marginTop: 8}}
-                data-testid="generate-proposal-v3-dismiss"
-                onClick={() => setProposalV3Banner(null)}
+                data-testid="generate-proposal-draft-dismiss"
+                onClick={() => setProposalDraftBanner(null)}
               >Dismiss banner</button>
             </div>
           )}
+          <div className="generate-proof-meter" data-testid="generate-proof-meter">
+            <div>
+              <span className="eyebrow eyebrow--accent">proof source</span>
+              <strong>{proofSourceLabel}</strong>
+            </div>
+            <div>
+              <span className="eyebrow">payload</span>
+              <strong>{Math.max(0, inputText.trim().length).toLocaleString()} chars · {attachedFiles.length} file{attachedFiles.length === 1 ? '' : 's'}</strong>
+            </div>
+            <div>
+              <span className="eyebrow">draft state</span>
+              <strong>{draftStateLabel}</strong>
+            </div>
+          </div>
+          <label className="sr-only" htmlFor="generate-buyer-proof">Buyer proof</label>
           <textarea
+            id="generate-buyer-proof"
             ref={briefRef}
             value={inputText}
             onChange={e => {
@@ -4314,13 +5541,50 @@ function GeneratePage({ setRoute }) {
             aria-invalid={briefError ? 'true' : 'false'}
             aria-describedby={briefError ? 'generate-brief-error' : undefined}
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="sr-only"
+            aria-label="Attach buyer proof files"
+            data-testid="generate-file-input"
+            onChange={handleFileAttach}
+          />
+          <div className="generate-attachments" data-testid="generate-attachments">
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              data-testid="generate-file-attach"
+              aria-describedby={attachmentPickerNote ? 'generate-attachment-status' : undefined}
+              onClick={requestFileAttach}
+            ><I3.Doc size={12}/>Attach file</button>
+            {attachedFiles.map(file => (
+              <span key={file.id} className="generate-attachment-chip" data-testid="generate-attachment-chip">
+                <span className="mono">{file.name}</span>
+                <span>{Math.max(1, Math.round(file.size / 1024))} KB</span>
+                <button type="button" aria-label={`Remove ${file.name}`} onClick={() => removeAttachedFile(file.id)}><I3.Close size={10}/></button>
+              </span>
+            ))}
+            {attachmentPickerNote && (
+              <span
+                id="generate-attachment-status"
+                className="generate-attachment-status"
+                data-testid="generate-attachment-status"
+                role="status"
+                aria-live="polite"
+              >
+                {attachmentPickerNote}
+              </span>
+            )}
+          </div>
           {briefError && <div id="generate-brief-error" className="generate-brief-error" role="alert">{briefError}</div>}
           <div className="generate-actions">
-            <button className="btn btn--ghost btn--sm" onClick={autoSample}>Load HVAC sample</button>
+            <button className="btn btn--ghost btn--sm" onClick={autoSample}>Use demo proof</button>
             <button
               className="btn btn--primary btn--sm"
-              onClick={handleGenerate}
-              disabled={!hasBrief || isGenerating}
+              onClick={handleDraftAction}
+              disabled={isGenerating}
+              aria-controls={!hasBrief ? 'generate-buyer-proof' : undefined}
               aria-describedby={hasBrief ? undefined : 'generate-brief-required-note'}
               title={hasBrief ? undefined : 'Buyer proof is required before the draft engine runs.'}
             >
@@ -4333,84 +5597,10 @@ function GeneratePage({ setRoute }) {
         <Card title="sequence trace" className="generate-trace-card">
           <window.ConsolePanel title="live · pipeline.stream" lines={null} useLiveStream={true} />
         </Card>
-
-        <Card
-          title="artifact review"
-          action={
-            <button className="btn btn--primary btn--sm generate-review-cta" disabled={!reviewReady} onClick={reviewInProposals}>
-              Review in Proposals
-            </button>
-          }
-          accent={reviewReady ? 'accent' : undefined}
-          className="generate-review-card"
-        >
-          <div className="artifact-review">
-            <div className="artifact-review__state">
-              <Badge tone={reviewReady ? 'healthy' : 'neutral'}>{reviewReady ? 'ready' : 'waiting'}</Badge>
-              <span>{reviewReady ? 'Draft is ready for operator review.' : 'Run the sequence to unlock the proposal review gate.'}</span>
-              {!reviewReady && (
-                <button type="button" className="btn btn--ghost btn--xs artifact-review__jump" onClick={focusBuyerBrief}>
-                  {hasBrief ? 'Edit buyer proof' : 'Add buyer proof'}
-                </button>
-              )}
-            </div>
-            <div className="artifact-review__path" aria-label="Proposal review path" data-testid="generate-review-path">
-              {reviewPathSteps.map((step, idx) => (
-                <div key={step.label} data-state={step.state} data-testid={`generate-review-path-step-${step.key}`}>
-                  <span className="artifact-review__path-index">{idx + 1}</span>
-                  <div>
-                    <strong>{step.label}</strong>
-                    <p>{step.detail}</p>
-                    {step.action ? (
-                      <button
-                        type="button"
-                        className="btn btn--ghost btn--xs artifact-review__path-action"
-                        data-testid={`generate-review-path-action-${step.action.key}`}
-                        aria-pressed={step.action.key.includes('artifact') ? artifactPanel === 'pdf' : undefined}
-                        onClick={() => {
-                          if (step.action.key.includes('artifact')) {
-                            openArtifact('pdf');
-                          } else if (step.action.key === 'open-proposals-review') {
-                            reviewInProposals();
-                          }
-                        }}
-                      >
-                        {step.action.label}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="artifact-review__links">
-              <button type="button" className="btn btn--ghost btn--sm" aria-pressed={artifactPanel === 'pdf'} onClick={() => openArtifact('pdf')}><I3.Doc size={12}/>{reviewReady ? 'Preview draft PDF' : 'Review PDF sample'}</button>
-              <button type="button" className="btn btn--ghost btn--sm" aria-pressed={artifactPanel === 'json'} onClick={() => openArtifact('json')}><I3.Bracket size={12}/>{reviewReady ? 'Inspect draft source' : 'Inspect sample source'}</button>
-            </div>
-            <div className="artifact-review__packet">
-              <div>
-                <div className="eyebrow eyebrow--accent">review packet</div>
-                <strong>Proposal, source evidence, and quality gate stay together.</strong>
-                <p>Use the local artifact previews before routing the draft into Proposals for operator approval.</p>
-              </div>
-            </div>
-            <div className="artifact-review__quality">
-              {[
-                { label:'Pricing math', state: reviewReady ? 'checked' : 'pending' },
-                { label:'Risk report', state: reviewReady ? 'checked' : 'pending' },
-                { label:'PDF polish', state: 'needs review' },
-              ].map(q => (
-                <div key={q.label}>
-                  <span>{q.label}</span>
-                  <Badge tone={q.state === 'checked' ? 'healthy' : q.state === 'needs review' ? 'warn' : 'neutral'}>{q.state}</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
       </div>
 
       {activeArtifact && (
-        <div ref={artifactPanelRef} className="workflow-popout workflow-popout--single generate-artifact-panel" role="region" aria-label="Proposal artifact review drawer">
+        <div id="generate-artifact-drawer" ref={artifactPanelRef} className="workflow-popout workflow-popout--single generate-artifact-panel" role="region" aria-label="Proposal artifact review drawer">
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
@@ -4442,8 +5632,8 @@ function GeneratePage({ setRoute }) {
                   </div>
                 </div>
                 <div className="artifact-drawer__source">
-                  <span className="eyebrow">local source path</span>
-                  <code className="artifact-drawer__path">{activeArtifact.path}</code>
+                  <span className="eyebrow">review locator</span>
+                  <code className="artifact-drawer__path">{activeArtifact.displayPath || activeArtifact.path}</code>
                 </div>
                 <div className="artifact-drawer__pathway" data-testid="generate-artifact-review-path">
                   {reviewPathSteps.map((step, idx) => (
@@ -4456,7 +5646,45 @@ function GeneratePage({ setRoute }) {
               </div>
               <div className="artifact-drawer__review">
                 {activeArtifact.kind === 'PDF' ? (
-                  <iframe title={activeArtifact.previewTitle || 'Proposal PDF review preview'} src={activeArtifact.path}></iframe>
+                  <div className="artifact-drawer__pdf-frame" data-preview-available={activeArtifact.previewAvailable ? 'true' : 'false'} data-testid="generate-pdf-review-frame">
+                    <div className="artifact-drawer__pdf-map">
+                      <span className="eyebrow">PDF review map</span>
+                      <strong>{reviewReady ? 'Draft packet checkpoint' : activeArtifact.previewAvailable ? 'Preview packet checkpoint' : 'Pending packet checkpoint'}</strong>
+                      <p>{activeArtifact.previewAvailable
+                        ? sampleArtifactPreviewOnly
+                          ? 'Inspect this demo PDF preview here. Load demo proof or run the sequence before treating it as source-bound buyer evidence.'
+                          : 'Read the PDF here with source evidence, quality checks, and the approval gate still attached to the review packet.'
+                        : artifactIsUnbound
+                          ? 'No PDF has been rendered yet. Add buyer proof first so the draft engine can bind evidence, pricing, risk, and the approval gate.'
+                          : 'No PDF has been rendered yet. Run the sequence so the draft engine can bind evidence, pricing, risk, and the approval gate.'}</p>
+                      <div className="artifact-drawer__pdf-checks">
+                        {pdfReviewChecks.map(check => (
+                          <div key={check.label}>
+                            <span>{check.label}</span>
+                            <Badge tone={check.state === 'check' || check.state === 'bound' ? 'healthy' : check.state === 'preview' ? 'accent' : check.state === 'review' ? 'warn' : 'neutral'}>{check.state}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {activeArtifact.previewAvailable ? (
+                      <iframe title={activeArtifact.previewTitle || 'Proposal PDF review preview'} src={activeArtifact.path}></iframe>
+                    ) : (
+                      <div className="artifact-drawer__pdf-empty" data-testid="generate-pdf-review-placeholder">
+                        <div>
+                          <span className="eyebrow eyebrow--accent">PDF preview pending</span>
+                          <strong>{artifactIsUnbound ? 'Buyer proof is required before this packet exists.' : 'Run the sequence before this packet exists.'}</strong>
+                          <p>{artifactIsUnbound
+                            ? 'The review packet id is reserved, but there is no source evidence or rendered PDF to inspect yet.'
+                            : 'Buyer proof is loaded, but the draft engine has not created a source-bound PDF artifact yet.'}</p>
+                        </div>
+                        <div className="artifact-drawer__pending-steps" aria-label="Pending proposal packet requirements">
+                          <span>buyer proof</span>
+                          <span>draft engine</span>
+                          <span>operator review</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : artifactState === 'loading' ? (
                   <div className="lead-artifact-empty">Loading source evidence...</div>
                 ) : (
@@ -4465,7 +5693,17 @@ function GeneratePage({ setRoute }) {
               </div>
               <div className="artifact-drawer__actions">
                 <button className="btn btn--ghost btn--sm" onClick={() => copyReviewPacketId(activeArtifact)}><I3.Doc size={12}/>Copy review packet ID</button>
-                <button className="btn btn--primary btn--sm" disabled={!reviewReady} onClick={reviewInProposals}>Continue review</button>
+                {reviewReady ? (
+                  <button className="btn btn--primary btn--sm" data-testid="generate-artifact-drawer-primary-action" onClick={reviewInProposals}>Continue review</button>
+                ) : hasBrief ? (
+                  <button className="btn btn--primary btn--sm" data-testid="generate-artifact-drawer-primary-action" disabled={isGenerating} onClick={handleGenerate}>
+                    {isGenerating ? 'Sequence running...' : 'Run sequence'}
+                  </button>
+                ) : sampleArtifactPreviewOnly ? (
+                  <button className="btn btn--primary btn--sm" data-testid="generate-artifact-drawer-primary-action" onClick={autoSample}>Load demo proof</button>
+                ) : (
+                  <button className="btn btn--primary btn--sm" data-testid="generate-artifact-drawer-primary-action" onClick={focusBuyerBrief}>Add buyer proof</button>
+                )}
               </div>
             </div>
           </div>

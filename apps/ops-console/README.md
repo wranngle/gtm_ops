@@ -60,8 +60,10 @@ mount live ElevenLabs ConvAI widgets for the Sales Coach and Sarah Intake
 agents. Agent IDs and surface bindings live in `console/agents-registry.js`.
 The widget script is loaded lazily from
 `unpkg.com/@elevenlabs/convai-widget-embed`; if that load is blocked
-(strict CSP, corporate firewall) the widget container renders a fallback
-message + deep link to the agent on `elevenlabs.io`.
+(strict CSP, corporate firewall) the widget container renders a local
+recovery panel that opens the in-console agent admin. The only external
+ElevenLabs dashboard escape hatch lives under Settings → Integrations →
+ElevenLabs after the local wrapper is surfaced.
 
 Append `?admin=1` to the `/console/` URL to reveal admin-only agents.
 

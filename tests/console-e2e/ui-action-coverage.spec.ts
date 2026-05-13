@@ -9,7 +9,7 @@ import { test, expect } from './helpers.js';
 const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'settings'] as const;
 
 const ROUTE_LABELS: Record<(typeof ROUTES)[number], string> = {
-  home: 'Mission Control',
+  home: 'Callbacks',
   generate: 'Generate',
   pipeline: 'Pipeline',
   calls: 'Calls',
@@ -288,6 +288,28 @@ async function exerciseTarget(page: Page, target: ActionTarget) {
       if (inputType === 'checkbox' || inputType === 'radio') {
         const clicked = await clickActionTarget(page, resolved.target);
         if (!clicked) return { covered: true, reason: 'checkbox detached during probe' };
+      } else if (inputType === 'file') {
+        return { covered: true, reason: 'file inputs are exercised through their visible upload trigger' };
+      } else if (inputType === 'time') {
+        await locator.fill('08:30');
+      } else if (inputType === 'number') {
+        const nextValue = await locator.evaluate((element: HTMLInputElement) => {
+          const min = Number.parseFloat(element.min);
+          const max = Number.parseFloat(element.max);
+          const current = Number.parseFloat(element.value);
+          const floor = Number.isFinite(min) ? min : 0;
+          const ceiling = Number.isFinite(max) ? max : floor + 10;
+          const step = Number.parseFloat(element.step);
+          const increment = Number.isFinite(step) && step > 0 ? step : 1;
+          let next = Number.isFinite(current) ? current + increment : floor;
+          if (next > ceiling) next = ceiling;
+          if (Number.isFinite(current) && next === current && current - increment >= floor) {
+            next = current - increment;
+          }
+          return Number.isFinite(current) && next === current ? '' : String(next);
+        });
+        if (!nextValue) return { covered: true, reason: 'single-value number input' };
+        await locator.fill(nextValue);
       } else {
         await locator.fill('__ui_action_probe__');
       }

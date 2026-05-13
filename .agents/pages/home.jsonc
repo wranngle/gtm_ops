@@ -1,0 +1,41 @@
+{
+  "route": "console/?route=home",
+  "purpose": "Land operators on callback recovery work: missed callers waiting, callback outcomes, human handoffs, recent calls, and follow-up schedule.",
+  "primaryUsers": ["operator", "reviewer"],
+  "regions": [
+    {
+      "name": "command strip",
+      "intent": "Summarize callback workload, missed callers, recovered work, and handoff state without agent-cockpit language."
+    },
+    {
+      "name": "metric row",
+      "intent": "Keep missed-call volume, callback volume, call quality, and recovery evidence scannable with range-aware labels and compact trend evidence."
+    },
+    {
+      "name": "operations grid",
+      "intent": "Prioritize missed-call recovery cases in the primary rail, with recent calls and callbacks owed in the secondary rail."
+    },
+    {
+      "name": "attention banner",
+      "intent": "Surface the current paused-agent handoff only when it is actionable, with snooze and review flows preserved."
+    }
+  ],
+  "designConstraints": [
+    "No marketing hero, decorative blobs, or visible route title/caption block.",
+    "Use Wranngle console tokens from DESIGN.md with dense operational spacing and mono metadata.",
+    "Use Home-scoped CSS via .page--home or Home-only class names.",
+    "Preserve existing AppContext, route navigation, refresh, snooze, call review, proposal review, and Sarah test handoff behavior."
+  ],
+  "states": [
+    "Default live fixture state with active attention banner.",
+    "Attention snoozed state with restore affordance.",
+    "No callback recovery cases waiting.",
+    "No recent calls or callbacks owed."
+  ],
+  "verification": [
+    "Range segmented control updates mission stats data-range.",
+    "Refresh button shows transient refreshing state and returns to enabled.",
+    "Attention snooze hides the active banner and restore brings it back.",
+    "Recovery case and evidence rows remain keyboard actionable and do not create horizontal page overflow."
+  ]
+}

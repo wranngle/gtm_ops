@@ -61,12 +61,13 @@ test('landing uses the Wranngle PNG logo and real console screenshot carousel', 
   }
 });
 
-test('landing sample proposal CTA opens console artifact review instead of a direct download', async ({ page }) => {
+test('landing proposal CTA opens console artifact review instead of a direct download', async ({ page }) => {
   await page.goto('/');
-  const sampleCta = page.getByRole('link', { name: /Review sample proposal packet/i });
+  const sampleCta = page.getByRole('link', { name: /Review proposal packet/i });
   await expect(sampleCta).toHaveAttribute('href', '/console/?route=generate&artifact=pdf');
   expect(await sampleCta.getAttribute('download')).toBeNull();
   await expect(page.getByRole('link', { name: /Download sample proposal/i })).toHaveCount(0);
+  await expect(page.getByText(/reviewable artifacts attached/i)).toBeVisible();
 });
 
 const HTML_ENTRYPOINTS = [
