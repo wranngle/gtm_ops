@@ -817,13 +817,6 @@ app.get('/api/health', generalLimiter, (req, res) => {
   res.status(200).json(buildLightHealthPayload());
 });
 
-// /api/ticker — anonymized booking telemetry feed (mirror of the Pages Function).
-app.get('/api/ticker', generalLimiter, async (req, res) => {
-  const { getTickerEvents } = await import('./lib/ticker.js');
-  const events = await getTickerEvents({});
-  res.set('Cache-Control', 'public, max-age=30').json(events);
-});
-
 // GDPR endpoints
 app.get('/api/gdpr/consent', generalLimiter, async (req, res) => {
   try {
