@@ -4183,6 +4183,32 @@ function GeneratePage({ setRoute }) {
     }
   };
 
+  // Public-link auto-play: README and external CTAs deep-link to
+  // `/console/?route=generate&demo=1` for a hands-off canned trace.
+  // Stage 1 strips the param and loads the sample brief; stage 2 fires
+  // handleGenerate once hasBrief flips so the 11-step pipeline replays
+  // without operator interaction. One-shot per page load.
+  const autoPlayStateRef = React.useRef('idle');
+  React.useEffect(() => {
+    if (autoPlayStateRef.current !== 'idle') return;
+    try {
+      const url = new URL(globalThis.location.href);
+      if (url.searchParams.get('demo') !== '1') return;
+      autoPlayStateRef.current = 'loading-brief';
+      url.searchParams.delete('demo');
+      globalThis.history.replaceState(globalThis.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+      autoSample();
+    } catch (_) {
+      /* URL API unavailable */
+    }
+  }, []);
+  React.useEffect(() => {
+    if (autoPlayStateRef.current !== 'loading-brief') return;
+    if (!hasBrief || isGenerating || reviewReady) return;
+    autoPlayStateRef.current = 'generating';
+    handleGenerate();
+  }, [hasBrief, isGenerating, reviewReady]);
+
   return (
     <div className="page page--generate">
       <PageHeader
