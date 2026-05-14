@@ -18,6 +18,21 @@ const PAGE_HEIGHT_PX = 1056; // 11 inches
 const SAFE_HEIGHT_PX = 1008; // 10.5 inches (leaving margin for safety)
 const PADDING_PX = 48;       // 0.5in total padding (0.25in each side)
 
+// Watermark text stamped into every sheet when DEMO_MODE is on. Plain ASCII
+// (no em-dash) so consumers searching the rendered PDF text layer find it
+// without normalization. Single source of truth — exported for tests.
+export const DEMO_WATERMARK_TEXT = 'SYNTHETIC FIXTURE - NOT A REAL QUOTE';
+
+function isDemoMode(opt) {
+  if (opt === true) return true;
+  if (opt === false || opt === 0) return false;
+  if (opt === undefined || opt === null) {
+    const raw = process.env.DEMO_MODE;
+    return raw === '1' || raw === 'true';
+  }
+  return Boolean(opt);
+}
+
 /**
  * Default PDF options for Traffic Light Reports
  */
@@ -228,6 +243,55 @@ async function applyPrintFixes(page, options = {}) {
 }
 
 /**
+ * Stamp a synthetic-fixture watermark footer onto every printed sheet.
+ * Text-layer (not background image) so PDF text search/extraction finds it.
+ */
+async function applyDemoWatermark(page, watermarkText) {
+  await page.evaluate((text) => {
+    const stamp = document.createElement('div');
+    stamp.dataset.demoWatermark = '1';
+    stamp.textContent = text;
+    stamp.style.cssText = [
+      'position: fixed',
+      'left: 0',
+      'right: 0',
+      'bottom: 0',
+      'width: 100%',
+      'padding: 4px 0',
+      'font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      'font-size: 9pt',
+      'font-weight: 700',
+      'letter-spacing: 0.08em',
+      'text-align: center',
+      'color: #b91c1c',
+      'background: rgba(254, 226, 226, 0.92)',
+      'border-top: 1px solid #b91c1c',
+      'z-index: 2147483647',
+      'pointer-events: none'
+    ].join(';');
+    document.body.append(stamp);
+
+    const style = document.createElement('style');
+    style.id = 'pdf-demo-watermark';
+    style.textContent = `
+      @media print {
+        [data-demo-watermark="1"] {
+          position: fixed !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          display: block !important;
+          visibility: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    `;
+    document.head.append(style);
+  }, watermarkText);
+}
+
+/**
  * Generate PDF from HTML file
  */
 export async function generatePDF(htmlPath, pdfPath = null, options = {}) {
@@ -287,6 +351,10 @@ export async function generatePDF(htmlPath, pdfPath = null, options = {}) {
       options.isInternalSheet === true;
 
     await applyPrintFixes(page, { isInternalSheet });
+    const demoMode = isDemoMode(options.demoMode);
+    if (demoMode) {
+      await applyDemoWatermark(page, DEMO_WATERMARK_TEXT);
+    }
     await new Promise(resolve => setTimeout(resolve, 200));
 
     await page.pdf(pdfOptions);
@@ -298,7 +366,8 @@ export async function generatePDF(htmlPath, pdfPath = null, options = {}) {
       pdfPath: absolutePdfPath,
       size: stats.size,
       sizeDisplay: `${(stats.size / 1024).toFixed(1)} KB`,
-      isInternalSheet
+      isInternalSheet,
+      demoMode
     };
 
   } finally {
@@ -364,6 +433,11 @@ export async function generatePDFFromContent(htmlContent, pdfPath, options = {})
 
     scalingResults = await measureAndScaleSheets(page, { isInternalSheet });
 
+    const demoMode = isDemoMode(options.demoMode);
+    if (demoMode) {
+      await applyDemoWatermark(page, DEMO_WATERMARK_TEXT);
+    }
+
     await new Promise(resolve => setTimeout(resolve, 200));
 
     await page.pdf(pdfOptions);
@@ -377,7 +451,8 @@ export async function generatePDFFromContent(htmlContent, pdfPath, options = {})
       sizeDisplay: `${(stats.size / 1024).toFixed(1)} KB`,
       scaling: scalingResults,
       sheetsFound: scalingResults.length,
-      isInternalSheet
+      isInternalSheet,
+      demoMode
     };
 
   } finally {
