@@ -1706,6 +1706,66 @@ function CallsPage({ setRoute }) {
   const [coachingDraftText, setCoachingDraftText] = useState('');
   const transcriptKeyFor = (l) => `${l.t}|${l.who}|${(l.txt || '').slice(0, 24)}`;
   const callNotes = coachingNotes.filter(n => n.callId === activeId);
+
+  // Build a portable, shareable trace for the active call. Operators paste
+  // these into bug reports and AE prep docs; the shape mirrors what the
+  // post-call pipeline would emit (transcript + tool_calls + latency_legs
+  // + audit_log) so a downstream consumer can replay or grade without
+  // needing the live ops-console session.
+  const buildCallTrace = (call) => {
+    const isBanyan = call.id === 'CALL-2419';
+    const transcriptLines = isBanyan ? (D.transcriptBanyan || []) : [];
+    const transcript = transcriptLines
+      .filter(l => l.who === 'agent' || l.who === 'caller')
+      .map(l => ({ ts: l.t, role: l.who, text: l.txt || '' }));
+    const tool_calls = transcriptLines
+      .filter(l => l.who === 'tool')
+      .map((l, i) => ({
+        ts: l.t,
+        name: ((l.txt || '').match(/\[([^\]]+)\]/) || [, `tool_${i}`])[1],
+        summary: (l.txt || '').replace(/^\[[^\]]+\]\s*/, ''),
+      }));
+    const latency_legs = [
+      { leg: 'asr_partial_ms', value: 142, label: 'caller speech → partial transcript' },
+      { leg: 'llm_first_token_ms', value: 318, label: 'partial → first model token' },
+      { leg: 'tts_first_audio_ms', value: 211, label: 'first token → first audio frame' },
+      { leg: 'end_to_first_audio_ms', value: 671, label: 'caller end-of-utterance → agent audio' },
+    ];
+    const audit_log = [
+      { ts: call.when, actor: 'voice_agent', event: 'call_started', call_id: call.id },
+      { ts: call.when, actor: 'voice_agent', event: 'transcript_finalized', lines: transcript.length },
+      { ts: call.when, actor: 'post_call_pipeline', event: 'scored', score: call.score, sentiment: call.sentiment },
+      { ts: call.when, actor: 'ops_console', event: 'trace_exported', call_id: call.id },
+    ];
+    return {
+      schema: 'gtm-ops.call-trace.v1',
+      call_id: call.id,
+      company: call.co,
+      participant: call.who,
+      duration: call.duration,
+      outcome: call.outcome,
+      score: call.score,
+      sentiment: call.sentiment,
+      exported_at: new Date().toISOString(),
+      transcript,
+      tool_calls,
+      latency_legs,
+      audit_log,
+    };
+  };
+
+  const downloadCallTrace = (call) => {
+    const trace = buildCallTrace(call);
+    const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `trace-${call.id}.json`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
   const noteByLineKey = (key) => callNotes.find(n => n.transcriptKey === key) || null;
   const tryOpenCoachingDraft = (l) => {
     if (!coachingMode) {
@@ -2103,6 +2163,12 @@ function CallsPage({ setRoute }) {
                       data-testid="call-recap-open"
                       onClick={openRecapDraft}
                     ><I2.Mail size={10}/>{recapReceipt ? 're-send recap' : 'recap'}</button>
+                    <button
+                      className="btn btn--ghost btn--xs"
+                      data-testid="call-trace-download"
+                      title="Download a shareable JSON of this call's transcript, tool calls, latency legs, and audit log"
+                      onClick={() => downloadCallTrace(active)}
+                    ><I2.ArrowDown size={10}/>trace</button>
                   </div>
                 );
               })()}>
