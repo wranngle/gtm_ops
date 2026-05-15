@@ -1,0 +1,18 @@
+{"kind":"meta","scenario":"HVAC inbound — failed proposal: pricing-engine timeout","co_id":"acme_hvac","caller":"Jane Roe","tier":"silver","fixture_id":"failed-call-2026-05-14","failure_stage":"pricing","failure_kind":"upstream-timeout"}
+{"kind":"turn","ts":0.0,"role":"agent","text":"Hi, this is Sarah from Acme HVAC. We're closed for the night — I can take down the issue and route to the on-call tech. Who am I speaking with?"}
+{"kind":"turn","ts":6.1,"role":"caller","text":"Hey, this is Jane. The AC is leaking water all over the laundry room floor."}
+{"kind":"turn","ts":10.3,"role":"agent","text":"Got it Jane — I see you're at 88 Cedar, silver tier. Is the water actively coming down, or just pooled?","tool":"lookup_record"}
+{"kind":"turn","ts":14.5,"role":"caller","text":"Actively dripping. I've got a bucket under it for now."}
+{"kind":"turn","ts":18.8,"role":"agent","text":"Marking this priority. I'll page Mike and send a proposal — give me one moment to price it."}
+{"kind":"turn","ts":24.0,"role":"caller","text":"Okay, thanks."}
+{"kind":"pipeline","step":1,"stage":"intake","ms":140,"status":"ok","summary":"normalize transcript + caller record"}
+{"kind":"pipeline","step":2,"stage":"extract","ms":360,"status":"ok","summary":"LLM extraction: scope, priority, customer tier"}
+{"kind":"pipeline","step":3,"stage":"enrichment","ms":230,"status":"ok","summary":"CRM hydrate: account, address, silver-tier rates"}
+{"kind":"pipeline","step":4,"stage":"pricing","ms":15000,"status":"failed","summary":"pricing engine timeout @ 15s — upstream rate-card service down"}
+{"kind":"counterfactual","step":4,"stage":"pricing","ms":210,"status":"ok","summary":"cached rate-card fallback (silver tier, AC leak SKU)"}
+{"kind":"counterfactual","step":5,"stage":"compliance","ms":90,"status":"ok","summary":"check service-area + after-hours surcharge disclosure"}
+{"kind":"counterfactual","step":6,"stage":"scope","ms":150,"status":"ok","summary":"draft scope-of-work bullets + customer-specific notes"}
+{"kind":"counterfactual","step":7,"stage":"pdf-render","ms":430,"status":"ok","summary":"render branded PDF via puppeteer template"}
+{"kind":"counterfactual","step":8,"stage":"audit","ms":80,"status":"ok","summary":"emit ECS audit log entry + checksum"}
+{"kind":"final","proposal":"failed","reason":"pricing-engine timeout","total_ms":15730,"note":"Actual run aborted at stage 4. Counterfactual replay shows cached rate-card fallback would have completed in 2150ms."}
+{"kind":"counterfactual-final","proposal":"generated","proposal_id":"prop_counterfactual_2026_05_14","total_ms":2150,"note":"Synthetic counterfactual — what the run would have produced under the cached-rate-card fallback policy."}

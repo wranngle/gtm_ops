@@ -308,6 +308,7 @@ function Sidebar({ route, setRoute, collapsed }) {
     { id:'simulator', label:'Simulator',       icon:I.Phone },
     { id:'email-composer', label:'Follow-up email', icon:I.Mail },
     { id:'verticals', label:'Verticals',       icon:I.Bolt },
+    { id:'replay',    label:'Replay',          icon:I.Beaker },
     { id:'settings',  label:'Settings',        icon:I.Cog },
   ];
   const agents = (window.AGENT_REGISTRY?.agents || [])
