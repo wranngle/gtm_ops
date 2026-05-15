@@ -1,0 +1,17 @@
+{"kind":"meta","scenario":"HVAC inbound — emergency dispatch into booked proposal","co_id":"acme_hvac","caller":"John Doe","tier":"gold","fixture_id":"canned-call-2026-05-14"}
+{"kind":"turn","ts":0.0,"role":"agent","text":"Hi, this is Sarah from Acme HVAC. We're closed for the night, but I can take down what's going on and route to the on-call tech. Who am I speaking with?"}
+{"kind":"turn","ts":6.4,"role":"caller","text":"Yeah hi — this is John. My furnace just stopped working and the house is freezing."}
+{"kind":"turn","ts":10.2,"role":"agent","text":"Got it John — I see you're at 1024 Pine, gold tier. Is the furnace fully dead, or just blowing cold?","tool":"lookup_record"}
+{"kind":"turn","ts":14.0,"role":"caller","text":"Cold air. Thermostat's calling for heat but nothing."}
+{"kind":"turn","ts":18.1,"role":"agent","text":"Marking this priority. I'll page Mike, our on-call tech. He'll call back in 30 minutes and I'll send a proposal for the repair tier you're on."}
+{"kind":"turn","ts":24.7,"role":"caller","text":"Sounds good. Thanks Sarah."}
+{"kind":"turn","ts":25.5,"role":"agent","text":"All set. Stay warm — Mike will be in touch shortly."}
+{"kind":"pipeline","step":1,"stage":"intake","ms":120,"summary":"normalize transcript + caller record"}
+{"kind":"pipeline","step":2,"stage":"extract","ms":340,"summary":"LLM extraction: scope, priority, customer tier"}
+{"kind":"pipeline","step":3,"stage":"enrichment","ms":210,"summary":"CRM hydrate: account, address, gold-tier rates"}
+{"kind":"pipeline","step":4,"stage":"pricing","ms":180,"summary":"price emergency dispatch + 1hr labor + furnace diagnostic"}
+{"kind":"pipeline","step":5,"stage":"compliance","ms":90,"summary":"check service-area + after-hours surcharge disclosure"}
+{"kind":"pipeline","step":6,"stage":"scope","ms":140,"summary":"draft scope-of-work bullets + customer-specific notes"}
+{"kind":"pipeline","step":7,"stage":"pdf-render","ms":420,"summary":"render branded PDF via puppeteer template"}
+{"kind":"pipeline","step":8,"stage":"audit","ms":80,"summary":"emit ECS audit log entry + checksum"}
+{"kind":"final","proposal":"generated","proposal_id":"prop_canned_2026_05_14","total_ms":1580,"note":"Deterministic canned trace — synthetic fixture, no PII."}
