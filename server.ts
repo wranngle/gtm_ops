@@ -10,6 +10,7 @@ import { GoogleGenAI } from '@google/genai';
 import { UnifiedPipeline } from './lib/pipeline.js';
 import { HistoryManager } from './lib/history.js';
 import { healthCheck, serverState, trackRequest, buildLightHealthPayload } from './lib/health.js';
+import { buildVersionPayload } from './lib/version.js';
 import {
   corsMiddleware,
   securityHeadersMiddleware,
@@ -815,6 +816,15 @@ app.get('/api/admin/health', requireRole(Role.OWNER, Role.ADMIN), generalLimiter
 // to "unknown" when not provided.
 app.get('/api/health', generalLimiter, (req, res) => {
   res.status(200).json(buildLightHealthPayload());
+});
+
+// Build-provenance probe — answers "what's deployed?" so an operator
+// triaging a bug can match a stack trace to a specific commit + dep set.
+// Shape pinned by lib/version.ts + tests/unit/version.test.ts. Mirrors
+// the Cloudflare Pages function in functions/api/version.ts so local dev
+// and prod return identical JSON (same triple-deploy pattern as PR #169).
+app.get('/api/version', generalLimiter, (req, res) => {
+  res.status(200).json(buildVersionPayload());
 });
 
 // GDPR endpoints
