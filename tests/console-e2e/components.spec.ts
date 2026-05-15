@@ -1,7 +1,7 @@
 /**
  * Per-component surface tests. One spec per major interactive component.
  */
-import { test, expect, smokeClickAll } from './_helpers.js';
+import { test, expect, smokeClickAll } from './helpers.js';
 
 test.describe('shell', () => {
   test('sidebar nav toggles every route', async ({ openConsole }) => {
@@ -151,12 +151,19 @@ test.describe('shell', () => {
 
   test('sidebar brand shows Wranngle / gtm_ops console without exposing a version', async ({ openConsole }) => {
     const page = await openConsole();
+    // Browser <title> still says "Wranngle \u00b7 gtm_ops console" \u2014 that's
+    // the tab title, where the surface name is helpful disambiguation.
+    // The in-app breadcrumb and brand-sub mirror shell-level branding:
+    // Wranngle / gtm_ops console. Keep this explicit for operators who
+    // move between environments, and keep version text out of shell chrome.
     await expect(page).toHaveTitle(/Wranngle\s+\u00b7\s+gtm_ops console/i);
     await expect(page).not.toHaveTitle(/v\d/i);
     await expect(page.locator('.sb__brand .sb__wordmark')).toHaveAttribute('alt', /Wranngle/i);
     await expect(page.locator('.sb__brand .sb__logo--lasso img')).toHaveAttribute('src', /wranngle-lasso\.png/);
-    await expect(page.locator('.sb__brand')).toContainText(/gtm_ops console/i);
+    await expect(page.locator('.sb__brand-sub')).toHaveText('gtm_ops console');
+    await expect(page.locator('.sb__brand-sub')).toHaveCSS('text-transform', 'none');
     await expect(page.locator('.sb__brand')).not.toContainText(/v\d/i);
+    await expect(page.locator('.tb__crumb--workspace')).toHaveText('gtm_ops console');
     await expect(page.locator('.tb__crumbs')).toContainText(/Wranngle\s*\/\s*gtm_ops console/i);
     await expect(page.locator('.tb__crumbs')).not.toContainText(/v\d/i);
   });
@@ -183,7 +190,7 @@ test.describe('shell', () => {
     };
 
     await page.locator('.sb__item:has-text("Generate")').first().click();
-    await assertReadableButton(page.getByRole('button', { name: /Review PDF sample/i }), 'Generate artifact PDF button');
+    await assertReadableButton(page.getByRole('button', { name: /Review local PDF artifact/i }), 'Generate artifact PDF button');
 
     await page.locator('.sb__item:has-text("Evals")').first().click();
     await assertReadableButton(page.getByRole('button', { name: /Open run plan/i }), 'Evals run plan button');
@@ -191,6 +198,43 @@ test.describe('shell', () => {
     await page.locator('.sb__item:has-text("Agents")').first().click();
     await assertReadableButton(page.getByRole('button', { name: /Workspace settings/i }), 'Agents workspace settings button');
     await assertReadableButton(page.getByRole('link', { name: /ElevenLabs admin/i }), 'Agents ElevenLabs escape hatch');
+  });
+
+  test('drawer and admin jumps stay inside console scrollers', async ({ openConsole, page }) => {
+    const pageErrors: string[] = [];
+    await page.addInitScript(() => {
+      Object.defineProperty(Element.prototype, 'scrollIntoView', {
+        configurable: true,
+        value() {
+          throw new Error('scrollIntoView should not drive console popout navigation');
+        },
+      });
+    });
+    page.on('pageerror', (error) => {
+      if (!error.message.includes('languageCode')) {
+        pageErrors.push(error.message);
+      }
+    });
+
+    await openConsole();
+
+    await page.locator('.sb__item:has-text("Generate")').first().click();
+    await page.getByRole('button', { name: /Use sample brief/i }).click();
+    await page.getByRole('button', { name: /Review local PDF artifact/i }).click();
+    await expect(page.getByRole('region', { name: /Proposal artifact review drawer/i })).toBeVisible();
+
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    await page.locator('[data-testid="eval-header-run-plan-open"]').click();
+    await expect(page.getByRole('region', { name: /Local eval run plan details/i })).toBeVisible();
+
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+    await page.getByRole('button', { name: /Open local admin/i }).first().click();
+    await expect(page.locator('[data-testid="agent-local-admin-focus-status"]')).toContainText(/local admin focused/i);
+    await page.locator('.agent-admin-tab').filter({ hasText: /^Context$/ }).click();
+    await page.locator('[data-testid="agent-refresh-context"]').click();
+    await expect(page.locator('[data-testid="agent-context-sync"]')).toBeVisible();
+
+    expect(pageErrors).toEqual([]);
   });
 
   test('sparkline inspection is granular without flooding the tab order', async ({ openConsole }) => {
@@ -609,8 +653,9 @@ test.describe('topbar', () => {
     await page.locator('.sb__item:has-text("Generate")').first().click();
 
     await page.getByRole('button', { name: /Use sample brief/i }).click();
-    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-sample"]')).toBeVisible();
-    await page.locator('[data-testid="generate-review-path-action-open-artifact-sample"]').click();
+    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-preview"]')).toBeVisible();
+    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-preview"]')).toHaveText(/Open PDF preview/i);
+    await page.locator('[data-testid="generate-review-path-action-open-artifact-preview"]').click();
     const drawer = page.locator('[role="region"][aria-label="Proposal artifact review drawer"]');
     await expect(drawer).toBeVisible();
     await drawer.getByRole('button', { name: /Close proposal artifact review drawer/i }).click();
@@ -621,6 +666,7 @@ test.describe('topbar', () => {
     await expect(page.locator('[data-testid="generate-review-path-step-review"] .artifact-review__path-action')).toBeVisible({
       timeout: 10_000,
     });
+    await expect(page.locator('[data-testid="generate-review-path-action-open-artifact-draft"]')).toHaveText(/Open draft PDF/i);
     await page.locator('[data-testid="generate-review-path-action-open-proposals-review"]').click();
     await expect(page.locator('.tb__crumb--active')).toContainText('Proposals');
   });
@@ -687,7 +733,7 @@ test.describe('mission control', () => {
     const page = await openConsole();
     // Read live fixture and visible value together inside one evaluate
     // tick so the expected/actual pair is always consistent. Otherwise
-    // /api/history's async mutation of window.GTM.companies (in app.jsx
+    // /api/history's async mutation of window.GTM.companies (in app.tsx
     // loadData) can race the assertion.
     await expect.poll(async () => {
       return page.evaluate(() => {
@@ -2240,7 +2286,7 @@ test.describe('proposals · seed preservation', () => {
 
     // The curated demo proposals from data.js (Banyan Health, Verdant
     // Logistics, Arcadia Insurance, Thornfield Foods) MUST still render
-    // after history loads. Previously app.jsx overwrote the seed array.
+    // after history loads. Previously app.tsx overwrote the seed array.
     await expect(list).toContainText('Banyan Health');
     await expect(list).toContainText('Verdant Logistics');
 
@@ -2303,31 +2349,25 @@ test.describe('proposals · sections card', () => {
       .toContainText(`${verdant.accepted}/${verdant.sections}`);
   });
 
-  test('coach launcher does not cover proposal section review rows on a laptop viewport', async ({ openConsole, page }) => {
+  test('coach launcher is bottom-right on the proposals route at laptop viewport', async ({ openConsole, page }) => {
+    // Earlier shape: launcher hopped to top-right on /generate /proposals
+    // /evals /agents to dodge dense content. May 5 punch list item #20
+    // explicitly asked for bottom-right everywhere, so this test pins
+    // the new contract instead of the old no-overlap one. A floating
+    // bottom-right widget can sit over scrolled content; that's how
+    // floating widgets work.
     await page.setViewportSize({ width: 1280, height: 720 });
     await openConsole();
     await page.locator('.sb__item:has-text("Proposals")').first().click();
 
-    await expect(page.locator('.coach-launcher')).toBeVisible();
+    const launcher = page.locator('.coach-launcher');
+    await expect(launcher).toBeVisible();
     await expect(page.locator('[data-testid="proposal-section-row"]').nth(1)).toBeVisible();
 
-    const overlaps = await page.evaluate(() => {
-      const coach = document.querySelector('.coach-launcher')?.getBoundingClientRect();
-      if (!coach) return ['coach launcher missing'];
-      return [...document.querySelectorAll('[data-testid="proposal-section-row"]')]
-        .filter((row) => {
-          const rect = row.getBoundingClientRect();
-          const visible = rect.bottom > 0 && rect.top < window.innerHeight;
-          return visible
-            && coach.left < rect.right
-            && coach.right > rect.left
-            && coach.top < rect.bottom
-            && coach.bottom > rect.top;
-        })
-        .map(row => row.textContent?.trim() || 'unnamed row');
-    });
-
-    expect(overlaps, `Coach launcher covered proposal review rows: ${overlaps.join(', ')}`).toEqual([]);
+    const box = await launcher.boundingBox();
+    expect(box, 'coach launcher should render').not.toBeNull();
+    expect(box!.y + box!.height, 'launcher bottom edge near viewport bottom').toBeGreaterThan(720 - 60);
+    expect(box!.x + box!.width, 'launcher right edge near viewport right').toBeGreaterThan(1280 - 60);
   });
 });
 
@@ -2579,10 +2619,10 @@ test.describe('evals', () => {
     const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
     expect(ctx.selection.type).toBe('eval');
     expect(ctx.extra.selected_eval_run).toBeTruthy();
-    expect(ctx.extra.eval_run, 'rich eval_run object should be set so buildContextDump emits failed_axes/score/verdict').toEqual(expect.any(Object));
+    expect(ctx.extra.eval_run, 'rich eval_run object should be set so buildAgentContext emits failed_axes/score/verdict').toEqual(expect.any(Object));
     expect(ctx.extra.eval_run.scenario_id || ctx.extra.eval_run.id).toBeTruthy();
 
-    const dump = await page.evaluate(() => (globalThis as any).buildContextDump((globalThis as any).AppContext.get()));
+    const dump = await page.evaluate(() => (globalThis as any).buildAgentContext((globalThis as any).AppContext.get()));
     expect(dump).toMatch(/active_eval_run\.scenario:\s+\S+/);
     expect(dump).toMatch(/active_eval_run\.verdict:\s+(pass|fail|unknown)/);
     expect(dump).toMatch(/active_eval_run\.score:\s+\d+%/);
@@ -2707,12 +2747,12 @@ test.describe('evals', () => {
       return Array.from(range.getClientRects()).length;
     });
     expect(quickAdminKeyLines).toBe(1);
-    const contextDump = page.locator('[data-testid="agent-context-dump"]');
-    await expect(contextDump).toContainText(`active_eval_run.scenario: ${scenario}`);
-    await expect(contextDump).toContainText(/active_eval_run\.verdict: (pass|fail|unknown)/);
-    await expect(contextDump).toContainText(/active_eval_run\.score: \d+%/);
-    await expect(contextDump).toContainText(/selected_eval_score: \d+%|selected_eval_score: --/);
-    await expect(contextDump).toContainText(/eval_failed_axes: /);
+    const agentContext = page.locator('[data-testid="agent-context"]');
+    await expect(agentContext).toContainText(`active_eval_run.scenario: ${scenario}`);
+    await expect(agentContext).toContainText(/active_eval_run\.verdict: (pass|fail|unknown)/);
+    await expect(agentContext).toContainText(/active_eval_run\.score: \d+%/);
+    await expect(agentContext).toContainText(/selected_eval_score: \d+%|selected_eval_score: --/);
+    await expect(agentContext).toContainText(/eval_failed_axes: /);
 
     const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
     expect(ctx.extra.triggered_from).toBe('eval-agent-admin');
@@ -2749,8 +2789,8 @@ test.describe('evals', () => {
     await page.locator('.sb__item:has-text("Agents")').first().click();
     await page.locator('[data-testid="agent-refresh-context"]').click();
     await expect(page.locator('.agent-admin-tab:has-text("Context")')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('[data-testid="agent-context-dump"]')).toHaveAttribute('data-source', 'synced');
-    await expect(page.locator('[data-testid="agent-context-dump"]')).toContainText(/active_route: agents/i);
+    await expect(page.locator('[data-testid="agent-context"]')).toHaveAttribute('data-source', 'synced');
+    await expect(page.locator('[data-testid="agent-context"]')).toContainText(/active_route: agents/i);
 
     await page.locator('.sb__item:has-text("Evals")').first().click();
     await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
@@ -2761,7 +2801,7 @@ test.describe('evals', () => {
     await page.locator('[data-testid="eval-local-agent-admin"]').click();
 
     await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
-    const dump = page.locator('[data-testid="agent-context-dump"]');
+    const dump = page.locator('[data-testid="agent-context"]');
     await expect(dump).toHaveAttribute('data-source', 'live');
     await expect(dump).toContainText(`active_eval_run.scenario: ${scenario}`);
   });
@@ -2772,7 +2812,7 @@ test.describe('evals', () => {
     await expect(page.locator('.eval-run-row')).not.toHaveCount(0, { timeout: 5000 });
     await page.locator('[data-testid="eval-local-agent-admin"]').click();
     await expect(page.locator('[data-testid="agent-eval-handoff-banner"]')).toBeVisible();
-    await expect(page.locator('[data-testid="agent-context-dump"]')).toContainText(/active_eval_run\.scenario:/);
+    await expect(page.locator('[data-testid="agent-context"]')).toContainText(/active_eval_run\.scenario:/);
 
     await page.locator('.sb__nav[aria-label="ElevenLabs agents"] .sb__item:has-text("Sarah")').first().click();
 
@@ -2781,7 +2821,7 @@ test.describe('evals', () => {
     await expect(page.locator('[data-testid="agent-eval-handoff"]')).toHaveCount(0);
     await expect(page.locator('.agent-row[data-active="true"]')).toContainText(/Sarah/i);
     await page.locator('.agent-admin-tab:has-text("Context")').click();
-    const dump = page.locator('[data-testid="agent-context-dump"]');
+    const dump = page.locator('[data-testid="agent-context"]');
     await expect(dump).not.toContainText(/active_eval_run\.scenario:/);
     await expect(dump).not.toContainText(/selected_eval_run:/);
     await expect(dump).not.toContainText(/eval_admin_return_route:/);
@@ -3131,6 +3171,43 @@ test.describe('evals', () => {
     expect(slowestDuration).toMatch(/^\d+(\.\d+)?(ms|s)$/);
   });
 
+  test('eval dashboard surfaces per-tool rolling latency aggregation (parity with voice_ai_agent_evals tool-call rollup gap)', async ({ openConsole }) => {
+    const page = await openConsole();
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+
+    // Rollup panel is run-list-wide (not per-active-run). Fixture has multiple
+    // tool_calls across runs: lookup_record (×2), schedule_appointment, send_confirmation.
+    const rollup = page.locator('[data-testid="eval-tool-latency-rollup"]');
+    await expect(rollup).toBeVisible();
+    await expect(rollup).toContainText(/tool latency · rolling across \d+ runs?/);
+    await expect(rollup).toContainText(/round-trip p95/);
+
+    const rows = page.locator('[data-testid="eval-tool-latency-rollup-row"]');
+    expect(await rows.count(), 'fixture covers at least 3 distinct tool names').toBeGreaterThanOrEqual(3);
+
+    // lookup_record appears in multiple runs — its row should aggregate the
+    // count, not show n=1, and emit a numeric p95.
+    const lookup = page.locator('[data-testid="eval-tool-latency-rollup-row"][data-tool-name="lookup_record"]');
+    await expect(lookup).toBeVisible();
+    const lookupCount = Number(await lookup.getAttribute('data-call-count') || '0');
+    expect(lookupCount, 'lookup_record should aggregate calls across the loaded runs').toBeGreaterThanOrEqual(2);
+    await expect(lookup).toContainText(/p95\s+\d+(\.\d+)?(ms|s)/);
+    await expect(lookup).toContainText(/schema\s+\d+%/);
+    const lookupTone = await lookup.getAttribute('data-tone');
+    expect(['healthy', 'warn', 'critical']).toContain(lookupTone || '');
+
+    // Rows are sorted slowest-first by p95 round-trip.
+    const p95Values = await rows.evaluateAll(nodes =>
+      nodes
+        .map(n => Number((n as HTMLElement).getAttribute('data-p95-ms')))
+        .filter(n => Number.isFinite(n) && n > 0),
+    );
+    if (p95Values.length >= 2) {
+      const sorted = [...p95Values].sort((a, b) => b - a);
+      expect(p95Values, 'rollup rows should be sorted by p95 descending').toEqual(sorted);
+    }
+  });
+
   test('eval dashboard top surface stays compact at laptop width', async ({ openConsole, page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await openConsole();
@@ -3181,7 +3258,15 @@ test.describe('evals', () => {
     expect(overlaps, 'global coach launcher must not cover the Evals run-plan CTA').toBe(false);
   });
 
-  test('eval run detail header is not covered by the global coach launcher after scrolling', async ({ openConsole, page }) => {
+  test('coach launcher stays bottom-right on /evals after opening a run detail', async ({ openConsole, page }) => {
+    // Replaces the earlier "must not cover the run detail card after
+    // scrolling" assertion. That contract assumed the launcher hopped
+    // to top-right on /evals — a per-route override removed for May 5
+    // punch list item #20 (bottom-right everywhere). The companion
+    // test "eval run-plan CTA is not covered by the global coach
+    // launcher" (line ~3144) still asserts no above-fold collision on
+    // the entry-point CTA; this one just pins corner stability after
+    // navigating into a run detail.
     await page.setViewportSize({ width: 1280, height: 900 });
     await openConsole();
     await page.locator('.sb__item:has-text("Evals")').first().click();
@@ -3191,32 +3276,12 @@ test.describe('evals', () => {
     test.skip(runCount === 0, 'Evals runs are unavailable in this fixture snapshot');
     await runRows.last().click();
 
-    const runDetailCard = page.locator('.card:has(.card__title:has-text("run detail"))').first();
-    const runDetailHeader = runDetailCard.locator('.card__hd');
-    const coach = page.locator('.coach-launcher');
-    await expect(runDetailHeader).toBeVisible();
-    await expect(coach).toBeVisible();
-    await runDetailHeader.scrollIntoViewIfNeeded();
-
-    const [headerBox, cardBox, coachBox] = await Promise.all([
-      runDetailHeader.boundingBox(),
-      runDetailCard.boundingBox(),
-      coach.boundingBox(),
-    ]);
-    expect(headerBox, 'eval run detail header should render').not.toBeNull();
-    expect(cardBox, 'eval run detail card should render').not.toBeNull();
-    expect(coachBox, 'global coach launcher should render').not.toBeNull();
-
-    const overlapsHeader = headerBox!.x < coachBox!.x + coachBox!.width
-      && headerBox!.x + headerBox!.width > coachBox!.x
-      && headerBox!.y < coachBox!.y + coachBox!.height
-      && headerBox!.y + headerBox!.height > coachBox!.y;
-    const overlapsCard = cardBox!.x < coachBox!.x + coachBox!.width
-      && cardBox!.x + cardBox!.width > coachBox!.x
-      && cardBox!.y < coachBox!.y + coachBox!.height
-      && cardBox!.y + cardBox!.height > coachBox!.y;
-    expect(overlapsHeader, 'global coach launcher must not cover the Evals run detail header after scroll').toBe(false);
-    expect(overlapsCard, 'global coach launcher must stay out of the Evals run detail card after scroll').toBe(false);
+    const launcher = page.locator('.coach-launcher');
+    await expect(launcher).toBeVisible();
+    const box = await launcher.boundingBox();
+    expect(box, 'coach launcher should render').not.toBeNull();
+    expect(box!.y + box!.height, 'launcher bottom edge near viewport bottom').toBeGreaterThan(900 - 60);
+    expect(box!.x + box!.width, 'launcher right edge near viewport right').toBeGreaterThan(1280 - 60);
   });
 
   test('eval policy action opens Settings on the Eval policy tab', async ({ openConsole }) => {
@@ -3504,7 +3569,7 @@ test.describe('agents page', () => {
     await expect(page.locator('[data-testid="agent-context-bar"]')).toContainText(/from\s+agents/i);
     await expect(page.locator('.agent-session-strip')).toContainText(/route\s+agents/i);
     await page.locator('.agent-admin-tab:has-text("Context")').click();
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/active_route: agents/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).toContainText(/active_route: agents/i);
   });
 
   test('Agents navigation publishes the current route before the local ConvAI wrapper renders', async ({ openConsole }) => {
@@ -3520,8 +3585,8 @@ test.describe('agents page', () => {
     await expect(page.locator('[data-testid="agent-context-bar"]')).toContainText(/from\s+agents/i);
     await expect(page.locator('.agent-session-strip')).toContainText(/route\s+agents/i);
     await page.locator('.agent-admin-tab:has-text("Context")').click();
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/active_route: agents/i);
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).not.toContainText(/active_route: generate/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).toContainText(/active_route: agents/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).not.toContainText(/active_route: generate/i);
   });
 
   test('agent Context tab reuses the shared app context without hook-order errors', async ({ openConsole }) => {
@@ -3557,7 +3622,7 @@ test.describe('agents page', () => {
     const contextPane = page.locator('.agent-admin-json').first();
     await expect(contextPane).toHaveAttribute('tabindex', '0');
     await expect(contextPane).toHaveAttribute('role', 'region');
-    await expect(contextPane).toHaveAttribute('aria-label', /dynamic context dump/i);
+    await expect(contextPane).toHaveAttribute('aria-label', /agent context/i);
   });
 
   test('playground keeps local admin controls above the fold without stretching the picker', async ({ openConsole, page }) => {
@@ -3622,7 +3687,7 @@ test.describe('agents page', () => {
     await expect(sync).toContainText(/refreshed inside the console/i);
     await expect(sync).toContainText(/route\s+agents/i);
     await expect(sync).toContainText(/No dashboard handoff/i);
-    await expect(page.getByRole('region', { name: /dynamic context dump/i })).toContainText(/route: agents/i);
+    await expect(page.getByRole('region', { name: /agent context/i })).toContainText(/route: agents/i);
     await expect(page.locator('.toast').first()).toContainText(/context refreshed/i);
 
     const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
@@ -3630,19 +3695,19 @@ test.describe('agents page', () => {
     expect(ctx.extra.triggered_from).toBe('agents-page');
   });
 
-  test('synced context dump is sealed at sync time — switching the active agent on-page does not silently mutate the displayed dump', async ({ openConsole }) => {
+  test('synced agent context is sealed at sync time — switching the active agent on-page does not silently mutate the displayed dump', async ({ openConsole }) => {
     const page = await openConsole();
     await page.locator('.sb__item:has-text("Agents")').first().click();
     await page.locator('[data-testid="agent-refresh-context"]').click();
     // Wait for the Context tab to become selected before reading the dump,
     // since refreshActiveContext switches admin panels asynchronously.
     await expect(page.locator('.agent-admin-tab:has-text("Context")')).toHaveAttribute('aria-selected', 'true');
-    const dump = page.locator('[data-testid="agent-context-dump"]');
+    const dump = page.locator('[data-testid="agent-context"]');
     await expect(dump).toHaveAttribute('data-source', 'synced');
     const sealed = (await dump.textContent() || '').trim();
     expect(sealed.length).toBeGreaterThan(0);
     // Switch to a different agent — selection inside the playground would
-    // normally re-derive contextDump. The sealed snapshot must not move.
+    // normally re-derive agentContext. The sealed snapshot must not move.
     const otherAgentRow = page.locator('.agents-grid .vstack [role="button"]').filter({ hasText: /Sarah/i }).first();
     await otherAgentRow.click();
     // Re-open the Context tab on the new active agent.

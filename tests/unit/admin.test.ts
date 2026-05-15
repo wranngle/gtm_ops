@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/admin.js
+ * Unit Tests for lib/admin.ts
  *
  * Tests admin dashboard functionality:
  * - Metrics recording and aggregation
@@ -11,7 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -213,6 +213,11 @@ describe('[P0] Activity Feed', () => {
 
   it('[P0] should retrieve activity feed', async () => {
     // GIVEN: Multiple activities
+    const now = Date.now();
+    const dateSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now + 10);
+
     await admin.logActivity({
       workspaceId: 'ws-1',
       userId: 'user-1',
@@ -224,6 +229,8 @@ describe('[P0] Activity Feed', () => {
       userId: 'user-2',
       activityType: 'document.viewed',
     });
+
+    dateSpy.mockRestore();
 
     // WHEN: Getting feed
     const feed = await admin.getActivityFeed('ws-1');

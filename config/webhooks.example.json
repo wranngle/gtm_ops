@@ -1,5 +1,5 @@
 {
-  "_comment": "webhooks.example.json — synthetic placeholder for the gitignored config/webhooks.db SQLite database. Schema is auto-created by lib/webhooks.js on first run; this file shows the shape with 1 sample row per table.",
+  "_comment": "webhooks.example.json — synthetic placeholder for the gitignored config/webhooks.db SQLite database. Schema is auto-created by lib/webhooks.ts on first run; this file shows the shape with 1 sample row per table.",
   "_db_path": "config/webhooks.db",
   "schema": {
     "statements": [

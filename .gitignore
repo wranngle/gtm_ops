@@ -52,9 +52,15 @@ examples/csv-validator/workspaces/*
 # Bun
 .bun/
 bun.lockb
+# npm/pnpm/yarn lockfiles — bun.lock is the only lockfile we commit
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
 
 # TypeScript incremental builds
 **/*.tsbuildinfo
+# tsc declaration sourcemaps (stale build outputs; .d.ts hand-maintained)
+**/*.d.ts.map
 
 # Python build / test caches
 **/*.egg-info/

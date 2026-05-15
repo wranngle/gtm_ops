@@ -2,7 +2,7 @@
 
 This repo is the unified runtime for a voice-AI-led GTM motion. Contributions should preserve:
 
-1. The product surface: `lib/`, `server.js`, `cli.js`, `apps/ops-console/`, `templates/`, `prompts/`.
+1. The product surface: `lib/`, `server.ts`, `cli.ts`, `apps/ops-console/`, `templates/`, `prompts/`.
 2. The agent-legibility layer: short `AGENTS.md`, repo-local docs as the source of truth, mechanical lint checks, knowledge-base validation.
 
 ## Local Setup
@@ -49,8 +49,8 @@ Stack-specific rules live in `docs/references/` so the doc is co-located with wh
 - [`docs/references/layered-domain-architecture.md`](docs/references/layered-domain-architecture.md) — per-domain import-direction rule (enforced by `scripts/lint-layered-architecture.sh`).
 - [`docs/references/sqlite-query-stability.md`](docs/references/sqlite-query-stability.md) — every `ORDER BY <ts> DESC` needs `, rowid DESC`; range builders use `Date.now() + 1`; `node-sqlite3` cache-visibility race + retry-shim convention.
 - [`apps/ops-console/_headers`](apps/ops-console/_headers) — CSP discipline. New external script/style/font/image/media/connect destinations must be added to the explicit allowlists. `connect-src` and `media-src` are deliberately scoped (no `https:` wildcards). CSP violations log to `/api/csp-report`.
-- [`lib/security.js#maskApiKeysInText`](lib/security.js) — extend the prefix list when adopting a new API provider. Test fixtures use synthetic placeholders that don't trip GitHub Push Protection.
-- [`tests/unit/audit.test.ts > Hash Chain Integrity`](tests/unit/audit.test.ts) — three negative-path tests (UPDATE / DELETE / hash-mutate) cover every realistic tamper vector. Add a new test if you change `lib/audit.js#computeHash` or the chain shape.
+- [`lib/security.ts#maskApiKeysInText`](lib/security.ts) — extend the prefix list when adopting a new API provider. Test fixtures use synthetic placeholders that don't trip GitHub Push Protection.
+- [`tests/unit/audit.test.ts > Hash Chain Integrity`](tests/unit/audit.test.ts) — three negative-path tests (UPDATE / DELETE / hash-mutate) cover every realistic tamper vector. Add a new test if you change `lib/audit.ts#computeHash` or the chain shape.
 - [`docs/references/security-tooling.md`](docs/references/security-tooling.md) — RBAC coverage lint (`scripts/lint-rbac-coverage.sh`), `audit:verify` CLI, audit metadata redaction, dev-mode auth shim resolution order, CSP report Pages Function, Express response-header middleware. Read before adding a new mutation route or sensitive GET — adding either without `requireRole(...)` will fail CI.
 
 ## Filing a Pull Request

@@ -60,6 +60,7 @@ async function seedChain(rowCount: number) {
 }
 
 function runCli(): { code: number; stdout: string; stderr: string } {
+  // Use bun explicitly: lib/audit was migrated .js → .ts and node cannot resolve a `.js` specifier to a `.ts` source.
   try {
     const stdout = execFileSync(process.execPath, [scriptPath, `--db=${testDbPath}`], {
       encoding: 'utf8',

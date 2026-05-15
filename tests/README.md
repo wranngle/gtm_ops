@@ -154,8 +154,8 @@ expect(result.integrations.length).toBe(3);
 
 | Module | Target | Current |
 |--------|--------|---------|
-| build_technical_approach.js | 80% | ~75% |
-| verify_output.js | 90% | ~85% |
+| build-technical-approach.js | 80% | ~75% |
+| verify-output.js | 90% | ~85% |
 | extract.js | 70% | 0% |
 | pipeline.js | 60% | 0% |
 

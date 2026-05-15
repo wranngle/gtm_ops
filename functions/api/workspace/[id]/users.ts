@@ -1,5 +1,5 @@
 // /api/workspace/:id/users — list users for a workspace.
-// D1-backed when schema is migrated (Phase 2.5: lib/rbac.js:559
+// D1-backed when schema is migrated (Phase 2.5: lib/rbac.ts:559
 // workspace_users); otherwise falls through to
 // fixtures/workspace/default/users.json.
 //

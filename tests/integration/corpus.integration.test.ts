@@ -1,3 +1,5 @@
+// @ts-nocheck — tests against lib modules carrying @ts-nocheck post-.js->.ts migration.
+
 /**
  * Corpus CRUD Integration Tests
  *
@@ -60,7 +62,7 @@ const TEST_DB_PATH = path.join(__dirname, '..', 'fixtures', 'test_corpus.db');
 
 /**
  * Create a valid case study object for testing
- * Matches the CaseStudySchema in lib/schemas/case_study.schema.ts
+ * Matches the CaseStudySchema in lib/schemas/case-study.schema.ts
  */
 function createTestCaseStudy(overrides: Record<string, unknown> = {}) {
   const id = overrides.id || `test-case-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

@@ -1,8 +1,8 @@
 /**
  * Schemas Index
- * 
- * Re-exports all Zod schemas for the presales pipeline.
- * 
+ *
+ * Re-exports all ArkType schemas for the presales pipeline.
+ *
  * @module src/schemas
  */
 
@@ -131,4 +131,4 @@ export {
 } from './intake.js';
 
 
-export {z} from 'zod';
+export { type } from 'arktype';

@@ -3,7 +3,7 @@
  * /evaluation/ is only a compatibility redirect into /console/?route=evals,
  * so its behavior is covered in evaluation-flow.spec.ts.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
  
 import AxeBuilderImport from '@axe-core/playwright';
 

@@ -4,7 +4,7 @@
  * against crashes; this spec guards against fake/dead affordances.
  */
 import { type Page } from '@playwright/test';
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'settings'] as const;
 

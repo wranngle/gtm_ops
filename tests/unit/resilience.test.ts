@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/resilience.js
+ * Unit Tests for lib/resilience.ts
  *
  * Tests error recovery functionality:
  * - Retry logic with exponential backoff

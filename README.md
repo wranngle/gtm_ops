@@ -6,9 +6,9 @@ Voice-AI-led GTM motion runtime. An inbound voice agent enriches the lead from C
 
 - **`apps/ops-console/`** — operator UI: React (loaded via UMD + babel-standalone, no build step) for the main `/console/`; `/evaluation/` is a compatibility redirect into `/console/?route=evals`, and `/eval-runs/` remains the static harness output surface. Same code runs static (`DEMO_MODE`) or against the live backend. Includes the **Agents** route and the **Evals** regression lab — live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake agents wired to app context.
 - **`lib/`** — intake, CRM enrichment, post-call processing, LLM extraction, branded PDF generation, audit log surface, evaluation hooks.
-- **`server.js`** — Express `/api/*` surface (live mode, full Express backend).
+- **`server.ts`** — Express `/api/*` surface (live mode, full Express backend).
 - **`functions/api/`** — Cloudflare Pages Functions mirror of the same `/api/*` surface so the Pages deploy is full-stack. Pages Functions read from D1 first and fall back to the bundled fixtures when D1 is empty or unbound.
-- **`cli.js`** — presales pipeline CLI.
+- **`cli.ts`** — presales pipeline CLI.
 - **`templates/`** — branded PDF templates rendered with `tokens/`.
 - **`tokens/`** — machine-readable extracts of the brand system (`tokens.css`, `tokens.json`, `tokens.tailwind.js`); see [`DESIGN.md`](DESIGN.md) for the long-form spec.
 

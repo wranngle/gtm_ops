@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "description": "Voice-AI-led GTM motion runtime: presales pipeline (LLM extraction -> branded PDF -> CRM) + ops-console UI + sample n8n workflows + design tokens. One repo, one runnable thing.",
   "type": "module",
-  "main": "server.js",
+  "main": "server.ts",
   "bin": {
-    "wranngle": "./cli.js"
+    "wranngle": "./cli.ts"
   },
   "scripts": {
-    "start": "bun --env-file=.env server.js",
-    "generate": "bun --env-file=.env cli.js generate",
-    "verify": "bun --env-file=.env scripts/verify_output.js",
+    "start": "bun --env-file=.env server.ts",
+    "generate": "bun --env-file=.env cli.ts generate",
+    "verify": "bun --env-file=.env scripts/verify-output.ts",
     "audit:verify": "bun scripts/audit-verify.mjs",
-    "dev": "bun --env-file=.env --watch server.js",
+    "dev": "bun --env-file=.env --watch server.ts",
     "typecheck": "tsc --noEmit",
     "lint": "xo",
     "lint:fix": "xo --fix",
@@ -32,10 +32,10 @@
     "deploy": "wrangler pages deploy apps/ops-console --project-name=gtm-ops",
     "deploy:preview": "wrangler pages deploy apps/ops-console --project-name=gtm-ops --branch=preview",
     "pages:dev": "wrangler pages dev apps/ops-console",
-    "eval:import": "bun --env-file=.env cli.js eval:import",
-    "eval:quick": "bun --env-file=.env cli.js eval:batch --limit 5",
-    "eval:full": "bun --env-file=.env cli.js eval:batch",
-    "eval:report": "bun --env-file=.env cli.js eval:report --verbose",
+    "eval:import": "bun --env-file=.env cli.ts eval:import",
+    "eval:quick": "bun --env-file=.env cli.ts eval:batch --limit 5",
+    "eval:full": "bun --env-file=.env cli.ts eval:batch",
+    "eval:report": "bun --env-file=.env cli.ts eval:report --verbose",
     "eval:harness": "bun ../voice_ai_agent_evals/scripts/run-gtm-ops-adapter.ts --root ."
   },
   "keywords": [
@@ -55,8 +55,9 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
-    "ajv": "^8.12.0",
+    "ajv": "8.20.0",
     "ajv-formats": "^2.1.1",
+    "arktype": "2.1.29",
     "cors": "2.8.5",
     "dotenv": "^16.3.1",
     "eventsource": "^2.0.2",
@@ -67,8 +68,7 @@
     "puppeteer": "^24.42.0",
     "sql.js": "^1.13.0",
     "sqlite3": "^6.0.1",
-    "uuid": "^9.0.1",
-    "zod": "^3.22.4"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",
@@ -80,7 +80,6 @@
     "@types/uuid": "^9.0.7",
     "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.18",
-    "arktype": "2.1.29",
     "bun-types": "1.3.13",
     "eslint-config-xo-typescript": "^9.0.0",
     "tsx": "^4.7.0",
@@ -89,6 +88,7 @@
     "xo": "2.0.2"
   },
   "overrides": {
-    "ip-address": "10.1.1"
+    "ip-address": "10.1.1",
+    "fast-uri": "^3.1.2"
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Unit Tests for lib/gdpr.js
+ * Unit Tests for lib/gdpr.ts
  *
  * Tests GDPR compliance functionality:
  * - Consent management

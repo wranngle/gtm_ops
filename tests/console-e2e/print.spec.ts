@@ -5,7 +5,7 @@
  * cuts off content. Asserts @media print collapses chrome and restores
  * document flow on every route a user might hit Cmd-P from.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 test('print mode · chrome is hidden + body becomes white', async ({ openConsole }) => {
   const page = await openConsole();

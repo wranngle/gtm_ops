@@ -2,7 +2,7 @@
  * Console-wide smoke-click sweep. Visits every route, clicks every visible
  * button, and asserts no uncaught page errors fire.
  */
-import { test, expect, smokeClickAll } from './_helpers.js';
+import { test, expect, smokeClickAll } from './helpers.js';
 
 const ROUTES = ['home', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'settings'];
 const LABELS: Record<string, string> = {
@@ -26,11 +26,11 @@ for (const route of ROUTES) {
   });
 }
 
-test('context dump rebuilds when selection changes', async ({ openConsole }) => {
+test('agent context rebuilds when selection changes', async ({ openConsole }) => {
   const page = await openConsole();
   await page.locator('.sb__item:has-text("Pipeline")').first().click();
   await page.locator('.pipe__card').first().click();
-  const ctxAfter = await page.evaluate(() => (globalThis as any).buildContextDump((globalThis as any).AppContext.get()));
+  const ctxAfter = await page.evaluate(() => (globalThis as any).buildAgentContext((globalThis as any).AppContext.get()));
   expect(ctxAfter).toMatch(/active_lead|selection\.type/);
 });
 

@@ -17,16 +17,16 @@ import { v4 as uuidv4 } from 'uuid';
 import Mustache from 'mustache';
 
 // External dependencies (remain as JS imports until migrated)
-import { calculatePricing, calculateROI } from '../../lib/pricing_calculator.js';
-import { buildPhases, calculateTotalDuration } from '../../lib/milestone_builder.js';
+import { calculatePricing, calculateROI } from '../../lib/pricing-calculator.js';
+import { buildPhases, calculateTotalDuration } from '../../lib/milestone-builder.js';
 import { validateProjectPlan, formatValidationErrors } from '../../lib/validate.js';
 import { generateFootnotesHtml } from '../../lib/citations.js';
-import { slugify } from '../../lib/file_utils.js';
+import { slugify } from '../../lib/file-utils.js';
 import {
   generateProjectIdentity,
   formatDateDisplay,
   formatCurrency as formatCurrencyUnified
-} from '../../lib/project_identity.js';
+} from '../../lib/project-identity.js';
 
 // ============================================================================
 // Type Definitions

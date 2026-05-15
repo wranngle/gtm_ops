@@ -1,5 +1,5 @@
 {
-  "_comment": "history.example.json — synthetic placeholder for the gitignored config/history.db SQLite database. Schema is auto-created by lib/history.js on first run. Tracks projects, executions, and artifacts for the GTM ops pipeline.",
+  "_comment": "history.example.json — synthetic placeholder for the gitignored config/history.db SQLite database. Schema is auto-created by lib/history.ts on first run. Tracks projects, executions, and artifacts for the GTM ops pipeline.",
   "_db_path": "config/history.db",
   "schema": {
     "statements": [

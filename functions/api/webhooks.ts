@@ -1,5 +1,5 @@
 // /api/webhooks — list configured webhook endpoints.
-// D1-backed when schema is migrated (Phase 2.5: lib/webhooks.js:84
+// D1-backed when schema is migrated (Phase 2.5: lib/webhooks.ts:84
 // webhooks table); otherwise falls through to fixtures/webhooks.json.
 //
 // POST/PATCH/DELETE for this resource are NOT yet ported — they require

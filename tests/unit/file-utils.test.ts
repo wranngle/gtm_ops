@@ -1,5 +1,5 @@
 /**
- * Unit tests for lib/file_utils.ts — slugification, timestamp
+ * Unit tests for lib/file-utils.ts — slugification, timestamp
  * formatting, and structured output-path construction. Untested
  * before this file. Path-shape regressions silently break all
  * downstream consumers that read by directory layout (the proposal
@@ -23,7 +23,7 @@ let parseOutputFilename: any;
 let scratch: string;
 
 beforeEach(async () => {
-  const mod: any = await import('../../lib/file_utils.js');
+  const mod: any = await import('../../lib/file-utils.js');
   ({
     slugify,
     generateTimestamp,

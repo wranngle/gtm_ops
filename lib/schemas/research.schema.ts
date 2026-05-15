@@ -3,198 +3,188 @@
  * @module lib/schemas/research.schema
  */
 
-import { z } from 'zod';
+import { type } from 'arktype';
 import { ComplexityTierSchema, CitationSchema } from './common.schema.js';
 
 // =============================================================================
 // Integration Summary (from research table)
 // =============================================================================
 
-export const IntegrationSummarySchema = z.object({
-  name: z.string(),
-  has_native_node: z.boolean().default(false),
-  auth_type: z.string().optional(),
-  docs_available: z.boolean().optional(),
-  confidence: z.number().min(0).max(1).nullable().optional(),
+export const IntegrationSummarySchema = type({
+  name: 'string',
+  has_native_node: type('boolean').default(false),
+  'auth_type?': 'string',
+  'docs_available?': 'boolean',
+  'confidence?': '0 <= number <= 1 | null',
 });
 
-export type IntegrationSummary = z.infer<typeof IntegrationSummarySchema>;
+export type IntegrationSummary = typeof IntegrationSummarySchema.infer;
 
 // =============================================================================
-// Integration Detail (rich per-integration info)
+// Integration Detail
 // =============================================================================
 
-export const IntegrationDetailSchema = z.object({
-  name: z.string(),
-  native_node: z.boolean().default(false),
-  native_node_info: z.string().optional(),
-  native_node_name: z.string().optional(),
-  auth: z.string().optional(),
-  auth_type: z.string().optional(),
-  gotchas: z.array(z.string()).default([]),
-  rate_limits: z.string().nullable().optional(),
-  client_must_provide: z.array(z.string()).default([]),
-  complexity_score: z.number().min(1).max(10).optional(),
-  complexity_tier: ComplexityTierSchema.optional(),
-  api_reference: z.string().nullable().optional(),
-  integration_pattern: z.string().optional(),
-  operations: z.array(z.string()).nullable().optional(),
-  citations: z.array(z.string()).default([]),
-  api_quality: z.enum(['excellent', 'good', 'fair', 'poor']).optional(),
+export const IntegrationDetailSchema = type({
+  name: 'string',
+  native_node: type('boolean').default(false),
+  'native_node_info?': 'string',
+  'native_node_name?': 'string',
+  'auth?': 'string',
+  'auth_type?': 'string',
+  gotchas: type('string[]').default(() => []),
+  'rate_limits?': 'string | null',
+  client_must_provide: type('string[]').default(() => []),
+  'complexity_score?': '1 <= number <= 10',
+  'complexity_tier?': ComplexityTierSchema,
+  'api_reference?': 'string | null',
+  'integration_pattern?': 'string',
+  'operations?': 'string[] | null',
+  citations: type('string[]').default(() => []),
+  'api_quality?': "'excellent' | 'good' | 'fair' | 'poor'",
 });
 
-export type IntegrationDetail = z.infer<typeof IntegrationDetailSchema>;
+export type IntegrationDetail = typeof IntegrationDetailSchema.infer;
 
 // =============================================================================
 // Complexity Assessment
 // =============================================================================
 
-export const ComplexitySchema = z.object({
-  score: z.number().min(0).max(10),
+export const ComplexitySchema = type({
+  score: '0 <= number <= 10',
   tier: ComplexityTierSchema,
-  factors: z.array(z.string()).default([]),
-  estimated_nodes: z.number().nonnegative().optional(),
+  factors: type('string[]').default(() => []),
+  'estimated_nodes?': 'number >= 0',
 });
 
-export type Complexity = z.infer<typeof ComplexitySchema>;
+export type Complexity = typeof ComplexitySchema.infer;
 
 // =============================================================================
 // Labor Factor
 // =============================================================================
 
-export const LaborFactorSchema = z.object({
-  factor: z.string(),
-  impact: z.string(),
-  notes: z.string().optional(),
+export const LaborFactorSchema = type({
+  factor: 'string',
+  impact: 'string',
+  'notes?': 'string',
 });
 
-export type LaborFactor = z.infer<typeof LaborFactorSchema>;
+export type LaborFactor = typeof LaborFactorSchema.infer;
 
 // =============================================================================
 // Risk Item
 // =============================================================================
 
-export const RiskItemSchema = z.object({
-  risk: z.string(),
-  likelihood: z.string().optional(),
-  impact: z.string().optional(),
-  mitigation: z.string().optional(),
+export const RiskItemSchema = type({
+  risk: 'string',
+  'likelihood?': 'string',
+  'impact?': 'string',
+  'mitigation?': 'string',
 });
 
-export type RiskItem = z.infer<typeof RiskItemSchema>;
+export type RiskItem = typeof RiskItemSchema.infer;
 
 // =============================================================================
 // Effort Recommendation
 // =============================================================================
 
-export const EffortRecommendationSchema = z.object({
+export const EffortRecommendationSchema = type({
   tier: ComplexityTierSchema,
-  rationale: z.string().optional(),
-  base_hours: z.number().nonnegative(),
-  caveats: z.array(z.string()).default([]),
+  'rationale?': 'string',
+  base_hours: 'number >= 0',
+  caveats: type('string[]').default(() => []),
 });
 
-export type EffortRecommendation = z.infer<typeof EffortRecommendationSchema>;
+export type EffortRecommendation = typeof EffortRecommendationSchema.infer;
 
 // =============================================================================
 // Freshness Score
 // =============================================================================
 
-export const FreshnessSchema = z.object({
-  stale: z.boolean(),
-  days: z.number().nonnegative(),
-  score: z.number().min(0).max(1),
-  reason: z.string().optional(),
+export const FreshnessSchema = type({
+  stale: 'boolean',
+  days: 'number >= 0',
+  score: '0 <= number <= 1',
+  'reason?': 'string',
 });
 
-export type Freshness = z.infer<typeof FreshnessSchema>;
+export type Freshness = typeof FreshnessSchema.infer;
 
 // =============================================================================
 // Complete Research Result
 // =============================================================================
 
-export const ResearchResultSchema = z.object({
-  // Identification
-  title: z.string().optional(),
-  business_process: z.string().optional(),
-  research_date: z.string().optional(),
-  confidence: z.number().min(0).max(1).optional(),
-  executive_summary: z.string().optional(),
-
-  // Integrations
-  integrations: z.array(IntegrationSummarySchema).default([]),
-  integration_details: z.record(z.string(), IntegrationDetailSchema).optional(),
-
-  // Assessment
-  complexity: ComplexitySchema.optional(),
-  labor_factors: z.array(LaborFactorSchema).default([]),
-  risks: z.array(RiskItemSchema).default([]),
-  effort_recommendation: EffortRecommendationSchema.optional(),
-
-  // Citations
-  citations: z.array(CitationSchema).default([]),
-
-  // Metadata
-  source_file: z.string().optional(),
-  freshness: FreshnessSchema.optional(),
-  from_cache: z.boolean().default(false),
-  from_db: z.boolean().default(false),
-  generated: z.boolean().default(false),
+export const ResearchResultSchema = type({
+  'title?': 'string',
+  'business_process?': 'string',
+  'research_date?': 'string',
+  'confidence?': '0 <= number <= 1',
+  'executive_summary?': 'string',
+  integrations: type(IntegrationSummarySchema, '[]').default(() => []),
+  'integration_details?': type('Record<string, unknown>'),
+  'complexity?': ComplexitySchema,
+  labor_factors: type(LaborFactorSchema, '[]').default(() => []),
+  risks: type(RiskItemSchema, '[]').default(() => []),
+  'effort_recommendation?': EffortRecommendationSchema,
+  citations: type(CitationSchema, '[]').default(() => []),
+  'source_file?': 'string',
+  'freshness?': FreshnessSchema,
+  from_cache: type('boolean').default(false),
+  from_db: type('boolean').default(false),
+  generated: type('boolean').default(false),
 });
 
-export type ResearchResult = z.infer<typeof ResearchResultSchema>;
+export type ResearchResult = typeof ResearchResultSchema.infer;
 
 // =============================================================================
 // Integration Research Item (per-integration wrapper)
 // =============================================================================
 
-export const IntegrationResearchItemSchema = z.object({
-  integration: z.string(),
-  system: z.string().optional(),
-  found: z.boolean().default(false),
-  research: ResearchResultSchema.optional(),
-  // Flat fields for backward compatibility
-  has_native_n8n_node: z.boolean().optional(),
-  native_node_name: z.string().nullable().optional(),
-  auth_type: z.string().optional(),
-  api_quality: z.enum(['excellent', 'good', 'fair', 'poor']).optional(),
-  complexity: ComplexitySchema.optional(),
-  effort_recommendation: EffortRecommendationSchema.optional(),
-  gotchas: z.array(z.string()).optional(),
-  client_must_provide: z.array(z.string()).optional(),
-  citations: z.array(CitationSchema).optional(),
-  freshness: FreshnessSchema.optional(),
-  from_cache: z.boolean().optional(),
+export const IntegrationResearchItemSchema = type({
+  integration: 'string',
+  'system?': 'string',
+  found: type('boolean').default(false),
+  'research?': ResearchResultSchema,
+  'has_native_n8n_node?': 'boolean',
+  'native_node_name?': 'string | null',
+  'auth_type?': 'string',
+  'api_quality?': "'excellent' | 'good' | 'fair' | 'poor'",
+  'complexity?': ComplexitySchema,
+  'effort_recommendation?': EffortRecommendationSchema,
+  'gotchas?': 'string[]',
+  'client_must_provide?': 'string[]',
+  'citations?': CitationSchema.array(),
+  'freshness?': FreshnessSchema,
+  'from_cache?': 'boolean',
 });
 
-export type IntegrationResearchItem = z.infer<typeof IntegrationResearchItemSchema>;
+export type IntegrationResearchItem = typeof IntegrationResearchItemSchema.infer;
 
 // =============================================================================
 // Tier Assessment
 // =============================================================================
 
-export const TierAssessmentSchema = z.object({
+export const TierAssessmentSchema = type({
   key: ComplexityTierSchema,
-  label: z.string(),
-  base_hours: z.number().nonnegative(),
-  risk_multiplier: z.number().min(1).max(2).default(1),
-  rationale: z.string().optional(),
-  integration_count: z.number().nonnegative().optional(),
-  complexity_score: z.number().min(0).max(10).optional(),
+  label: 'string',
+  base_hours: 'number >= 0',
+  risk_multiplier: type('1 <= number <= 2').default(1),
+  'rationale?': 'string',
+  'integration_count?': 'number >= 0',
+  'complexity_score?': '0 <= number <= 10',
 });
 
-export type TierAssessment = z.infer<typeof TierAssessmentSchema>;
+export type TierAssessment = typeof TierAssessmentSchema.infer;
 
 // =============================================================================
 // Research Gap Report
 // =============================================================================
 
-export const ResearchGapReportSchema = z.object({
-  fresh: z.array(z.string()).default([]),
-  stale: z.array(z.string()).default([]),
-  missing: z.array(z.string()).default([]),
-  actionable_commands: z.array(z.string()).default([]),
-  summary: z.string().optional(),
+export const ResearchGapReportSchema = type({
+  fresh: type('string[]').default(() => []),
+  stale: type('string[]').default(() => []),
+  missing: type('string[]').default(() => []),
+  actionable_commands: type('string[]').default(() => []),
+  'summary?': 'string',
 });
 
-export type ResearchGapReport = z.infer<typeof ResearchGapReportSchema>;
+export type ResearchGapReport = typeof ResearchGapReportSchema.infer;

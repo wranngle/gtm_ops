@@ -22,7 +22,6 @@ env:
 jobs:
   actionlint:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
@@ -31,6 +30,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PUPPETEER_SKIP_DOWNLOAD=true
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
           asset="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           base_url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
           curl -fsSLO "${base_url}/${asset}"
@@ -45,7 +46,6 @@ jobs:
 
   zizmor:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
@@ -57,6 +57,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PUPPETEER_SKIP_DOWNLOAD=true
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
           python -m venv .zizmor-venv
           . .zizmor-venv/bin/activate
           python -m pip install --quiet --upgrade pip
@@ -65,7 +67,6 @@ jobs:
 
   dependency-review:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     if: github.event_name == 'pull_request' && (github.event.repository.private == false || vars.ENABLE_DEPENDENCY_REVIEW == 'true')
     permissions:
       contents: read
@@ -79,7 +80,6 @@ jobs:
 
   scorecard:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     if: github.event_name != 'pull_request' && (github.event.repository.private == false || vars.ENABLE_SCORECARD == 'true')
     permissions:
       actions: read
@@ -106,7 +106,6 @@ jobs:
 
   detect-codeql:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     outputs:
       enabled: ${{ steps.detect.outputs.enabled }}
       matrix: ${{ steps.detect.outputs.matrix }}
@@ -118,6 +117,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PUPPETEER_SKIP_DOWNLOAD=true
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
           find_code() {
             find . \
               \( -path './.git' -o -path './old' -o -path './node_modules' -o -path '*/node_modules' -o -path '*/vendor' -o -path '*/deps' \) -prune -o \
@@ -144,7 +145,6 @@ jobs:
   codeql:
     needs: detect-codeql
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     if: needs.detect-codeql.outputs.enabled == 'true' && (github.event.repository.private == false || vars.ENABLE_CODEQL == 'true')
     permissions:
       contents: read

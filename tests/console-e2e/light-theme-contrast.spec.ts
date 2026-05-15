@@ -4,7 +4,7 @@
  * babel-standalone. Here we re-enable it explicitly for the light theme
  * and assert zero AA failures on the routes a brand-new visitor can hit.
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
  
 import AxeBuilderImport from '@axe-core/playwright';
 

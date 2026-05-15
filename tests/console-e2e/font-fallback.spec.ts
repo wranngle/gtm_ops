@@ -8,7 +8,7 @@
  *   3. with fonts.googleapis.com blocked, the console still renders
  *      with a non-empty system-font chain on body / .ph__title / .mono
  */
-import { test, expect } from './_helpers.js';
+import { test, expect } from './helpers.js';
 
 const HTML_ENTRYPOINTS = ['/', '/console/', '/evaluation/', '/eval-runs/', '/404.html'];
 
