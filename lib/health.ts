@@ -258,29 +258,52 @@ export async function healthCheck(db: Database | undefined): Promise<HealthStatu
 // LIGHTWEIGHT HEALTH PAYLOAD
 // =============================================================================
 
+export type HealthChecks = {
+  fixtures: 'present' | 'missing';
+  db: 'ok' | 'n/a' | 'down';
+  model: string;
+};
+
 export type LightHealthPayload = {
   status: 'ok';
+  ok: boolean;
   timestamp: string;
   version: string;
   commit: string;
   uptime_s: number;
+  checks: HealthChecks;
 };
+
+export const DEFAULT_MODEL_NAME = 'gemini-2.0-flash';
 
 /**
  * Build the lightweight /api/health response payload. Pure function
  * so the contract can be pinned by unit tests without spinning up
  * an Express app or pulling server.ts into the test process.
+ *
+ * The `checks` block was introduced alongside /api/version so any
+ * external prober (uptime monitor, status page) sees a structured
+ * three-way readiness signal (fixtures present + db bound + model
+ * name) without parsing prose. `ok` mirrors `status === 'ok'` as a
+ * boolean for tooling that wants a single truthy field.
  */
 export function buildLightHealthPayload(
   env: Record<string, string | undefined> = process.env,
   proc: { uptime?: () => number } = process,
+  checks: Partial<HealthChecks> = {},
 ): LightHealthPayload {
   return {
     status: 'ok',
+    ok: true,
     timestamp: new Date().toISOString(),
     version: env?.npm_package_version || '1.0.0',
     commit: (env?.GIT_SHA || 'unknown').slice(0, 7),
     uptime_s: Math.floor(proc?.uptime?.() ?? 0),
+    checks: {
+      fixtures: checks.fixtures ?? 'present',
+      db: checks.db ?? 'n/a',
+      model: checks.model ?? env?.GEMINI_MODEL ?? DEFAULT_MODEL_NAME,
+    },
   };
 }
 
