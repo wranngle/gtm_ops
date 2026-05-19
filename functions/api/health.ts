@@ -6,7 +6,8 @@
 // shared-lib + Express + Pages triple-deploy pattern.
 
 import {jsonResponse, type Env} from '../_lib/respond';
-import {DEFAULT_MODEL_NAME} from '../../lib/health';
+
+const DEFAULT_MODEL_NAME = 'gemini-2.0-flash';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const dbBound = Boolean(context.env.DB);
