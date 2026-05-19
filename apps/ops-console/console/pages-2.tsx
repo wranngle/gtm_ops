@@ -257,6 +257,17 @@ function normalizeEvalRun(raw) {
       response_consumed_in_next_turn: tc?.response_consumed_in_next_turn === true,
     }))
     : [];
+  // Post-call sentiment rollup (see lib/post-call.ts). The Node-side
+  // processPostCall pre-computes {score, label, confidence}; here we just
+  // pass it through, clamping defensively in case a fixture is hand-edited.
+  const rawSentiment = raw.sentiment;
+  const sentiment = rawSentiment && typeof rawSentiment === 'object' && rawSentiment.label
+    ? {
+      score: Math.max(-1, Math.min(1, Number(rawSentiment.score) || 0)),
+      label: rawSentiment.label === 'positive' || rawSentiment.label === 'negative' ? rawSentiment.label : 'neutral',
+      confidence: Math.max(0, Math.min(1, Number(rawSentiment.confidence) || 0)),
+    }
+    : null;
   return {
     id: raw.id || raw.scenario_id || raw.case_study_id,
     scenario_id: raw.scenario_id || raw.case_study_id || `run-${raw.id || 'unknown'}`,
@@ -270,8 +281,13 @@ function normalizeEvalRun(raw) {
     flaws,
     latency_breakdown: latencyBreakdown,
     tool_calls: toolCalls,
+    sentiment,
     result_path: raw.result_path || null,
   };
+}
+
+function sentimentChipTone(label) {
+  return label === 'positive' ? 'healthy' : label === 'negative' ? 'critical' : 'neutral';
 }
 
 function evalRunsFromPayload(data) {
@@ -1396,6 +1412,16 @@ function EvalsPage({ setRoute }) {
                       </div>
                     </div>
                     <Badge tone={r.verdict === 'pass' ? 'healthy' : r.verdict === 'fail' ? 'critical' : 'neutral'}>{r.verdict}</Badge>
+                    {r.sentiment && (
+                      <span
+                        className={`badge badge--${sentimentChipTone(r.sentiment.label)}`}
+                        data-testid="sentiment-chip"
+                        data-sentiment-label={r.sentiment.label}
+                        data-sentiment-score={r.sentiment.score}
+                        data-sentiment-confidence={r.sentiment.confidence}
+                        title={`post-call sentiment · confidence ${Math.round((r.sentiment.confidence || 0) * 100)}%`}
+                      >{r.sentiment.label} · {Math.round((r.sentiment.confidence || 0) * 100)}%</span>
+                    )}
                     <div
                       className="eval-run-row__latency"
                       data-tone={evalLatencyTone(r.duration_ms)}
