@@ -80,7 +80,7 @@
     "@types/uuid": "^9.0.7",
     "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.18",
-    "bun-types": "1.3.13",
+    "bun-types": "1.3.14",
     "eslint-config-xo-typescript": "^9.0.0",
     "tsx": "^4.7.0",
     "typescript": "5.9.3",
