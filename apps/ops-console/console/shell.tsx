@@ -300,6 +300,7 @@ function Sidebar({ route, setRoute, collapsed }) {
     { id:'home',      label:'Mission Control', icon:I.Home },
     { id:'generate',  label:'Generate',        icon:I.Plus },
     { id:'pipeline',  label:'Pipeline',        icon:I.Pipeline, count: counts.pipeline },
+    { id:'funnel',    label:'Funnel',          icon:I.Filter },
     { id:'calls',     label:'Calls',           icon:I.Phone,    count: counts.calls },
     { id:'proposals', label:'Proposals',       icon:I.Doc,      count: counts.proposals },
     { id:'evals',     label:'Evals',           icon:I.Beaker,   count: counts.evals || null },
@@ -412,7 +413,7 @@ function Sidebar({ route, setRoute, collapsed }) {
 /* ---------- Topbar ---------- */
 function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setCollapsed }) {
   const labels = {
-    home:'Mission Control', generate:'Generate Proposal', pipeline:'Pipeline', calls:'Calls',
+    home:'Mission Control', generate:'Generate Proposal', pipeline:'Pipeline', funnel:'Funnel', calls:'Calls',
     proposals:'Proposals', evals:'Evals', agents:'Agents', settings:'Settings',
   };
   const [notifOpen, setNotifOpen] = useState(false);

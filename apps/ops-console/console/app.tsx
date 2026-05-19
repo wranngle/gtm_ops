@@ -14,7 +14,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showLiveDot": true
 }/*EDITMODE-END*/;
 
-const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'simulator', 'settings'];
+const ROUTES = ['home', 'generate', 'pipeline', 'funnel', 'calls', 'proposals', 'evals', 'agents', 'simulator', 'settings'];
 
 function readHistoryMetadata(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
@@ -248,6 +248,7 @@ function App() {
             {route === 'home' && <HomePage setRoute={setConsoleRoute}/>}
             {route === 'generate' && <GeneratePage setRoute={setConsoleRoute}/>}
             {route === 'pipeline' && <PipelinePage setRoute={setConsoleRoute}/>}
+            {route === 'funnel' && <FunnelPage setRoute={setConsoleRoute}/>}
             {route === 'calls' && <CallsPage setRoute={setConsoleRoute}/>}
             {route === 'evals' && <EvalsPage setRoute={setConsoleRoute}/>}
             {route === 'proposals' && <ProposalsPage setRoute={setConsoleRoute}/>}

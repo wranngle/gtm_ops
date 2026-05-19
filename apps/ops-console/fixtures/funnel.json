@@ -1,0 +1,36 @@
+{
+  "window": "last_30_days",
+  "generated_at": "2026-05-14T00:00:00Z",
+  "stages": [
+    {
+      "id": "call",
+      "label": "Calls received",
+      "count": 480,
+      "sublabel": "inbound + outbound dials connected"
+    },
+    {
+      "id": "qualified",
+      "label": "Qualified",
+      "count": 312,
+      "sublabel": "BANT/MEDDIC clear, agent advanced"
+    },
+    {
+      "id": "booked",
+      "label": "Booked",
+      "count": 168,
+      "sublabel": "discovery or demo on calendar"
+    },
+    {
+      "id": "proposal",
+      "label": "Proposal sent",
+      "count": 84,
+      "sublabel": "presales report delivered"
+    },
+    {
+      "id": "contract",
+      "label": "Contract signed",
+      "count": 31,
+      "sublabel": "closed-won, kickoff scheduled"
+    }
+  ]
+}
