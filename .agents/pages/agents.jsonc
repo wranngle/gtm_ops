@@ -1,0 +1,35 @@
+{
+  "route": "console/?route=agents",
+  "purpose": "Make ElevenLabs agents a first-class console route where operators configure the AI receptionist's greeting, business hours, handoff rules, and test-call preview without leaving the console. Deep ElevenLabs/admin controls stay available only in admin mode.",
+  "primaryUsers": ["operator", "admin"],
+  "regions": [
+    {
+      "name": "agent picker",
+      "intent": "Show only available phone agents with readable names, official-style ElevenLabs orb state, and human labels for where each agent is mounted."
+    },
+    {
+      "name": "playground",
+      "intent": "Embed the ConvAI widget at a useful width. The widget must not be squeezed beside duplicate chrome."
+    },
+    {
+      "name": "phone setup",
+      "intent": "Expose editable greeting, hours, after-hours handoff, deflection cap, save, and greeting preview. Prompt, tools, context, history, and safety settings are admin-only."
+    }
+  ],
+  "designConstraints": [
+    "Use repo-native ElevenLabs UI primitives that mirror the official Orb, BarVisualizer, Conversation, and Voice Button patterns.",
+    "The route identity is Agents; phone setup is one local setup region inside the route, not the breadcrumb or page title.",
+    "Avoid external dashboard escape hatches in the first viewport.",
+    "No visible page title/caption block; route identity comes from navigation and the accessible h1.",
+    "Use Wranngle tokens from DESIGN.md; keep the surface dense and operational."
+  ],
+  "verification": [
+    "At desktop width, the ConvAI frame is wide enough for normal chat text.",
+    "Agent surfaces read as human labels, not registry keys like global or pipeline.",
+    "Operator phone setup fields are editable and expose save/preview affordances.",
+    "The test-call preview has an inline play/stop control that changes local preview state instead of relying on a hidden lower action.",
+    "Admin settings fields appear behind ?admin=1 and expose save/reset affordances.",
+    "No external ElevenLabs dashboard escape appears in the operator admin flow.",
+    "Sales Coach context reflects active route and selection through AppContext."
+  ]
+}

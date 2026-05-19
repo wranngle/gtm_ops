@@ -39,6 +39,49 @@ function HomePage({ setRoute }) {
   const { stats, sparks, feed, agents, companies, evalSuites } = D;
   const liveCalls = D.calls.slice(0, 3);
   const hotLeads = [...companies].sort((a, b) => b.score - a.score).slice(0, 5);
+  const callRisk = (call) => (Number(call?.flags) || 0) + (Number(call?.deflections) || 0);
+  const isMissedCall = (call) => call?.missed === true
+    || ['voicemail', 'no-answer', 'dropped', 'missed'].includes(String(call?.outcome || '').toLowerCase());
+  const isSubDayCall = (call) => !/\b\d+\s*[dw]\b/i.test(String(call?.when || ''));
+  const todayCalls = (D.calls || []).filter(isSubDayCall);
+  const recoveryCases = todayCalls
+    .filter(call => isMissedCall(call) || callRisk(call) > 0)
+    .slice()
+    .sort((a, b) => callRisk(b) - callRisk(a));
+  const firstRecoveryCase = recoveryCases[0] || todayCalls[0] || (D.calls || [])[0] || null;
+  const waitingOnYouCount = recoveryCases.length;
+  const missedTodayCount = todayCalls.filter(isMissedCall).length || recoveryCases.length;
+  const flagsTodayCount = recoveryCases.reduce((sum, call) => sum + (Number(call.flags) || 0), 0);
+  const returnedUnderHourCount = todayCalls.filter(call => /meeting-booked|qualified|follow-up/i.test(String(call.outcome || '')) && /\bm\b/i.test(String(call.when || ''))).length;
+  const recoverySpark = (() => {
+    const base = Array.isArray(sparks.calls) ? sparks.calls : [];
+    if (base.length === 0) return [waitingOnYouCount];
+    const max = Math.max(...base, 1);
+    return base.map((value, index) => (
+      index === base.length - 1
+        ? waitingOnYouCount
+        : Math.max(0, Math.round((Number(value) / max) * Math.max(waitingOnYouCount, 1)))
+    ));
+  })();
+  const recoveryCaseLabel = (call) => {
+    if (isMissedCall(call)) return `${String(call.outcome || 'missed').replace(/[-_]/g, ' ')} callback`;
+    if (/pricing|objection|quote/i.test(String(call?.outcome || ''))) return 'repair handoff';
+    if (callRisk(call) > 0) return 'repair review';
+    return 'call review';
+  };
+  const openRecoveryCase = (call, source) => {
+    if (!call) return;
+    window.AppContext.set({
+      selection: { type:'call', id: call.id },
+      extra: {
+        ...(window.AppContext.get().extra || {}),
+        call_workflow: 'human-review',
+        call_window: 'flagged',
+        triggered_from: source,
+      },
+    });
+    setRoute('calls');
+  };
   const [range, setRange] = useState('today');
   const [queueMode, setQueueMode] = useState('active');
   const [refreshing, setRefreshing] = useState(false);
@@ -103,6 +146,8 @@ function HomePage({ setRoute }) {
       callId: matchedCall?.id,
       callOutcome: matchedCall?.outcome || 'unknown',
       callDeflections: Number(matchedCall?.deflections || 0),
+      callFlags: Number(matchedCall?.flags || 0),
+      isMissed: isMissedCall(matchedCall),
       companyName,
       proposalAmount: matchedProposal?.amount,
       bannerId: `${pausedAgent.id}-${matchedCall?.id || 'no-call'}-attention`,
@@ -114,8 +159,9 @@ function HomePage({ setRoute }) {
   const snoozeAttention = (durationMs, label) => {
     if (!attentionItem) return;
     const until = Date.now() + durationMs;
+    const subject = attentionItem.isMissed ? 'Callback' : 'Handoff';
     setSnoozedBanners(s => ({ ...s, [ATTENTION_BANNER_ID]: until }));
-    window.toast(`Attention snoozed · ${label}`, {
+    window.toast(`${subject} snoozed · ${label}`, {
       sub: `${attentionItem.agentId} will retry ${attentionItem.callOutcome} · until ${new Date(until).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
       tone: 'warn',
     });
@@ -210,11 +256,37 @@ function HomePage({ setRoute }) {
   };
 
   return (
-    <div className="page">
-      <PageHeader
-        title="Mission Control"
-        sub={missionSub}
-        actions={<>
+    <div className="page page--home">
+      <h1 id="console-page-title" className="sr-only">Callbacks</h1>
+      <section className="home-command-strip" data-testid="home-command-center" aria-label="Callback recovery command center">
+        <div className="home-command-strip__copy">
+          <div className="eyebrow eyebrow--accent">callback recovery</div>
+          <strong>Missed calls today, handoffs waiting, and reviewable proof.</strong>
+          <span>{missionSub}</span>
+        </div>
+        <div className="home-command-strip__facts" aria-label="Callback workload">
+          <div className="home-fact">
+            <span>waiting on you</span>
+            <strong>{waitingOnYouCount}</strong>
+          </div>
+          <div className="home-fact">
+            <span>missed today</span>
+            <strong>{missedTodayCount}</strong>
+          </div>
+          <div className="home-fact">
+            <span>flags today</span>
+            <strong>{flagsTodayCount}</strong>
+          </div>
+          <div className="home-fact">
+            <span>next case</span>
+            <strong>{firstRecoveryCase?.id || 'none'}</strong>
+          </div>
+          <div className="home-fact">
+            <span>returned &lt;1h</span>
+            <strong>{returnedUnderHourCount}</strong>
+          </div>
+        </div>
+        <div className="home-command-strip__actions">
           <Segmented value={range} onChange={(v) => setRange(v)} options={[
             { value:'today', label:'Today' },
             { value:'week', label:'7d' },
@@ -243,8 +315,8 @@ function HomePage({ setRoute }) {
             });
             setRoute('evals');
           }}><I2.Bolt size={14}/>Run all evals</button>
-        </>}
-      />
+        </div>
+      </section>
 
       {/* Attention banner — derived from live state; hidden while snoozed
           OR when no agent is currently paused. */}
@@ -257,13 +329,14 @@ function HomePage({ setRoute }) {
           <span className="dot dot--critical attention-banner__dot"/>
           <div className="attention-banner__copy">
             <div className="attention-banner__title">
-              {attentionItem.agentId} paused on {attentionItem.companyName || 'unknown'} call
-              {attentionItem.callOutcome ? ` · ${attentionItem.callOutcome}` : ''}
-              {attentionItem.callDeflections > 0 ? ` (${attentionItem.callDeflections} deflection${attentionItem.callDeflections === 1 ? '' : 's'})` : ''}
+              {attentionItem.isMissed
+                ? `${attentionItem.companyName || 'Unknown caller'} needs callback`
+                : `${attentionItem.agentName} needs human review on ${attentionItem.companyName || 'unknown'} call`}
             </div>
             <div className="attention-banner__meta">
-              Awaiting human review
-              {attentionItem.callId ? ` · ${attentionItem.callId}` : ''}
+              {attentionItem.isMissed
+                ? `Waiting on a callback · ${attentionItem.callId || 'no call id'} · ${attentionItem.callOutcome}`
+                : `${attentionItem.callId || 'no call id'} · ${attentionItem.callDeflections} handoff ${attentionItem.callDeflections === 1 ? 'try' : 'tries'} · ${attentionItem.callFlags} flag${attentionItem.callFlags === 1 ? '' : 's'}`}
               {attentionItem.proposalAmount ? ` · ${attentionItem.proposalAmount} proposal at risk` : ''}
             </div>
           </div>
@@ -287,7 +360,7 @@ function HomePage({ setRoute }) {
         >
           <span className="dot dot--idle attention-banner__dot"/>
           <div className="attention-banner__copy">
-            <strong>Attention snoozed</strong> · {attentionItem.agentId} / {attentionItem.companyName || 'unknown'} · resumes at <span className="mono" data-testid="attention-snoozed-until">{new Date(snoozeExpiry).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+            <strong>{attentionItem.isMissed ? 'Callback snoozed' : 'Handoff snoozed'}</strong> · {attentionItem.agentId} / {attentionItem.companyName || 'unknown'} · resumes at <span className="mono" data-testid="attention-snoozed-until">{new Date(snoozeExpiry).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
           </div>
           <div className="attention-banner__actions">
             <button
@@ -306,6 +379,15 @@ function HomePage({ setRoute }) {
       {/* Pipeline tile derives its value from each active company's
           dealSize rather than a frozen literal '$8.42M' — see Stat below. */}
       <div className="stats" data-testid="mission-stats" data-range={range} style={{marginBottom:18}}>
+        <Stat
+          label="Waiting on you"
+          value={waitingOnYouCount}
+          delta={null}
+          spark={recoverySpark}
+          sparkLabels={buildSparkLabels(recoverySpark, range === 'today' ? 'hour' : 'day')}
+          sparkColor="var(--violet-500)"
+          accent
+        />
         <Stat
           label="Pipeline"
           value={(() => {
@@ -382,8 +464,64 @@ function HomePage({ setRoute }) {
       </div>
 
       <div className="split split--2" style={{marginBottom:18}}>
-        {/* Agents column */}
+        {/* Callback recovery column */}
         <div>
+          <Card
+            title={`missed ${waitingOnYouCount} · call them back`}
+            className="home-card--agents"
+            action={<button
+              type="button"
+              className="btn btn--primary btn--xs"
+              disabled={!firstRecoveryCase}
+              onClick={() => openRecoveryCase(firstRecoveryCase, 'today-recovery-next')}
+            >Open next <I2.ArrowRight size={12}/></button>}
+          >
+            <div className="vstack recovery-case-list" style={{gap:0}}>
+              {recoveryCases.length === 0 ? (
+                <div className="muted" style={{fontSize:12, padding:'12px 0'}}>
+                  No missed calls or human handoffs are waiting right now.
+                </div>
+              ) : recoveryCases.map(call => {
+                const risk = callRisk(call);
+                return (
+                  <div
+                    key={call.id}
+                    className="recovery-case-row"
+                    data-testid="recovery-case-row"
+                    data-case-type="call"
+                    data-case-id={call.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${call.co} ${recoveryCaseLabel(call)} evidence`}
+                    onClick={() => openRecoveryCase(call, 'today-recovery-case')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openRecoveryCase(call, 'today-recovery-case');
+                      }
+                    }}
+                  >
+                    <div>
+                      <div className="recovery-case-row__title">
+                        {call.co}
+                        <Badge tone={isMissedCall(call) ? 'warn' : 'critical'}>{recoveryCaseLabel(call)}</Badge>
+                      </div>
+                      <div className="recovery-case-row__meta">
+                        {call.id} · {call.outcome} · {call.when} · {risk} review signal{risk === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                    <div className="recovery-case-row__score">
+                      <strong>{Number(call.score || 0).toFixed(1)}</strong>
+                      <span>score</span>
+                    </div>
+                    <I2.ArrowRight size={12}/>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <div style={{marginTop:18}}>
           <Card title={(() => {
             // Derive the in-flight count from the queue state + live
             // agents fixture so the card title doesn't claim more agents
@@ -508,6 +646,7 @@ function HomePage({ setRoute }) {
               }}><I2.Sparkle size={12}/>New agent</button>
             </div>
           </Card>
+          </div>
 
           <div style={{marginTop:18}}>
             <Card
@@ -519,10 +658,37 @@ function HomePage({ setRoute }) {
               >see all {companies.length} →</button>}
             >
               <div className="vstack" style={{gap:0}}>
-                {hotLeads.map(c => (
-                  <div key={c.id} style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:14, alignItems:'center', padding:'10px 0', borderBottom:'1px dashed var(--border)'}}>
+                {hotLeads.map(c => {
+                  const openLead = () => {
+                    window.AppContext.set({
+                      selection: { type:'lead', id: c.id },
+                      extra: {
+                        ...(window.AppContext.get().extra || {}),
+                        triggered_from: 'home-hot-lead',
+                      },
+                    });
+                    setRoute('pipeline');
+                  };
+                  return (
+                  <div
+                    key={c.id}
+                    className="home-lead-row"
+                    data-testid="hot-lead-row"
+                    data-company-id={c.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${c.name} in pipeline`}
+                    onClick={openLead}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openLead();
+                      }
+                    }}
+                    style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:14, alignItems:'center', padding:'10px 0', borderBottom:'1px dashed var(--border)', cursor:'pointer'}}
+                  >
                     <div>
-                      <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
+                      <div className="home-lead-row__name" style={{fontSize:13, fontWeight:600}}>{c.name}</div>
                       <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:1}}>{c.industry} · {c.size} ppl</div>
                     </div>
                     <Badge tone={c.intent === 'high' ? 'accent' : c.intent === 'med' ? 'warn' : 'neutral'}>{c.intent} intent</Badge>
@@ -530,9 +696,10 @@ function HomePage({ setRoute }) {
                       <div className="progress"><div className={`progress__fill progress__fill--${c.score >= 80 ? 'healthy' : c.score >= 70 ? 'accent' : 'warn'}`} style={{width:`${c.score}%`}}/></div>
                       <div className="mono num" style={{fontSize:10, color:'var(--text-3)', textAlign:'right', marginTop:2}}>{c.score}/100</div>
                     </div>
-                    <button className="btn btn--ghost btn--icon" aria-label={`Open ${c.name} in pipeline`} onClick={()=>setRoute('pipeline')}><I2.ArrowRight size={12}/></button>
+                    <span className="btn btn--ghost btn--icon" aria-hidden="true"><I2.ArrowRight size={12}/></span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
           </div>
@@ -1762,6 +1929,20 @@ function CallsPage({ setRoute }) {
           sub: 'Draft includes procurement owner, security review ask, and unresolved objections.',
         };
       }
+      if (intent === 'quote-follow-up') {
+        return {
+          kind: 'recap draft',
+          title: `Quote follow-up · ${call?.co || 'selected call'}`,
+          sub: 'Draft the pricing recap from this call instead of dropping the operator on a generic queue.',
+        };
+      }
+      if (intent === 'schedule-job') {
+        return {
+          kind: 'calendar hold',
+          title: `Schedule job · ${call?.co || 'selected call'}`,
+          sub: 'Hold the next buyer step from the selected call context.',
+        };
+      }
       if (intent === 'security-review') {
         return {
           kind: 'calendar hold',
@@ -1769,7 +1950,7 @@ function CallsPage({ setRoute }) {
           sub: '30-minute hold with buyer, security reviewer, and operator owner.',
         };
       }
-      if (intent === 'human-review') {
+      if (intent === 'human-review' || intent === 'human-handoff') {
         return {
           kind: 'human review',
           title: `Human review · ${call?.id || 'selected call'}`,

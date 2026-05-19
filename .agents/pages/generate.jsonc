@@ -1,0 +1,46 @@
+{
+  "route": "console/?route=generate",
+  "purpose": "Turn buyer proof into a locally reviewable proposal artifact while making the proof, draft sequence, artifact drawer, and Proposals handoff explicit.",
+  "primaryUsers": ["operator", "reviewer"],
+  "regions": [
+    {
+      "name": "run command strip",
+      "intent": "Summarize whether buyer proof exists, which buyer/context is active only after proof or a handoff exists, the review packet id, and whether buyer send is still gated."
+    },
+    {
+      "name": "sequence rail",
+      "intent": "Show the three-step proof -> draft engine -> review gate path with honest locked/running/ready states."
+    },
+    {
+      "name": "artifact review gate",
+      "intent": "Keep PDF/source artifact previews and the Proposals approval handoff visible before the long buyer-proof composer."
+    },
+    {
+      "name": "buyer proof composer",
+      "intent": "Accept pasted proof and file attachments without losing the recent attachment support or /api/generate payload shape."
+    },
+    {
+      "name": "terminal trace",
+      "intent": "Preserve the live stream log as the source of truth for request envelope, demo replay, backend failure, and completion events."
+    },
+    {
+      "name": "artifact drawer",
+      "intent": "Open local PDF/source previews in-console with packet metadata, review path, copy affordance, and next valid action."
+    }
+  ],
+  "designConstraints": [
+    "Dense operational console, not a marketing hero.",
+    "Use Wranngle tokens and existing Card, Badge, Button, ConsolePanel primitives.",
+    "No decorative orbs/blobs and no negative letter spacing.",
+    "The review gate must appear before the buyer composer on mobile.",
+    "Artifact controls must stay reachable above the fold on laptop and short desktop viewports."
+  ],
+  "verification": [
+    "The empty composer must not claim a sample buyer is active before the operator loads sample proof or receives a console handoff.",
+    "Use sample brief still unlocks the draft engine and POSTs /api/generate with the same input and attachments payload shape.",
+    "File attachment chips remain removable and readable text attachments are appended to buyer proof.",
+    "Running the sequence streams request.posting, request.response, pipeline.done, and pipeline.complete in the terminal trace.",
+    "PDF and source artifact drawer actions remain keyboard reachable and expose aria-controls/aria-expanded state.",
+    "Editing buyer proof after a ready draft locks stale review artifacts until regeneration."
+  ]
+}

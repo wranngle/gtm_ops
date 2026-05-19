@@ -1,0 +1,35 @@
+{
+  "route": "console/?route=calls",
+  "purpose": "Review call evidence, play transcript lines, capture coaching notes, and start follow-up workflows without leaving the console.",
+  "primaryUsers": ["operator", "reviewer", "sales coach"],
+  "regions": [
+    {
+      "name": "review rail",
+      "intent": "Show active call, transcript availability, coaching state, and list filters as compact operational controls above the workbench."
+    },
+    {
+      "name": "call queue",
+      "intent": "Keep recent and flagged calls scannable with score, duration, outcome, and flag count without crowding the transcript."
+    },
+    {
+      "name": "transcript review",
+      "intent": "Make the transcript the primary reading surface, with playback, receipts, and line-level coaching handoff available in context."
+    },
+    {
+      "name": "evidence and next actions",
+      "intent": "Summarize score, axis evidence, signal tones, and concrete next actions for recap, security review, and proposal generation."
+    }
+  ],
+  "designConstraints": [
+    "Coaching mode defaults on but must not create an always-open instructional panel.",
+    "Use dense Wranngle console tokens from DESIGN.md; no marketing hero, decorative blobs, or oversized type.",
+    "Transcript text remains readable at laptop widths, with score and next-action evidence allowed to move below the transcript.",
+    "Only CALL-2419 has fixture transcript and axis evidence; other calls must show explicit unavailable states instead of reusing Banyan data."
+  ],
+  "verification": [
+    "Coaching mode starts enabled and transcript line clicks update AppContext and open the inline composer.",
+    "Play/Pause advances and freezes the transcript cursor, then resets on call switch.",
+    "Flagged/all filtering, recap composer, booking form, receipts, and proposal handoff preserve existing behavior.",
+    "Calls workbench has no horizontal overflow and keeps transcript controls visible at 1280px and mobile widths."
+  ]
+}

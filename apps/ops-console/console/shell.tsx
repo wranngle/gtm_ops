@@ -26,6 +26,30 @@ function clearEvalAdminHandoffExtra(extra = {}) {
   return next;
 }
 
+function isConsoleAdminMode() {
+  try { return new URLSearchParams(globalThis.location.search).has('admin'); }
+  catch (_) { return false; }
+}
+
+function agentDisplayLabel(agent) {
+  return String(agent?.display_name || agent?.label || 'Agent').replace(' · ', ' ');
+}
+
+function agentSurfaceLabel(agent) {
+  if (!agent) return 'local';
+  if (agent.key === 'sales_coach' || agent.id === 'sales_coach') return 'all pages';
+  if (agent.key === 'intake' || agent.id === 'intake') return 'pipeline lead';
+  return String(agent.surface || 'local').replace(/[-_]/g, ' ');
+}
+
+function defaultVisibleAgentKey(agents = []) {
+  return agents.find(a => a.key === 'intake' || a.id === 'intake')?.key
+    || agents.find(a => a.key === 'intake' || a.id === 'intake')?.id
+    || agents[0]?.key
+    || agents[0]?.id
+    || null;
+}
+
 /* ---------- Toast / notification system ---------- */
 const __toastListeners = new Set();
 window.toast = function toast(msg, opts = {}) {
@@ -195,7 +219,7 @@ function ToastHost() {
    Tab inside while open, and restores focus to the trigger on close.
    This keeps click-outside-to-close behavior (pure aria-modal would
    block that) while giving keyboard users a sane experience. */
-function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320, label }) {
+function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320, label, id }) {
   const [pos, setPos] = useState(null);
   const popRef = useRef(null);
   const previousFocusRef = useRef(null);
@@ -256,7 +280,7 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
 
   if (!open || !pos) return null;
   return (
-    <div ref={popRef} className="popover" role="dialog" aria-label={label || 'Popover'}
+    <div ref={popRef} id={id} className="popover" role="dialog" aria-label={label || 'Popover'}
          style={{ top: pos.top, left: pos.left, width }}>
       {children}
     </div>
@@ -266,10 +290,7 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
 /* ---------- Sidebar ---------- */
 function Sidebar({ route, setRoute, collapsed }) {
   const D = window.GTM;
-  const isAdmin = (() => {
-    try { return new URLSearchParams(globalThis.location.search).has('admin'); }
-    catch (_) { return false; }
-  })();
+  const isAdmin = isConsoleAdminMode();
   // Mirror the active agent from AppContext so the sidebar agent rows can
   // highlight which one is currently loaded in the playground. Without
   // this, the sidebar listed all agents identically — operator on the
@@ -297,7 +318,7 @@ function Sidebar({ route, setRoute, collapsed }) {
     evals: D.evalSuites.filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75)).length,
   };
   const items = [
-    { id:'home',      label:'Mission Control', icon:I.Home },
+    { id:'home',      label:'Callbacks',       icon:I.Home },
     { id:'generate',  label:'Generate',        icon:I.Plus },
     { id:'pipeline',  label:'Pipeline',        icon:I.Pipeline, count: counts.pipeline },
     { id:'calls',     label:'Calls',           icon:I.Phone,    count: counts.calls },
@@ -310,11 +331,12 @@ function Sidebar({ route, setRoute, collapsed }) {
     .filter(a => isAdmin || a.surface !== 'admin-only')
     .map(a => ({
       id: a.key,
-      label: a.display_name,
-      surface: a.surface,
+      label: agentDisplayLabel(a),
+      surface: agentSurfaceLabel(a),
       color1: a.avatar_color_1,
       color2: a.avatar_color_2,
     }));
+  const defaultAgentKey = defaultVisibleAgentKey(agents);
   const selectAgent = (agentKey) => {
     const ctx = window.AppContext?.get?.() || {};
     const baseExtra = clearEvalAdminHandoffExtra(ctx.extra || {});
@@ -337,6 +359,7 @@ function Sidebar({ route, setRoute, collapsed }) {
         {!collapsed && (
           <div>
             <img className="sb__wordmark" src="../assets/wranngle-wordmark.png" alt="Wranngle"/>
+            <span className="sb__wordmark-text sr-only">Wranngle</span>
             <div className="sb__brand-sub">gtm_ops console</div>
           </div>
         )}
@@ -348,10 +371,24 @@ function Sidebar({ route, setRoute, collapsed }) {
           <button key={it.id}
                type="button"
                className="sb__item"
+               data-testid="sidebar-route"
+               data-route-id={it.id}
                data-active={route === it.id}
                aria-label={`${it.label}${it.count != null ? ` ${it.count}` : ''}`}
                aria-current={route === it.id ? 'page' : undefined}
-               onClick={() => setRoute(it.id)}>
+               onClick={() => {
+                 if (it.id === 'agents') {
+                   const ctx = window.AppContext?.get?.() || {};
+                   window.AppContext?.set?.({
+                     extra: {
+                       ...clearEvalAdminHandoffExtra(ctx.extra || {}),
+                       selected_agent_key: defaultAgentKey,
+                       triggered_from: 'sidebar-agents-route-nav',
+                     },
+                   });
+                 }
+                 setRoute(it.id);
+               }}>
             <it.icon className="sb__icon" size={16} />
             <span className="sb__label">{it.label}</span>
             {it.count != null && <span className="sb__count">{it.count}</span>}
@@ -367,6 +404,7 @@ function Sidebar({ route, setRoute, collapsed }) {
             <button key={a.id}
                  type="button"
                  className="sb__item"
+                 data-testid="sidebar-agent-route"
                  data-active={isActive}
                  data-agent-key={a.id}
                  aria-label={`${a.label} ${a.surface}${isActive ? ' (active in playground)' : ''}`}
@@ -381,8 +419,10 @@ function Sidebar({ route, setRoute, collapsed }) {
                   label={`${a.label} · ${isActive ? 'active' : 'idle'}`}
                 />
               </span>
-              <span className="sb__label">{a.label}</span>
-              <span className="mono dim" style={{fontSize: 9}}>{a.surface}</span>
+              <span className="sb__label sb__agent-copy">
+                <span className="sb__agent-name">{a.label}</span>
+                <span className="sb__agent-surface mono dim">{a.surface}</span>
+              </span>
             </button>
           );
         })}
@@ -411,15 +451,37 @@ function Sidebar({ route, setRoute, collapsed }) {
 /* ---------- Topbar ---------- */
 function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setCollapsed }) {
   const labels = {
-    home:'Mission Control', generate:'Generate Proposal', pipeline:'Pipeline', calls:'Calls',
+    home:'Callbacks', generate:'Generate', pipeline:'Pipeline', calls:'Calls',
     proposals:'Proposals', evals:'Evals', agents:'Agents', settings:'Settings',
   };
   const [notifOpen, setNotifOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
+  const [proposalPlanOpen, setProposalPlanOpen] = useState(false);
   const [notificationsRead, setNotificationsRead] = useState(false);
   const notifRef = useRef(null);
   const runRef = useRef(null);
+  const proposalPlanRef = useRef(null);
   const D = window.GTM;
+  const isAdmin = isConsoleAdminMode();
+  const calls = Array.isArray(D.calls) ? D.calls : [];
+  const isMissedCall = (call) => call?.missed === true
+    || ['voicemail', 'no-answer', 'dropped', 'missed'].includes(String(call?.outcome || '').toLowerCase());
+  const callRisk = (call) => (Number(call?.flags) || 0) + (Number(call?.deflections) || 0);
+  const missedCall = calls.find(call => isMissedCall(call) && call.returned !== true)
+    || calls.find(isMissedCall)
+    || calls[0]
+    || null;
+  const quoteCall = calls.find(call => !isMissedCall(call) && /pricing|quote|follow-up|objection/.test(String(call.outcome || '').toLowerCase()))
+    || calls.find(call => !isMissedCall(call) && callRisk(call) > 0)
+    || missedCall;
+  const scheduleCall = calls.find(call => !isMissedCall(call) && /meeting-booked|qualified|discovery|technical-deep-dive/.test(String(call.outcome || '').toLowerCase()))
+    || quoteCall
+    || missedCall;
+  const humanCall = calls
+    .filter(call => !isMissedCall(call) && !/no-fit|lost|closed|signed/.test(String(call.outcome || '').toLowerCase()))
+    .sort((a, b) => callRisk(b) - callRisk(a))[0]
+    || quoteCall
+    || missedCall;
   const proposalRunCall = (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'meeting-booked')
     || (Array.isArray(D.calls) ? D.calls : []).find(c => c.outcome === 'qualified')
     || (Array.isArray(D.calls) ? D.calls[0] : null);
@@ -434,13 +496,49 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
   } : {};
 
   const notifs = buildTopbarNotifications(D);
-  const runActions = [
-    { icon:I.Phone, label:'Outbound discovery', sub:'opens lead intake · agent-01 Hunter', route:'pipeline', toast:'Outbound discovery opened', intent:'outbound_discovery', extra:{ pipeline_panel:'new-lead' } },
-    { icon:I.Mail,  label:'Multi-thread sequence', sub:'opens high-intent saved view', route:'pipeline', toast:'Multi-thread sequence opened', intent:'multi_thread_sequence', extra:{ pipeline_panel:'filters', pipeline_filter:'high' } },
-    { icon:I.Doc,   label:'Generate proposal', sub:'prefills buyer proof from latest call', route:'generate', toast:'Proposal generator opened', intent:'proposal_generation', extra: proposalRunExtra },
-    { icon:I.Beaker,label:'Trigger eval suite', sub:'opens harness bridge · Cmd+E', route:'evals', toast:'Eval harness opened', intent:'eval_suite', extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick' } },
-    { icon:I.Refresh, label:'Re-score stale leads', sub:'opens pipeline saved views', route:'pipeline', toast:'Lead re-score review opened', intent:'lead_rescore', extra:{ pipeline_panel:'filters', pipeline_filter:'all' } },
+  const advancedRunActions = [
+    { icon:I.Phone, label:'Outbound discovery', sub:'opens lead intake · agent-01 Hunter', route:'pipeline', intent:'outbound_discovery', extra:{ pipeline_panel:'new-lead' } },
+    { icon:I.Mail,  label:'Multi-thread sequence', sub:'opens high-intent saved view', route:'pipeline', intent:'multi_thread_sequence', extra:{ pipeline_panel:'filters', pipeline_filter:'high' } },
+    { icon:I.Doc,   label:'Generate proposal', sub:'prefills buyer proof from latest call', route:'generate', intent:'proposal_generation', extra: proposalRunExtra },
+    { icon:I.Beaker,label:'Trigger eval suite', sub:'opens harness bridge · Cmd+E', route:'evals', intent:'eval_suite', extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick' } },
+    { icon:I.Refresh, label:'Re-score stale leads', sub:'opens pipeline saved views', route:'pipeline', intent:'lead_rescore', extra:{ pipeline_panel:'filters', pipeline_filter:'all' } },
   ];
+  const callbackRunActions = [
+    { icon:I.Phone, label:'Call a missed number', sub: missedCall ? `${missedCall.co} · ${missedCall.outcome || 'missed'}` : 'opens the missed-call queue', route:'calls', intent:'missed_callback', selection: missedCall ? { type:'call', id: missedCall.id } : null, extra:{ call_workflow:'human-review', call_window:'flagged' } },
+    { icon:I.Mail, label:'Send a quote follow-up', sub: quoteCall ? `${quoteCall.co} · pricing recap` : 'opens the quote follow-up queue', route:'calls', intent:'quote_follow_up', selection: quoteCall ? { type:'call', id: quoteCall.id } : null, extra:{ call_workflow:'quote-follow-up' } },
+    { icon:I.Calendar, label:'Schedule a job', sub: scheduleCall ? `${scheduleCall.co} · booking hold` : 'opens a scheduling hold', route:'calls', intent:'schedule_job', selection: scheduleCall ? { type:'call', id: scheduleCall.id } : null, extra:{ call_workflow:'schedule-job' } },
+    { icon:I.User, label:'Escalate to a human', sub: humanCall ? `${humanCall.id} · ${humanCall.co}` : 'opens human review', route:'calls', intent:'human_handoff', selection: humanCall ? { type:'call', id: humanCall.id } : null, extra:{ call_workflow:'human-handoff', call_window:'flagged' } },
+  ];
+  const proposalDraftActions = [
+    { icon:I.Doc, label:'Generate proposal', sub:'prefills buyer proof and opens the review draft path', route:'generate', intent:'proposal_generation', extra: proposalRunExtra },
+  ];
+  const agentRunActions = [
+    { icon:I.Play, label:'Preview greeting', sub:'plays Sarah locally with the current phone setup', route:'agents', intent:'agent_preview', extra:{ selected_agent_key:'intake' }, event:'gtm:agent-preview' },
+    { icon:I.Cog, label:'Edit phone setup', sub:'focuses greeting, hours, and handoff controls', route:'agents', intent:'agent_setup', extra:{ selected_agent_key:'intake' }, event:'gtm:agent-setup-focus' },
+    { icon:I.Cog, label:'ElevenLabs settings', sub:'opens local integration admin before the vendor dashboard', route:'settings', intent:'agent_settings', extra:{ settings_tab:'integrations', integration_name:'ElevenLabs' }, settingsTab:'integrations' },
+  ];
+  const evalRunActions = [
+    { icon:I.Beaker, label:'Trigger eval suite', sub:'opens the in-console harness run plan', route:'evals', intent:'eval_suite', extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick' } },
+    { icon:I.Bot, label:'Open local agent admin', sub:'hands the active regression to the agent wrapper', route:'agents', intent:'eval_agent_admin', extra:{ selected_agent_key:'sales_coach', agent_admin_panel:'context', triggered_from:'eval-agent-admin' } },
+  ];
+  const primaryRunLabel = route === 'generate'
+    ? 'Generate draft'
+    : isAdmin
+      ? 'New run'
+      : route === 'agents'
+        ? 'Test agent'
+        : route === 'evals'
+          ? 'Run eval'
+          : 'Call back';
+  const runActions = route === 'generate'
+    ? proposalDraftActions
+    : isAdmin
+      ? advancedRunActions
+      : route === 'agents'
+        ? agentRunActions
+        : route === 'evals'
+          ? evalRunActions
+          : callbackRunActions;
   const openNotification = (n) => {
     // Guard the selection even though notifications are derived from live
     // fixture state. History can still refresh between render and click,
@@ -475,16 +573,29 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
   };
   const startRun = (o) => {
     const ctx = window.AppContext.get();
+    const extra = {
+      ...(ctx.extra || {}),
+      ...(o.extra || {}),
+      run_intent: o.intent,
+      triggered_from: 'topbar-new-run',
+    };
+    if (o.event === 'gtm:agent-preview' || o.event === 'gtm:agent-setup-focus') {
+      extra.selected_agent_key = o.extra?.selected_agent_key || 'intake';
+    }
     window.AppContext.set({
-      extra: {
-        ...(ctx.extra || {}),
-        ...(o.extra || {}),
-        run_intent: o.intent,
-        triggered_from: 'topbar-new-run',
-      },
+      selection: o.selection || ctx.selection || null,
+      extra,
     });
+    if (o.settingsTab) {
+      window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: o.settingsTab } }));
+    }
     setRoute(o.route);
     setRunOpen(false);
+    if (o.event) {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent(o.event, { detail: { source: 'topbar', action: o.label } }));
+      });
+    }
   };
 
   return (
@@ -492,12 +603,12 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
       <button className="btn btn--ghost btn--icon" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar" aria-label="Toggle sidebar">
         <I.Menu size={16} />
       </button>
-      <div className="tb__crumbs">
-        <button className="tb__crumb tb__crumb--brand" disabled={route === 'home'} onClick={() => setRoute('home')}>Wranngle</button>
+      <div className="tb__crumbs tb__route-label" data-testid="topbar-route-label" aria-label={`Wranngle / gtm_ops console / ${labels[route]}`}>
+        <button className="tb__crumb tb__crumb--brand tb__route-brand" disabled={route === 'home'} onClick={() => setRoute('home')}>Wranngle</button>
         <span className="tb__sep">/</span>
-        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops console</button>
+        <button className="tb__crumb tb__crumb--workspace tb__route-product" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops console</button>
         <span className="tb__sep">/</span>
-        <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
+        <span className="tb__crumb tb__crumb--active tb__route-page">{labels[route]}</span>
       </div>
       {window.GTM?._isDemoFallback && (
         <span className="tb__demo-pill" role="status" aria-label="Demo data — backend returned no historic runs">
@@ -515,6 +626,9 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
 
       <div className="tb__actions">
         <button ref={notifRef} className="btn btn--ghost btn--icon tb__bell" title="Notifications" aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-controls="topbar-notifications-popover"
+                aria-expanded={notifOpen}
                 onClick={() => setNotifOpen(o => !o)}>
           <I.Bell size={16} />
           {!notificationsRead && <span className="tb__bell-dot"/>}
@@ -525,26 +639,50 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
                 aria-label="Toggle color theme">
           {theme === 'dark' ? <I.Sun size={16} /> : <I.Moon size={16} />}
         </button>
-        <button ref={runRef} className="btn btn--primary" onClick={() => setRunOpen(o => !o)}>
-          <I.Plus size={14} /> New run <I.ChevronDown size={12} style={{marginLeft:2,opacity:.85}}/>
+        {route === 'generate' && (
+          <button
+            ref={proposalPlanRef}
+            className="btn btn--ghost tb__proposal-run-trigger"
+            aria-label="Proposal run plan"
+            aria-haspopup="dialog"
+            aria-controls="topbar-proposal-run-popover"
+            aria-expanded={proposalPlanOpen}
+            onClick={() => setProposalPlanOpen(o => !o)}
+          >
+            <I.Pulse size={14} />
+            <span className="btn__label">Run plan</span>
+            <I.ChevronDown size={12} style={{marginLeft:2,opacity:.85}}/>
+          </button>
+        )}
+        <button
+          ref={runRef}
+          className="btn btn--primary tb__run-trigger"
+          aria-label={primaryRunLabel}
+          aria-haspopup="dialog"
+          aria-controls="topbar-run-popover"
+          aria-expanded={runOpen}
+          onClick={() => setRunOpen(o => !o)}
+        >
+          <I.Plus size={14} />
+          <span className="btn__label">{primaryRunLabel}</span>
+          <I.ChevronDown size={12} style={{marginLeft:2,opacity:.85}}/>
         </button>
       </div>
 
-      <Popover open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
+      <Popover id="topbar-notifications-popover" open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
         <div className="pop__hd">
           <span>Notifications</span>
           <span className="mono dim" style={{fontSize:10}}>{notificationsRead ? '0 new' : `${notifs.length} new`}</span>
         </div>
         <div className="pop__list">
           {notifs.map(n => (
-            <div key={n.id} className="pop__row" role="button" tabIndex={0}
+            <button key={n.id} className="pop__row" type="button"
                  data-notification-id={n.id}
                  data-notification-route={n.route}
                  data-selection-type={n.selection?.type || ''}
                  data-selection-id={n.selection?.id || ''}
                  aria-label={`${n.act}: ${n.title}`}
-                 onClick={() => openNotification(n)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}>
+                 onClick={() => openNotification(n)}>
               <span className={`dot dot--${n.tone === 'neutral' ? 'idle' : n.tone}`} style={{width:7,height:7,marginTop:6}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{n.title}</div>
@@ -552,30 +690,63 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
               </div>
               <span className="mono dim" style={{fontSize:10}}>{n.t}</span>
               <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
-            </div>
+            </button>
           ))}
         </div>
         <div className="pop__ft">
           <button className="btn btn--ghost btn--xs" onClick={() => { setNotificationsRead(true); setNotifOpen(false); }}>Mark all read</button>
-          <button className="btn btn--ghost btn--xs" onClick={() => { setRoute('settings'); window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } })); setNotifOpen(false); }}>Settings</button>
+          <button className="btn btn--ghost btn--xs" onClick={() => {
+            const ctx = window.AppContext.get();
+            window.AppContext.set({
+              extra: {
+                ...(ctx.extra || {}),
+                settings_tab: 'integrations',
+                triggered_from: 'topbar-notification-settings',
+              },
+            });
+            setRoute('settings');
+            requestAnimationFrame(() => {
+              window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } }));
+            });
+            setNotifOpen(false);
+          }}>Settings</button>
         </div>
       </Popover>
 
-      <Popover open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={300} label="Start a run">
-        <div className="pop__hd"><span>Start a run</span></div>
+      <Popover id="topbar-run-popover" open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={320} label={primaryRunLabel}>
+        <div className="pop__hd"><span>{primaryRunLabel}</span></div>
         <div className="pop__list">
           {runActions.map(o => (
-            <div key={o.label} className="pop__row" role="button" tabIndex={0}
-                 onClick={() => startRun(o)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRun(o); } }}>
+            <button key={o.label} className="pop__row" type="button"
+                 onClick={() => startRun(o)}>
               <o.icon size={14} />
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{o.label}</div>
                 <div style={{fontSize:11, color:'var(--text-3)'}}>{o.sub}</div>
               </div>
               <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
-            </div>
+            </button>
           ))}
+        </div>
+      </Popover>
+
+      <Popover id="topbar-proposal-run-popover" open={proposalPlanOpen} onClose={() => setProposalPlanOpen(false)} anchorRef={proposalPlanRef} width={340} label="Proposal run plan">
+        <div className="pop__hd"><span>Proposal run plan</span></div>
+        <div className="proposal-run-plan" data-testid="proposal-run-plan">
+          <div><strong>Buyer proof</strong><span>Use handoff context or paste proof before drafting.</span></div>
+          <div><strong>Draft engine</strong><span>Extract fields, price the proposal, and render local artifacts.</span></div>
+          <div><strong>Artifact review</strong><span>Open PDF/source previews, then hand off to Proposals for approval.</span></div>
+        </div>
+        <div className="pop__ft">
+          <button
+            type="button"
+            className="btn btn--primary btn--sm"
+            data-testid="proposal-run-start"
+            onClick={() => {
+              setProposalPlanOpen(false);
+              startRun(proposalDraftActions[0]);
+            }}
+          ><I.Doc size={12}/>Start draft</button>
         </div>
       </Popover>
     </header>
@@ -951,7 +1122,10 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
           key={i}
           className="spark-point"
           aria-hidden="true"
+          data-testid="sparkline-point"
+          data-point-index={i}
           data-point-label={pointLabelValues[i]}
+          data-point-value={fmt(data[i])}
           data-active={hovered === i ? 'true' : 'false'}
           onPointerEnter={() => setHovered(i)}
           style={{ left: `${(p[0] / w) * 100}%`, top: `${(p[1] / h) * 100}%`, '--spark-color': color }}
@@ -997,7 +1171,12 @@ function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accen
   const deltaText = statDeltaLabel(delta);
   const dir = deltaValue > 0 ? 'up' : deltaValue < 0 ? 'down' : null;
   return (
-    <div className={`stat ${accent ? 'stat--accent' : ''}`}>
+    <div
+      className={`stat ${accent ? 'stat--accent' : ''}`}
+      data-testid="stat-card"
+      data-stat-label={label}
+      aria-label={`${label}: ${value}${deltaText ? `, ${deltaText}` : ''}`}
+    >
       <div className="stat__label">{label}</div>
       <div className={`stat__value ${tone ? `stat__value--${tone}` : ''}`}>{value}</div>
       {deltaText && (

@@ -76,6 +76,143 @@ function AgentsPage({ setRoute }) {
   }, [resolveVisibleKey]);
   const active = globalThis.AGENT_REGISTRY.byKey(activeKey) || visibleAgents[0];
   const appExtra = appCtx.extra || {};
+  const agentSurfaceLabel = (agent) => {
+    if (!agent) return 'local';
+    if (agent.key === 'sales_coach') return 'all pages';
+    if (agent.key === 'intake') return 'pipeline lead';
+    return String(agent.surface || 'local').replace(/[-_]/g, ' ');
+  };
+  const agentDisplayLabel = (agent) => (
+    String(agent?.display_name || agent?.label || 'Agent').replace(' · ', ' ')
+  );
+  const agentRoleLabel = (agent) => {
+    if (!agent) return 'ElevenLabs agent';
+    if (agent.key === 'sales_coach') return 'Deal coaching agent';
+    if (agent.key === 'intake') return 'AI receptionist · answers callers and hands off jobs';
+    return agent.role || 'ElevenLabs agent';
+  };
+  const agentWrapperTitle = (agent) => (
+    agent?.key === 'intake'
+      ? 'Your AI receptionist'
+      : 'Local ElevenLabs agent'
+  );
+  const setupDefaultsFor = (agent) => ({
+    greeting: agent?.first_message || '',
+    opens: agent?.key === 'intake' ? '07:00' : '09:00',
+    closes: agent?.key === 'intake' ? '19:00' : '17:00',
+    handoff: agent?.key === 'intake' ? 'Maria' : 'Rae',
+    deflections: agent?.key === 'intake' ? '2' : '1',
+    savedAt: null,
+  });
+  const [setupByAgent, setSetupByAgent] = React.useState(() => {
+    const seed = {};
+    for (const agent of visibleAgents) seed[agent.key] = setupDefaultsFor(agent);
+    return seed;
+  });
+  const [previewState, setPreviewState] = React.useState({ agentKey: null, active: false, mode: 'idle' });
+  const [setupSaveState, setSetupSaveState] = React.useState('clean');
+  const previewTimerRef = React.useRef(null);
+  const setup = setupByAgent[active?.key] || setupDefaultsFor(active);
+  const activeLabel = agentDisplayLabel(active);
+  const updateSetup = (patch) => {
+    if (!active?.key) return;
+    setSetupByAgent(prev => ({
+      ...prev,
+      [active.key]: { ...(prev[active.key] || setupDefaultsFor(active)), ...patch },
+    }));
+    setSetupSaveState('dirty');
+  };
+  const normalizeTimeValue = (value, fallback) => {
+    const raw = String(value || '').trim();
+    const match = raw.match(/^(\d{1,2})(?::?(\d{2}))?$/);
+    if (!match) return fallback;
+    const hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return fallback;
+    }
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  };
+  const compactTime = (value) => {
+    const [hRaw, mRaw] = String(value || '00:00').split(':');
+    let h = Number(hRaw);
+    const m = Number(mRaw || 0);
+    const suffix = h >= 12 ? 'p' : 'a';
+    h = h % 12 || 12;
+    return `${h}${m ? `:${String(m).padStart(2, '0')}` : ''}${suffix}`;
+  };
+  const setupHoursLabel = `M-F ${compactTime(setup.opens)}-${compactTime(setup.closes)}`;
+  const setupSessionHoursLabel = `${setup.opens}-${setup.closes}`;
+  const setupHandoffLabel = `${setup.handoff || 'operator'} after ${setup.deflections || '1'} ${String(setup.deflections) === '1' ? 'try' : 'tries'}`;
+  const wrapperSummary = active?.key === 'intake'
+    ? 'greeting · hours · handoff'
+    : 'opening line · context · tools';
+  const previewLabel = active?.key === 'sales_coach' ? 'opening' : 'greeting';
+  const isPreviewingActiveAgent = Boolean(active?.key && previewState.active && previewState.agentKey === active.key);
+  const stopGreetingPreview = React.useCallback(() => {
+    if (previewTimerRef.current) {
+      clearTimeout(previewTimerRef.current);
+      previewTimerRef.current = null;
+    }
+    try { globalThis.speechSynthesis?.cancel?.(); } catch (_) {}
+    setPreviewState({ agentKey: null, active: false, mode: 'idle' });
+  }, []);
+  React.useEffect(() => stopGreetingPreview, [active?.key, stopGreetingPreview]);
+  const playGreetingPreview = () => {
+    if (previewState.active && previewState.agentKey === active.key) {
+      stopGreetingPreview();
+      return;
+    }
+    stopGreetingPreview();
+    const text = setup.greeting || active.first_message || `${activeLabel} is ready.`;
+    const visualFallback = (mode = 'visual') => {
+      setPreviewState({ agentKey: active.key, active: true, mode });
+      previewTimerRef.current = setTimeout(() => {
+        setPreviewState({ agentKey: null, active: false, mode: 'idle' });
+        previewTimerRef.current = null;
+      }, 6000);
+    };
+    try {
+      if (typeof globalThis.SpeechSynthesisUtterance !== 'function' || !globalThis.speechSynthesis?.speak) {
+        visualFallback('visual');
+        return;
+      }
+      const utterance = new globalThis.SpeechSynthesisUtterance(text);
+      utterance.rate = active.key === 'intake' ? 0.96 : 1;
+      utterance.pitch = 1;
+      utterance.onend = () => setPreviewState({ agentKey: null, active: false, mode: 'idle' });
+      utterance.onerror = () => visualFallback('visual');
+      setPreviewState({ agentKey: active.key, active: true, mode: 'audio' });
+      globalThis.speechSynthesis.speak(utterance);
+    } catch (_) {
+      visualFallback('visual');
+    }
+  };
+  const savePhoneSetup = () => {
+    if (!active?.key) return;
+    const savedAt = new Date();
+    setSetupByAgent(prev => ({
+      ...prev,
+      [active.key]: { ...(prev[active.key] || setupDefaultsFor(active)), savedAt: savedAt.toISOString() },
+    }));
+    setSetupSaveState('saved');
+  };
+  React.useEffect(() => {
+    const handlePreview = () => playGreetingPreview();
+    const handleSetupFocus = () => {
+      requestAnimationFrame(() => {
+        globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'nearest' });
+        const input = globalThis.document?.querySelector?.('[data-testid="phone-setup-greeting-input"]');
+        input?.focus?.({ preventScroll: true });
+      });
+    };
+    globalThis.addEventListener('gtm:agent-preview', handlePreview);
+    globalThis.addEventListener('gtm:agent-setup-focus', handleSetupFocus);
+    return () => {
+      globalThis.removeEventListener('gtm:agent-preview', handlePreview);
+      globalThis.removeEventListener('gtm:agent-setup-focus', handleSetupFocus);
+    };
+  }, [active?.key, previewState.active, previewState.agentKey, setup.greeting, setup.opens, setup.closes, setup.handoff, setup.deflections]);
   const clearEvalHandoffExtra = (extra = {}) => {
     const next = { ...extra };
     [
@@ -122,7 +259,7 @@ function AgentsPage({ setRoute }) {
         history: 'History',
         safety: 'Safety',
       }[nextPanel] || 'Admin';
-      setAdminFocusNotice(`${active?.display_name || 'Agent'} local admin focused · ${label}`);
+      setAdminFocusNotice(`${activeLabel} local admin focused · ${label}`);
     }
     requestAnimationFrame(() => {
       globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'nearest' });
@@ -186,7 +323,7 @@ function AgentsPage({ setRoute }) {
     // different blob than what was on screen.
     setContextSync({
       agentKey: active.key,
-      agentName: active.display_name,
+      agentName: activeLabel,
       route: current.route || appCtx.route || 'agents',
       selection,
       lines: contextLines,
@@ -206,7 +343,7 @@ function AgentsPage({ setRoute }) {
     requestAnimationFrame(() => {
       globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'nearest' });
     });
-    globalThis.toast(`${active.display_name} · context refreshed`, { sub: 'Visible context packet updated in local admin', tone: 'accent' });
+    globalThis.toast(`${activeLabel} · context refreshed`, { sub: 'Visible context packet updated in local admin', tone: 'accent' });
   };
   const dismissNewAgentPanel = () => {
     setNewAgentPanelOpen(false);
@@ -223,27 +360,53 @@ function AgentsPage({ setRoute }) {
   }
 
   return (
-    <div className="page page--wide">
-      <PageHeader
-        eyebrow={`${visibleAgents.length} agents wired · ElevenLabs ConvAI${isAdmin ? ' · admin' : ''}`}
-        title="Agents"
-        sub="Each agent is a real ElevenLabs ConvAI agent. Use the playground to talk to it; the admin panel summarizes its binding inside the GTM app."
-        actions={<>
-          <button
-            className="btn btn--primary btn--sm"
-            data-testid="agents-workspace-settings"
-            onClick={openWorkspaceAgentSettings}
-          ><I3.Cog size={12}/>Workspace settings</button>
-          <a
-            className="btn btn--external btn--sm"
-            data-testid="agents-elevenlabs-escape"
-            href="https://elevenlabs.io/app/conversational-ai/agents"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="External escape hatch: open ElevenLabs admin dashboard externally"
-          ><I3.ArrowUpRight size={12}/>External ElevenLabs admin</a>
-        </>}
-      />
+    <div className="page page--wide page--agents">
+      <h1 id="console-page-title" className="sr-only">Agents</h1>
+
+      <section className="agent-route-strip" aria-label="Selected ElevenLabs agent">
+        <div className="agent-route-strip__identity">
+          <window.ElevenUI.Orb
+            size={42}
+            state={isPreviewingActiveAgent ? 'talking' : 'idle'}
+            color1={active.avatar_color_1}
+            color2={active.avatar_color_2}
+            label={`${activeLabel} selected agent`}
+          />
+          <div>
+            <div className="eyebrow eyebrow--accent">{visibleAgents.length} agents wired · ElevenLabs ConvAI{isAdmin ? ' · admin' : ''}</div>
+            <div className="agent-route-strip__active">
+              <span>{agentWrapperTitle(active)}</span>
+              <strong>{activeLabel}</strong>
+            </div>
+          </div>
+        </div>
+        <div className="agent-route-strip__facts" aria-label="Local agent setup facts">
+          <span>
+            <span className="agent-route-strip__fact-label">status</span>
+            <code className="mono" data-testid="agent-route-fact-status">
+              {active.key === 'intake' ? 'Answering now' : 'Ready for coaching'}
+            </code>
+          </span>
+          <span>
+            <span className="agent-route-strip__fact-label">{active.key === 'intake' ? 'hours' : 'surface'}</span>
+            <code className="mono" data-testid={active.key === 'intake' ? 'agent-route-fact-hours' : 'agent-route-fact-surface'}>
+              {active.key === 'intake' ? setupHoursLabel : agentSurfaceLabel(active)}
+            </code>
+          </span>
+          <span>
+            <span className="agent-route-strip__fact-label">{active.key === 'intake' ? 'handoff' : 'wrapper'}</span>
+            <code className="mono" data-testid="agent-route-fact-handoff">
+              {active.key === 'intake' ? setupHandoffLabel : wrapperSummary}
+            </code>
+          </span>
+        </div>
+        <button
+          className="btn btn--primary btn--sm"
+          data-testid="agents-workspace-settings"
+          aria-label="ElevenLabs workspace settings"
+          onClick={openWorkspaceAgentSettings}
+        ><I3.Cog size={12}/>ElevenLabs settings</button>
+      </section>
 
       {evalContextHandoff && (
         <section
@@ -329,36 +492,39 @@ function AgentsPage({ setRoute }) {
 
       <div className="agents-grid">
         <Card title={`agents · ${visibleAgents.length}`} className="card--accent agents-picker-card">
-          <div className="vstack" style={{gap: 0}}>
+          <div className="vstack agent-picker-list" role="list" aria-label="ElevenLabs agents wired into this console" style={{gap: 0}}>
             {visibleAgents.map(a => (
-              <div key={a.key}
+              <div key={a.key} role="listitem">
+              <button
+                type="button"
                 className="agent-row"
+                data-testid="agents-picker-row"
                 data-active={activeKey === a.key}
                 data-agent-key={a.key}
                 onClick={() => setActiveKey(a.key)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveKey(a.key); } }}
-                role="button"
-                tabIndex={0}
                 aria-pressed={activeKey === a.key}
+                aria-label={`${agentDisplayLabel(a)} ${agentRoleLabel(a)} ${agentSurfaceLabel(a)}`}
                 style={{
                   padding: '12px 8px', borderBottom: '1px dashed var(--border)',
                   display: 'grid', gridTemplateColumns: '36px 1fr auto', gap: 12, alignItems: 'center', cursor: 'pointer',
                   borderLeft: activeKey === a.key ? '2px solid var(--sunset-500)' : '2px solid transparent',
                   paddingLeft: activeKey === a.key ? 10 : 8,
                 }}>
-                <window.ElevenUI.Orb size={34} color1={a.avatar_color_1} color2={a.avatar_color_2} label={`${a.display_name} state`}/>
+                <window.ElevenUI.Orb size={34} color1={a.avatar_color_1} color2={a.avatar_color_2} label={`${agentDisplayLabel(a)} state`}/>
                 <div>
-                  <div style={{fontSize: 13, fontWeight: 600}}>{a.display_name}</div>
-                  <div className="mono" style={{fontSize: 10, color: 'var(--text-3)'}}>{a.role}</div>
+                  <div className="agent-row__name" style={{fontSize: 13, fontWeight: 600}}>{agentDisplayLabel(a)}</div>
+                  <div className="agent-row__role mono" style={{fontSize: 10, color: 'var(--text-3)'}}>{agentRoleLabel(a)}</div>
                 </div>
-                <span className="mono" style={{fontSize: 10, color: 'var(--text-3)'}}>{a.surface}</span>
+                <span className="mono" data-testid="agent-surface-label" style={{fontSize: 10, color: 'var(--text-3)'}}>{agentSurfaceLabel(a)}</span>
+              </button>
               </div>
             ))}
           </div>
         </Card>
 
         <div className="vstack" style={{gap: 18, minWidth: 0}}>
-          <Card title={`playground · ${active.display_name}`} accent="accent" className="agent-playground-card">
+          <Card title={`playground · ${activeLabel}`} accent="accent" className="agent-playground-card">
             {/* The playground frames the raw ConvAI web component with the
                 local ElevenLabs UI primitives (Orb, BarVisualizer, status
                 bar) so the operator gets the same visual contract here as
@@ -367,17 +533,19 @@ function AgentsPage({ setRoute }) {
               <div className="el-agent-panel__head">
                 <window.ElevenUI.Orb
                   size={48}
-                  state="idle"
+                  state={isPreviewingActiveAgent ? 'talking' : 'idle'}
                   color1={active.avatar_color_1}
                   color2={active.avatar_color_2}
-                  label={`${active.display_name} playground state`}
+                  label={`${activeLabel} playground state`}
                 />
                 <div>
-                  <div style={{fontWeight: 700, fontSize: 14}}>{active.display_name}</div>
-                  <div className="mono dim" style={{fontSize: 10}}>{active.role} · {active.mode}</div>
+                  <div style={{fontWeight: 700, fontSize: 14}} data-testid="agent-playground-title">{activeLabel}</div>
+                  <div className="agent-playground-frame__identity mono dim" data-testid="agent-playground-subtitle" style={{fontSize: 10}}>
+                    {agentRoleLabel(active)} · {active.mode}
+                  </div>
                 </div>
                 <window.ElevenUI.BarVisualizer
-                  active={false}
+                  active={isPreviewingActiveAgent}
                   tone="accent"
                   bars={[.32,.58,.41,.74,.5,.36,.66,.45,.82,.4,.58,.3]}
                 />
@@ -385,16 +553,25 @@ function AgentsPage({ setRoute }) {
               <div className="el-conversation-bar" role="status" aria-live="polite" data-testid="agent-context-bar">
                 <I3.Mic size={14}/>
                 <span>
-                  Console context packet: <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code>
-                  {' '}from <code className="mono">{appCtx.route || 'agents'}</code>
+                  {isPreviewingActiveAgent
+                    ? `${activeLabel} ${previewState.mode === 'audio' ? 'preview playing locally.' : 'visual preview running; browser audio unavailable.'}`
+                    : <>Preview the saved greeting before callers hear it. Context packet: <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code>{' '}from <code className="mono">{appCtx.route || 'agents'}</code>.</>}
                 </span>
                 <Badge tone="accent">ready</Badge>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--xs"
+                  data-testid="agent-playground-play-greeting"
+                  aria-pressed={isPreviewingActiveAgent}
+                  onClick={playGreetingPreview}
+                >{isPreviewingActiveAgent ? 'Stop preview' : `Play ${previewLabel}`}</button>
               </div>
               <div className="agent-admin-quick" aria-label="Local agent admin shortcuts">
                 <div className="agent-admin-quick__head">
                   <div>
                     <div className="eyebrow eyebrow--accent">local admin</div>
                     <strong>{active.key}</strong>
+                    <code className="mono agent-local-wrapper-id" data-testid="agent-local-wrapper-id">{wrapperSummary}</code>
                   </div>
                   <button
                     type="button"
@@ -422,17 +599,19 @@ function AgentsPage({ setRoute }) {
                 </div>
               </div>
             </div>
-            <div className="eval-convai-frame agent-playground-convai" role="region" aria-label={`${active.display_name} playground chat`} data-testid="agent-playground-convai">
+            <div className="eval-convai-frame agent-playground-convai" role="region" aria-label={`${activeLabel} playground chat`} data-testid="agent-playground-convai">
               <div className="agent-session-strip" aria-label="Active ElevenLabs session packet">
                 <div>
                   <div className="eyebrow eyebrow--accent">ElevenLabs session</div>
-                  <strong>{active.display_name}</strong>
+                  <strong>{activeLabel}</strong>
                 </div>
                 <Badge tone="accent">embedded</Badge>
                 <div className="agent-session-strip__grid">
                   <span>route <code className="mono">{appCtx.route}</code></span>
                   <span>context <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code></span>
                   <span>tools <code className="mono">{(active.tools || []).length || 3} local</code></span>
+                  <span>{active.key === 'intake' ? 'hours' : 'wrapper'} <code className="mono">{active.key === 'intake' ? setupSessionHoursLabel : wrapperSummary}</code></span>
+                  <span>{active.key === 'intake' ? 'handoff' : 'surface'} <code className="mono">{active.key === 'intake' ? setupHandoffLabel : agentSurfaceLabel(active)}</code></span>
                 </div>
               </div>
               {/* surface="agent_playground" pulls textOnly + expanded +
@@ -458,6 +637,120 @@ function AgentsPage({ setRoute }) {
             </div>
           </Card>
 
+          <div className="agent-admin-focus-target" tabIndex={-1}>
+            <Card
+              title={active.key === 'intake' ? 'Receptionist setup' : `${activeLabel} wrapper`}
+              className="agent-local-admin-card"
+              action={<Badge tone={setupSaveState === 'dirty' ? 'warn' : setupSaveState === 'saved' ? 'healthy' : 'neutral'}>{setupSaveState === 'dirty' ? 'unsaved' : setupSaveState === 'saved' ? 'saved' : 'current'}</Badge>}
+            >
+              <section
+                className="phone-setup-panel"
+                data-testid="agent-local-admin-panel"
+                aria-label={`${activeLabel} local setup`}
+              >
+                <div className="phone-setup-panel__fields" data-testid="phone-setup-panel">
+                  <label className="field" data-testid="phone-setup-greeting">
+                    <span className="field__label">{active.key === 'sales_coach' ? 'Opening line' : 'Greeting'}</span>
+                    <textarea
+                      className="input phone-setup-panel__greeting"
+                      data-testid="phone-setup-greeting-input"
+                      value={setup.greeting}
+                      onChange={(e) => updateSetup({ greeting: e.target.value })}
+                    />
+                  </label>
+                  <div className="phone-setup-panel__row">
+                    <label className="field">
+                      <span className="field__label">Opens</span>
+                      <input
+                        className="input"
+                        type="text"
+                        inputMode="numeric"
+                        data-testid="phone-setup-hours-start"
+                        value={setup.opens}
+                        onChange={(e) => updateSetup({ opens: e.target.value })}
+                        onBlur={(e) => updateSetup({ opens: normalizeTimeValue(e.target.value, '07:00') })}
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="field__label">Closes</span>
+                      <input
+                        className="input"
+                        type="text"
+                        inputMode="numeric"
+                        data-testid="phone-setup-hours-end"
+                        value={setup.closes}
+                        onChange={(e) => updateSetup({ closes: e.target.value })}
+                        onBlur={(e) => updateSetup({ closes: normalizeTimeValue(e.target.value, '19:00') })}
+                      />
+                    </label>
+                  </div>
+                  <div className="phone-setup-panel__row">
+                    <label className="field">
+                      <span className="field__label">After-hours handoff</span>
+                      <input
+                        className="input"
+                        type="text"
+                        data-testid="phone-setup-handoff-input"
+                        value={setup.handoff}
+                        onChange={(e) => updateSetup({ handoff: e.target.value })}
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="field__label">Deflection cap</span>
+                      <input
+                        className="input"
+                        type="number"
+                        min="1"
+                        max="9"
+                        data-testid="phone-setup-deflection-input"
+                        value={setup.deflections}
+                        onChange={(e) => updateSetup({ deflections: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div
+                  className="phone-setup-preview"
+                  data-testid="phone-setup-preview"
+                  data-active={isPreviewingActiveAgent ? 'true' : 'false'}
+                  data-preview-mode={previewState.mode}
+                >
+                  <div>
+                    <div className="eyebrow eyebrow--accent">local preview</div>
+                    <strong>{activeLabel}</strong>
+                    <p>{setup.opens}-{setup.closes} · after-hours to {setupHandoffLabel}</p>
+                  </div>
+                  <div className="phone-setup-preview__sample">
+                    {isPreviewingActiveAgent
+                      ? (previewState.mode === 'audio' ? 'Audio preview playing locally.' : 'Visual preview running.')
+                      : setup.greeting}
+                  </div>
+                  <div className="phone-setup-preview__actions">
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      aria-pressed={isPreviewingActiveAgent}
+                      onClick={playGreetingPreview}
+                    ><I3.Mic size={12}/>{isPreviewingActiveAgent ? 'Stop preview' : `Preview ${previewLabel}`}</button>
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--sm"
+                      data-testid="phone-setup-save"
+                      onClick={savePhoneSetup}
+                    ><I3.Cog size={12}/>Save local wrapper</button>
+                  </div>
+                  <div className="phone-setup-save-status" data-testid="phone-setup-save-status" data-state={setupSaveState}>
+                    {setupSaveState === 'dirty'
+                      ? 'Unsaved local edits. Save before trusting the next test call.'
+                      : setupSaveState === 'saved'
+                        ? `Saved · ${setup.opens}-${setup.closes} · ${setupHandoffLabel}`
+                        : 'Current registry settings. Edit locally before opening the external dashboard.'}
+                  </div>
+                </div>
+              </section>
+            </Card>
+          </div>
+
           <div ref={adminCardRef} className="agent-admin-focus-target" tabIndex={-1}>
             <Card title={`admin · ${active.key}`} className="agent-admin-card">
               {adminFocusNotice && (
@@ -469,10 +762,10 @@ function AgentsPage({ setRoute }) {
                 >{adminFocusNotice}</div>
               )}
               <div className="agent-admin-hero">
-                <window.ElevenUI.Orb size={76} state="talking" color1={active.avatar_color_1} color2={active.avatar_color_2} label={`${active.display_name} admin state`}/>
+                <window.ElevenUI.Orb size={76} state="talking" color1={active.avatar_color_1} color2={active.avatar_color_2} label={`${activeLabel} admin state`}/>
                 <div className="agent-admin-hero__copy">
                   <div className="eyebrow eyebrow--accent">{active.surface} · {active.mode}</div>
-                  <h2>{active.display_name}</h2>
+                  <h2>{activeLabel}</h2>
                   <p>{active.description}</p>
                   <div className="agent-admin-caps">
                     {active.capabilities.map(c => <Badge key={c} tone="accent">{c}</Badge>)}
@@ -525,7 +818,7 @@ function AgentsPage({ setRoute }) {
                           className="mono agent-admin-json"
                           tabIndex={0}
                           role="region"
-                          aria-label={`${active.display_name} system prompt`}
+                          aria-label={`${activeLabel} system prompt`}
                           style={{whiteSpace:'pre-wrap', maxHeight:240, overflow:'auto'}}
                         >{active.system_prompt}</pre>
                       ) : (
@@ -625,7 +918,7 @@ function AgentsPage({ setRoute }) {
                       className="mono agent-admin-json"
                       tabIndex={0}
                       role="region"
-                      aria-label={`${active.display_name} agent context`}
+                      aria-label={`${activeLabel} agent context`}
                       data-testid="agent-context"
                       data-source={contextSync ? 'synced' : 'live'}
                     >{contextSync ? contextSync.text : context}</pre>

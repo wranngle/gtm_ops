@@ -995,7 +995,7 @@ function EvalsPage({ setRoute }) {
         </div>
       )}
 
-      <section className="eval-command-center">
+      <section className="eval-command-center" data-testid="eval-command-center">
         <div className="eval-command-center__copy">
           <div className="eyebrow eyebrow--accent">active regression</div>
           <h2 data-testid="eval-active-scenario-title">{evalScenarioTitle(activeRun?.scenario_id || active.name)}</h2>
@@ -2329,7 +2329,7 @@ function SettingsPage({ setRoute }) {
           id={`settings-panel-${tab}`}
           aria-labelledby={`settings-tab-${tab}`}
           tabIndex={0}>
-          {tab === 'integrations' && <IntegrationsSettings/>}
+          {tab === 'integrations' && <IntegrationsSettings setRoute={setRoute}/>}
           {tab === 'evals' && <EvalPolicySettings/>}
           {tab === 'team' && <TeamSettings/>}
           {tab === 'billing' && <BillingSettings/>}
@@ -2341,7 +2341,7 @@ function SettingsPage({ setRoute }) {
   );
 }
 
-function IntegrationsSettings() {
+function IntegrationsSettings({ setRoute }) {
   // Live status per integration; flipping disconnect/connect mutates this
   // map so the connected-count and the row badges actually reflect operator
   // actions instead of the static fixture.
@@ -2364,6 +2364,7 @@ function IntegrationsSettings() {
   const [savedActions, setSavedActions] = useState(buildActionMap);
   const [draftActions, setDraftActions] = useState(buildActionMap);
   const [lastTestSync, setLastTestSync] = useState({});
+  const [operationLog, setOperationLog] = useState({});
   const [activeName, setActiveName] = useState(() => {
     const requestedName = globalThis.AppContext.get().extra?.integration_name;
     return INTEGRATION_CONNECTIONS.some(c => c.name === requestedName) ? requestedName : null;
@@ -2379,6 +2380,28 @@ function IntegrationsSettings() {
   const enabledCount = activeConfig
     ? Object.values(draftFor(activeConfig.name)).filter(Boolean).length
     : 0;
+  const logIntegrationOperation = (name, message) => {
+    if (!name) return;
+    const stamp = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    setOperationLog(prev => ({
+      ...prev,
+      [name]: [`${stamp} · ${message}`, ...(prev[name] || [])].slice(0, 4),
+    }));
+  };
+  const openElevenLabsLocalAdmin = () => {
+    globalThis.AppContext.set({
+      extra: {
+        ...(globalThis.AppContext.get().extra || {}),
+        selected_agent_key: 'intake',
+        triggered_from: 'settings-elevenlabs-local-admin',
+      },
+    });
+    logIntegrationOperation('ElevenLabs', 'Local admin opened inside gtm_ops');
+    setRoute?.('agents');
+  };
+  const noteElevenLabsEscape = () => {
+    logIntegrationOperation('ElevenLabs', 'Dashboard escape opened · single settings escape hatch');
+  };
 
   const onToggleAction = (name, action, checked) => {
     setDraftActions(prev => ({
@@ -2501,7 +2524,42 @@ function IntegrationsSettings() {
                   <div className="eyebrow">automation</div>
                   <p className="muted" style={{fontSize:12}}>{activeConfig.automations}</p>
                 </div>
+                {activeConfig.name === 'ElevenLabs' && (
+                  <div className="integration-local-admin" role="group" aria-label="ElevenLabs local admin controls">
+                    <div className="eyebrow">local admin first</div>
+                    <p className="muted" style={{fontSize:12}}>
+                      Sarah and Sales Coach are configured inside this console. Use the external dashboard only for vendor-only agent settings.
+                    </p>
+                    <div className="hstack" style={{gap:8, marginTop:10, flexWrap:'wrap'}}>
+                      <button
+                        type="button"
+                        className="btn btn--primary btn--sm"
+                        data-testid="integration-open-elevenlabs-local-admin"
+                        onClick={openElevenLabsLocalAdmin}
+                      ><I3.Bot size={12}/>Open local admin</button>
+                      <a
+                        className="btn btn--external btn--sm"
+                        data-testid="integration-elevenlabs-escape"
+                        href="https://elevenlabs.io/app/agents"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Open ElevenLabs Agents dashboard in a new tab"
+                        onClick={noteElevenLabsEscape}
+                      ><I3.ArrowUpRight size={12}/>Open ElevenLabs dashboard</a>
+                    </div>
+                    <p className="mono dim" data-testid="integration-elevenlabs-escape-note" style={{fontSize:10, marginTop:8}}>
+                      one explicit dashboard escape hatch · all routine setup stays local
+                    </p>
+                  </div>
+                )}
               </div>
+              {activeConfig.name === 'ElevenLabs' && (
+                <div className="integration-operation-log" data-testid="integration-operation-log" role="status" aria-live="polite">
+                  {(operationLog.ElevenLabs || ['No ElevenLabs admin operations yet.']).map(line => (
+                    <div key={line} className="mono">{line}</div>
+                  ))}
+                </div>
+              )}
               <div className="hstack" style={{marginTop:12, justifyContent:'space-between'}}>
                 <div className="hstack" style={{gap:8}}>
                   {isConnected ? (

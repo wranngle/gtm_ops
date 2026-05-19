@@ -6,10 +6,22 @@ import { test, expect, smokeClickAll } from './helpers.js';
 test.describe('shell', () => {
   test('sidebar nav toggles every route', async ({ openConsole }) => {
     const page = await openConsole();
-    for (const label of ['Mission Control', 'Generate', 'Pipeline', 'Calls', 'Proposals', 'Evals', 'Agents', 'Settings']) {
-      await page.locator(`.sb__item:has-text("${label}")`).first().click();
-      await expect(page.locator('.tb__crumb--active')).toContainText(label);
-    }
+    await page.locator('.sb__item:has-text("Callbacks")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Callbacks');
+    await page.locator('.sb__item:has-text("Generate")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Generate');
+    await page.locator('.sb__item:has-text("Pipeline")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Pipeline');
+    await page.locator('.sb__item:has-text("Calls")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Calls');
+    await page.locator('.sb__item:has-text("Proposals")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Proposals');
+    await page.locator('.sb__item:has-text("Evals")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Evals');
+    await page.locator('.sb__item:has-text("Agents")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    await page.locator('.sb__item:has-text("Settings")').first().click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Settings');
   });
 
   test('sidebar collapse toggle persists in DOM attribute', async ({ openConsole }) => {
@@ -197,7 +209,9 @@ test.describe('shell', () => {
 
     await page.locator('.sb__item:has-text("Agents")').first().click();
     await assertReadableButton(page.getByRole('button', { name: /Workspace settings/i }), 'Agents workspace settings button');
-    await assertReadableButton(page.getByRole('link', { name: /ElevenLabs admin/i }), 'Agents ElevenLabs escape hatch');
+    await page.getByRole('button', { name: /Workspace settings/i }).click();
+    await assertReadableButton(page.getByRole('button', { name: /Open local admin/i }), 'Settings ElevenLabs local admin button');
+    await assertReadableButton(page.getByRole('link', { name: /Open ElevenLabs Agents dashboard/i }), 'Settings ElevenLabs escape hatch');
   });
 
   test('drawer and admin jumps stay inside console scrollers', async ({ openConsole, page }) => {
@@ -241,12 +255,21 @@ test.describe('shell', () => {
     const page = await openConsole();
 
     await expect(page.getByRole('button', { name: /Pipeline trend/i })).toHaveCount(0);
-    const firstSparkline = page.locator('.stat__spark .spark-wrap').first();
+    const firstStat = page.getByTestId('stat-card').filter({ has: page.locator('.spark-wrap') }).first();
+    const statLabel = await firstStat.getAttribute('data-stat-label') ?? '';
+    expect(statLabel).not.toBe('');
+    const escapedStatLabel = [...statLabel]
+      .map(char => String.raw`\^$.*+?()[]{}|`.includes(char) ? `\\${char}` : char)
+      .join('');
+    const firstSparkline = firstStat.locator('.spark-wrap');
     await expect(firstSparkline).toHaveAttribute('role', 'group');
     await expect(firstSparkline).toHaveAttribute('tabindex', '0');
+    await expect(firstSparkline.getByTestId('sparkline-point').first()).toHaveAttribute('data-point-index', '0');
+    const firstPointValue = await firstSparkline.getByTestId('sparkline-point').first().getAttribute('data-point-value') ?? '';
+    expect([...firstPointValue].some(char => char >= '0' && char <= '9')).toBe(true);
 
     await firstSparkline.focus();
-    await expect(firstSparkline.locator('.spark-tooltip')).toContainText(/Pipeline trend/i);
+    await expect(firstSparkline.locator('.spark-tooltip')).toContainText(new RegExp(`${escapedStatLabel} trend`, 'i'));
     await expect(firstSparkline.locator('.spark-tooltip')).toContainText(/latest/i);
     await page.keyboard.press('ArrowLeft');
     await expect(firstSparkline.locator('.spark-tooltip')).toContainText(/ago/i);
