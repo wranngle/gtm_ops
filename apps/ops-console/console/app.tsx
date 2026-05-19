@@ -15,6 +15,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const ROUTES = ['home', 'generate', 'pipeline', 'funnel', 'calls', 'proposals', 'evals', 'agents', 'simulator', 'settings'];
+const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'email-composer', 'settings'];
 
 function readHistoryMetadata(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
@@ -254,6 +255,7 @@ function App() {
             {route === 'proposals' && <ProposalsPage setRoute={setConsoleRoute}/>}
             {route === 'agents' && <AgentsPage setRoute={setConsoleRoute}/>}
             {route === 'simulator' && <SimulatorPage setRoute={setConsoleRoute}/>}
+            {route === 'email-composer' && <EmailComposerPage setRoute={setConsoleRoute}/>}
             {route === 'settings' && <SettingsPage setRoute={setConsoleRoute}/>}
           </main>
         </div>

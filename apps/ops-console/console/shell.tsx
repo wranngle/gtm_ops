@@ -306,6 +306,7 @@ function Sidebar({ route, setRoute, collapsed }) {
     { id:'evals',     label:'Evals',           icon:I.Beaker,   count: counts.evals || null },
     { id:'agents',    label:'Agents',          icon:I.Bot },
     { id:'simulator', label:'Simulator',       icon:I.Phone },
+    { id:'email-composer', label:'Follow-up email', icon:I.Mail },
     { id:'settings',  label:'Settings',        icon:I.Cog },
   ];
   const agents = (window.AGENT_REGISTRY?.agents || [])
