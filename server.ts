@@ -27,6 +27,7 @@ import { VersionManager } from './lib/versioning.js';
 import { getAuditLogger, auditContextMiddleware, RetentionPolicy } from './lib/audit.js';
 import { BrandingManager } from './lib/branding.js';
 import { AdminManager } from './lib/admin.js';
+import { getTickerEvents } from './lib/ticker.js';
 import { GdprManager } from './lib/gdpr.js';
 import { Role, getPermissionSummary, getUserManager, requireRole, resolveDevAuthRole } from './lib/rbac.js';
 
@@ -188,6 +189,10 @@ app.get('/ready', (req, res) => {
   }
 
   res.status(200).json({ ready: true });
+});
+
+app.get('/api/ticker', generalLimiter, async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=30').json(await getTickerEvents({}));
 });
 
 app.get('/api/history', historyLimiter, (req, res) => {
