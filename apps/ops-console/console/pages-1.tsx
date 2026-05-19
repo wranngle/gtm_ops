@@ -962,6 +962,55 @@ function PipelinePage({ setRoute }) {
         </div>
       )}
 
+      {/* Pipeline velocity — closed_won / proposals_sent over the
+          last 30 days. Mirrors lib/admin.ts#getPipelineVelocity so the
+          UI surface and any future server-side aggregation stay aligned
+          on what counts as "sent" (review/redlines/legal/signed/lost)
+          vs. closed_won (signed). Numerator / denominator are surfaced
+          alongside the percent so an operator can sanity-check the
+          ratio without opening the fixture. */}
+      {(() => {
+        const SENT_STAGES = new Set(['review', 'redlines', 'legal', 'signed', 'lost']);
+        const props = D.proposals || [];
+        let sent = 0;
+        let closedWon = 0;
+        for (const p of props) {
+          const stage = String(p?.stage || '').toLowerCase();
+          if (!SENT_STAGES.has(stage)) continue;
+          sent += 1;
+          if (stage === 'signed') closedWon += 1;
+        }
+        const ratio = sent > 0 ? closedWon / sent : 0;
+        const percent = `${(ratio * 100).toFixed(1)}%`;
+        const tone = ratio >= 0.3 ? 'healthy' : ratio >= 0.15 ? 'accent' : 'warn';
+        return (
+          <div
+            className={`card card--${tone} pipeline-velocity-card`}
+            data-testid="pipeline-velocity-card"
+            data-velocity-ratio={ratio.toFixed(4)}
+            data-velocity-closed-won={closedWon}
+            data-velocity-sent={sent}
+            style={{display:'grid', gridTemplateColumns:'auto 1fr auto', gap:18, alignItems:'center', marginBottom:18, padding:'14px 18px'}}
+          >
+            <div>
+              <div className="eyebrow eyebrow--accent">pipeline velocity · 30d</div>
+              <div className="mono num" style={{fontSize:28, fontWeight:700, marginTop:2}} data-testid="pipeline-velocity-percent">
+                {percent}
+              </div>
+            </div>
+            <div className="mono dim" style={{fontSize:11, lineHeight:1.5}}>
+              closed-won proposals over proposals sent — last 30 days · fixture-driven in DEMO_MODE
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div className="mono num" style={{fontSize:13, fontWeight:600}}>
+                {closedWon} / {sent}
+              </div>
+              <div className="eyebrow">won / sent</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {view === 'kanban' && <PipelineKanban companies={filtered} stages={D.stages} onSelect={setSelected} selected={selected} effectiveStage={effectiveStage} onDropToStage={onDropToStage}/>}
       {view === 'table' && <PipelineTable companies={filtered} onSelect={setSelected} selected={selected}/>}
 

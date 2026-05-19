@@ -668,3 +668,39 @@ export class AdminManager {
 
 // Export for convenience (TimePeriod already exported above)
 export { getTimestampRange };
+
+/**
+ * Compute pipeline velocity = closed_won_count / proposals_sent_count
+ * over a window. A proposal is "sent" once it has reached any stage past
+ * draft (review/redlines/legal/signed/lost); it is "closed_won" only when
+ * stage === 'signed'. The denominator includes every sent proposal, won
+ * or otherwise, so the ratio expresses the conversion likelihood.
+ *
+ * Pure / framework-free so it can be unit-tested without spinning up the
+ * AdminManager database, AND so the ops-console DEMO_MODE path can feed
+ * it the in-memory fixture proposals array verbatim.
+ *
+ * @param {Array<{stage?: string|null}>} proposals - proposal rows.
+ * @returns {{ ratio: number, closedWon: number, sent: number, percent: string }}
+ *   ratio: 0..1 (0 when sent === 0)
+ *   percent: pre-formatted "XX.X%" string for direct UI rendering
+ */
+export function getPipelineVelocity(proposals = []) {
+  const SENT_STAGES = new Set(['review', 'redlines', 'legal', 'signed', 'lost']);
+  const list = Array.isArray(proposals) ? proposals : [];
+  let sent = 0;
+  let closedWon = 0;
+  for (const p of list) {
+    const stage = String(p?.stage || '').toLowerCase();
+    if (!SENT_STAGES.has(stage)) continue;
+    sent += 1;
+    if (stage === 'signed') closedWon += 1;
+  }
+  const ratio = sent > 0 ? closedWon / sent : 0;
+  return {
+    ratio,
+    closedWon,
+    sent,
+    percent: `${(ratio * 100).toFixed(1)}%`,
+  };
+}
