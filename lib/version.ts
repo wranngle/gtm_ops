@@ -4,7 +4,26 @@
 // the Express server.ts route and the Cloudflare Pages function so local
 // dev and prod return identical JSON.
 
-import packageJson from '../package.json' with {type: 'json'};
+const PACKAGE_METADATA = {
+  version: '1.0.0',
+  dependencies: {
+    '@google/genai': '^1.0.0',
+    ajv: '8.20.0',
+    'ajv-formats': '^2.1.1',
+    arktype: '2.2.0',
+    cors: '2.8.6',
+    dotenv: '^16.3.1',
+    eventsource: '^4.1.0',
+    express: '^4.18.2',
+    'express-rate-limit': '8.5.2',
+    mustache: '^4.2.0',
+    open: '^10.0.0',
+    puppeteer: '^24.42.0',
+    'sql.js': '^1.13.0',
+    sqlite3: '^6.0.1',
+    uuid: '^14.0.0',
+  },
+} as const;
 
 export type VersionPayload = {
   version: string;
@@ -14,7 +33,7 @@ export type VersionPayload = {
 };
 
 const RUNTIME_DEPS = Object.keys(
-  (packageJson as {dependencies?: Record<string, string>}).dependencies ?? {},
+  PACKAGE_METADATA.dependencies,
 ).sort();
 
 /**
@@ -34,13 +53,13 @@ export function buildVersionPayload(
   proc: {version?: string} = process,
 ): VersionPayload {
   const sha = env?.GIT_SHA || env?.CF_PAGES_COMMIT_SHA || 'unknown';
-  const deps = (packageJson as {dependencies?: Record<string, string>}).dependencies ?? {};
+  const deps: Record<string, string> = PACKAGE_METADATA.dependencies;
   const filtered: Record<string, string> = {};
   for (const name of RUNTIME_DEPS) {
     filtered[name] = deps[name];
   }
   return {
-    version: (packageJson as {version?: string}).version ?? '0.0.0',
+    version: PACKAGE_METADATA.version,
     commit: sha.slice(0, 7),
     node_version: proc?.version ?? 'unknown',
     deps: filtered,
