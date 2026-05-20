@@ -11,8 +11,40 @@
  * 5. System stores in corpus
  */
 
-import { generateCaseStudyId } from '../schemas/case-study.schema.js';
-import { createCaseStudy } from './corpus.js';
+import {generateCaseStudyId, type Vendor} from '../schemas/case-study.schema.js';
+import {createCaseStudy} from './corpus.js';
+
+type ExtractionOptions = {
+	maxRetries?: number;
+};
+
+type HarvestOptions = {
+	autoSave?: boolean;
+	id?: string | undefined;
+	title?: string | undefined;
+	harvestedBy?: string;
+	holdout?: boolean;
+} & ExtractionOptions;
+
+type SourceInfo = {
+	url: string;
+	vendor?: Vendor;
+	title?: string | undefined;
+	published_date?: string | undefined;
+};
+
+type BatchSource = {
+	url: string;
+	title?: string | undefined;
+	vendor?: Vendor;
+};
+
+type ExtractedCaseStudy = {
+	problem: any;
+	solution: any;
+	meta: any;
+	_extraction_error?: string;
+};
 
 // =============================================================================
 // Extraction Prompt
@@ -107,32 +139,32 @@ IMPORTANT:
 /**
  * Known vendor URL patterns
  */
-const VENDOR_PATTERNS = {
-  vapi: ['vapi.ai', 'getvapi.com'],
-  retell: ['retellai.com', 'retell.ai'],
-  bland: ['bland.ai'],
-  synthflow: ['synthflow.ai'],
-  air: ['air.ai'],
-  playht: ['play.ht', 'playht.com'],
-  voiceflow: ['voiceflow.com'],
-  elevenlabs: ['elevenlabs.io'],
+const VENDOR_PATTERNS: Partial<Record<Vendor, string[]>> = {
+	vapi: ['vapi.ai', 'getvapi.com'],
+	retell: ['retellai.com', 'retell.ai'],
+	bland: ['bland.ai'],
+	synthflow: ['synthflow.ai'],
+	air: ['air.ai'],
+	playht: ['play.ht', 'playht.com'],
+	voiceflow: ['voiceflow.com'],
+	elevenlabs: ['elevenlabs.io'],
 };
 
 /**
  * Detect vendor from URL
  */
-export function detectVendor(url) {
-  const urlLower = url.toLowerCase();
+export function detectVendor(url: string): Vendor {
+	const urlLower = url.toLowerCase();
 
-  for (const [vendor, patterns] of Object.entries(VENDOR_PATTERNS)) {
-    for (const pattern of patterns) {
-      if (urlLower.includes(pattern)) {
-        return vendor;
-      }
-    }
-  }
+	for (const [vendor, patterns] of Object.entries(VENDOR_PATTERNS)) {
+		for (const pattern of patterns) {
+			if (urlLower.includes(pattern)) {
+				return vendor as Vendor;
+			}
+		}
+	}
 
-  return 'other';
+	return 'other';
 }
 
 // =============================================================================
@@ -147,13 +179,11 @@ export function detectVendor(url) {
  * - Puppeteer for JS-rendered pages
  * - API calls for structured data sources
  */
-async function fetchPageContent(_url) {
-  // For now, this is a placeholder that requires manual content input
-  // In production, integrate with WebFetch or similar
+async function fetchPageContent(_url: string): Promise<string> {
+	// For now, this is a placeholder that requires manual content input
+	// In production, integrate with WebFetch or similar
 
-  throw new Error(
-    'Automatic fetching not implemented. Please provide page content manually via harvestFromContent().'
-  );
+	throw new Error('Automatic fetching not implemented. Please provide page content manually via harvestFromContent().');
 }
 
 // =============================================================================
@@ -167,71 +197,57 @@ async function fetchPageContent(_url) {
  * @param {object} options - Extraction options
  * @returns {object} Extracted PROBLEM/SOLUTION structure
  */
-async function extractWithLLM(content, options = {}) {
-  const { maxRetries = 2 } = options;
+async function extractWithLLM(content: string, options: ExtractionOptions = {}): Promise<ExtractedCaseStudy> {
+	const {maxRetries = 2} = options;
 
-  // Truncate very long content
-  const truncatedContent = content.length > 15_000
-    ? content.slice(0, 15_000) + '\n\n[Content truncated...]'
-    : content;
+	// Truncate very long content
+	const truncatedContent = content.length > 15_000
+		? content.slice(0, 15_000) + '\n\n[Content truncated...]'
+		: content;
 
-  const prompt = `${EXTRACTION_PROMPT}\n\n---\n\nCASE STUDY CONTENT:\n\n${truncatedContent}`;
+	const prompt = `${EXTRACTION_PROMPT}\n\n---\n\nCASE STUDY CONTENT:\n\n${truncatedContent}`;
 
-  // Use the project's LLM service
-  try {
-    const { LLMExecutor } = await import('../../src/services/llm.js');
+	// Use the project's LLM service
+	try {
+		const {executeLLMJson} = await import('../../src/services/llm.js');
+		return await executeLLMJson(prompt, {
+			task: 'case-study-extraction',
+			maxRetries,
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		// Fallback: return structure with raw content for manual extraction
+		console.warn(`LLM extraction failed: ${message}`);
+		console.warn('Returning template for manual extraction');
 
-    const executor = new LLMExecutor({
-      task: 'case-study-extraction',
-      maxRetries,
-    });
-
-    const result = await executor.execute({
-      prompt,
-      responseFormat: 'json',
-      temperature: 0.1, // Low temperature for consistent extraction
-    });
-
-    // Parse JSON from response
-    const jsonMatch = result.match(/{[\s\S]*}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in LLM response');
-    }
-
-    return JSON.parse(jsonMatch[0]);
-  } catch (error) {
-    // Fallback: return structure with raw content for manual extraction
-    console.warn(`LLM extraction failed: ${error.message}`);
-    console.warn('Returning template for manual extraction');
-
-    return {
-      problem: {
-        industry: 'MANUAL_ENTRY_REQUIRED',
-        company_size: null,
-        company_type: null,
-        pain_points: ['EXTRACT FROM: ' + content.slice(0, 200)],
-        volume_metrics: { raw_description: 'MANUAL_ENTRY_REQUIRED' },
-        systems_involved: [],
-        goals: ['MANUAL_ENTRY_REQUIRED'],
-      },
-      solution: {
-        agent_type: 'hybrid',
-        voice_provider: null,
-        integrations: [],
-        pricing_model: { model_type: 'unknown' },
-        timeline_weeks: null,
-        roi_achieved: { raw_description: 'MANUAL_ENTRY_REQUIRED' },
-        key_features: [],
-        inferred_tier: 'standard',
-      },
-      meta: {
-        quality_score: 1,
-        quality_notes: `LLM extraction failed: ${error.message}. Manual entry required.`,
-        domain_tags: [],
-      },
-      _extraction_error: error.message,
-    };
-  }
+		return {
+			problem: {
+				industry: 'MANUAL_ENTRY_REQUIRED',
+				company_size: null,
+				company_type: null,
+				pain_points: ['EXTRACT FROM: ' + content.slice(0, 200)],
+				volume_metrics: {raw_description: 'MANUAL_ENTRY_REQUIRED'},
+				systems_involved: [],
+				goals: ['MANUAL_ENTRY_REQUIRED'],
+			},
+			solution: {
+				agent_type: 'hybrid',
+				voice_provider: null,
+				integrations: [],
+				pricing_model: {model_type: 'unknown'},
+				timeline_weeks: null,
+				roi_achieved: {raw_description: 'MANUAL_ENTRY_REQUIRED'},
+				key_features: [],
+				inferred_tier: 'standard',
+			},
+			meta: {
+				quality_score: 1,
+				quality_notes: `LLM extraction failed: ${message}. Manual entry required.`,
+				domain_tags: [],
+			},
+			_extraction_error: message,
+		};
+	}
 }
 
 // =============================================================================
@@ -245,43 +261,43 @@ async function extractWithLLM(content, options = {}) {
  * @param {object} options - Harvesting options
  * @returns {object} Harvested case study (not yet saved)
  */
-export async function harvestFromUrl(url, options = {}) {
-  const { autoSave = false } = options;
+export async function harvestFromUrl(url: string, options: HarvestOptions = {}) {
+	const {autoSave = false} = options;
 
-  // Detect vendor
-  const vendor = detectVendor(url);
+	// Detect vendor
+	const vendor = detectVendor(url);
 
-  // Fetch content
-  const content = await fetchPageContent(url);
+	// Fetch content
+	const content = await fetchPageContent(url);
 
-  // Extract structure
-  const extracted = await extractWithLLM(content, options);
+	// Extract structure
+	const extracted = await extractWithLLM(content, options);
 
-  // Build case study object
-  const caseStudy = {
-    source: {
-      vendor,
-      url,
-      title: options.title || null,
-    },
-    problem: extracted.problem,
-    solution: extracted.solution,
-    meta: {
-      ...extracted.meta,
-      holdout: false,
-      harvested_by: options.harvestedBy || 'harvester',
-    },
-  };
+	// Build case study object
+	const caseStudy = {
+		source: {
+			vendor,
+			url,
+			title: options.title || null,
+		},
+		problem: extracted.problem,
+		solution: extracted.solution,
+		meta: {
+			...extracted.meta,
+			holdout: false,
+			harvested_by: options.harvestedBy || 'harvester',
+		},
+	};
 
-  if (autoSave) {
-    return await createCaseStudy(caseStudy);
-  }
+	if (autoSave) {
+		return createCaseStudy(caseStudy);
+	}
 
-  return {
-    ...caseStudy,
-    _preview: true,
-    _extraction_error: extracted._extraction_error,
-  };
+	return {
+		...caseStudy,
+		_preview: true,
+		_extraction_error: extracted._extraction_error,
+	};
 }
 
 /**
@@ -292,46 +308,46 @@ export async function harvestFromUrl(url, options = {}) {
  * @param {object} options - Harvesting options
  * @returns {object} Harvested case study
  */
-export async function harvestFromContent(content, sourceInfo, options = {}) {
-  const { autoSave = false, id = null } = options;
+export async function harvestFromContent(content: string, sourceInfo: SourceInfo, options: HarvestOptions = {}) {
+	const {autoSave = false, id = null} = options;
 
-  // Validate source info
-  if (!sourceInfo.url) {
-    throw new Error('Source URL is required');
-  }
+	// Validate source info
+	if (!sourceInfo.url) {
+		throw new Error('Source URL is required');
+	}
 
-  const vendor = sourceInfo.vendor || detectVendor(sourceInfo.url);
+	const vendor = sourceInfo.vendor || detectVendor(sourceInfo.url);
 
-  // Extract structure
-  const extracted = await extractWithLLM(content, options);
+	// Extract structure
+	const extracted = await extractWithLLM(content, options);
 
-  // Build case study object
-  const caseStudy = {
-    id: id || generateCaseStudyId(vendor, extracted.problem?.industry || 'unknown', Date.now() % 1000),
-    source: {
-      vendor,
-      url: sourceInfo.url,
-      title: sourceInfo.title || null,
-      published_date: sourceInfo.published_date || null,
-    },
-    problem: extracted.problem,
-    solution: extracted.solution,
-    meta: {
-      ...extracted.meta,
-      holdout: options.holdout ?? false,
-      harvested_by: options.harvestedBy || 'harvester',
-    },
-  };
+	// Build case study object
+	const caseStudy = {
+		id: id || generateCaseStudyId(vendor, extracted.problem?.industry || 'unknown', Date.now() % 1000),
+		source: {
+			vendor,
+			url: sourceInfo.url,
+			title: sourceInfo.title || null,
+			published_date: sourceInfo.published_date || null,
+		},
+		problem: extracted.problem,
+		solution: extracted.solution,
+		meta: {
+			...extracted.meta,
+			holdout: options.holdout ?? false,
+			harvested_by: options.harvestedBy || 'harvester',
+		},
+	};
 
-  if (autoSave) {
-    return await createCaseStudy(caseStudy);
-  }
+	if (autoSave) {
+		return createCaseStudy(caseStudy);
+	}
 
-  return {
-    ...caseStudy,
-    _preview: true,
-    _extraction_error: extracted._extraction_error,
-  };
+	return {
+		...caseStudy,
+		_preview: true,
+		_extraction_error: extracted._extraction_error,
+	};
 }
 
 /**
@@ -340,8 +356,8 @@ export async function harvestFromContent(content, sourceInfo, options = {}) {
  * @param {object} data - Complete case study data
  * @returns {object} Created case study
  */
-export async function createManualCaseStudy(data) {
-  return await createCaseStudy(data);
+export async function createManualCaseStudy(data: any) {
+	return createCaseStudy(data);
 }
 
 // =============================================================================
@@ -355,30 +371,31 @@ export async function createManualCaseStudy(data) {
  * @param {object} options - Harvesting options
  * @returns {Array} Results for each URL
  */
-export async function batchHarvest(sources, options = {}) {
-  const results = [];
+export async function batchHarvest(sources: BatchSource[], options: HarvestOptions = {}) {
+	const results = [];
 
-  for (const source of sources) {
-    try {
-      const result = await harvestFromUrl(source.url, {
-        ...options,
-        title: source.title,
-      });
-      results.push({
-        url: source.url,
-        success: true,
-        case_study: result,
-      });
-    } catch (error) {
-      results.push({
-        url: source.url,
-        success: false,
-        error: error.message,
-      });
-    }
-  }
+	for (const source of sources) {
+		try {
+			const result = await harvestFromUrl(source.url, {
+				...options,
+				title: source.title,
+			});
+			results.push({
+				url: source.url,
+				success: true,
+				case_study: result,
+			});
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			results.push({
+				url: source.url,
+				success: false,
+				error: message,
+			});
+		}
+	}
 
-  return results;
+	return results;
 }
 
 // =============================================================================
@@ -388,71 +405,71 @@ export async function batchHarvest(sources, options = {}) {
 /**
  * Validate extracted case study quality
  */
-export function validateExtraction(caseStudy) {
-  const issues = [];
+export function validateExtraction(caseStudy: any) {
+	const issues = [];
 
-  // Check problem completeness
-  if (!caseStudy.problem?.industry || caseStudy.problem.industry === 'MANUAL_ENTRY_REQUIRED') {
-    issues.push('Missing or invalid industry');
-  }
+	// Check problem completeness
+	if (!caseStudy.problem?.industry || caseStudy.problem.industry === 'MANUAL_ENTRY_REQUIRED') {
+		issues.push('Missing or invalid industry');
+	}
 
-  if (!caseStudy.problem?.pain_points?.length) {
-    issues.push('No pain points extracted');
-  }
+	if (!caseStudy.problem?.pain_points?.length) {
+		issues.push('No pain points extracted');
+	}
 
-  if (!caseStudy.problem?.goals?.length) {
-    issues.push('No goals extracted');
-  }
+	if (!caseStudy.problem?.goals?.length) {
+		issues.push('No goals extracted');
+	}
 
-  // Check solution completeness
-  if (!caseStudy.solution?.agent_type) {
-    issues.push('Missing agent type');
-  }
+	// Check solution completeness
+	if (!caseStudy.solution?.agent_type) {
+		issues.push('Missing agent type');
+	}
 
-  if (!caseStudy.solution?.key_features?.length) {
-    issues.push('No key features extracted');
-  }
+	if (!caseStudy.solution?.key_features?.length) {
+		issues.push('No key features extracted');
+	}
 
-  // Check quality score validity
-  const quality = caseStudy.meta?.quality_score;
-  if (quality == null || quality < 1 || quality > 5) {
-    issues.push('Invalid quality score');
-  }
+	// Check quality score validity
+	const quality = caseStudy.meta?.quality_score;
+	if (quality == null || quality < 1 || quality > 5) {
+		issues.push('Invalid quality score');
+	}
 
-  return {
-    valid: issues.length === 0,
-    issues,
-    quality_score: caseStudy.meta?.quality_score || 1,
-  };
+	return {
+		valid: issues.length === 0,
+		issues,
+		quality_score: caseStudy.meta?.quality_score || 1,
+	};
 }
 
 /**
  * Suggest improvements for low-quality extractions
  */
-export function suggestImprovements(caseStudy) {
-  const suggestions = [];
-  const validation = validateExtraction(caseStudy);
+export function suggestImprovements(caseStudy: any) {
+	const suggestions = [];
+	const validation = validateExtraction(caseStudy);
 
-  if (!validation.valid) {
-    suggestions.push(...validation.issues.map((i) => `Fix: ${i}`));
-  }
+	if (!validation.valid) {
+		suggestions.push(...validation.issues.map(i => `Fix: ${i}`));
+	}
 
-  // Quality-specific suggestions
-  if (validation.quality_score < 3) {
-    if (!caseStudy.problem?.volume_metrics?.calls_per_month) {
-      suggestions.push('Add volume metrics (calls/month, hours spent)');
-    }
+	// Quality-specific suggestions
+	if (validation.quality_score < 3) {
+		if (!caseStudy.problem?.volume_metrics?.calls_per_month) {
+			suggestions.push('Add volume metrics (calls/month, hours spent)');
+		}
 
-    if (!caseStudy.solution?.pricing_model?.total_cost) {
-      suggestions.push('Add pricing information if available');
-    }
+		if (!caseStudy.solution?.pricing_model?.total_cost) {
+			suggestions.push('Add pricing information if available');
+		}
 
-    if (!caseStudy.solution?.roi_achieved?.monthly_savings) {
-      suggestions.push('Add ROI metrics if available');
-    }
-  }
+		if (!caseStudy.solution?.roi_achieved?.monthly_savings) {
+			suggestions.push('Add ROI metrics if available');
+		}
+	}
 
-  return suggestions;
+	return suggestions;
 }
 
 // =============================================================================
@@ -460,11 +477,11 @@ export function suggestImprovements(caseStudy) {
 // =============================================================================
 
 export default {
-  harvestFromUrl,
-  harvestFromContent,
-  createManualCaseStudy,
-  batchHarvest,
-  validateExtraction,
-  suggestImprovements,
-  detectVendor,
+	harvestFromUrl,
+	harvestFromContent,
+	createManualCaseStudy,
+	batchHarvest,
+	validateExtraction,
+	suggestImprovements,
+	detectVendor,
 };
