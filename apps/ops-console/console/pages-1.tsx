@@ -1765,6 +1765,10 @@ function CallsPage({ setRoute }) {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
+    window.toast(`Trace exported for ${call.id}`, {
+      kind: 'ok',
+      title: 'Trace downloaded',
+    });
   };
   const noteByLineKey = (key) => callNotes.find(n => n.transcriptKey === key) || null;
   const tryOpenCoachingDraft = (l) => {
