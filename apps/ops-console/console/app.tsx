@@ -14,10 +14,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showLiveDot": true
 }/*EDITMODE-END*/;
 
-const ROUTES = ['home', 'generate', 'pipeline', 'funnel', 'calls', 'proposals', 'evals', 'agents', 'simulator', 'settings'];
-const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'email-composer', 'settings'];
-const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'simulator', 'verticals', 'settings'];
-const ROUTES = ['home', 'generate', 'pipeline', 'calls', 'proposals', 'evals', 'agents', 'replay', 'settings'];
+const ROUTES = ['home', 'generate', 'pipeline', 'funnel', 'calls', 'proposals', 'evals', 'agents', 'simulator', 'email-composer', 'verticals', 'replay', 'settings'];
 
 function readHistoryMetadata(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;

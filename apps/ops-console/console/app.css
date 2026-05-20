@@ -3560,14 +3560,6 @@ input:focus-visible, .input:focus-visible { outline: 0; border-color: var(--acce
 }
 .coach-launcher:hover { transform: translateY(-1px); border-color: var(--accent-fg); }
 .coach-launcher:focus-visible { outline: 2px solid var(--sunset-500); outline-offset: 2px; }
-/* Dense workbench routes keep the global coach affordance visible without
-   covering local admin controls, artifact review actions, or run-plan CTAs. */
-.app[data-route="generate"] ~ .coach-launcher,
-.app[data-route="evals"] ~ .coach-launcher,
-.app[data-route="agents"] ~ .coach-launcher {
-  top: calc(var(--topbar-h) + 20px);
-  bottom: auto;
-}
 .coach-launcher__orb {
   width: 14px; height: 14px; border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #F97316, #8B5CF6);
@@ -4484,4 +4476,3 @@ a:focus-visible,
 @media (max-width: 900px) {
   .replay__columns { grid-template-columns: 1fr; }
 }
-

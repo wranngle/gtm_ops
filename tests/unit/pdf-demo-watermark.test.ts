@@ -126,10 +126,13 @@ describe('pdf-generator DEMO_MODE watermark', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pdf-watermark-'));
   const demoPdfPath = path.join(tmpDir, 'demo.pdf');
   const prodPdfPath = path.join(tmpDir, 'prod.pdf');
+  const canRenderPuppeteerPdf = !(process.env.CI && process.env.PUPPETEER_SKIP_DOWNLOAD);
   let demoBuf: Buffer;
   let prodBuf: Buffer;
 
   beforeAll(async () => {
+    if (!canRenderPuppeteerPdf) return;
+
     // Ensure env-var path can't bleed across test runs.
     delete process.env.DEMO_MODE;
 
@@ -150,12 +153,12 @@ describe('pdf-generator DEMO_MODE watermark', () => {
     expect(DEMO_WATERMARK_TEXT).toBe('SYNTHETIC FIXTURE - NOT A REAL QUOTE');
   });
 
-  it('stamps the watermark into the PDF buffer when demoMode=true', () => {
+  it.skipIf(!canRenderPuppeteerPdf)('stamps the watermark into the PDF buffer when demoMode=true', () => {
     expect(demoBuf.length).toBeGreaterThan(1000);
     expect(pdfTextLayerCovers(demoBuf, DEMO_WATERMARK_TEXT)).toBe(true);
   });
 
-  it('omits the watermark from the PDF buffer in production mode', () => {
+  it.skipIf(!canRenderPuppeteerPdf)('omits the watermark from the PDF buffer in production mode', () => {
     expect(prodBuf.length).toBeGreaterThan(1000);
     expect(pdfTextLayerCovers(prodBuf, DEMO_WATERMARK_TEXT)).toBe(false);
   });
