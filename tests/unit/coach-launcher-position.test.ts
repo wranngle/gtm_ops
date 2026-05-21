@@ -1,5 +1,5 @@
 /**
- * Pins the Sales Coach launcher to bottom-right across every route.
+ * Pins the Sales Coach launcher to bottom-right across persistent work routes.
  * Original ask: punch-list item #20 (May 5 04:22 UTC) — "Move Sales
  * coach widget to bottom right." A later media-query override moved
  * the launcher to top-right on /generate, /proposals, /evals, and
@@ -28,14 +28,11 @@ describe('apps/ops-console coach launcher position', () => {
     expect(body).toMatch(/right\s*:\s*\d+px/);
   });
 
-  it('no per-route override moves the launcher off bottom-right', () => {
-    // Specific regression: previously a `@media (min-width: 901px)`
-    // block targeted html[data-console-route="..."] .coach-launcher
-    // on generate / proposals / evals / agents and set
-    // `bottom: auto; top: calc(var(--topbar-h) + 14px);`. That's the
-    // shape we don't want back.
+  it('only Generate may move the launcher above dense artifact actions', () => {
+    expect(css).toMatch(/\.app\[data-route="generate"\]\s*~\s*\.coach-launcher[^}]*bottom\s*:\s*auto/s);
+
+    // Persistent review/admin routes must keep the launcher bottom-right.
     expect(css).not.toMatch(/html\[data-console-route=[^\]]+\]\s*\.coach-launcher/);
-    // Defense in depth: no rule should set bottom:auto on the launcher.
-    expect(css).not.toMatch(/\.coach-launcher[^}]*bottom\s*:\s*auto/);
+    expect(css).not.toMatch(/\.app\[data-route="(?:proposals|evals|agents)"\]\s*~\s*\.coach-launcher[^}]*bottom\s*:\s*auto/s);
   });
 });
