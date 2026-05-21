@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sample Proposal - Acme HVAC</title>
+  <style>
+    :root {
+      --ink: #12111a;
+      --muted: #57516a;
+      --line: #ebdfc8;
+      --paper: #fcfaf5;
+      --panel: #ffffff;
+      --accent: #ff5f00;
+      --critical: #cf3c69;
+      --healthy: #5d8c61;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: #ffffff;
+    }
+
+    .sheet {
+      width: 8.5in;
+      min-height: 11in;
+      padding: 0.42in;
+      background: var(--paper);
+      page-break-after: always;
+    }
+
+    .sheet.white { background: #ffffff; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid var(--line);
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .meta {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    p {
+      margin: 0 0 12px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .lead {
+      max-width: 620px;
+      font-size: 15px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 22px 0;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .metric {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric-label {
+      margin-top: 6px;
+      font-size: 10px;
+      line-height: 1.35;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .section {
+      margin: 20px 0;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    li { margin-bottom: 6px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .right { text-align: right; }
+
+    .total-row td {
+      font-weight: 700;
+      font-size: 13px;
+      background: #fff3e7;
+    }
+
+    .callout {
+      margin-top: 20px;
+      padding: 16px;
+      border-left: 5px solid var(--accent);
+      background: #fff3e7;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: #ecfdf5;
+      color: var(--healthy);
+    }
+  </style>
+</head>
+<body>
+  <section class="sheet">
+    <div class="header">
+      <div>
+        <div class="brand">Wranngle proposal packet</div>
+        <div>Acme HVAC Services</div>
+      </div>
+      <div class="meta">
+        WRN-AI-acme-hvac-lead-intake-26r6<br>
+        May 20, 2026<br>
+        Synthetic sample - not a real quote
+      </div>
+    </div>
+
+    <h1>After-hours dispatch voice agent</h1>
+    <p class="lead">A fixed-scope pilot that answers after-hours HVAC calls, qualifies urgency, captures property details, and routes true emergencies to the on-call technician without losing quote-ready demand.</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="metric">$4,200</div>
+        <div class="metric-label">Modeled monthly revenue leakage</div>
+      </div>
+      <div class="card">
+        <div class="metric">92</div>
+        <div class="metric-label">Readiness score from intake audit</div>
+      </div>
+      <div class="card">
+        <div class="metric">14 days</div>
+        <div class="metric-label">Pilot launch window after kickoff</div>
+      </div>
+      <div class="card">
+        <div class="metric">124 hrs</div>
+        <div class="metric-label">Implementation budget</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Recommended path</h2>
+      <p>Deploy a Sarah-style intake agent for emergency triage first, then expand into quote scheduling once the call logs prove routing accuracy and objection coverage.</p>
+      <ul>
+        <li>Capture caller name, property ZIP code, unit type, issue category, and emergency status.</li>
+        <li>Escalate no-heat, active leak, electrical smell, and vulnerable-occupant calls immediately.</li>
+        <li>Send all non-emergency leads into the CRM with a proposed callback window and transcript summary.</li>
+      </ul>
+    </div>
+
+    <div class="callout">This sample is generated from HTML through PyMuPDF to keep page geometry, text extraction, and watermark behavior testable in the repo.</div>
+  </section>
+
+  <section class="sheet white">
+    <div class="header">
+      <div>
+        <div class="brand">Scope and delivery</div>
+        <div>Phase 1 pilot</div>
+      </div>
+      <div class="meta">Prepared for Acme HVAC Services</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>In scope</h3>
+        <ul>
+          <li>One inbound voice agent for after-hours dispatch.</li>
+          <li>Emergency routing rules and technician notification copy.</li>
+          <li>CRM lead creation with transcript, summary, and priority fields.</li>
+          <li>Five regression scenarios for emergency, routine, and ambiguous calls.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Out of scope</h3>
+        <ul>
+          <li>Live payment collection.</li>
+          <li>Multi-location franchise routing.</li>
+          <li>Warranty adjudication or parts inventory lookup.</li>
+          <li>Production SMS campaigns beyond dispatch notification.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Milestones</h2>
+      <table>
+        <thead>
+          <tr><th>Milestone</th><th>Acceptance check</th><th class="right">Amount</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Design</td><td>Prompt, intake schema, escalation matrix, and CRM field map approved.</td><td class="right">$4,625</td></tr>
+          <tr><td>Build</td><td>Agent, webhook, CRM write, and audit event are working in staging.</td><td class="right">$6,475</td></tr>
+          <tr><td>Test</td><td>Regression set passes and transcript summaries match the expected schema.</td><td class="right">$3,700</td></tr>
+          <tr><td>Launch</td><td>Production number forwards after hours and first-week monitoring is enabled.</td><td class="right">$3,700</td></tr>
+          <tr class="total-row"><td colspan="2">Fixed pilot total</td><td class="right">$18,500</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sheet white">
+    <div class="header">
+      <div>
+        <div class="brand">Commercial proposal</div>
+        <div>Decision packet</div>
+      </div>
+      <div class="meta"><span class="status">Ready for review</span></div>
+    </div>
+
+    <h2>Why approve now</h2>
+    <p>Acme already has a narrow call category, high-value missed demand, and a clear escalation owner. That makes the pilot a low-risk first automation with measurable revenue recovery.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Business case</h3>
+        <p>Recovering five additional qualified jobs per month at the modeled ticket value covers the pilot cost inside the first operating quarter.</p>
+      </div>
+      <div class="card">
+        <h3>Operator guardrails</h3>
+        <p>The agent does not diagnose equipment, promise arrival windows, or quote repairs. It captures facts, classifies urgency, and routes.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Next steps</h2>
+      <ul>
+        <li>Confirm CRM destination fields and emergency escalation contacts.</li>
+        <li>Approve the four milestone payment schedule.</li>
+        <li>Schedule a 60-minute kickoff with operations, dispatch, and the on-call lead.</li>
+      </ul>
+    </div>
+
+    <div class="callout">Sample artifact only. Public demo data is synthetic and safe to inspect, share, and regenerate.</div>
+  </section>
+</body>
+</html>
