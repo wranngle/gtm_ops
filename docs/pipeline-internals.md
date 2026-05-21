@@ -80,7 +80,7 @@ UnifiedPipeline (lib/pipeline.ts)
 │   ├── buildProjectPlanContext()
 │   └── buildProposalContext()
 ├── Stage 6: render_html
-│   └── Mustache.render()
+│   └── html-report-generator (context → Mustache → HTML)
 ├── Stage 7: polish_narratives
 │   └── htmlPolish()
 └── Stage 8: generate_pdf
@@ -292,7 +292,8 @@ unified_presales_report/          n8n_workflow_development/
 | Cached research load | ~10ms | JSON parse from filesystem |
 | LLM research generation | 2-5s | Per integration |
 | Full pipeline execution | 30-90s | Depends on LLM calls |
-| PDF generation | 5-10s | Puppeteer rendering |
+| HTML report generation | <1s | Context + Mustache template render |
+| PDF generation | 5-10s | PyMuPDF Story rendering |
 
 ---
 
@@ -302,7 +303,7 @@ unified_presales_report/          n8n_workflow_development/
 Production (Local)
 ├── Node.js 18+ (ESM)
 ├── SQLite (config databases)
-├── Puppeteer + Chromium (PDF)
+├── PyMuPDF + MuPDF (PDF)
 └── File system (output artifacts)
 
 Web Dashboard

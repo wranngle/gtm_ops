@@ -70,6 +70,7 @@ import { runFinalHtmlPass as polishHTML } from './html-polish.js';
 // Validation & Output
 import { initValidation } from './validate.js';
 import { generatePDF } from './pdf-generator.js';
+import { generateHtmlReportFromContext } from './html-report-generator.js';
 import { validateBleedOutputGate, validateExtractionGate } from './schema-validation.js';
 
 // Display Field Sync (prevents display field desync bug)
@@ -2421,7 +2422,7 @@ export class UnifiedPipeline {
 
     // Render unified template
     this.log.subStep('Rendering unified document');
-    const unifiedHtml = Mustache.render(unifiedTemplate, templateData);
+    const { html: unifiedHtml } = generateHtmlReportFromContext(templateData, { template: unifiedTemplate });
     const unifiedSize = Buffer.byteLength(unifiedHtml, 'utf8');
     this.log.data('Rendered Size', `${(unifiedSize / 1024).toFixed(1)} KB`);
 
@@ -2529,7 +2530,7 @@ export class UnifiedPipeline {
         templateData.sales_strategy = salesStrategy;
       }
       
-      const internalHtml = Mustache.render(internalTemplate, templateData);
+      const { html: internalHtml } = generateHtmlReportFromContext(templateData, { template: internalTemplate });
       const internalSize = Buffer.byteLength(internalHtml, 'utf8');
       const internalPath = path.join(fullOutputDir, `INTERNAL_${clientSlug}_${timestamp}.html`);
       fs.writeFileSync(internalPath, internalHtml);
@@ -2706,10 +2707,10 @@ export class UnifiedPipeline {
     let failCount = 0;
     let totalPdfBytes = 0;
 
-    this.log.subStep('Initializing Puppeteer for PDF generation');
+    this.log.subStep('Initializing PyMuPDF for PDF generation');
     this.log.data('Documents to Convert', Object.keys(outputs).filter(k => outputs[k]?.html).length);
-    this.log.data('PDF Engine', 'Puppeteer (Chromium)');
-    this.log.subStepDone('Puppeteer ready');
+    this.log.data('PDF Engine', 'PyMuPDF Story');
+    this.log.subStepDone('PyMuPDF ready');
 
     for (const [docType, output] of Object.entries(outputs)) {
       if (output.html) {
@@ -2840,7 +2841,7 @@ export class UnifiedPipeline {
       llmFill:    { maxAttempts: 4, baseDelayMs: 8000 },   // Heavy LLM (most failures here)
       render:     { maxAttempts: 2, baseDelayMs: 2000 },   // Template render
       polish:     { maxAttempts: 4, baseDelayMs: 10_000 },  // LLM polish passes
-      pdf:        { maxAttempts: 3, baseDelayMs: 5000 }    // Puppeteer (fonts, network)
+      pdf:        { maxAttempts: 3, baseDelayMs: 5000 }    // PyMuPDF (fonts, layout)
     };
 
     try {

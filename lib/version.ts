@@ -18,7 +18,6 @@ const PACKAGE_METADATA = {
     'express-rate-limit': '8.5.2',
     mustache: '^4.2.0',
     open: '^10.0.0',
-    puppeteer: '^24.42.0',
     'sql.js': '^1.13.0',
     sqlite3: '^6.0.1',
     uuid: '^14.0.0',
