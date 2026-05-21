@@ -308,7 +308,6 @@ export function loadHtmlReportTemplate(templatePath = DEFAULT_REPORT_TEMPLATE) {
 }
 
 export function renderHtmlReport(context, template) {
-  Mustache.escape = text => String(text);
   return Mustache.render(template, context);
 }
 

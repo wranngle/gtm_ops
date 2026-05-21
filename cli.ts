@@ -25,6 +25,24 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const PORT = process.env.PORT || 3000;
 const SERVER_URL = `http://localhost:${PORT}`;
 
+function replacePathExtension(filePath, extension) {
+  const parsed = path.parse(filePath);
+  return path.join(parsed.dir, `${parsed.name}${extension}`);
+}
+
+function replaceHtmlPathExtension(filePath, extension) {
+  const lowerPath = filePath.toLowerCase();
+  if (lowerPath.endsWith('.html')) {
+    return `${filePath.slice(0, -5)}${extension}`;
+  }
+
+  if (lowerPath.endsWith('.htm')) {
+    return `${filePath.slice(0, -4)}${extension}`;
+  }
+
+  return `${filePath}${extension}`;
+}
+
 /**
  * Check if the history server is running
  */
@@ -235,7 +253,7 @@ async function main() {
     }
 
     const schema = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
-    const defaultOutputPath = inputPath.replace(/\.json$/i, '.html');
+    const defaultOutputPath = replacePathExtension(inputPath, '.html');
     const htmlPath = outputPath || defaultOutputPath;
     const { generatePresalesHtmlReport, writeHtmlReport } = await import('./lib/html-report-generator.js');
     const { html } = generatePresalesHtmlReport(schema, { templatePath });
@@ -244,7 +262,7 @@ async function main() {
 
     if (renderPdf) {
       const { generatePDF } = await import('./lib/pdf-generator.js');
-      const pdfPath = written.path.replace(/\.html?$/i, '.pdf');
+      const pdfPath = replaceHtmlPathExtension(written.path, '.pdf');
       const pdf = await generatePDF(written.path, pdfPath);
       console.log(`PDF report saved: ${pdf.pdfPath} (${pdf.sizeDisplay}, ${pdf.pageCount} pages)`);
     }

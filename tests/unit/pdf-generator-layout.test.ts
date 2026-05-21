@@ -6,7 +6,7 @@ import process from 'node:process';
 import {
 	afterAll, describe, expect, it,
 } from 'vitest';
-import {generatePDFFromContent} from '../../lib/pdf-generator.js';
+import {generatePDF, generatePDFFromContent} from '../../lib/pdf-generator.js';
 
 const fixedSheetHtml = `<!doctype html>
 <html><head><meta charset="utf-8"><title>layout fixture</title>
@@ -98,5 +98,36 @@ describe('pdf-generator PyMuPDF layout', () => {
 		expect(inspected.text).toContain('Proposal summary');
 		expect(inspected.text).toContain('Commercial terms');
 		expect(inspected.text).not.toContain('Internal strategy only');
+	});
+
+	it('infers internal sheet rendering from INTERNAL_ html artifacts', async () => {
+		const htmlPath = path.join(temporaryDir, 'INTERNAL_layout.html');
+		const internalPdfPath = path.join(temporaryDir, 'internal-layout.pdf');
+		fs.writeFileSync(htmlPath, fixedSheetHtml);
+
+		const result = await generatePDF(htmlPath, internalPdfPath, {demoMode: false});
+		const inspected = inspectPdf(internalPdfPath);
+
+		expect(result.isInternalSheet).toBe(true);
+		expect(result.sheetsFound).toBe(3);
+		expect(result.pageCount).toBe(3);
+		expect(inspected.text).toContain('Internal strategy only');
+	});
+
+	it('resolves the PyMuPDF runner from the module when called outside the repo root', async () => {
+		const htmlPath = path.join(temporaryDir, 'external-cwd.html');
+		const externalPdfPath = path.join(temporaryDir, 'external-cwd.pdf');
+		const originalCwd = process.cwd();
+		fs.writeFileSync(htmlPath, fixedSheetHtml);
+
+		try {
+			process.chdir(os.tmpdir());
+			const result = await generatePDF(htmlPath, externalPdfPath, {demoMode: false});
+			expect(result.engine).toBe('pymupdf');
+			expect(result.pageCount).toBe(2);
+			expect(fs.existsSync(externalPdfPath)).toBe(true);
+		} finally {
+			process.chdir(originalCwd);
+		}
 	});
 });

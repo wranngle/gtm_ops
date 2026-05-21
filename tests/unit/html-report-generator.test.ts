@@ -11,7 +11,7 @@ describe('html-report-generator', () => {
   it('renders a Mustache context into an HTML report before PDF generation', () => {
     const { html } = generateHtmlReportFromContext(
       {
-        client: 'Acme HVAC',
+        client: '<img src=x onerror=alert(1)>',
         headline: '<strong>After-hours dispatch</strong>',
         metrics: [{ label: 'missed calls', value: '38/mo' }]
       },
@@ -22,8 +22,9 @@ describe('html-report-generator', () => {
 
     expect(html).toContain('<!doctype html>');
     expect(html).toContain('<strong>After-hours dispatch</strong>');
-    expect(html).toContain('Acme HVAC');
-    expect(html).toContain('38/mo');
+    expect(html).toContain('&lt;img src&#x3D;x onerror&#x3D;alert(1)&gt;');
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
+    expect(html).toContain('38&#x2F;mo');
   });
 
   it('builds the legacy presales report context from a pipeline schema', () => {
@@ -76,6 +77,6 @@ describe('html-report-generator', () => {
     expect(context.pricing.total.display).toBe('$18,500');
     expect(html).toContain('Acme HVAC Services');
     expect(html).toContain('$18,500');
-    expect(html).toContain('$4,200/mo');
+    expect(html).toContain('$4,200&#x2F;mo');
   });
 });

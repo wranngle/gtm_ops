@@ -9,10 +9,13 @@ import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import {fileURLToPath} from 'node:url';
 
 const pageWidthPt = 612;
 const pageHeightPt = 792;
-const pdfRunnerPath = path.resolve('scripts/render-pdf-pymupdf.py');
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(moduleDir, '..');
+const pdfRunnerPath = path.join(repoRoot, 'scripts/render-pdf-pymupdf.py');
 
 // Watermark text stamped into every sheet when DEMO_MODE is on. Plain ASCII
 // so consumers searching the rendered PDF text layer find it without
@@ -127,7 +130,7 @@ function resolvePython(): string {
 		return process.env.PYMUPDF_PYTHON;
 	}
 
-	const localVenvPython = path.resolve('.venv/bin/python');
+	const localVenvPython = path.join(repoRoot, '.venv/bin/python');
 	if (fs.existsSync(localVenvPython)) {
 		return localVenvPython;
 	}
@@ -190,10 +193,14 @@ function countSheets(htmlContent: string, isInternalSheet: boolean): number {
 	return count;
 }
 
-function normalizePdfOptions(options: PdfGeneratorOptions): NormalizedPdfOptions {
+function isInternalArtifact(filePath?: string): boolean {
+	return typeof filePath === 'string' && path.basename(filePath).toUpperCase().startsWith('INTERNAL_');
+}
+
+function normalizePdfOptions(options: PdfGeneratorOptions, sourceHtmlPath?: string): NormalizedPdfOptions {
 	return {
 		demoMode: isDemoMode(options.demoMode),
-		isInternalSheet: options.isInternalSheet === true,
+		isInternalSheet: options.isInternalSheet ?? isInternalArtifact(sourceHtmlPath),
 		verbose: options.verbose === true,
 	};
 }
@@ -215,7 +222,7 @@ async function runPyMuPdf(args: string[], stdin?: string): Promise<RunnerStats> 
 	return new Promise((resolve, reject) => {
 		const python = resolvePython();
 		const child = spawn(python, [pdfRunnerPath, ...args], {
-			cwd: process.cwd(),
+			cwd: repoRoot,
 			env: process.env,
 			stdio: ['pipe', 'pipe', 'pipe'],
 		});
@@ -256,8 +263,9 @@ async function runPyMuPdf(args: string[], stdin?: string): Promise<RunnerStats> 
 function buildRunnerArgs(
 	pdfPath: string,
 	options: PdfGeneratorOptions,
+	sourceHtmlPath?: string,
 ): {args: string[]; runnerOptions: NormalizedPdfOptions} {
-	const runnerOptions = normalizePdfOptions(options);
+	const runnerOptions = normalizePdfOptions(options, sourceHtmlPath);
 	const args = ['--output', pdfPath];
 
 	if (runnerOptions.demoMode) {
@@ -322,7 +330,7 @@ export async function generatePdf(
 	const absolutePdfPath = path.resolve(pdfPath ?? replaceHtmlExtension(absoluteHtmlPath));
 	ensureOutputDir(absolutePdfPath);
 
-	const {args, runnerOptions} = buildRunnerArgs(absolutePdfPath, options);
+	const {args, runnerOptions} = buildRunnerArgs(absolutePdfPath, options, absoluteHtmlPath);
 	const stats = await runPyMuPdf(['--input', absoluteHtmlPath, ...args]);
 
 	return toResult(
