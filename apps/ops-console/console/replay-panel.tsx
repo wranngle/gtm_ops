@@ -5,14 +5,14 @@
    (what would have happened under the fallback policy) streams in
    on the RIGHT, with a `counterfactual` label indicator.
 
-   Fixture: apps/ops-console/fixtures/failed-call.jsonl
-   Schema reused from round-1 PR #170 (?demo=1 canned trace),
+   Source trace: apps/ops-console/fixtures/failed-call.jsonl
+   Schema reused from round-1 PR #170 (?demo=1 local trace),
    augmented with `counterfactual` + `counterfactual-final` rows.
    Pure logic lives in counterfactual.ts so it is unit-testable
    without a DOM render (same convention as simulator-page.tsx).
    ============================================================ */
 
-const REPLAY_FIXTURE_URL = 'fixtures/failed-call.jsonl';
+const REPLAY_FIXTURE_URL = '../fixtures/failed-call.jsonl';
 const REPLAY_TURN_DELAY_MS = 1200;
 const REPLAY_STAGE_DELAY_MS = 500;
 
@@ -64,13 +64,13 @@ function ReplayPanel({ fixturePath = REPLAY_FIXTURE_URL }) {
     let cancelled = false;
     setPhase('loading');
     fetch(fixturePath)
-      .then(r => r.ok ? r.text() : Promise.reject(new Error(`fixture ${r.status}`)))
+      .then(r => r.ok ? r.text() : Promise.reject(new Error(`failed trace source returned HTTP ${r.status}`)))
       .then(text => {
         if (cancelled) return;
         setData(parseReplayFixtureSrc(text));
         setPhase('idle');
       })
-      .catch(e => { if (!cancelled) { setError(String(e)); setPhase('error'); } });
+      .catch(e => { if (!cancelled) { setError(e?.message || String(e)); setPhase('error'); } });
     return () => { cancelled = true; };
   }, [fixturePath]);
 
@@ -106,7 +106,7 @@ function ReplayPanel({ fixturePath = REPLAY_FIXTURE_URL }) {
   }, [phase, stageIdx, data, pairs.length]);
 
   if (phase === 'error') {
-    return <div className="replay replay--error" role="alert">Fixture failed to load: {error}</div>;
+    return <div className="replay replay--error" role="alert">Local trace failed to load: {error}</div>;
   }
   if (!data) {
     return <div className="replay replay--loading">Loading failed trace…</div>;

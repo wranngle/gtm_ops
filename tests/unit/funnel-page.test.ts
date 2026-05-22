@@ -27,20 +27,25 @@ const indexPath = resolve(root, 'apps', 'ops-console', 'console', 'index.html');
 
 const widgetSrc = readFileSync(widgetPath, 'utf8');
 
-/* Extract the two pure helpers (`computeFunnelRows`,
-   `computeFunnelOverall`) from the TSX source, wrap them in a
+/* Extract the pure helpers (`computeFunnelRows`,
+   `computeFunnelOverall`, `buildFunnelStageReview`,
+   `resolveFunnelStageSelection`) from the TSX source, wrap them in a
    sandboxed scope that stubs React, and return them as live
    functions the test can call. */
 function loadPureHelpers() {
   const rowsMatch = widgetSrc.match(/function computeFunnelRows\([\s\S]*?\n\}\n/);
   const overallMatch = widgetSrc.match(/function computeFunnelOverall\([\s\S]*?\n\}\n/);
-  if (!rowsMatch || !overallMatch) {
+  const reviewMatch = widgetSrc.match(/function buildFunnelStageReview\([\s\S]*?\n\}\n/);
+  const selectionMatch = widgetSrc.match(/function resolveFunnelStageSelection\([\s\S]*?\n\}\n(?=\nfunction FunnelChart)/);
+  if (!rowsMatch || !overallMatch || !reviewMatch || !selectionMatch) {
     throw new Error('funnel helper source not found — did the function shape change?');
   }
   const factory = new Function(`
     ${rowsMatch[0]}
     ${overallMatch[0]}
-    return { computeFunnelRows, computeFunnelOverall };
+    ${reviewMatch[0]}
+    ${selectionMatch[0]}
+    return { computeFunnelRows, computeFunnelOverall, buildFunnelStageReview, resolveFunnelStageSelection };
   `);
   return factory();
 }
@@ -206,9 +211,58 @@ describe('computeFunnelOverall: math', () => {
   });
 });
 
+describe('buildFunnelStageReview: stage drill-in contract', () => {
+  const { computeFunnelRows, buildFunnelStageReview, resolveFunnelStageSelection } = loadPureHelpers();
+  const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
+  const rows = computeFunnelRows(fixture.stages);
+
+  it('computes loss from the prior handoff, not from the top of funnel', () => {
+    const proposal = rows.find((row: any) => row.id === 'proposal');
+    const review = buildFunnelStageReview(proposal, rows);
+    expect(review.handoffLabel).toBe('Booked → Proposal sent');
+    expect(review.lost).toBe(84);
+    expect(review.lossLabel).toMatch(/84 booked did not reach proposal sent/i);
+  });
+
+  it('routes each stage review to the console surface with the relevant evidence', () => {
+    expect(buildFunnelStageReview(rows.find((row: any) => row.id === 'call'), rows).route).toBe('calls');
+    expect(buildFunnelStageReview(rows.find((row: any) => row.id === 'booked'), rows).route).toBe('calls');
+    expect(buildFunnelStageReview(rows.find((row: any) => row.id === 'qualified'), rows).route).toBe('pipeline');
+    expect(buildFunnelStageReview(rows.find((row: any) => row.id === 'proposal'), rows).route).toBe('proposals');
+    expect(buildFunnelStageReview(rows.find((row: any) => row.id === 'contract'), rows).route).toBe('proposals');
+  });
+
+  it('resolves a concrete console record before routing, not just a destination page', () => {
+    const data = {
+      calls: [
+        {id: 'CALL-1', outcome: 'qualified', flags: 0, deflections: 1},
+        {id: 'CALL-2', outcome: 'meeting-booked', flags: 0, deflections: 0},
+        {id: 'CALL-3', outcome: 'pricing-objection', flags: 2, deflections: 3},
+      ],
+      companies: [
+        {id: 'lead-discovery', stage: 'discovery'},
+        {id: 'lead-qualified', stage: 'qualifying'},
+      ],
+      proposals: [
+        {id: 'PR-open', stage: 'redlines'},
+        {id: 'PR-signed', stage: 'signed'},
+      ],
+    };
+    const reviewFor = (id: string) => buildFunnelStageReview(rows.find((row: any) => row.id === id), rows);
+    const rowFor = (id: string) => rows.find((row: any) => row.id === id);
+
+    expect(resolveFunnelStageSelection(rowFor('call'), reviewFor('call'), data)).toEqual({type: 'call', id: 'CALL-3'});
+    expect(resolveFunnelStageSelection(rowFor('booked'), reviewFor('booked'), data)).toEqual({type: 'call', id: 'CALL-2'});
+    expect(resolveFunnelStageSelection(rowFor('qualified'), reviewFor('qualified'), data)).toEqual({type: 'lead', id: 'lead-qualified'});
+    expect(resolveFunnelStageSelection(rowFor('proposal'), reviewFor('proposal'), data)).toEqual({type: 'proposal', id: 'PR-open'});
+    expect(resolveFunnelStageSelection(rowFor('contract'), reviewFor('contract'), data)).toEqual({type: 'proposal', id: 'PR-signed'});
+  });
+});
+
 describe('widget source: page contract', () => {
   it('declares FunnelChart and FunnelPage components', () => {
     expect(widgetSrc).toMatch(/function\s+FunnelChart\s*\(/);
+    expect(widgetSrc).toMatch(/function\s+FunnelStageReview\s*\(/);
     expect(widgetSrc).toMatch(/function\s+FunnelPage\s*\(/);
   });
 
@@ -222,9 +276,27 @@ describe('widget source: page contract', () => {
     expect(widgetSrc).toMatch(/data-testid={`funnel-drop-\$\{row\.id\}`}/);
   });
 
+  it('stage rows are real controls that open the local review panel', () => {
+    expect(widgetSrc).toMatch(/<button[\s\S]{0,240}className="funnel-row"/);
+    expect(widgetSrc).toMatch(/aria-controls="funnel-stage-review"/);
+    expect(widgetSrc).toMatch(/data-testid="funnel-stage-review"/);
+    expect(widgetSrc).toMatch(/data-testid="funnel-stage-action"/);
+  });
+
   it('surfaces the headline call→contract conversion chip', () => {
     expect(widgetSrc).toMatch(/data-testid="funnel-overall-chip"/);
     expect(widgetSrc).toMatch(/call → contract/);
+  });
+
+  it('frames funnel data as a console review panel, not a demo download', () => {
+    expect(widgetSrc).toMatch(/Sourced from current console data/);
+    expect(widgetSrc).not.toMatch(/fixture-driven|DEMO_MODE|canned/i);
+  });
+
+  it('uses the canonical page wrapper without inline route padding', () => {
+    expect(widgetSrc).toMatch(/className="page page--funnel"/);
+    expect(widgetSrc).toMatch(/data-testid="funnel-page"/);
+    expect(widgetSrc).not.toMatch(/data-testid="funnel-page"[\s\S]{0,180}style=/);
   });
 
   it('declares the canonical FUNNEL_STAGE_ORDER constant matching the fixture', () => {
@@ -248,6 +320,7 @@ describe('widget source: page contract', () => {
   it('publishes the page + helpers on globalThis for app.tsx', () => {
     expect(widgetSrc).toMatch(/Object\.assign\(globalThis,\s*\{[^}]*FunnelPage[^}]*\}\)/);
     expect(widgetSrc).toMatch(/Object\.assign\(globalThis,\s*\{[^}]*FunnelChart[^}]*\}\)/);
+    expect(widgetSrc).toMatch(/Object\.assign\(globalThis,\s*\{[^}]*buildFunnelStageReview[^}]*\}\)/);
   });
 });
 

@@ -59,3 +59,22 @@ test('css tokens · no JSX inline-style refers to a undefined token (sanity grep
   });
   expect(undefinedRefs, `undefined CSS vars in inline styles: ${JSON.stringify(undefinedRefs)}`).toEqual([]);
 });
+
+test('css tokens · app stylesheet has no undefined no-fallback var references', async ({ openConsole }) => {
+  const page = await openConsole();
+  const unresolvedRefs = await page.evaluate(async () => {
+    const response = await fetch('/console/app.css');
+    const css = await response.text();
+    const declarations = new Set(
+      [...css.matchAll(/--[a-z0-9_-]+\s*:/gi)]
+        .map(match => match[0].slice(0, -1).trim()),
+    );
+    const refs = [...css.matchAll(/var\(\s*(--[a-z0-9_-]+)\s*\)/gi)]
+      .map(match => match[1]);
+    return [...new Set(refs.filter(ref => !declarations.has(ref)))].sort();
+  });
+  expect(
+    unresolvedRefs,
+    `undefined CSS variables without fallback in app.css: ${unresolvedRefs.join(', ')}`,
+  ).toEqual([]);
+});

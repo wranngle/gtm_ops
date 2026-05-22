@@ -73,7 +73,7 @@ async function goToRoute(page: Page, route: (typeof ROUTES)[number]) {
   const currentRoute = await page.evaluate(() => (globalThis as any).AppContext?.get?.().route || 'home');
   if (currentRoute !== route) {
     const label = ROUTE_LABELS[route].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const routeButton = page.getByRole('button', { name: new RegExp(`^${label}(?:\\s+\\d+)?$`, 'i') }).first();
+    const routeButton = page.getByRole('link', { name: new RegExp(`^${label}(?:\\s+\\d+)?$`, 'i') }).first();
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await routeButton.click({ timeout: 5_000 });

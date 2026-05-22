@@ -12,6 +12,17 @@ const EVAL_AGENT_BY_DEMO_ID = {
   agent_yyyy_demo: 'intake',
 };
 
+const EVAL_SUITE_BY_SCENARIO_ID = {
+  'noisy-caller-transcription-stress': 'discovery-q1',
+  'ambiguous-caller-name-confirmation': 'discovery-q1',
+  'appointment-reschedule-flow': 'discovery-q1',
+  'barge-in-mid-question': 'discovery-q1',
+  'lookup-record-greeting': 'discovery-q1',
+  'knowledge-base-pricing-question': 'objection-pricing',
+  'multi-turn-tool-loop': 'multithread',
+  'out-of-scope-handoff': 'compliance-phi',
+};
+
 function evalPct(value) {
   if (value == null || Number.isNaN(Number(value))) return '--';
   return `${Math.round(Number(value) * 100)}%`;
@@ -64,11 +75,119 @@ function evalScenarioTitle(value) {
   }).join(' ');
 }
 
+function evalAxisTitle(value) {
+  return evalScenarioTitle(value)
+    .replace(/\bAsr\b/g, 'ASR')
+    .replace(/\bTtfb\b/g, 'TTFB')
+    .replace(/\bP95\b/g, 'P95');
+}
+
 function evalReviewContextLabel(run, suite) {
   if (run?.scenario_id) {
-    return `${evalScenarioTitle(run.scenario_id)} · ${run.prompt_tag || 'prompt/latest'}`;
+    return `${evalScenarioTitle(run.scenario_id)} · active prompt profile`;
   }
   return suite?.name || suite?.id || 'Selected eval context';
+}
+
+function evalPromptProfileLabel(run) {
+  return run?.prompt_tag ? 'active prompt profile' : 'prompt profile pending';
+}
+
+function evalEvidencePathLabel(path) {
+  const clean = reviewArtifactPathLabel(path);
+  if (!clean) return 'local eval artifact index';
+  const filename = clean.split('/').filter(Boolean).at(-1) || clean;
+  const stem = filename.replace(/\.[^.]+$/u, '');
+  if (/^eval-runs(?:\.json)?$/iu.test(filename)) return 'local eval artifact index';
+  if (/\.json$/iu.test(clean)) return `source evidence · ${stem}`;
+  return `review evidence artifact · ${stem || clean}`;
+}
+
+function evalEvidencePacketLabel(path, run, state) {
+  if (state === 'loading') return 'Loading harness run evidence';
+  if (state === 'error') return 'Harness evidence unavailable';
+  if (!path) return 'No evidence packet linked';
+  return `Review evidence packet · ${evalScenarioTitle(run?.scenario_id || run?.id)}`;
+}
+
+function evalEvidencePacketTitle(path, run, state) {
+  if (state === 'loading') {
+    return { scope: 'Loading harness run evidence', title: '' };
+  }
+  if (state === 'error') {
+    return { scope: 'harness run evidence', title: 'Evidence unavailable' };
+  }
+  if (!path) {
+    return { scope: 'evidence packet', title: 'No packet linked' };
+  }
+  return {
+    scope: 'Review evidence packet',
+    title: evalScenarioTitle(run?.scenario_id || run?.id),
+  };
+}
+
+function evalEvidencePacketKindLabel(path, state) {
+  if (state === 'loading') return 'artifact loading';
+  if (state === 'error') return 'artifact load failed';
+  if (!path) return 'artifact not linked';
+  const clean = reviewArtifactPathLabel(path);
+  if (/\.json$/i.test(clean)) return 'source evidence · JSON';
+  return 'review evidence artifact';
+}
+
+function evalEvidenceSourceLabel(path, run, state) {
+  if (state === 'loading') return 'waiting for /api/eval-runs';
+  if (state === 'error') return 'open the harness runs panel and retry';
+  if (!path) return 'no local artifact linked';
+  const scenario = String(run?.scenario_id || run?.id || '')
+    .trim()
+    .replace(/^fixtures\/runs\//, '')
+    .replace(/\.json$/i, '');
+  return scenario ? `source evidence · ${scenario}` : 'source evidence';
+}
+
+function reviewArtifactPathLabel(path) {
+  return String(path || '').trim().replace(/^(\.\.\/)+/, '');
+}
+
+function evalRunsSourceLabel(state) {
+  const raw = String(state || '').toLowerCase();
+  if (raw === 'fixture') return 'local artifacts';
+  if (raw === 'live') return 'live backend';
+  if (raw === 'loading') return 'loading';
+  if (raw === 'error') return 'load failed';
+  return raw || 'unknown';
+}
+
+function evalReviewArtifactTitle(run) {
+  if (!run) return 'No eval artifact loaded';
+  return `${evalScenarioTitle(run.scenario_id || run.id)} review artifact`;
+}
+
+function reviewArtifactPreviewHref(path) {
+  const raw = String(path || '').trim();
+  if (!raw || raw === '#') return null;
+  if (raw.startsWith('./fixtures/')) return raw.replace('./fixtures/', '../fixtures/');
+  if (raw.startsWith('fixtures/')) return `../${raw}`;
+  return raw;
+}
+
+function demoPdfFrameProps(title, path) {
+  const src = String(path || '');
+  if (!globalThis.DEMO_MODE || !/sample-proposal\.pdf(?:$|[?#])/i.test(src)) {
+    return { title, src };
+  }
+  return {
+    title,
+    src,
+    srcDoc: `<!doctype html><html><body style="margin:0;background:#fcfaf5;color:#12111a;font-family:Inter,system-ui,sans-serif;">
+      <main style="padding:28px;min-height:100vh;border-left:6px solid #ff5f00;">
+        <p style="margin:0 0 8px;font:700 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:#9f3000;">sample proposal pdf</p>
+        <h1 style="margin:0 0 12px;font-size:28px;">${title || 'Proposal PDF review preview'}</h1>
+        <p style="margin:0;color:#57516a;line-height:1.5;">Demo mode renders this local PDF placeholder in-frame so route switching cannot abort a binary document request during console screenshots.</p>
+      </main>
+    </body></html>`,
+  };
 }
 
 /* The bridge to voice_ai_agent_evals is sourced live from
@@ -306,6 +425,18 @@ function evalAgentKeyForRun(run, suite) {
   return 'sales_coach';
 }
 
+function evalSuiteIdForRun(run) {
+  const scenarioId = String(run?.scenario_id || run?.id || '').trim().toLowerCase();
+  if (!scenarioId) return null;
+  if (EVAL_SUITE_BY_SCENARIO_ID[scenarioId]) return EVAL_SUITE_BY_SCENARIO_ID[scenarioId];
+  if (/pricing|refund|objection|quote|discount/.test(scenarioId)) return 'objection-pricing';
+  if (/multi[-_]?thread|stakeholder/.test(scenarioId)) return 'multithread';
+  if (/phi|compliance|scope|handoff|policy/.test(scenarioId)) return 'compliance-phi';
+  if (/closing|mutual|action[-_]?plan/.test(scenarioId)) return 'closing-mutual';
+  if (/recap|email|recall/.test(scenarioId)) return 'recap-quality';
+  return 'discovery-q1';
+}
+
 // Build axis-by-axis labels for a Sparkline series (hoisted to module scope
 // because EvalsPage references it before its old in-component declaration —
 // `const` arrow functions are NOT hoisted, so the inline def threw a
@@ -319,7 +450,7 @@ function buildEvalSparkLabels(series, cadence = 'sample') {
   return points.map((_, i) => {
     const age = total - i - 1;
     const marker = i === total - 1 ? 'latest' : `${age} ${unit}${age === 1 ? '' : 's'} ago`;
-    return `${unit} · ${marker}`;
+    return `${unit} · ${marker} · point ${i + 1}/${total}`;
   });
 }
 
@@ -346,13 +477,19 @@ function EvalsPage({ setRoute }) {
   const [runFilter, setRunFilter] = useState('all');
   const [runs, setRuns] = useState([]);
   const [activeRunId, setActiveRunId] = useState(null);
+  const [runDetailOpened, setRunDetailOpened] = useState(false);
   const [runsState, setRunsState] = useState('loading');
   const [replaying, setReplaying] = useState(false);
   const [runDetail, setRunDetail] = useState(null);
   const [artifactPath, setArtifactPath] = useState(null);
-  const [bridgeOpen, setBridgeOpen] = useState(Boolean(globalThis.AppContext.get().extra?.evals_bridge_open));
+  const initialBridgeOpen = Boolean(globalThis.AppContext.get().extra?.evals_bridge_open);
+  const [bridgeOpen, setBridgeOpen] = useState(initialBridgeOpen);
+  const [bridgeRevealToken, setBridgeRevealToken] = useState(0);
   const [activeHarnessCommandId, setActiveHarnessCommandId] = useState(null);
   const [rerunTarget, setRerunTarget] = useState(null);
+  const suiteBuilderRef = React.useRef(null);
+  const suiteBuilderNameRef = React.useRef(null);
+  const suiteBuilderScenarioRef = React.useRef(null);
   const bridgePanelRef = React.useRef(null);
   const artifactPanelRef = React.useRef(null);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
@@ -377,7 +514,14 @@ function EvalsPage({ setRoute }) {
     passTarget: '0.85',
   });
   const harnessCommands = harnessManifest?.commands || [];
-  const activeHarnessCommand = harnessCommands.find(cmd => cmd.id === activeHarnessCommandId) || harnessCommands[0] || null;
+  const recommendedHarnessCommandId = (() => {
+    const domainCommand = harnessCommands.find(cmd => cmd.id === 'eval-quick')
+      || harnessCommands.find(cmd => Array.isArray(cmd.tags) && cmd.tags.includes('domain-eval'));
+    return (domainCommand || harnessCommands[0])?.id || null;
+  })();
+  const selectedHarnessCommandId = activeHarnessCommandId || recommendedHarnessCommandId;
+  const activeHarnessCommand = harnessCommands.find(cmd => cmd.id === selectedHarnessCommandId)
+    || (activeHarnessCommandId ? { id: activeHarnessCommandId, name: activeHarnessCommandId } : null);
   const allEvalSuites = useMemo(() => [...draftSuites, ...D.evalSuites], [draftSuites, D.evalSuites]);
   const visibleSuites = suiteFilter === 'regressions'
     ? allEvalSuites.filter(s => !s.draft && (D.isEvalRegressing || (x => x.delta < 0 || x.pass < 0.75))(s))
@@ -398,6 +542,13 @@ function EvalsPage({ setRoute }) {
   const failedAxesReviewCopy = failedAxes.length > 0
     ? `${failedAxes.length} failed judge ${failedAxes.length === 1 ? 'axis needs' : 'axes need'} review before this prompt ships.`
     : 'No failed axes selected; use the fail filter to inspect the risk surface.';
+  const activeRunSuiteId = evalSuiteIdForRun(activeRun);
+  const activeRunSuite = activeRunSuiteId
+    ? allEvalSuites.find(s => s.id === activeRunSuiteId)
+    : null;
+  const activeRunSuiteLabel = activeRunSuite
+    ? `${activeRunSuite.name} · ${activeRunSuite.id}`
+    : 'unmapped suite family';
   const artifactPayload = runDetail || activeRun || {};
   const artifactAxes = Array.isArray(artifactPayload?.score?.axes) ? artifactPayload.score.axes : activeAxes;
   const artifactFailedAxes = artifactAxes.filter(axis => axis.pass === false);
@@ -410,6 +561,10 @@ function EvalsPage({ setRoute }) {
   const artifactDuration = artifactPayload.duration_ms ?? activeRun?.duration_ms;
   const activeAgentKey = active?.draft && active.agentKey ? active.agentKey : evalAgentKeyForRun(activeRun, active);
   const activeAgent = globalThis.AGENT_REGISTRY.byKey(activeAgentKey) || globalThis.AGENT_REGISTRY.byKey('sales_coach');
+  const evalAgentDisplayName = (run, suite = active) => {
+    const agentKey = evalAgentKeyForRun(run, suite);
+    return globalThis.AGENT_REGISTRY.byKey(agentKey)?.display_name || 'ElevenLabs agent';
+  };
   const activeEvalReviewContext = evalReviewContextLabel(activeRun, active);
   const passCount = normalizedRuns.filter(r => r.verdict === 'pass').length;
   const failCount = normalizedRuns.filter(r => r.verdict === 'fail').length;
@@ -511,34 +666,54 @@ function EvalsPage({ setRoute }) {
     : evalSuiteWeightedPassRate(realEvalSuites) ?? D.stats?.evalPassRate ?? null;
   const displayedRegressionCount = normalizedRuns.length > 0 ? failCount : suiteRegressionCount;
   const displayedRunCount = normalizedRuns.length > 0 ? normalizedRuns.length : fallbackRunCount;
-  const evalHeaderRunLabel = normalizedRuns.length > 0
-    ? `${normalizedRuns.length.toLocaleString()} loaded result${normalizedRuns.length === 1 ? '' : 's'} · ${fallbackRunCount.toLocaleString()} suite-library runs`
-    : `${fallbackRunCount.toLocaleString()} suite-library runs`;
+  const evalLoadedResultLabel = normalizedRuns.length > 0
+    ? `${normalizedRuns.length.toLocaleString()} loaded result${normalizedRuns.length === 1 ? '' : 's'}`
+    : null;
+  const evalSuiteRunLabel = `${fallbackRunCount.toLocaleString()} suite-library runs`;
   const selectDomainEvalCommandId = () => {
-    const domainCommand = harnessCommands.find(cmd => cmd.id === 'eval-quick')
-      || harnessCommands.find(cmd => Array.isArray(cmd.tags) && cmd.tags.includes('domain-eval'));
-    return (domainCommand || harnessCommands[0])?.id || 'eval-quick';
+    return recommendedHarnessCommandId || 'eval-quick';
   };
-  useEffect(() => {
-    if (harnessManifestState !== 'ready' || activeHarnessCommandId || harnessCommands.length === 0) return;
-    setActiveHarnessCommandId(selectDomainEvalCommandId());
-  }, [harnessManifestState, activeHarnessCommandId, harnessCommands.map(cmd => cmd.id).join('|')]);
   const openHarnessCommand = (cmd) => {
     if (cmd?.id) setActiveHarnessCommandId(cmd.id);
     setRerunTarget(null);
     setArtifactPath(null);
     setSuiteBuilderOpen(false);
     setBridgeOpen(true);
+    setBridgeRevealToken(token => token + 1);
   };
   const openDomainEvalRunPlan = () => {
     const commandId = selectDomainEvalCommandId();
     const command = harnessCommands.find(cmd => cmd.id === commandId) || { id: commandId };
     openHarnessCommand(command);
   };
+  const evalRunPlanState = rerunTarget
+    ? 'queued'
+    : activeHarnessCommandId
+      ? 'selected'
+      : activeHarnessCommand
+        ? 'ready'
+        : harnessManifestState;
+  const canOpenEvalArtifact = Boolean(activeRun?.result_path);
+  const evalArtifactButtonTitle = canOpenEvalArtifact
+    ? `Open ${activeRun.scenario_id || 'selected run'} evidence artifact`
+    : 'Load a harness run before opening artifacts';
   const openActiveArtifactPanel = () => {
+    if (!canOpenEvalArtifact) return;
     setBridgeOpen(false);
     setSuiteBuilderOpen(false);
-    setArtifactPath(activeRun?.result_path || '../fixtures/eval-runs.json');
+    setArtifactPath(activeRun.result_path);
+  };
+  const selectEvalRun = (run, options = {}) => {
+    if (!run?.scenario_id) return;
+    setActiveRunId(run.scenario_id);
+    if (!options.initial) setRunDetailOpened(true);
+    const suiteId = evalSuiteIdForRun(run);
+    if (suiteId && allEvalSuites.some(s => s.id === suiteId)) {
+      setActiveId(suiteId);
+    }
+    if (options.openArtifact && run.result_path) {
+      setArtifactPath(run.result_path);
+    }
   };
   const openSuiteBuilder = () => {
     setBridgeOpen(false);
@@ -595,6 +770,9 @@ function EvalsPage({ setRoute }) {
     const scenario = suiteDraft.scenario.trim();
     if (!name || !scenario) {
       setSuiteBuilderError('Suite name and scenario focus are required.');
+      requestAnimationFrame(() => {
+        (name ? suiteBuilderScenarioRef.current : suiteBuilderNameRef.current)?.focus?.();
+      });
       return;
     }
     const agent = visibleEvalAgents.find(a => a.key === suiteDraft.agentKey) || visibleEvalAgents[0] || {};
@@ -674,6 +852,20 @@ function EvalsPage({ setRoute }) {
       globalThis.toast('Could not copy command', { tone:'critical' });
     }
   };
+  const copyHarnessArtifactPath = async (artifact) => {
+    const path = String(artifact?.path || '').trim();
+    if (!path) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(path);
+        globalThis.toast('Evidence reference copied', { sub: `${artifact.name || 'Harness artifact'} · ${path}`, tone:'accent' });
+      } else {
+        globalThis.toast('Evidence reference', { sub: path, tone:'warn' });
+      }
+    } catch (_) {
+      globalThis.toast('Could not copy evidence reference', { tone:'critical' });
+    }
+  };
   const openEvalAgentAdmin = () => {
     if (!activeRun) {
       globalThis.toast('Load a harness run first', {
@@ -728,7 +920,7 @@ function EvalsPage({ setRoute }) {
   const evalAgentSession = hasActiveEvalRun
     ? {
       orbState: activeRun?.verdict === 'fail' ? 'alert' : 'idle',
-      subtitle: `${activeAgent?.role || 'ConvAI'} · ${activeRun?.agent_id || activeRun?.scenario_id || 'selected run'}`,
+      subtitle: `${activeAgent?.role || 'ConvAI'} · local eval wrapper`,
       barActive: activeRun?.verdict === 'fail',
       barTone: activeRun?.verdict === 'fail' ? 'critical' : 'healthy',
       bars: activeAxes.length > 0 ? activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.85) : [.28,.34,.3,.36,.32],
@@ -748,6 +940,46 @@ function EvalsPage({ setRoute }) {
       badge: runsState === 'error' ? 'blocked' : 'pending',
       badgeTone: runsState === 'error' ? 'critical' : 'neutral',
     };
+  const evalCommandEvidenceSource = evalEvidenceSourceLabel(activeRun?.result_path, activeRun, runsState);
+  const evalCommandEvidenceLabel = evalEvidencePacketLabel(activeRun?.result_path, activeRun, runsState);
+  const evalCommandEvidenceTitle = evalEvidencePacketTitle(activeRun?.result_path, activeRun, runsState);
+  const evalCommandLatencyCaption = activeRun?.duration_ms ? 'total turn latency' : 'latency';
+  const evalCommandLatencyLabel = activeRun?.duration_ms ? evalDuration(activeRun.duration_ms) : 'pending';
+  const evalCommandTitle = activeRun
+    ? evalScenarioTitle(activeRun.scenario_id || active.name)
+    : runsState === 'loading'
+      ? 'Loading harness run evidence'
+      : runsState === 'error'
+        ? 'Harness run evidence unavailable'
+        : evalScenarioTitle(active.name);
+  const evalCommandReviewCopy = activeRun
+    ? failedAxesReviewCopy
+    : runsState === 'error'
+      ? 'Harness runs failed to load; retry before opening local admin or reviewing artifacts.'
+      : 'Waiting for a concrete harness run before opening artifacts or local admin.';
+  const evalCommandBadgeLabel = activeRun?.verdict || (runsState === 'error' ? 'blocked' : runsState === 'loading' ? 'loading' : 'ready');
+  const evalCommandBadgeTone = activeRun?.verdict === 'fail'
+    ? 'critical'
+    : activeRun
+      ? 'healthy'
+      : runsState === 'error'
+        ? 'critical'
+        : 'neutral';
+  const evalCommandOrbState = !activeRun ? 'idle' : activeRun.verdict === 'fail' ? 'alert' : 'talking';
+  const evalCommandBars = activeRun && activeAxes.length > 0
+    ? activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.88)
+    : [.18,.22,.2,.24,.19];
+  const evalCommandBarsTone = !activeRun ? (runsState === 'error' ? 'critical' : 'neutral') : activeRun.verdict === 'fail' ? 'critical' : 'healthy';
+  const evalCommandVoiceFacts = [
+    {
+      label: 'agent',
+      value: `${activeAgent?.display_name || 'ElevenLabs'} · ${activeRun ? 'local eval wrapper' : 'selected run'}`,
+    },
+    {
+      label: 'local wrapper',
+      value: `Agents / ${activeAgentKey || 'sales_coach'}`,
+    },
+  ];
 
   const [runsError, setRunsError] = useState(null);
   const [runsReloadToken, setRunsReloadToken] = useState(0);
@@ -823,7 +1055,7 @@ function EvalsPage({ setRoute }) {
     if (normalizedRuns.length === 0) return;
     if (activeRunId && normalizedRuns.some(r => r.scenario_id === activeRunId)) return;
     const firstRegression = normalizedRuns.find(r => r.verdict === 'fail');
-    setActiveRunId((firstRegression || normalizedRuns[0]).scenario_id);
+    selectEvalRun(firstRegression || normalizedRuns[0], { initial: true });
   }, [normalizedRuns, activeRunId]);
 
   useEffect(() => globalThis.AppContext.subscribe((ctx) => {
@@ -847,6 +1079,25 @@ function EvalsPage({ setRoute }) {
     };
     applyEvalsIntent(globalThis.AppContext.get());
     return globalThis.AppContext.subscribe(applyEvalsIntent);
+  }, []);
+
+  useEffect(() => {
+    const applyArtifactIntent = (ctx) => {
+      if (ctx.extra?.triggered_from !== 'agents-open-eval-evidence') return;
+      const requestedPath = String(ctx.extra.eval_open_artifact_path || '').trim();
+      const requestedRun = String(ctx.extra.eval_open_artifact_run || '').trim();
+      if (requestedRun) setActiveRunId(requestedRun);
+      if (requestedPath) {
+        setBridgeOpen(false);
+        setSuiteBuilderOpen(false);
+        setArtifactPath(requestedPath);
+      }
+      const latest = globalThis.AppContext.get().extra || {};
+      const { eval_open_artifact_path, eval_open_artifact_run, ...rest } = latest;
+      globalThis.AppContext.set({ extra: rest });
+    };
+    applyArtifactIntent(globalThis.AppContext.get());
+    return globalThis.AppContext.subscribe(applyArtifactIntent);
   }, []);
 
   useEffect(() => {
@@ -884,11 +1135,19 @@ function EvalsPage({ setRoute }) {
   }, []);
 
   useEffect(() => {
-    if (!bridgeOpen) return;
+    if (!suiteBuilderOpen) return;
+    requestAnimationFrame(() => {
+      globalThis.scrollConsoleNodeIntoView?.(suiteBuilderRef.current, { block:'start' });
+      suiteBuilderNameRef.current?.focus?.({ preventScroll: true });
+    });
+  }, [suiteBuilderOpen]);
+
+  useEffect(() => {
+    if (!bridgeOpen || bridgeRevealToken === 0) return;
     requestAnimationFrame(() => {
       globalThis.scrollConsoleNodeIntoView?.(bridgePanelRef.current, { block:'center' });
     });
-  }, [bridgeOpen, activeHarnessCommandId]);
+  }, [bridgeRevealToken]);
 
   useEffect(() => {
     if (!artifactPath) return;
@@ -899,36 +1158,16 @@ function EvalsPage({ setRoute }) {
   }, [artifactPath]);
 
   return (
-    <div className="page page--evals">
-      <PageHeader
-        eyebrow={`${evalHeaderRunLabel} · ${visibleEvalAgentLabel}`}
-        title="Evals"
-        sub="One native console for voice-agent regressions: scenario coverage, judge evidence, transcript replay, and the agent admin context that caused the behavior."
-        actions={<>
-          <Segmented value={runFilter} onChange={setRunFilter} options={[
-            { value:'all', label:'All' },
-            { value:'fail', label:'Fail' },
-            { value:'pass', label:'Pass' },
-          ]} />
-          <button className="btn btn--ghost btn--sm" onClick={openActiveArtifactPanel}><I3.Doc size={12}/>Artifacts</button>
-          <button className="btn btn--ghost btn--sm" onClick={() => {
-            globalThis.AppContext.set({
-              extra: {
-                ...globalThis.AppContext.get().extra,
-                settings_tab:'evals',
-                triggered_from:'evals-policy',
-              },
-            });
-            globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab:'evals' } }));
-            setRoute?.('settings');
-          }}><I3.Cog size={12}/>Policy</button>
-          <button className="btn btn--ghost btn--sm" data-testid="eval-header-run-plan-open" onClick={openDomainEvalRunPlan}><I3.Bracket size={12}/>Run plan</button>
-          <button className="btn btn--primary btn--sm" onClick={openSuiteBuilder}><I3.Plus size={12}/>New suite</button>
-        </>}
-      />
-
+    <div className="page page--evals" data-run-detail-open={runDetailOpened ? 'true' : 'false'}>
       {suiteBuilderOpen && (
-        <div className="workflow-popout workflow-popout--single eval-suite-builder" role="region" aria-label="New eval suite builder" data-testid="eval-suite-builder">
+        <div
+          id="eval-suite-builder"
+          ref={suiteBuilderRef}
+          className="workflow-popout workflow-popout--single eval-suite-builder"
+          role="region"
+          aria-label="New eval suite builder"
+          data-testid="eval-suite-builder"
+        >
           <form className="workflow-popout__pane" onSubmit={submitSuiteDraft}>
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
@@ -944,9 +1183,12 @@ function EvalsPage({ setRoute }) {
               <label className="field">
                 <span className="field__label">Suite name</span>
                 <input
+                  ref={suiteBuilderNameRef}
                   className="input"
                   data-testid="eval-suite-builder-name"
                   aria-label="Suite name"
+                  aria-invalid={Boolean(suiteBuilderError && !suiteDraft.name.trim())}
+                  aria-describedby={suiteBuilderError ? 'eval-suite-builder-error' : undefined}
                   placeholder="Refund objection stress"
                   value={suiteDraft.name}
                   onChange={(e) => setSuiteDraft(d => ({ ...d, name: e.target.value }))}
@@ -993,16 +1235,19 @@ function EvalsPage({ setRoute }) {
               <label className="field eval-suite-builder__scenario">
                 <span className="field__label">Scenario focus</span>
                 <textarea
+                  ref={suiteBuilderScenarioRef}
                   className="textarea"
                   data-testid="eval-suite-builder-scenario"
                   aria-label="Scenario focus"
+                  aria-invalid={Boolean(suiteBuilderError && !suiteDraft.scenario.trim())}
+                  aria-describedby={suiteBuilderError ? 'eval-suite-builder-error' : undefined}
                   placeholder="Caller asks for refund terms after a missed appointment; agent must acknowledge, collect details, and escalate without inventing policy."
                   value={suiteDraft.scenario}
                   onChange={(e) => setSuiteDraft(d => ({ ...d, scenario: e.target.value }))}
                 />
               </label>
             </div>
-            {suiteBuilderError && <div className="eval-suite-builder__error" role="alert">{suiteBuilderError}</div>}
+            {suiteBuilderError && <div id="eval-suite-builder-error" className="eval-suite-builder__error" role="alert">{suiteBuilderError}</div>}
             <div className="eval-suite-builder__actions">
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setSuiteBuilderOpen(false)}>Cancel</button>
               <button type="submit" className="btn btn--primary btn--sm"><I3.Plus size={12}/>Add suite draft</button>
@@ -1011,119 +1256,204 @@ function EvalsPage({ setRoute }) {
         </div>
       )}
 
-      <section className="eval-command-center">
+      <section className="eval-command-center" data-testid="eval-command-center" aria-labelledby="eval-command-title">
         <div className="eval-command-center__copy">
-          <div className="eyebrow eyebrow--accent">active regression</div>
-          <h2 data-testid="eval-active-scenario-title">{evalScenarioTitle(activeRun?.scenario_id || active.name)}</h2>
-          <p data-testid="eval-active-regression-review-copy">{failedAxesReviewCopy}</p>
+          <div className="eval-command-center__route" data-testid="eval-console-masthead">
+            <h1 id="console-page-title">Evals</h1>
+            <div className="ph__eyebrow eval-command-center__scope-summary">
+              {[evalLoadedResultLabel, evalSuiteRunLabel, visibleEvalAgentLabel].filter(Boolean).join(' · ')}
+            </div>
+            <div className="eval-command-center__route-stats" aria-label="Eval dashboard scope">
+              {evalLoadedResultLabel && (
+                <span className="eval-command-center__route-stat" data-testid="eval-masthead-results">{evalLoadedResultLabel}</span>
+              )}
+              <span className="eval-command-center__route-stat" data-testid="eval-masthead-suite-runs">{evalSuiteRunLabel}</span>
+              <span className="eval-command-center__route-stat" data-testid="eval-masthead-agents">{visibleEvalAgentLabel}</span>
+            </div>
+          </div>
+          <h2 id="eval-command-title" data-testid="eval-active-scenario-title">{evalCommandTitle}</h2>
+          <p data-testid="eval-active-regression-review-copy">{evalCommandReviewCopy}</p>
           <div className="eval-command-center__meta">
-            <Badge tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}>{activeRun?.verdict || 'ready'}</Badge>
-            <span className="mono">{evalPct(activeRun?.score?.weighted)}</span>
+            <Badge tone={evalCommandBadgeTone}>{evalCommandBadgeLabel}</Badge>
+            <span className="mono">{activeRun ? evalPct(activeRun?.score?.weighted) : '--'}</span>
             {activeRun?.scenario_id && <span className="mono eval-command-center__scenario-id" data-testid="eval-active-scenario-id">scenario {activeRun.scenario_id}</span>}
+            {activeRunSuite && <span className="mono" data-testid="eval-active-suite-id">suite {activeRunSuite.id}</span>}
             <span className="mono">{activeAgent?.display_name || 'Sales Coach'}</span>
           </div>
+          {activeRun && (
+            <div className="eval-command-center__axis-brief" data-testid="eval-command-axis-brief" aria-label="Selected run judge axes" tabIndex={0}>
+              <div className="eval-command-center__axis-brief-head">
+                <span>judge axes</span>
+                <strong>{failedAxes.length > 0 ? `${failedAxes.length} failed` : 'all pass'}</strong>
+              </div>
+              <div className="eval-command-center__axis-list">
+                {activeAxes.map((axis, index) => (
+                  <div
+                    key={`${axis.name || axis.id || 'axis'}-${index}`}
+                    className="eval-command-center__axis-row"
+                    data-testid="eval-command-axis-row"
+                    data-status={axis.pass === false ? 'fail' : axis.pass === true ? 'pass' : 'unknown'}
+                  >
+                    <div className="eval-command-center__axis-copy">
+                      <strong>{evalAxisTitle(axis.name || axis.id || `axis ${index + 1}`)}</strong>
+                      <span>{axis.detail || 'No judge detail supplied.'}</span>
+                    </div>
+                    <span className={`status-text status-text--${axis.pass === false ? 'critical' : axis.pass === true ? 'healthy' : 'neutral'}`}>
+                      {axis.pass === false ? 'fail' : axis.pass === true ? 'pass' : 'unknown'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="eval-command-center__voice" aria-label="ElevenLabs eval state">
-          <window.ElevenUI.Orb
-            state={activeRun?.verdict === 'fail' ? 'alert' : 'talking'}
-            size={54}
-            color1={activeAgent?.avatar_color_1}
-            color2={activeAgent?.avatar_color_2}
-            label={`${activeAgent?.display_name || 'ElevenLabs'} eval state`}
-          />
-          <window.ElevenUI.BarVisualizer
-            active={true}
-            tone={activeRun?.verdict === 'fail' ? 'critical' : 'healthy'}
-            bars={activeAxes.map((axis, i) => axis.pass ? 0.35 + ((i % 5) * 0.1) : 0.88)}
-          />
+          <div className="eval-command-center__voice-head">
+            <window.ElevenUI.Orb
+              state={evalCommandOrbState}
+              size={54}
+              color1={activeAgent?.avatar_color_1}
+              color2={activeAgent?.avatar_color_2}
+              label={`${activeAgent?.display_name || 'ElevenLabs'} eval state`}
+            />
+            <div className="eval-command-center__bar-stack">
+              <window.ElevenUI.BarVisualizer
+                active={Boolean(activeRun)}
+                tone={evalCommandBarsTone}
+                bars={evalCommandBars}
+              />
+              <div className="eval-command-center__latency" data-testid="eval-command-latency">
+                <span>{evalCommandLatencyCaption}</span>
+                <strong>{evalCommandLatencyLabel}</strong>
+              </div>
+            </div>
+          </div>
+          <div className="eval-command-center__voice-meta" data-testid="eval-command-voice-meta">
+            {evalCommandVoiceFacts.map(fact => (
+              <div key={fact.label} className="eval-command-center__voice-fact">
+                <span>{fact.label}</span>
+                <strong>{fact.value}</strong>
+              </div>
+            ))}
+            <div className="eval-command-center__evidence" data-testid="eval-command-evidence-card">
+              <span>evidence packet</span>
+              <div
+                className="eval-command-center__evidence-title"
+                data-testid="eval-command-evidence-title"
+                aria-label={evalCommandEvidenceLabel}
+              >
+                <span className="eval-command-center__evidence-title-scope">{evalCommandEvidenceTitle.scope}</span>
+                {evalCommandEvidenceTitle.title && <strong>{evalCommandEvidenceTitle.title}</strong>}
+              </div>
+              <span className="eval-command-center__evidence-kind" data-testid="eval-command-evidence-kind">{evalEvidencePacketKindLabel(activeRun?.result_path, runsState)}</span>
+              <code className="mono" data-testid="eval-command-evidence-source" title="Raw source reference is available in the review drawer.">{evalCommandEvidenceSource}</code>
+              <div className="eval-command-center__evidence-actions">
+                <button
+                  className="btn btn--ghost btn--xs"
+                  data-testid="eval-command-open-artifact"
+                  disabled={!canOpenEvalArtifact}
+                  aria-controls="eval-artifact-drawer"
+                  aria-expanded={Boolean(artifactPath)}
+                  title={evalArtifactButtonTitle}
+                  onClick={openActiveArtifactPanel}
+                ><I3.Doc size={11}/>Review artifact</button>
+                <button
+                  className="btn btn--ghost btn--xs"
+                  data-testid="eval-command-open-admin"
+                  disabled={!canOpenEvalAgentAdmin}
+                  title={canOpenEvalAgentAdmin ? 'Open this eval run in local agent admin' : 'Load a harness run before opening local agent admin'}
+                  onClick={openEvalAgentAdmin}
+                ><I3.Bot size={11}/>Open local admin</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="eval-command-center__ops" aria-label="Evaluation controls">
+          <div className="eval-command-center__filters">
+            <Segmented value={runFilter} onChange={setRunFilter} options={[
+              { value:'all', label:'All' },
+              { value:'fail', label:'Fail' },
+              { value:'pass', label:'Pass' },
+            ]} />
+          </div>
+          <div className="eval-command-center__actions ph__actions">
+            <button
+              className="btn btn--ghost btn--sm"
+              data-testid="eval-policy-settings"
+              aria-label="Open Eval policy settings"
+              onClick={() => {
+                globalThis.AppContext.set({
+                  extra: {
+                    ...globalThis.AppContext.get().extra,
+                    settings_tab:'evals',
+                    triggered_from:'evals-policy',
+                  },
+                });
+                globalThis.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab:'evals' } }));
+                setRoute?.('settings');
+              }}
+            ><I3.Cog size={12}/>Policy settings</button>
+            <button
+              className="btn btn--primary btn--sm"
+              aria-controls="eval-suite-builder"
+              aria-expanded={suiteBuilderOpen}
+              onClick={openSuiteBuilder}
+            ><I3.Plus size={12}/>New suite</button>
+          </div>
         </div>
       </section>
 
-      <div className="stats eval-stats">
-        <Stat label="Suites" value={suiteCount.toLocaleString()} />
-        <Stat label="Harness runs" value={displayedRunCount ? displayedRunCount.toLocaleString() : '--'} />
-        <Stat
-          label="Pass rate"
-          value={evalPct(displayedPassRate)}
-          tone={evalScoreTone(displayedPassRate)}
-          spark={D.sparks.evalPass}
-          sparkLabels={buildEvalSparkLabels(D.sparks.evalPass, 'suite run')}
-          sparkColor="var(--healthy)"
-          accent
-        />
-        <Stat label="Regressions" value={displayedRegressionCount} tone={displayedRegressionCount > 0 ? 'critical' : 'healthy'} />
-        <Stat label="Mean score" value={meanScore == null ? '74%' : evalPct(meanScore)} tone={evalScoreTone(meanScore)} />
-        <Stat
-          label="Avg latency"
-          value={avgLatencyMs == null ? '--' : evalDuration(Math.round(avgLatencyMs))}
-          tone={latencyTone}
-        />
-      </div>
-      {(slowestRun || avgLatencyMs != null) && (
-        <div className="eval-latency-strip" data-testid="eval-latency-strip" aria-label="Harness latency summary">
-          <span className="eyebrow eyebrow--accent">latency budget</span>
-          <span className="mono dim">
-            ttfb p95 ≤ {LATENCY_BUDGET.ttfb_p95_ms}ms · first-audio p95 ≤ {LATENCY_BUDGET.end_to_first_audio_p95_ms}ms · total-turn p95 ≤ {evalDuration(LATENCY_BUDGET.total_turn_p95_ms)}
-          </span>
-          {p95LatencyMs != null && (
-            <span
-              className="mono eval-latency-strip__p95"
-              data-testid="eval-latency-p95"
-              data-tone={p95LatencyTone}
-              data-p95-ms={Math.round(p95LatencyMs)}
-              title={`Rolling p95 across the ${latencyDurations.length} loaded run${latencyDurations.length === 1 ? '' : 's'} · budget ≤ ${evalDuration(LATENCY_BUDGET.total_turn_p95_ms)}`}
-            >
-              total-turn p95: <strong>{evalDuration(Math.round(p95LatencyMs))}</strong> <span className="dim">/ {evalDuration(LATENCY_BUDGET.total_turn_p95_ms)}</span>
-            </span>
-          )}
-          {slowestRun && (
-            <span className="mono">
-              slowest: <strong data-testid="eval-slowest-scenario">{slowestRun.scenario_id}</strong> · <span data-testid="eval-slowest-duration">{evalDuration(slowestRun.duration_ms)}</span>
-            </span>
-          )}
+      <section
+        className="eval-run-plan-summary"
+        aria-label="Local eval run plan"
+        data-state={evalRunPlanState}
+        data-testid="eval-run-plan-summary"
+      >
+        <div>
+          <div className="eyebrow eyebrow--accent">local run plan</div>
+          <strong>
+            {rerunTarget
+              ? `${rerunTarget.draft ? 'Draft suite' : 'Suite'} queued · ${rerunTarget.name}`
+              : activeHarnessCommand
+                ? `${activeHarnessCommand.name || selectedHarnessCommandId} ${activeHarnessCommandId ? 'selected' : 'ready'}`
+                : 'Manifest command loading.'}
+          </strong>
+          <div className="mono dim" data-testid="eval-harness-manifest-status">
+            {harnessManifestState === 'loading' && 'loading console eval manifest…'}
+            {harnessManifestState === 'ready' && harnessManifest && (
+              <>console eval manifest · {harnessCommands.length} commands</>
+            )}
+            {harnessManifestState === 'error' && 'manifest unreachable — run plan is read-only'}
+          </div>
         </div>
-      )}
-
-      {toolLatencyRollup.length > 0 && (
-        <div
-          className="eval-tool-latency-rollup"
-          data-testid="eval-tool-latency-rollup"
-          aria-label="Per-tool latency rollup across loaded harness runs"
-        >
-          <span className="eyebrow eyebrow--accent eval-tool-latency-rollup__caption">
-            tool latency · rolling across {normalizedRuns.length} run{normalizedRuns.length === 1 ? '' : 's'}
-          </span>
-          <span className="mono dim eval-tool-latency-rollup__budget">
-            budget · round-trip p95 ≤ {TOOL_ROUND_TRIP_BUDGET_MS}ms
-          </span>
-          {toolLatencyRollup.map(row => (
-            <span
-              key={row.name}
-              data-testid="eval-tool-latency-rollup-row"
-              data-tool-name={row.name}
-              data-tone={row.tone}
-              data-call-count={row.schemaTotal}
-              data-p95-ms={row.p95 != null ? Math.round(row.p95) : ''}
-              className={`mono eval-tool-latency-rollup__chip ${row.tone === 'critical' ? 'cl-err' : row.tone === 'warn' ? 'cl-warn' : 'cl-ok'}`}
-            >
-              <span className="eval-tool-latency-rollup__chip-name">{row.name}</span>
-              <span className="dim"> · n={row.schemaTotal}</span>
-              <span className="dim"> · schema {row.schemaRate == null ? '—' : `${Math.round(row.schemaRate * 100)}%`}</span>
-              <span> · {row.p95 != null ? `p95 ${evalDuration(Math.round(row.p95))}` : 'no timing'}</span>
-              {row.orphan > 0 ? <span className="dim"> · {row.orphan} orphan</span> : null}
-            </span>
-          ))}
-        </div>
-      )}
+        <button
+          className="btn btn--ghost btn--sm"
+          data-testid="eval-run-plan-open"
+          aria-controls="eval-run-plan-details"
+          aria-expanded={bridgeOpen}
+          onClick={() => {
+            // Toggle: a second click on the surfacing button while the
+            // popout is already open should close it (standard expander
+            // pattern). Previously this branch always force-opened, so
+            // re-clicking the button felt inert.
+            if (bridgeOpen) { setBridgeOpen(false); return; }
+            if (activeHarnessCommandId) openHarnessCommand(activeHarnessCommand || { id: activeHarnessCommandId });
+            else openDomainEvalRunPlan();
+          }}
+        ><I3.Bracket size={12}/>{bridgeOpen ? 'Close run plan' : 'Open run plan'}</button>
+      </section>
 
       {bridgeOpen && (
-        <div ref={bridgePanelRef} className="workflow-popout workflow-popout--single eval-bridge-popout" role="region" aria-label="Local eval run plan details">
+        <div id="eval-run-plan-details" ref={bridgePanelRef} className="workflow-popout workflow-popout--single eval-bridge-popout" role="region" aria-label="Local eval run plan details">
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
                 <div className="eyebrow eyebrow--accent">local run plan</div>
                 <div className="workflow-popout__title">Manifest command handoff</div>
-                <div className="muted" style={{fontSize:12}}>Manifest: eval-harness.manifest.json. Harness repo: ../voice_ai_agent_evals. Outputs land in logs/eval-harness and the console eval-run artifacts.</div>
+                <div className="muted" style={{fontSize:12}}>
+                  Run plan loaded from the console manifest.
+                  Outputs return here as review evidence and stay attached to the selected eval artifact.
+                </div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close eval run plan" onClick={() => setBridgeOpen(false)}><I3.Close size={14}/></button>
             </div>
@@ -1159,9 +1489,17 @@ function EvalsPage({ setRoute }) {
                   {Array.isArray(activeHarnessCommand.artifacts) && activeHarnessCommand.artifacts.length > 0 && (
                     <div className="eval-run-plan__artifacts">
                       {activeHarnessCommand.artifacts.map(artifact => (
-                        <div key={`${artifact.name}-${artifact.path}`}>
-                          <span>{artifact.name}</span>
-                          <code>{artifact.path}</code>
+                        <div key={`${artifact.name}-${artifact.path}`} data-testid="eval-harness-artifact">
+                          <div>
+                            <span>{artifact.name}</span>
+                            <code>{artifact.path}</code>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn--ghost btn--xs"
+                            aria-label={`Copy ${artifact.name || 'harness'} evidence reference`}
+                            onClick={() => copyHarnessArtifactPath(artifact)}
+                          ><I3.Doc size={11}/>Copy reference</button>
                         </div>
                       ))}
                     </div>
@@ -1171,11 +1509,12 @@ function EvalsPage({ setRoute }) {
                     <button
                       className="btn btn--ghost btn--sm"
                       onClick={openActiveArtifactPanel}
-                      title={activeRun?.scenario_id ? `Open ${activeRun.scenario_id} locally` : 'Open selected run artifact locally'}
-                    >
-                      <I3.Doc size={12}/>
-                      Open local run artifact
-                    </button>
+                      disabled={!canOpenEvalArtifact}
+	                      title={evalArtifactButtonTitle}
+	                    >
+	                      <I3.Doc size={12}/>
+	                      Open review evidence
+	                    </button>
                   </div>
                 </div>
               )}
@@ -1204,8 +1543,91 @@ function EvalsPage({ setRoute }) {
         </div>
       )}
 
+      <div className="stats eval-stats">
+        <Stat label="Suites" value={suiteCount.toLocaleString()} />
+        <Stat label="Harness runs" value={displayedRunCount ? displayedRunCount.toLocaleString() : '--'} />
+        <Stat
+          label="Pass rate"
+          value={evalPct(displayedPassRate)}
+          tone={evalScoreTone(displayedPassRate)}
+          spark={D.sparks.evalPass}
+          sparkLabels={buildEvalSparkLabels(D.sparks.evalPass, 'suite run')}
+          sparkColor="var(--healthy)"
+          accent
+        />
+        <Stat label="Regressions" value={displayedRegressionCount} tone={displayedRegressionCount > 0 ? 'critical' : 'healthy'} />
+        <Stat label="Mean score" value={meanScore == null ? '74%' : evalPct(meanScore)} tone={evalScoreTone(meanScore)} />
+        <Stat
+          label="Avg latency"
+          value={avgLatencyMs == null ? '--' : evalDuration(Math.round(avgLatencyMs))}
+          tone={latencyTone}
+        />
+      </div>
+      {((slowestRun || avgLatencyMs != null) || toolLatencyRollup.length > 0) && (
+        <div className="eval-health-row" data-testid="eval-health-row">
+          {(slowestRun || avgLatencyMs != null) && (
+            <div className="eval-latency-strip" data-testid="eval-latency-strip" aria-label="Harness latency summary">
+              <span className="eyebrow eyebrow--accent">latency budget</span>
+              <span className="mono dim">
+                ttfb p95 ≤ {LATENCY_BUDGET.ttfb_p95_ms}ms · first-audio p95 ≤ {LATENCY_BUDGET.end_to_first_audio_p95_ms}ms · total-turn p95 ≤ {evalDuration(LATENCY_BUDGET.total_turn_p95_ms)}
+              </span>
+              {p95LatencyMs != null && (
+                <span
+                  className="mono eval-latency-strip__p95"
+                  data-testid="eval-latency-p95"
+                  data-tone={p95LatencyTone}
+                  data-p95-ms={Math.round(p95LatencyMs)}
+                  title={`Rolling p95 across the ${latencyDurations.length} loaded run${latencyDurations.length === 1 ? '' : 's'} · budget ≤ ${evalDuration(LATENCY_BUDGET.total_turn_p95_ms)}`}
+                >
+                  total-turn p95: <strong>{evalDuration(Math.round(p95LatencyMs))}</strong> <span className="dim">/ {evalDuration(LATENCY_BUDGET.total_turn_p95_ms)}</span>
+                </span>
+              )}
+              {slowestRun && (
+                <span className="mono">
+                  slowest: <strong data-testid="eval-slowest-scenario">{slowestRun.scenario_id}</strong> · <span data-testid="eval-slowest-duration">{evalDuration(slowestRun.duration_ms)}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {toolLatencyRollup.length > 0 && (
+            <div
+              className="eval-tool-latency-rollup"
+              data-testid="eval-tool-latency-rollup"
+              aria-label="Per-tool latency rollup across loaded harness runs"
+            >
+              <span className="eyebrow eyebrow--accent eval-tool-latency-rollup__caption">
+                tool latency · rolling across {normalizedRuns.length} run{normalizedRuns.length === 1 ? '' : 's'}
+              </span>
+              <span className="mono dim eval-tool-latency-rollup__budget">
+                budget · round-trip p95 ≤ {TOOL_ROUND_TRIP_BUDGET_MS}ms
+              </span>
+              {toolLatencyRollup.map(row => (
+                <span
+                  key={row.name}
+                  data-testid="eval-tool-latency-rollup-row"
+                  data-tool-name={row.name}
+                  data-tone={row.tone}
+                  data-call-count={row.schemaTotal}
+                  data-p95-ms={row.p95 != null ? Math.round(row.p95) : ''}
+                  className={`mono eval-tool-latency-rollup__chip ${row.tone === 'critical' ? 'cl-err' : row.tone === 'warn' ? 'cl-warn' : 'cl-ok'}`}
+                  title={`${row.name} · n=${row.schemaTotal} · schema ${row.schemaRate == null ? 'not scored' : `${Math.round(row.schemaRate * 100)}%`} · ${row.p95 != null ? `p95 ${evalDuration(Math.round(row.p95))}` : 'no timing'}${row.orphan > 0 ? ` · ${row.orphan} orphan` : ''}`}
+                >
+                  <span className="eval-tool-latency-rollup__chip-name">{row.name}</span>
+                  <span className="dim">n={row.schemaTotal}</span>
+                  <span className="dim">schema {row.schemaRate == null ? '—' : `${Math.round(row.schemaRate * 100)}%`}</span>
+                  <span>{row.p95 != null ? `p95 ${evalDuration(Math.round(row.p95))}` : 'no timing'}</span>
+                  {row.orphan > 0 ? <span className="dim">{row.orphan} orphan</span> : null}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {artifactPath && (
         <div
+          id="eval-artifact-drawer"
           ref={artifactPanelRef}
           className="workflow-popout workflow-popout--single eval-artifact-panel"
           role="region"
@@ -1216,9 +1638,9 @@ function EvalsPage({ setRoute }) {
           <div className="workflow-popout__pane">
             <div className="eval-artifact-panel__head">
               <div>
-                <div className="eyebrow eyebrow--accent">artifact review packet</div>
+                <div className="eyebrow eyebrow--accent">evidence artifact</div>
                 <div className="workflow-popout__title">{evalScenarioTitle(artifactScenario)}</div>
-                <div className="muted" style={{fontSize:12}}>Evidence is loaded inside the console first. The raw payload stays below as supporting detail, not the primary review surface.</div>
+                <div className="muted" style={{fontSize:12}}>Evidence is loaded inside the console first. The local source reference is review metadata; the raw payload stays below as supporting detail.</div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close artifact panel" onClick={() => setArtifactPath(null)}><I3.Close size={14}/></button>
             </div>
@@ -1241,9 +1663,9 @@ function EvalsPage({ setRoute }) {
                   <span className="eyebrow">latency</span>
                   <code className="mono">{evalDuration(artifactDuration)}</code>
                 </div>
-                <div>
-                  <span className="eyebrow">local path</span>
-                  <code className="mono" data-testid="eval-artifact-path">{artifactPath}</code>
+                <div className="artifact-drawer__fact artifact-drawer__fact--path">
+                  <span className="eyebrow">local evidence reference</span>
+                  <code className="mono" data-testid="eval-artifact-path">{evalEvidencePathLabel(artifactPath)}</code>
                 </div>
               </div>
               <div className="eval-artifact-review__axes" aria-label="Judge axis evidence">
@@ -1277,7 +1699,11 @@ function EvalsPage({ setRoute }) {
 
       <div className="evals-grid">
         {/* Suites table */}
-        <Card title={`suites · ${visibleSuites.length}`} action={<button className="btn btn--ghost btn--xs" aria-pressed={suiteFilter === 'regressions'} onClick={() => setSuiteFilter(f => f === 'all' ? 'regressions' : 'all')}><I3.Filter size={10}/>{suiteFilter === 'all' ? 'regressions' : 'all suites'}</button>}>
+        <Card
+          title={`suites · ${visibleSuites.length}`}
+          className="eval-suites-card"
+          action={<button className="btn btn--ghost btn--xs" aria-pressed={suiteFilter === 'regressions'} onClick={() => setSuiteFilter(f => f === 'all' ? 'regressions' : 'all')}><I3.Filter size={10}/>{suiteFilter === 'all' ? 'regressions' : 'all suites'}</button>}
+        >
           <div className="vstack" style={{gap:0}}>
             {visibleSuites.map(s => (
               <div key={s.id}
@@ -1288,7 +1714,7 @@ function EvalsPage({ setRoute }) {
                 data-active={activeId === s.id}
                 data-draft={s.draft ? 'true' : 'false'}
                 style={{paddingLeft: activeId === s.id ? 10 : 4}}>
-                <button className="eval-suite-row__select" aria-pressed={activeId === s.id} onClick={()=>setActiveId(s.id)}>
+                <div className="eval-suite-row__select" data-active={activeId === s.id ? 'true' : 'false'} tabIndex={0} onClick={()=>setActiveId(s.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(s.id); } }}>
                   <div>
                     <div style={{fontSize:13, fontWeight:600, marginBottom:2}}>{s.name}</div>
                     <div className="mono" style={{fontSize:10, color:'var(--text-3)'}}>
@@ -1304,7 +1730,7 @@ function EvalsPage({ setRoute }) {
                   <div className={`mono num ${s.delta > 0 ? 'cl-ok' : s.delta < 0 ? 'cl-err' : 'dim'}`} style={{fontSize:12, fontWeight:600, textAlign:'right'}}>
                     {s.draft ? 'new' : `${s.delta > 0 ? '▲' : s.delta < 0 ? '▼' : '·'} ${(Math.abs(s.delta)*100).toFixed(1)}%`}
                   </div>
-                </button>
+                </div>
                 <button className="btn btn--ghost btn--icon" aria-label={`${s.draft ? 'Queue' : 'Re-run'} ${s.name}`} onClick={(e)=>{e.stopPropagation(); rerunEvalSuite(s); }}><I3.Play size={12}/></button>
               </div>
             ))}
@@ -1313,7 +1739,7 @@ function EvalsPage({ setRoute }) {
 
         {/* Harness detail */}
         <div className="vstack" style={{gap:18}}>
-          <Card title={`suite · ${active.id}`} accent={active.delta < 0 ? 'violet' : 'accent'}>
+          <Card title={`suite family · ${active.id}`} accent={active.delta < 0 ? 'violet' : 'accent'}>
             <div className="eval-suite-detail">
               <div>
                 <div style={{fontSize:15, fontWeight:600, marginBottom:6}}>{active.name}</div>
@@ -1334,6 +1760,13 @@ function EvalsPage({ setRoute }) {
                 </div>
               </div>
             </div>
+            {activeRun && (
+              <div className="eval-suite-context-note" data-testid="eval-suite-context-note">
+                <span className="eyebrow eyebrow--accent">selected run family</span>
+                <strong>{evalScenarioTitle(activeRun.scenario_id)}</strong>
+                <p>{activeRunSuiteLabel}</p>
+              </div>
+            )}
             {active.draft ? (
               <div className="eval-suite-draft-focus" data-testid="eval-suite-draft-focus">
                 <div className="eyebrow eyebrow--accent">scenario focus</div>
@@ -1354,17 +1787,20 @@ function EvalsPage({ setRoute }) {
             )}
           </Card>
 
-          <Card title={`harness runs${normalizedRuns.length > 0 ? ` · ${normalizedRuns.length}` : ''}`} action={
-            <span className="hstack" style={{gap:8, alignItems:'center'}}>
-              <span data-testid="eval-runs-source-badge">
+          <Card title={`harness runs${normalizedRuns.length > 0 ? ` · ${normalizedRuns.length}` : ''}`} className="eval-runs-card" action={
+            <span className="eval-runs-card__actions">
+              <span data-testid="eval-runs-source-badge" data-source-state={runsState}>
                 <Badge
                   tone={runsState === 'live' ? 'healthy' : runsState === 'fixture' ? 'accent' : runsState === 'loading' ? 'neutral' : runsState === 'error' ? 'critical' : 'neutral'}
-                >{runsState}</Badge>
+                >{evalRunsSourceLabel(runsState)}</Badge>
               </span>
               <button className="btn btn--ghost btn--xs" onClick={() => {
-                setRunFilter('fail');
-                globalThis.toast('Regression filter applied', { sub:'showing failing harness runs', tone:'warn' });
-              }}><I3.Flag size={10}/>failures</button>
+                setRunFilter(current => current === 'fail' ? 'all' : 'fail');
+              }}
+                data-testid="eval-runs-failures-filter"
+                aria-pressed={runFilter === 'fail'}
+                aria-label={runFilter === 'fail' ? 'Show all harness runs' : 'Show failing harness runs'}
+              ><I3.Flag size={10}/>{runFilter === 'fail' ? 'all runs' : 'failures'}</button>
             </span>
           }>
             <div className="eval-run-list" role="group" aria-label="Evaluation harness runs">
@@ -1375,7 +1811,7 @@ function EvalsPage({ setRoute }) {
                 <div className="empty eval-runs-error" style={{padding:18}} data-testid="eval-runs-error" role="alert">
                   <div style={{fontWeight:600, marginBottom:4}}>Couldn't load harness runs</div>
                   <div className="muted" style={{fontSize:12, marginBottom:10}}>
-                    {runsError ? `Reason: ${runsError}` : 'Both /api/eval-runs and the bundled fixture failed.'}
+                    {runsError ? `Reason: ${runsError}` : 'Both /api/eval-runs and the local artifact index failed.'}
                   </div>
                   <button
                     className="btn btn--primary btn--sm"
@@ -1398,20 +1834,22 @@ function EvalsPage({ setRoute }) {
                   data-popout={`${r.scenario_id}: ${r.verdict}, ${evalPct(r.score.weighted)} score, ${(r.score.axes || []).filter(axis => axis.pass === false).length} failed axes`}
                   data-verdict={r.verdict}
                   data-active={activeRun?.scenario_id === r.scenario_id}
-                  onClick={() => setActiveRunId(r.scenario_id)}
+                  onClick={() => selectEvalRun(r)}
                 >
-                  <button
+                  <div
                     className="eval-run-row__select"
-                    aria-pressed={activeRun?.scenario_id === r.scenario_id}
-                    onClick={(e) => { e.stopPropagation(); setActiveRunId(r.scenario_id); }}
+                    data-active={activeRun?.scenario_id === r.scenario_id ? 'true' : 'false'}
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); selectEvalRun(r); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); selectEvalRun(r); } }}
                   >
                     <div>
                       <div className="eval-run-row__title">{evalScenarioTitle(r.scenario_id)}</div>
                       <div className="mono dim" style={{fontSize:10}}>
-                        <span data-testid="eval-run-row-scenario-id">scenario {r.scenario_id}</span> · {r.agent_id} · {r.prompt_tag}
+                        <span data-testid="eval-run-row-scenario-id">scenario {r.scenario_id}</span> · {evalAgentDisplayName(r)} · {evalPromptProfileLabel(r)}
                       </div>
                     </div>
-                    <Badge tone={r.verdict === 'pass' ? 'healthy' : r.verdict === 'fail' ? 'critical' : 'neutral'}>{r.verdict}</Badge>
+                    <span className={`status-text status-text--${r.verdict === 'pass' ? 'healthy' : r.verdict === 'fail' ? 'critical' : 'neutral'}`}>{r.verdict}</span>
                     {r.sentiment && (
                       <span
                         className={`badge badge--${sentimentChipTone(r.sentiment.label)}`}
@@ -1430,13 +1868,16 @@ function EvalsPage({ setRoute }) {
                       title={Number.isFinite(r.duration_ms) ? `total-turn latency · budget ≤ ${evalDuration(LATENCY_BUDGET.total_turn_p95_ms)}` : 'no latency captured'}
                     >{Number.isFinite(r.duration_ms) ? evalDuration(r.duration_ms) : '--'}</div>
                     <div className="eval-score-pill" data-tone={evalScoreTone(r.score.weighted)}>{evalPct(r.score.weighted)}</div>
-                  </button>
+                  </div>
                   {r.result_path && (
-                    <button
+                    <span
                       className="btn btn--ghost btn--icon"
+                      tabIndex={0}
+                      role="link"
                       aria-label={`Inspect result for ${r.scenario_id}`}
-                      onClick={(e) => { e.stopPropagation(); setActiveRunId(r.scenario_id); setArtifactPath(r.result_path); }}
-                    ><I3.Bracket size={12}/></button>
+                      onClick={(e) => { e.stopPropagation(); selectEvalRun(r, { openArtifact: true }); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); selectEvalRun(r, { openArtifact: true }); } }}
+                    ><I3.Bracket size={12}/></span>
                   )}
                 </div>
               ))}
@@ -1452,8 +1893,8 @@ function EvalsPage({ setRoute }) {
                     <Badge tone={activeRun.verdict === 'pass' ? 'healthy' : 'critical'}>{activeRun.verdict}</Badge>
                     <span className="mono">{evalPct(activeRun.score.weighted)}</span>
                     <span className="mono"><span className="eval-meta-strip__label">scenario</span>{activeRun.scenario_id}</span>
-                    <span className="mono"><span className="eval-meta-strip__label">prompt</span>{activeRun.prompt_tag}</span>
-                    <span className="mono"><span className="eval-meta-strip__label">harness</span>{activeRun.harness_version}</span>
+                    <span className="mono"><span className="eval-meta-strip__label">prompt</span>{evalPromptProfileLabel(activeRun)}</span>
+                    <span className="mono"><span className="eval-meta-strip__label">evidence</span>{evalEvidencePathLabel(activeRun.result_path)}</span>
                     <span className="mono">{evalDate(activeRun.started_at)}</span>
                   </div>
                   <div className="eval-axis-stack">
@@ -1466,7 +1907,7 @@ function EvalsPage({ setRoute }) {
                           <div className="mono" style={{fontSize:12, fontWeight:700}}>{axis.name}</div>
                           <div style={{fontSize:12, color:'var(--text-2)', marginTop:3}}>{axis.detail}</div>
                         </div>
-                        <Badge tone={axis.pass ? 'healthy' : 'critical'}>{axis.pass ? 'pass' : 'fail'}</Badge>
+                        <span className={`status-text status-text--${axis.pass ? 'healthy' : 'critical'}`}>{axis.pass ? 'pass' : 'fail'}</span>
                         <span className="mono dim">{axis.weight}x</span>
                       </div>
                     ))}
@@ -1545,16 +1986,7 @@ function EvalsPage({ setRoute }) {
 
         {/* ElevenLabs lab */}
         <div className="vstack eval-agent-column" style={{gap:18, minWidth:0}}>
-          <Card title="elevenlabs ui · live agent lab" accent="accent" action={
-            <button
-              className="btn btn--ghost btn--xs"
-              data-testid="eval-local-agent-admin"
-              disabled={!canOpenEvalAgentAdmin}
-              title={canOpenEvalAgentAdmin ? 'Open this eval run in local agent admin' : 'Load a harness run before opening local agent admin'}
-              aria-label={canOpenEvalAgentAdmin ? 'Open selected eval run in local agent admin' : 'Local agent admin unavailable until a harness run loads'}
-              onClick={openEvalAgentAdmin}
-            ><I3.Bot size={10}/>local admin</button>
-          }>
+          <Card title="elevenlabs ui · live agent lab" accent="accent">
             <div
               className="eval-agent-readiness"
               data-testid="eval-agent-readiness"
@@ -1688,39 +2120,6 @@ function EvalsPage({ setRoute }) {
         </div>
       </div>
 
-      <section className="eval-run-plan-summary" aria-label="Local eval run plan" data-testid="eval-run-plan-summary">
-        <div>
-          <div className="eyebrow eyebrow--accent">local run plan</div>
-          <strong>
-            {rerunTarget
-              ? `${rerunTarget.draft ? 'Draft suite' : 'Suite'} queued · ${rerunTarget.name}`
-              : activeHarnessCommandId
-                ? `${activeHarnessCommand?.name || activeHarnessCommandId} selected`
-                : 'No harness command queued.'}
-          </strong>
-          <div className="mono dim" data-testid="eval-harness-manifest-status">
-            {harnessManifestState === 'loading' && 'loading eval-harness.manifest.json…'}
-            {harnessManifestState === 'ready' && harnessManifest && (
-              <>manifest · {harnessManifest.schema_version} · {harnessCommands.length} commands</>
-            )}
-            {harnessManifestState === 'error' && 'manifest unreachable — run plan is read-only'}
-          </div>
-        </div>
-        <button
-          className="btn btn--ghost btn--sm"
-          data-testid="eval-run-plan-open"
-          aria-expanded={bridgeOpen}
-          onClick={() => {
-            // Toggle: a second click on the surfacing button while the
-            // popout is already open should close it (standard expander
-            // pattern). Previously this branch always force-opened, so
-            // re-clicking the button felt inert.
-            if (bridgeOpen) { setBridgeOpen(false); return; }
-            if (activeHarnessCommandId) openHarnessCommand(activeHarnessCommand || { id: activeHarnessCommandId });
-            else openDomainEvalRunPlan();
-          }}
-        ><I3.Bracket size={12}/>{bridgeOpen ? 'Close run plan' : 'Open run plan'}</button>
-      </section>
     </div>
   );
 }
@@ -1730,12 +2129,53 @@ function EvalsPage({ setRoute }) {
 /* ------------------------------------------------------------ */
 function ProposalsPage({ setRoute }) {
   const D = globalThis.GTM;
-  const initialProposal = globalThis.AppContext.get().selection;
+  const isReviewArtifactProposal = (proposal) => {
+    if (!proposal || typeof proposal !== 'object') return false;
+    return Boolean(proposal.executionId) || (Array.isArray(proposal.artifacts) && proposal.artifacts.length > 0);
+  };
+  const proposalArtifactCount = (proposal) => (
+    Array.isArray(proposal?.artifacts) ? proposal.artifacts.length : 0
+  );
+  const proposalActivityLine = (proposal) => {
+    const progress = `${proposal.accepted}/${proposal.sections} sections accepted`;
+    if (!isReviewArtifactProposal(proposal)) {
+      return `sent ${proposal.sent} · viewed ${proposal.viewed} · ${progress}`;
+    }
+    const count = proposalArtifactCount(proposal);
+    const artifactCopy = count > 0
+      ? `${count} review artifact${count === 1 ? '' : 's'}`
+      : 'review packet pending';
+    return `generated ${proposal.sent} · ${artifactCopy} · ${progress}`;
+  };
+  const proposalDetailMeta = (proposal) => {
+    const base = `${proposal.id} · owner ${proposal.owner} · ${proposal.stage}`;
+    if (!proposal.sent) return base;
+    return isReviewArtifactProposal(proposal)
+      ? `${base} · generated ${proposal.sent}`
+      : `${base} · ${proposal.sent}`;
+  };
+  const proposalPendingSectionCount = (proposal) => {
+    const accepted = Number(proposal?.accepted || 0);
+    const sections = Number(proposal?.sections || 0);
+    return Math.max(0, sections - accepted);
+  };
+  const ensureGeneratedProposalFromContext = (proposal) => {
+    if (!proposal || typeof proposal !== 'object' || !proposal.id) return null;
+    const proposals = Array.isArray(D.proposals) ? D.proposals : (D.proposals = []);
+    const existing = proposals.find(p => p.id === proposal.id || (proposal.executionId && p.executionId === proposal.executionId));
+    if (existing) return existing;
+    proposals.unshift(proposal);
+    return proposal;
+  };
+  const initialContext = globalThis.AppContext.get();
+  ensureGeneratedProposalFromContext(initialContext.extra?.generated_review_proposal);
+  const initialProposal = initialContext.selection;
   const initialProposalId = initialProposal?.type === 'proposal' && D.proposals.some(p => p.id === initialProposal.id)
     ? initialProposal.id
     : (D.proposals[0]?.id || 'PR-2041');
   const [activeId, setActiveId] = useState(initialProposalId);
   const [filter, setFilter] = useState('all');
+  const [, bumpProposalRevision] = useState(0);
   const [proposalWorkflow, setProposalWorkflow] = useState(null);
   const [resendForm, setResendForm] = useState({ recipient: '', cc: '', note: '' });
   // Persist per-proposal re-send receipts so the operator can see at a
@@ -1747,41 +2187,100 @@ function ProposalsPage({ setRoute }) {
   const [reviewArtifactKey, setReviewArtifactKey] = useState('proposal');
   const [reviewArtifactPayload, setReviewArtifactPayload] = useState(null);
   const [reviewArtifactState, setReviewArtifactState] = useState('idle');
+  const proposalWorkflowRef = useRef(null);
+  const generatedReviewAutoOpenRef = useRef(null);
   const active = D.proposals.find(p => p.id === activeId) || D.proposals[0];
+  const currentProposalContext = globalThis.AppContext.get();
+  const currentProposalExtra = currentProposalContext.extra || {};
+  const isGeneratedReviewHandoff = currentProposalExtra.triggered_from === 'generate-artifact-review'
+    && currentProposalContext.selection?.type === 'proposal'
+    && currentProposalContext.selection.id === active?.id
+    && Boolean(currentProposalExtra.generated_artifact_id);
+  const generatedReviewDraft = (() => {
+    const proposal = currentProposalExtra.generated_review_proposal;
+    if (!isGeneratedReviewHandoff || !proposal || typeof proposal !== 'object') return null;
+    const expectedExecutionId = String(currentProposalExtra.generated_artifact_id || '').trim();
+    if (expectedExecutionId && proposal.executionId !== expectedExecutionId) return null;
+    return proposal;
+  })();
   const proposalReviewPacket = (proposal) => {
     const rawArtifacts = Array.isArray(proposal?.artifacts) ? proposal.artifacts : [];
     const findArtifact = (type) => rawArtifacts.find(a => a?.type === type);
-    const fallbackPdf = '../assets/sample-proposal.pdf';
-    const fallbackJson = '../fixtures/transcripts/sample-proposal.json';
-    const usableWebPath = (artifact, fallback) => {
-      const webPath = String(artifact?.webPath || '').trim();
-      return webPath && webPath !== '#' ? webPath : fallback;
+    const usableWebPath = (artifact) => reviewArtifactPreviewHref(artifact?.webPath);
+    const previewForArtifact = (artifact) => {
+      const artifactType = artifact?.type;
+      const isPdfArtifact = artifactType === 'pdf' || artifactType === 'pdf_internal';
+      const isJsonArtifact = artifactType === 'json';
+      const declaredWebPath = String(artifact?.webPath || '').trim();
+      const declaredLocalOnly = declaredWebPath === '#';
+      const isGeneratedReviewPath = /^review\//i.test(declaredWebPath || String(artifact?.path || '').trim());
+      if (globalThis.DEMO_MODE && isGeneratedReviewPath && isPdfArtifact) {
+        return { previewPath: '../assets/sample-proposal.pdf', previewFallback: true };
+      }
+      if (globalThis.DEMO_MODE && isGeneratedReviewPath && isJsonArtifact) {
+        return { previewPath: '../fixtures/transcripts/sample-proposal.json', previewFallback: true };
+      }
+      const directPath = usableWebPath(artifact);
+      if (directPath) return { previewPath: directPath, previewFallback: false };
+      if (globalThis.DEMO_MODE && isPdfArtifact && declaredLocalOnly) {
+        return { previewPath: '../assets/sample-proposal.pdf', previewFallback: true };
+      }
+      return { previewPath: null, previewFallback: false };
+    };
+    const unavailableCopy = (label, artifact) => (
+      artifact
+        ? `${label} is listed in the review manifest, but no console preview is attached to this packet. Bind the artifact or generate a fresh packet before treating it as buyer-reviewable.`
+        : `${label} is not attached to this review packet yet. Generate a fresh packet or bind the artifact before treating it as buyer-reviewable.`
+    );
+    const item = ({ key, label, artifact, sourcePath, state }) => {
+      const { previewPath, previewFallback } = previewForArtifact(artifact);
+      const demoPdfFallback = globalThis.DEMO_MODE && key === 'proposal' && !previewPath;
+      const hasArtifact = Boolean(artifact);
+      return {
+        key,
+        label,
+        sourcePath: artifact?.path || sourcePath,
+        previewPath: demoPdfFallback ? '../assets/sample-proposal.pdf' : previewPath,
+        state,
+        hasArtifact,
+        hasPreview: Boolean(previewPath) || demoPdfFallback,
+        previewFallback: previewFallback || demoPdfFallback,
+        previewAction: (previewFallback || demoPdfFallback)
+          ? (key === 'source' ? 'Review sample evidence' : 'Review sample PDF')
+          : (previewPath ? 'Review in console' : (hasArtifact ? 'Manifest only' : 'Not attached')),
+        previewCopy: (previewFallback || demoPdfFallback)
+          ? (key === 'source'
+            ? 'Sample source evidence attached for local review; generated packets replace this with their own evidence artifact.'
+            : 'Sample PDF preview attached for local review; generated packets replace this with their own review artifact.')
+          : null,
+        unavailableCopy: unavailableCopy(label, artifact),
+      };
     };
     const pdf = findArtifact('pdf');
     const json = findArtifact('json');
     const audit = findArtifact('pdf_internal');
     const items = [
-      {
+      item({
         key: 'proposal',
         label: 'Proposal PDF',
-        sourcePath: pdf?.path || `review/${proposal?.id || 'proposal'}/proposal.pdf`,
-        previewPath: usableWebPath(pdf, fallbackPdf),
+        artifact: pdf,
+        sourcePath: `review/${proposal?.id || 'proposal'}/proposal.pdf`,
         state: proposal?.stage === 'signed' ? 'sent' : (proposal?.blockers?.length ? 'needs review' : 'ready'),
-      },
-      {
+      }),
+      item({
         key: 'source',
         label: 'Source evidence',
-        sourcePath: json?.path || `review/${proposal?.id || 'proposal'}/source-evidence.json`,
-        previewPath: usableWebPath(json, fallbackJson),
+        artifact: json,
+        sourcePath: `review/${proposal?.id || 'proposal'}/source-evidence.json`,
         state: 'bound',
-      },
-      {
+      }),
+      item({
         key: 'audit',
         label: 'Audit packet',
-        sourcePath: audit?.path || `review/${proposal?.id || 'proposal'}/audit-report.pdf`,
-        previewPath: usableWebPath(audit, fallbackPdf),
+        artifact: audit,
+        sourcePath: `review/${proposal?.id || 'proposal'}/audit-report.pdf`,
         state: proposal?.auditScore ? `score ${proposal.auditScore}` : 'pending',
-      },
+      }),
     ];
     return {
       packetId: proposal?.executionId || proposal?.id || 'proposal-review',
@@ -1791,10 +2290,37 @@ function ProposalsPage({ setRoute }) {
       pdf: items[0],
     };
   };
-  const activeReview = proposalReviewPacket(active);
+  const activeReview = proposalReviewPacket(generatedReviewDraft
+    ? {
+        ...active,
+        executionId: generatedReviewDraft.executionId,
+        artifacts: Array.isArray(generatedReviewDraft.artifacts) ? generatedReviewDraft.artifacts : [],
+        auditScore: generatedReviewDraft.auditScore ?? active?.auditScore,
+      }
+    : active);
   const selectedReviewArtifact = activeReview.items.find(item => item.key === reviewArtifactKey) || activeReview.pdf;
-  const selectedReviewIsJson = selectedReviewArtifact.key === 'source' || /\.json(?:$|\?)/i.test(String(selectedReviewArtifact.previewPath || ''));
-
+  const selectedReviewHasPreview = Boolean(selectedReviewArtifact.previewPath);
+  const selectedReviewIsJson = selectedReviewHasPreview && (selectedReviewArtifact.key === 'source' || /\.json(?:$|\?)/i.test(String(selectedReviewArtifact.previewPath || '')));
+  const activeBlockers = Array.isArray(active?.blockers) ? active.blockers : [];
+  const activeBlockerCount = activeBlockers.length;
+  const activePendingSectionCount = proposalPendingSectionCount(active);
+  const activeSendGateState = activeBlockerCount > 0
+    ? 'blocked'
+    : activePendingSectionCount > 0
+      ? 'operator-review'
+      : 'ready';
+  const activeSendReady = activeSendGateState === 'ready';
+  const activeSendHoldReason = activeBlockerCount > 0
+    ? `${activeBlockerCount} blocker${activeBlockerCount === 1 ? '' : 's'} must be cleared before buyer send. Review the packet or draft a revised review packet in Generate.`
+    : `${activePendingSectionCount} section${activePendingSectionCount === 1 ? '' : 's'} still need operator approval before buyer send. Review the packet and accept every section before re-sending.`;
+  const activeSendButtonLabel = activeSendReady
+    ? (resentProposals[active.id] ? 'Re-send again' : 'Re-send')
+    : activeBlockerCount > 0
+      ? `Send held · ${activeBlockerCount}`
+      : 'Send held · review';
+  const activeSendGateNote = activeBlockerCount > 0
+    ? 'Buyer send is held until a revised review packet clears the listed blockers.'
+    : 'Buyer send is held until operator review accepts every proposal section.';
   const defaultRecipient = (proposal) => {
     if (!proposal?.co) return '';
     const words = String(proposal.co).toLowerCase().split(/\s+/).filter(Boolean);
@@ -1803,11 +2329,49 @@ function ProposalsPage({ setRoute }) {
     const host = words.length > 1 ? [...words].join('').replace(/[^a-z0-9]/g, '') : words[0];
     return `${local}@${host}.example`;
   };
+  const acceptPendingSections = () => {
+    if (!active || activeBlockerCount > 0 || activePendingSectionCount === 0) return;
+    const proposals = Array.isArray(D.proposals) ? D.proposals : [];
+    const idx = proposals.findIndex(p => p.id === active.id);
+    if (idx < 0) return;
+    const nextStage = String(active.stage || '').toLowerCase() === 'drafting' ? 'review' : active.stage;
+    const updated = {
+      ...active,
+      accepted: Number(active.sections || 0),
+      stage: nextStage,
+    };
+    proposals[idx] = updated;
+    setResendForm({
+      recipient: defaultRecipient(updated),
+      cc: '',
+      note: `Re-sending ${updated.id} after local operator review accepted all sections.`,
+    });
+    bumpProposalRevision(n => n + 1);
+    setProposalWorkflow({
+      kind: 'send',
+      title: `Re-send ${updated.id}`,
+      sub: `Sections accepted locally · owner ${updated.owner} · stage ${updated.stage}`,
+      tone: 'accent',
+    });
+    globalThis.toast('Sections accepted locally', {
+      sub: `${updated.id} buyer send gate is ready`,
+      tone: 'accent',
+    });
+  };
   const openResend = () => {
+    if (!activeSendReady) {
+      setProposalWorkflow({
+        kind: 'send-hold',
+        title: `Send held · ${active.id}`,
+        sub: activeSendHoldReason,
+        tone: 'critical',
+      });
+      return;
+    }
     setResendForm({
       recipient: defaultRecipient(active),
       cc: '',
-      note: `Re-sending ${active.id} for review. ${active.blockers?.length ? `${active.blockers.length} blocker${active.blockers.length === 1 ? '' : 's'} remain.` : 'Sections look ready.'}`,
+      note: `Re-sending ${active.id} for review. Sections look ready.`,
     });
     setProposalWorkflow({
       kind: 'send',
@@ -1825,8 +2389,6 @@ function ProposalsPage({ setRoute }) {
       tone: active.blockers?.length ? 'critical' : 'accent',
     });
   };
-  const activeBlockers = Array.isArray(active?.blockers) ? active.blockers : [];
-  const activeBlockerCount = activeBlockers.length;
   const addressBlockers = () => {
     // Short-circuit when the proposal has no blockers — the action is
     // meaningless ("0 blockers carried" gives the operator nothing to
@@ -1850,6 +2412,15 @@ function ProposalsPage({ setRoute }) {
   const validEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
   const submitResend = (e) => {
     e.preventDefault();
+    if (!activeSendReady) {
+      setProposalWorkflow({
+        kind: 'send-hold',
+        title: `Send held · ${active.id}`,
+        sub: activeSendHoldReason,
+        tone: 'critical',
+      });
+      return;
+    }
     const recipient = resendForm.recipient.trim();
     if (!validEmail(recipient)) {
       globalThis.toast('Recipient email is invalid', { sub: 'fix the To field before re-sending', tone: 'critical' });
@@ -1882,6 +2453,7 @@ function ProposalsPage({ setRoute }) {
     return () => { globalThis.AppContext.set({ selection: null }); };
   }, [activeId]);
   useEffect(() => globalThis.AppContext.subscribe((ctx) => {
+    ensureGeneratedProposalFromContext(ctx.extra?.generated_review_proposal);
     if (ctx.selection?.type === 'proposal' && D.proposals.some(p => p.id === ctx.selection.id)) {
       setActiveId(ctx.selection.id);
     }
@@ -1891,6 +2463,23 @@ function ProposalsPage({ setRoute }) {
       setActiveId(filtered[0].id);
     }
   }, [activeId, filteredProposalIds]);
+  useEffect(() => {
+    if (!isGeneratedReviewHandoff || !active) return;
+    const ctx = globalThis.AppContext.get();
+    const extra = ctx.extra || {};
+    const autoOpenKey = `${active.id}:${extra.generated_artifact_id}`;
+    if (generatedReviewAutoOpenRef.current === autoOpenKey || extra.generated_review_autopened_id === autoOpenKey) {
+      return;
+    }
+    generatedReviewAutoOpenRef.current = autoOpenKey;
+    openProposalReview();
+    globalThis.AppContext.set({
+      extra: {
+        ...extra,
+        generated_review_autopened_id: autoOpenKey,
+      },
+    });
+  }, [isGeneratedReviewHandoff, active?.id, active?.co, activeReview.packetId]);
   useEffect(() => {
     setReviewArtifactKey('proposal');
     setReviewArtifactPayload(null);
@@ -1925,9 +2514,22 @@ function ProposalsPage({ setRoute }) {
       });
     return () => { cancelled = true; };
   }, [proposalWorkflow?.kind, selectedReviewArtifact.key, selectedReviewArtifact.previewPath, selectedReviewIsJson]);
+  useEffect(() => {
+    if (!proposalWorkflow) return;
+    requestAnimationFrame(() => {
+      if (isGeneratedReviewHandoff && proposalWorkflow.kind === 'viewer') {
+        const main = document.querySelector('main.scroll');
+        if (main) main.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        proposalWorkflowRef.current?.focus?.({ preventScroll: true });
+        return;
+      }
+      globalThis.scrollConsoleNodeIntoView?.(proposalWorkflowRef.current, { block: 'start' });
+      proposalWorkflowRef.current?.focus?.({ preventScroll: true });
+    });
+  }, [isGeneratedReviewHandoff, proposalWorkflow?.kind, proposalWorkflow?.title]);
 
   return (
-    <div className="page">
+    <div className="page page--proposals">
       <PageHeader
         eyebrow={`${D.proposals.length} proposals · ${openProposalCount} open · ${proposalTotal} total`}
         title="Proposals"
@@ -1938,7 +2540,7 @@ function ProposalsPage({ setRoute }) {
           // Generate page's job.
           const blockerCount = D.proposals.reduce((s, p) => s + (Array.isArray(p.blockers) ? p.blockers.length : 0), 0);
           const blocked = D.proposals.filter(p => Array.isArray(p.blockers) && p.blockers.length > 0).length;
-          return `${blocked} of ${D.proposals.length} proposal${D.proposals.length === 1 ? '' : 's'} carry open blockers (${blockerCount} total). Use Address blockers to draft a v-next packet that names each one.`;
+          return `${blocked} of ${D.proposals.length} proposal${D.proposals.length === 1 ? '' : 's'} carry open blockers (${blockerCount} total). Use Generate to carry those blockers into a revised review packet.`;
         })()}
         actions={<>
           <Segmented value={filter} onChange={setFilter} options={[
@@ -1949,34 +2551,33 @@ function ProposalsPage({ setRoute }) {
         </>}
       />
 
-      <div className="split split--2">
+      <div className={`split split--2 ${isGeneratedReviewHandoff ? 'proposals-review-handoff' : ''}`}>
         <Card title={`${proposalListLabel} proposals · ${filtered.length}`} className="card--accent proposals-list-card">
           <div className="vstack" style={{gap:0}}>
             {filtered.map(p => (
               <div key={p.id}
-                className="inspectable"
+                className="inspectable proposal-row-card"
                 data-testid="proposal-row"
-                data-active={activeId === p.id ? 'true' : 'false'}
-                data-popout={`${p.id}: ${p.co}, ${p.amount}, ${p.stage}, ${p.accepted}/${p.sections} sections accepted`}
-                role="button"
-                tabIndex={0}
+	                data-active={activeId === p.id ? 'true' : 'false'}
+	                data-popout={`${p.id}: ${p.co}, ${p.amount}, ${p.stage}, ${p.accepted}/${p.sections} sections accepted`}
+	                role="button"
+	                tabIndex={0}
                 aria-pressed={activeId === p.id}
                 onClick={()=>setActiveId(p.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(p.id); } }}
-                style={{padding:'14px 4px', borderBottom:'1px dashed var(--border)', display:'grid', gridTemplateColumns:'1fr auto', gap:12, cursor:'pointer', borderLeft: activeId === p.id ? '2px solid var(--sunset-500)' : '2px solid transparent', paddingLeft: activeId === p.id ? 10 : 4}}>
-                <div>
-                  <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
-                    <span className="mono" style={{fontSize:11, color:'var(--accent-fg)', fontWeight:600}}>{p.id}</span>
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(p.id); } }}>
+                <div className="proposal-row-card__main">
+                  <div className="proposal-row-card__meta">
+                    <span className="mono proposal-row-card__id">{p.id}</span>
                     <Badge tone={p.stage === 'signed' ? 'healthy' : p.stage === 'legal' || p.stage === 'redlines' ? 'warn' : 'accent'}>{p.stage}</Badge>
                     {p.blockers.length > 0 && <Badge tone="critical">{p.blockers.length} blocker{p.blockers.length > 1 ? 's' : ''}</Badge>}
                   </div>
-                  <div style={{fontSize:14, fontWeight:600, marginBottom:2}}>{p.co}</div>
-                  <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>
-                    sent {p.sent} · viewed {p.viewed} · {p.accepted}/{p.sections} sections accepted
+                  <div className="proposal-row-card__company">{p.co}</div>
+                  <div className="mono proposal-row-card__sub">
+                    {proposalActivityLine(p)}
                   </div>
                 </div>
-                <div style={{textAlign:'right'}}>
-                  <div className="mono num" style={{fontSize:18, fontWeight:700, fontFamily:'var(--font-display)'}}>{p.amount}</div>
+                <div className="proposal-row-card__amount">
+                  <div className="mono num proposal-row-card__value">{p.amount}</div>
                   <div className="eyebrow">value</div>
                 </div>
               </div>
@@ -1984,15 +2585,17 @@ function ProposalsPage({ setRoute }) {
           </div>
         </Card>
 
-        <div className="vstack" style={{gap:18}}>
+        <div className="vstack proposal-detail-stack" style={{gap:18}}>
           <Card title={`detail · ${active.id}`} accent={active.blockers.length > 0 ? 'violet' : 'accent'}>
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14}}>
-              <div>
-                <div style={{fontSize:18, fontWeight:700, fontFamily:'var(--font-display)'}}>{active.co}</div>
-                <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>{active.id} · owner {active.owner}</div>
+            <div className="proposal-detail-summary">
+              <div className="proposal-detail-summary__copy">
+                <div className="proposal-detail-summary__company">{active.co}</div>
+                <div className="mono proposal-detail-summary__meta">
+                  {proposalDetailMeta(active)}
+                </div>
               </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontFamily:'var(--font-display)', fontSize:32, fontWeight:800, color:'var(--accent-fg)'}}>{active.amount}</div>
+              <div className="proposal-detail-summary__amount">
+                <div className="proposal-detail-summary__value">{active.amount}</div>
                 <div className="eyebrow">annual</div>
               </div>
             </div>
@@ -2035,25 +2638,44 @@ function ProposalsPage({ setRoute }) {
                 </div>
               );
             })()}
-            <div style={{display:'flex', gap:8, marginTop:14}}>
-              <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={openProposalReview}><I3.Eye size={12}/>Review packet</button>
-              <button className="btn btn--ghost btn--sm" style={{flex:1}} data-testid="proposal-resend-open" onClick={openResend}><I3.Mail size={12}/>{resentProposals[active.id] ? 'Re-send again' : 'Re-send'}</button>
+            <div className="proposal-detail-actions">
+              <button className="btn btn--ghost btn--sm" onClick={openProposalReview}><I3.Eye size={12}/>Review packet</button>
+              <button
+                className={`btn btn--ghost btn--sm ${!activeSendReady ? 'proposal-send-held-button' : ''}`}
+                data-testid="proposal-resend-open"
+                data-send-gate={activeSendGateState}
+                data-pending-sections={activePendingSectionCount}
+                aria-describedby={!activeSendReady ? 'proposal-send-gate-note' : undefined}
+                title={!activeSendReady ? activeSendHoldReason : 'Open buyer re-send form'}
+                onClick={openResend}
+              ><I3.Mail size={12}/>{activeSendButtonLabel}</button>
               {(() => (
                 <button
                   className="btn btn--primary btn--sm"
-                  style={{flex:1}}
                   data-testid="proposal-address-blockers"
                   data-blocker-count={activeBlockerCount}
                   disabled={activeBlockerCount === 0}
-                  title={activeBlockerCount === 0 ? 'No open blockers — nothing to address' : `${activeBlockerCount} blocker${activeBlockerCount === 1 ? '' : 's'} to address`}
+                  title={activeBlockerCount === 0 ? 'No open blockers — nothing to address' : `Open Generate with ${activeBlockerCount} blocker${activeBlockerCount === 1 ? '' : 's'} carried into a revised review packet`}
                   onClick={addressBlockers}
                 >{activeBlockerCount > 0 ? `Address blockers · ${activeBlockerCount}` : 'No blockers to address'}</button>
               ))()}
             </div>
+            {!activeSendReady && (
+              <div id="proposal-send-gate-note" className="proposal-send-gate-note" data-testid="proposal-send-gate-note">
+                {activeSendGateNote}
+              </div>
+            )}
           </Card>
 
           {proposalWorkflow && (
-            <div className="workflow-popout workflow-popout--single" role="region" aria-label="Proposal workflow panel">
+            <div
+              ref={proposalWorkflowRef}
+              className="workflow-popout workflow-popout--single"
+              role="region"
+              aria-label="Proposal workflow panel"
+              tabIndex={-1}
+              data-testid={proposalWorkflow.kind === 'viewer' ? 'proposal-review-panel' : undefined}
+            >
               <div className="workflow-popout__pane">
                 <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
                   <div>
@@ -2064,7 +2686,7 @@ function ProposalsPage({ setRoute }) {
                 </div>
                 <div className="muted" style={{fontSize:12}}>{proposalWorkflow.sub}</div>
                 {proposalWorkflow.kind === 'viewer' && (
-                  <div className="proposal-review" data-testid="proposal-review-panel">
+                  <div className="proposal-review">
                     <div className="artifact-review__packet" data-testid="proposal-review-packet">
                       <div>
                         <div className="eyebrow eyebrow--accent">review packet</div>
@@ -2098,8 +2720,13 @@ function ProposalsPage({ setRoute }) {
                           className="proposal-review__artifact"
                           data-testid="proposal-review-artifact"
                           data-active={selectedReviewArtifact.key === item.key ? 'true' : 'false'}
+                          data-preview-state={item.hasPreview ? 'available' : 'unavailable'}
                           aria-pressed={selectedReviewArtifact.key === item.key}
-                          aria-label={`Review ${item.label} artifact for ${active.id}`}
+                          aria-label={item.previewFallback
+                            ? (item.key === 'source'
+                              ? `Review sample source evidence preview for ${active.id}`
+                              : `Review sample PDF preview for ${active.id}`)
+                            : `${item.hasPreview ? 'Review' : item.hasArtifact ? 'Inspect manifest for' : 'Missing'} ${item.label} artifact for ${active.id}`}
                           onClick={() => setReviewArtifactKey(item.key)}
                         >
                           <div>
@@ -2107,12 +2734,19 @@ function ProposalsPage({ setRoute }) {
                             <Badge tone={item.state.includes('needs') ? 'warn' : item.state.includes('pending') ? 'neutral' : 'healthy'}>{item.state}</Badge>
                           </div>
                           <code>{item.sourcePath}</code>
-                          <span className="proposal-review__artifact-action">Review in console</span>
+                          <span className="proposal-review__artifact-action">{item.previewAction}</span>
+                          {item.previewCopy && <span className="proposal-review__artifact-note">{item.previewCopy}</span>}
                         </button>
                       ))}
                     </div>
                     <div className="artifact-drawer__review proposal-review__preview" data-testid="proposal-review-artifact-preview">
-                      {selectedReviewIsJson ? (
+                      {!selectedReviewHasPreview ? (
+                        <div className="lead-artifact-empty proposal-review__empty" data-testid="proposal-review-preview-unavailable">
+                          <strong>{selectedReviewArtifact.label} preview unavailable</strong>
+                          <span>{selectedReviewArtifact.unavailableCopy}</span>
+                          <code>{selectedReviewArtifact.sourcePath}</code>
+                        </div>
+                      ) : selectedReviewIsJson ? (
                         <>
                           {reviewArtifactState === 'loading' && (
                             <div className="lead-artifact-empty">Loading source evidence...</div>
@@ -2124,11 +2758,21 @@ function ProposalsPage({ setRoute }) {
                           )}
                         </>
                       ) : (
-                        <iframe title={`${active.co} ${selectedReviewArtifact.label} review preview`} src={selectedReviewArtifact.previewPath}></iframe>
+                        <iframe
+                          {...demoPdfFrameProps(`${active.co} ${selectedReviewArtifact.previewFallback ? 'sample PDF' : selectedReviewArtifact.label} review preview`, selectedReviewArtifact.previewPath)}
+                        ></iframe>
                       )}
                     </div>
                     <div className="artifact-drawer__actions">
-                      <button type="button" className="btn btn--ghost btn--sm" onClick={openResend}><I3.Mail size={12}/>Re-send from review</button>
+                      <button type="button" className="btn btn--ghost btn--sm" data-send-gate={activeSendGateState} onClick={openResend}><I3.Mail size={12}/>{activeSendReady ? 'Re-send from review' : 'Send held from review'}</button>
+                      {activeSendGateState === 'operator-review' && (
+                        <button
+                          type="button"
+                          className="btn btn--primary btn--sm"
+                          data-testid="proposal-review-accept-sections"
+                          onClick={acceptPendingSections}
+                        ><I3.Check size={12}/>Accept sections</button>
+                      )}
                       <button
                         type="button"
                         className="btn btn--primary btn--sm"
@@ -2138,6 +2782,50 @@ function ProposalsPage({ setRoute }) {
                         title={activeBlockerCount === 0 ? 'No open blockers — Generate handoff is unavailable' : `${activeBlockerCount} blocker${activeBlockerCount === 1 ? '' : 's'} carried into Generate`}
                         onClick={addressBlockers}
                       >{activeBlockerCount > 0 ? 'Address blockers in Generate' : 'No blockers to address'}</button>
+                    </div>
+                  </div>
+                )}
+                {proposalWorkflow.kind === 'send-hold' && (
+                    <div className="proposal-send-hold" data-testid="proposal-send-hold" role="status">
+                      <div className="proposal-send-hold__summary">
+                        <Badge tone="critical">buyer send held</Badge>
+                        <strong>{active.co} is not buyer-sendable yet.</strong>
+                        <p>{activeSendHoldReason}</p>
+                      </div>
+                    {activeBlockerCount > 0 ? (
+                      <div className="proposal-send-hold__blockers" aria-label="Blocking proposal issues">
+                        {activeBlockers.map((blocker, index) => (
+                          <div key={`${blocker}-${index}`} data-testid="proposal-send-hold-blocker">
+                            <span className="mono">{String(index + 1).padStart(2, '0')} ·</span>
+                            <strong>{blocker}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="proposal-send-hold__blockers" aria-label="Pending proposal review sections">
+                        <div data-testid="proposal-send-hold-review">
+                          <span className="mono">01 ·</span>
+                          <strong>{activePendingSectionCount} section{activePendingSectionCount === 1 ? '' : 's'} awaiting operator acceptance</strong>
+                        </div>
+                      </div>
+                    )}
+                    <div className="artifact-drawer__actions">
+                      <button type="button" className="btn btn--ghost btn--sm" onClick={openProposalReview}><I3.Eye size={12}/>Review packet</button>
+                      {activeBlockerCount > 0 ? (
+                        <button
+                          type="button"
+                          className="btn btn--primary btn--sm"
+                          data-testid="proposal-send-hold-address-blockers"
+                          onClick={addressBlockers}
+                        ><I3.Plus size={12}/>Address blockers in Generate</button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn--primary btn--sm"
+                          data-testid="proposal-send-hold-accept-sections"
+                          onClick={acceptPendingSections}
+                        ><I3.Check size={12}/>Accept sections</button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2244,7 +2932,7 @@ function ProposalsPage({ setRoute }) {
                   </div>
                   <div style={{fontSize:13}}>{s.n}</div>
                   <span className="mono" style={{fontSize:10, color:'var(--text-3)'}}>{s.who}</span>
-                  <Badge tone={s.status === 'accepted' ? 'healthy' : s.status === 'redline' ? 'critical' : 'neutral'}>{s.status}</Badge>
+                  <span className={`status-text status-text--${s.status === 'accepted' ? 'healthy' : s.status === 'redline' ? 'critical' : 'neutral'}`}>{s.status}</span>
                 </div>
               ))}
             </div>
@@ -3093,10 +3781,10 @@ function AccountSettings() {
               <div
                 key={rule.id}
                 className="workflow-tile"
-                data-testid="delivery-rule-tile"
-                data-rule-id={rule.id}
-                role="button"
-                tabIndex={0}
+	                data-testid="delivery-rule-tile"
+	                data-rule-id={rule.id}
+	                role="button"
+	                tabIndex={0}
                 aria-expanded={isOpen}
                 onClick={() => setActiveRuleId(isOpen ? null : rule.id)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveRuleId(isOpen ? null : rule.id); } }}
@@ -3640,6 +4328,7 @@ function GeneratePage({ setRoute }) {
   const [addressBlockersBanner, setAddressBlockersBanner] = React.useState(null);
   const [proposalV3Banner, setProposalV3Banner] = React.useState(null);
   const [newRunBanner, setNewRunBanner] = React.useState(null);
+  const [runStageIndex, setRunStageIndex] = React.useState(null);
   // Captures the most-recent handoff context so reviewInProposals can route
   // to the matching proposal even after the visible banner auto-clears on
   // reviewReady. Without this, the route handoff lost the buyer identity
@@ -3649,6 +4338,8 @@ function GeneratePage({ setRoute }) {
   const generationIdRef = React.useRef(0);
   const briefRef = React.useRef(null);
   const artifactPanelRef = React.useRef(null);
+  const artifactPreviewRef = React.useRef(null);
+  const hasBrief = Boolean(inputText.trim());
   const artifactIdSlug = (value) => {
     const slug = String(value || '')
       .toLowerCase()
@@ -3658,50 +4349,87 @@ function GeneratePage({ setRoute }) {
     return slug || 'proposal';
   };
   const activeHandoff = lastHandoffRef.current || {};
-  const reviewSubject = (() => {
+  const normalizeBuyerName = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const derivedBriefSubject = (() => {
+    const text = String(inputText || '');
+    const client = text.match(/^\s*CLIENT:\s*([^\n\r]+)/im)?.[1];
+    const subject = String(client || '').replace(/\s+/g, ' ').trim();
+    if (!subject) return '';
+    if (/^Acme HVAC Services$/i.test(subject)) return 'Acme HVAC';
+    return subject;
+  })();
+  const activeHandoffSubject = (() => {
     if (activeHandoff.kind === 'address-blockers') return activeHandoff.co || activeHandoff.proposalId || 'Proposal';
     if (activeHandoff.kind === 'proposal-v3' || activeHandoff.kind === 'new-run') return activeHandoff.callCo || activeHandoff.callId || 'Proposal';
+    return '';
+  })();
+  const activeHandoffApplies = Boolean(
+    activeHandoff.kind
+    && hasBrief
+    && (
+      !derivedBriefSubject
+      || normalizeBuyerName(derivedBriefSubject) === normalizeBuyerName(activeHandoffSubject)
+    ),
+  );
+  const effectiveHandoff = activeHandoffApplies ? activeHandoff : {};
+  const reviewSubject = (() => {
+    if (effectiveHandoff.kind === 'address-blockers') return effectiveHandoff.co || effectiveHandoff.proposalId || 'Proposal';
+    if (effectiveHandoff.kind === 'proposal-v3' || effectiveHandoff.kind === 'new-run') return effectiveHandoff.callCo || effectiveHandoff.callId || 'Proposal';
+    if (hasBrief) return derivedBriefSubject || 'Pasted buyer proof';
     return 'Acme HVAC';
   })();
   const reviewSignal = (() => {
-    if (activeHandoff.kind === 'address-blockers') {
-      const blockers = Array.isArray(activeHandoff.blockers) ? activeHandoff.blockers.length : 0;
+    if (effectiveHandoff.kind === 'address-blockers') {
+      const blockers = Array.isArray(effectiveHandoff.blockers) ? effectiveHandoff.blockers.length : 0;
       return blockers
         ? `${blockers} buyer ${blockers === 1 ? 'blocker' : 'blockers'} carried from proposal review`
         : 'proposal review requested without blocker detail';
     }
-    if (activeHandoff.kind === 'proposal-v3' || activeHandoff.kind === 'new-run') {
+    if (effectiveHandoff.kind === 'proposal-v3' || effectiveHandoff.kind === 'new-run') {
       const parts = [
-        activeHandoff.callId,
-        activeHandoff.callOutcome,
-        typeof activeHandoff.callScore === 'number' ? `${activeHandoff.callScore.toFixed(1)}/10 call score` : null,
+        effectiveHandoff.callId,
+        effectiveHandoff.callOutcome,
+        typeof effectiveHandoff.callScore === 'number' ? `${effectiveHandoff.callScore.toFixed(1)}/10 call score` : null,
       ].filter(Boolean);
       return parts.length > 0 ? parts.join(' · ') : 'qualified call context carried from the console';
     }
-    return '22% after-hours voicemail · 40% no-callback · pilot approved';
+    if (!hasBrief) return 'sample artifact preview only';
+    if (/after-hours calls go to voicemail/i.test(inputText)) return '22% after-hours voicemail · 40% no-callback · pilot approved';
+    return derivedBriefSubject ? 'buyer proof parsed from CLIENT line' : 'pasted buyer proof · local composer';
   })();
-  const reviewContextSource = activeHandoff.kind
+  const reviewContextSource = effectiveHandoff.kind
     ? 'console handoff · selected buyer context'
-    : 'sample brief · regional HVAC contractor · TX';
-  const reviewPacketId = activeHandoff.kind ? `run_${artifactIdSlug(reviewSubject)}` : 'run_acme_hvac';
+    : hasBrief
+      ? (derivedBriefSubject ? 'buyer proof · parsed CLIENT line' : 'buyer proof · local composer')
+      : 'sample brief · regional HVAC contractor · TX';
+  const isSampleArtifactPreview = !hasBrief && !effectiveHandoff.kind;
+  const reviewPacketId = isSampleArtifactPreview ? 'sample_acme_hvac' : `run_${artifactIdSlug(reviewSubject)}`;
   const focusBuyerBrief = React.useCallback(() => {
     requestAnimationFrame(() => {
       globalThis.scrollConsoleNodeIntoView?.(briefRef.current, { block: 'center' });
       briefRef.current?.focus({ preventScroll: true });
     });
   }, []);
+  const promptForBuyerProof = React.useCallback(() => {
+    setBriefError('Paste buyer context or load the HVAC sample before generating a review draft.');
+    focusBuyerBrief();
+  }, [focusBuyerBrief]);
   const invalidateDraftForBriefChange = React.useCallback(() => {
     if (!reviewReady && !isGenerating && !artifactPanel) return;
+    const hadDraftState = reviewReady || isGenerating;
     generationIdRef.current += 1;
     setIsGenerating(false);
     setReviewReady(false);
     setArtifactPanel(null);
     setArtifactPayload(null);
     setArtifactState('idle');
-    globalThis.toast('Draft review reset', {
-      sub: 'Buyer proof changed. Regenerate before opening Proposals.',
-      tone: 'warn',
-    });
+    setRunStageIndex(null);
+    if (hadDraftState) {
+      globalThis.toast('Draft review reset', {
+        sub: 'Buyer proof changed. Regenerate before opening Proposals.',
+        tone: 'warn',
+      });
+    }
   }, [artifactPanel, isGenerating, reviewReady]);
 
   // Clear handoff banners as soon as the operator successfully generates
@@ -3747,12 +4475,12 @@ function GeneratePage({ setRoute }) {
       const blockers = Array.isArray(extra.address_blockers_list) ? extra.address_blockers_list : [];
       if (!proposalId && blockers.length === 0) return;
       const prefilled = [
-        `CONTEXT: Drafting a revised proposal (${proposalId || 'next version'}) for ${co || 'the active buyer'}.`,
+        `CONTEXT: Drafting a revised proposal (${proposalId || 'selected proposal'}) for ${co || 'the active buyer'}.`,
         '',
         'OUTSTANDING BLOCKERS to address head-on in this draft:',
         ...blockers.map((b, i) => `  ${i + 1}. ${b}`),
         '',
-        'GOAL: Produce a v-next packet that proactively addresses each blocker (legal, scope, pricing) with explicit language buyers can review.',
+        'GOAL: Produce a revised review packet that proactively addresses each blocker (legal, scope, pricing) with explicit language buyers can review.',
       ].join('\n');
       setInputText(prefilled);
       setBriefError('');
@@ -3769,7 +4497,7 @@ function GeneratePage({ setRoute }) {
     return globalThis.AppContext.subscribe(applyAddressBlockersHandoff);
   }, []);
 
-  // Consume the "Generate proposal v3" handoff from CallsPage. Pre-fills
+  // Consume the revised-proposal handoff from CallsPage. Pre-fills
   // the brief textarea with the active call's metadata so the toast's
   // "agent-02 context carries this call" claim is actually true.
   React.useEffect(() => {
@@ -3784,7 +4512,7 @@ function GeneratePage({ setRoute }) {
       const callDuration = String(extra.proposal_v3_call_duration || '').trim();
       if (!callId && !callCo) return;
       const prefilled = [
-        `CONTEXT: Generating proposal v3 from ${callId || 'most recent call'} with ${callCo || 'the active buyer'}.`,
+        `CONTEXT: Generating a revised proposal from ${callId || 'most recent call'} with ${callCo || 'the active buyer'}.`,
         '',
         `Call signal:`,
         `  · who: ${callWho || 'buyer stakeholder'}`,
@@ -3862,57 +4590,148 @@ function GeneratePage({ setRoute }) {
   }, []);
 
   const isDemoArtifactMode = Boolean(globalThis.DEMO_MODE);
-  const artifactMode = isDemoArtifactMode ? 'demo sequence' : 'live backend';
+  const artifactMode = isDemoArtifactMode ? 'local sample replay' : 'live backend';
+  const previewArtifactStatus = isSampleArtifactPreview ? 'sample review artifact' : 'preview artifact';
+  const previewPdfTitle = isSampleArtifactPreview
+    ? 'Sample HVAC review packet preview'
+    : `${reviewSubject} proposal packet preview`;
+  const previewSourceTitle = isSampleArtifactPreview
+    ? 'Sample HVAC source packet preview'
+    : `${reviewSubject} source artifact preview`;
+  const pdfPreviewSummary = reviewReady
+    ? (isDemoArtifactMode
+      ? `Sample-backed ${reviewSubject} packet replayed through the local trace. The review gate, audit trace, and proposal handoff are real console behavior; buyer send remains blocked.`
+      : 'Seven-page branded proposal packet generated from this run. Review pricing, scope, and the AI risk report before buyer send.')
+    : isSampleArtifactPreview
+      ? 'Sample review packet for inspecting the approval path. Load buyer proof before generating a buyer-specific draft.'
+      : `Local ${reviewSubject} review artifact preview. Run the sequence before treating it as a generated draft.`;
+  const sourcePreviewSummary = reviewReady
+    ? (isDemoArtifactMode
+      ? `Sample-backed evidence bundle replayed through the local trace with ${reviewSubject} review metadata. Use it to inspect the review path; live runs replace this with backend-generated source evidence.`
+      : 'Transcript, extracted buyer context, pricing inputs, and checks bound to the generated proposal draft.')
+    : isSampleArtifactPreview
+      ? 'Sample source packet for inspecting the review evidence path. Load buyer proof before generating buyer-specific evidence.'
+      : `Local source packet for ${reviewSubject}. Run the sequence before treating it as generated evidence.`;
+  const pdfArtifactLinkLabel = reviewReady
+    ? 'Review draft PDF artifact'
+    : isSampleArtifactPreview
+      ? 'Review packet preview'
+      : 'Review PDF preview';
+  const sourceArtifactLinkLabel = reviewReady
+    ? 'Inspect draft source evidence'
+    : isSampleArtifactPreview
+      ? 'Inspect source evidence'
+      : 'Inspect source evidence preview';
+  const reviewPacketCopy = isSampleArtifactPreview
+    ? 'Use the review packet preview to inspect the approval path before loading buyer proof.'
+    : reviewReady
+      ? 'Review the generated PDF and source evidence before routing the draft into Proposals for operator approval.'
+      : 'Review the packet preview only. Run the sequence to bind buyer proof, audit trace, and source evidence before Proposals.';
+  const reviewStateCopy = reviewReady
+    ? 'Draft is ready for operator review.'
+      : isGenerating
+        ? 'Sequence is running. Keep the PDF/source preview local until the draft gate completes.'
+        : isSampleArtifactPreview
+          ? 'Review packet preview is available for path inspection. Load buyer proof to unlock a buyer-specific draft.'
+          : 'Review packet preview is local only. Run the sequence to bind buyer proof before Proposals.';
+  const generatedPdfArtifactPath = `review/${reviewPacketId}/proposal.pdf`;
+  const generatedSourceArtifactPath = `review/${reviewPacketId}/source-evidence.json`;
   const artifacts = {
     pdf: {
       kind: 'PDF',
-      title: reviewReady ? `${reviewSubject} proposal draft` : `${reviewSubject} proposal packet preview`,
-      path: '../assets/sample-proposal.pdf',
+      title: reviewReady ? `${reviewSubject} proposal draft` : previewPdfTitle,
+      path: reviewReady ? generatedPdfArtifactPath : '../assets/sample-proposal.pdf',
+      previewPath: '../assets/sample-proposal.pdf',
+      pathLabel: reviewReady
+        ? (isDemoArtifactMode ? 'demo PDF review artifact · sample-backed PDF review artifact' : 'generated PDF review artifact')
+        : isSampleArtifactPreview
+          ? 'sample PDF review preview'
+          : 'PDF review preview',
+      pathDetail: reviewReady
+        ? (isDemoArtifactMode
+          ? 'Run-specific artifact identity is bound here; the local sample PDF preview stays inside the review drawer for inspection.'
+          : 'The packet id, artifact path, gate, and source evidence bind this draft before it can move to buyer send.')
+        : isSampleArtifactPreview
+          ? 'Synthetic sample for checking the review path before any buyer proof is loaded.'
+          : 'Review preview only; run the sequence to bind buyer proof and audit evidence.',
       artifactId: reviewPacketId,
       sourceLabel: 'branded PDF renderer',
-      previewTitle: `${reviewReady ? 'Generated' : 'Local'} proposal PDF review preview`,
-      status: reviewReady ? (isDemoArtifactMode ? 'demo draft ready' : 'draft ready') : 'preview artifact',
+      previewTitle: reviewReady
+        ? 'Generated proposal PDF review preview'
+        : isSampleArtifactPreview
+          ? 'Sample proposal PDF review preview'
+          : 'Local proposal PDF review preview',
+      status: reviewReady ? 'draft ready' : previewArtifactStatus,
       gate: reviewReady ? 'operator_review' : 'sequence_required',
       mode: artifactMode,
-      summary: reviewReady
-        ? (isDemoArtifactMode
-          ? `Demo-generated ${reviewSubject} packet replayed from the bundled fixture. The review gate, audit trace, and proposal handoff are real console behavior; buyer send remains blocked.`
-          : 'Seven-page branded proposal packet generated from this run. Review pricing, scope, and the AI risk report before buyer send.')
-        : `Fixture-backed ${reviewSubject} review artifact preview. Run the sequence before treating it as a live draft.`,
+      summary: pdfPreviewSummary,
     },
     json: {
       kind: 'JSON',
-      title: reviewReady ? `${reviewSubject} source evidence bundle` : `${reviewSubject} source artifact preview`,
-      path: '../fixtures/transcripts/sample-proposal.json',
+      title: reviewReady ? `${reviewSubject} source evidence bundle` : previewSourceTitle,
+      path: reviewReady ? generatedSourceArtifactPath : '../fixtures/transcripts/sample-proposal.json',
+      previewPath: '../fixtures/transcripts/sample-proposal.json',
+      pathLabel: reviewReady
+        ? (isDemoArtifactMode ? 'demo source evidence artifact · sample-backed source evidence artifact' : 'generated source evidence artifact')
+        : isSampleArtifactPreview
+          ? 'sample source evidence preview'
+          : 'source evidence review preview',
+      pathDetail: reviewReady
+        ? (isDemoArtifactMode
+          ? 'Run-specific source artifact identity is bound here; the local sample evidence preview stays inside the review drawer.'
+          : 'Review metadata, extraction inputs, and audit gate stay attached to the draft.')
+        : isSampleArtifactPreview
+          ? 'Synthetic source packet for checking the evidence review path before buyer-specific generation.'
+          : 'Review preview only; run the sequence to bind buyer proof and audit evidence.',
       artifactId: reviewPacketId,
       sourceLabel: 'buyer evidence bundle',
-      status: reviewReady ? (isDemoArtifactMode ? `demo-bound to ${reviewPacketId}` : `bound to ${reviewPacketId}`) : 'source preview',
+      status: reviewReady ? `bound to ${reviewPacketId}` : 'source preview',
       gate: reviewReady ? 'operator_review' : 'sequence_required',
       mode: artifactMode,
-      summary: reviewReady
-        ? (isDemoArtifactMode
-          ? `Demo evidence bundle replayed through the local fixture with ${reviewSubject} review metadata. Use it to inspect the review path; live runs replace this with backend-generated source evidence.`
-          : 'Transcript, extracted buyer context, pricing inputs, and checks bound to the generated proposal draft.')
-        : `Fixture-backed transcript and buyer context used for local source artifact preview before generation.`,
+      summary: sourcePreviewSummary,
     },
   };
   const activeArtifact = artifactPanel ? artifacts[artifactPanel] : null;
   const artifactSourcePreview = (() => {
     if (!activeArtifact) return null;
+    const loadedPayload = artifactPayload && typeof artifactPayload === 'object' ? artifactPayload : {};
+    const qualityGate = {
+      pricing_math: reviewReady ? 'checked' : 'pending',
+      risk_report: reviewReady ? 'checked' : 'pending',
+      pdf_polish: 'needs_review',
+      buyer_send: 'blocked_until_operator_review',
+    };
+    const reviewPreviewSource = {
+      source_path: activeArtifact.path,
+      proposal_id: loadedPayload.proposal_id || 'prop_demo_001',
+      revision: loadedPayload.revision || null,
+      sections: loadedPayload.sections ? Object.keys(loadedPayload.sections) : [],
+      note: loadedPayload._demo_note || 'Synthetic source packet used only for local review preview.',
+    };
+    if (!effectiveHandoff.kind && loadedPayload.title) {
+      reviewPreviewSource.title = loadedPayload.title;
+    }
     const base = {
       artifact_id: activeArtifact.artifactId,
       review_subject: reviewSubject,
       source_path: activeArtifact.path,
+      preview_path: activeArtifact.previewPath !== activeArtifact.path ? activeArtifact.previewPath : undefined,
       gate: activeArtifact.gate,
       buyer_send: 'blocked_until_operator_review',
+      quality_gate: qualityGate,
     };
-    if (!activeHandoff.kind) {
+    if (!effectiveHandoff.kind) {
       return {
         ...base,
-        evidence: artifactPayload || {},
+        evidence: {
+          packet_type: 'sample_review_source',
+          buyer: reviewSubject,
+          signal: reviewSignal,
+          context_source: reviewContextSource,
+          review_preview_source: reviewPreviewSource,
+        },
       };
     }
-    const loadedPayload = artifactPayload && typeof artifactPayload === 'object' ? artifactPayload : {};
     return {
       ...base,
       evidence: {
@@ -3921,20 +4740,14 @@ function GeneratePage({ setRoute }) {
         signal: reviewSignal,
         context_source: reviewContextSource,
         carried_handoff: {
-          kind: activeHandoff.kind,
-          call_id: activeHandoff.callId || null,
-          call_outcome: activeHandoff.callOutcome || null,
-          call_score: typeof activeHandoff.callScore === 'number' ? activeHandoff.callScore : null,
-          proposal_id: activeHandoff.proposalId || null,
-          blockers: Array.isArray(activeHandoff.blockers) ? activeHandoff.blockers : [],
+          kind: effectiveHandoff.kind,
+          call_id: effectiveHandoff.callId || null,
+          call_outcome: effectiveHandoff.callOutcome || null,
+          call_score: typeof effectiveHandoff.callScore === 'number' ? effectiveHandoff.callScore : null,
+          proposal_id: effectiveHandoff.proposalId || null,
+          blockers: Array.isArray(effectiveHandoff.blockers) ? effectiveHandoff.blockers : [],
         },
-        synthetic_fixture_shape: {
-          source_path: activeArtifact.path,
-          proposal_id: loadedPayload.proposal_id || 'prop_demo_001',
-          revision: loadedPayload.revision || null,
-          sections: loadedPayload.sections ? Object.keys(loadedPayload.sections) : [],
-          note: loadedPayload._demo_note || 'Synthetic fixture used only for local preview shape.',
-        },
+        review_preview_source: reviewPreviewSource,
       },
     };
   })();
@@ -3942,6 +4755,7 @@ function GeneratePage({ setRoute }) {
     if (!artifactPanel) return undefined;
     const frame = requestAnimationFrame(() => {
       globalThis.scrollConsoleNodeIntoView?.(artifactPanelRef.current, { block: 'start' });
+      artifactPanelRef.current?.focus?.({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
   }, [artifactPanel]);
@@ -3953,7 +4767,7 @@ function GeneratePage({ setRoute }) {
     }
     let cancelled = false;
     setArtifactState('loading');
-    fetch(activeArtifact.path)
+    fetch(activeArtifact.previewPath || activeArtifact.path)
       .then(res => res.ok ? res.json() : Promise.reject(new Error(`${res.status} ${res.statusText || 'artifact unavailable'}`)))
       .then(data => {
         if (cancelled) return;
@@ -3972,9 +4786,8 @@ function GeneratePage({ setRoute }) {
         setArtifactState('error');
       });
     return () => { cancelled = true; };
-  }, [activeArtifact?.kind, activeArtifact?.path, activeArtifact?.artifactId, activeArtifact?.gate]);
+  }, [activeArtifact?.kind, activeArtifact?.path, activeArtifact?.previewPath, activeArtifact?.artifactId, activeArtifact?.gate]);
 
-  const hasBrief = Boolean(inputText.trim());
   const draftButtonLabel = isGenerating
     ? 'Generating draft'
     : reviewReady
@@ -3989,6 +4802,16 @@ function GeneratePage({ setRoute }) {
       : hasBrief
         ? 'Generate review draft'
         : 'Add buyer proof first';
+  const reviewCtaLockReason = reviewReady
+    ? ''
+    : isGenerating
+      ? 'Sequence is running. Proposals review unlocks after pipeline.done.'
+      : hasBrief
+        ? 'Generate the review draft to unlock Proposals review.'
+        : 'Add buyer proof, then generate the review draft to unlock Proposals review.';
+  const reviewPathLockReason = reviewReady
+    ? ''
+    : `Draft gate locked: ${reviewCtaLockReason}`;
   const sequenceSteps = [
     {
       n: '01',
@@ -3996,6 +4819,11 @@ function GeneratePage({ setRoute }) {
       sub: 'Call notes, CRM context, transcript, constraints.',
       state: hasBrief ? 'ready' : 'missing',
       tone: hasBrief ? 'healthy' : 'neutral',
+      action: {
+        label: hasBrief ? 'Edit proof' : 'Add proof',
+        onClick: hasBrief ? focusBuyerBrief : promptForBuyerProof,
+        describedBy: hasBrief ? undefined : 'generate-brief-required-note',
+      },
     },
     {
       n: '02',
@@ -4015,30 +4843,82 @@ function GeneratePage({ setRoute }) {
   const reviewPathSteps = [
     {
       key: 'artifact',
-      label: 'Artifact',
-      detail: reviewReady ? `${reviewPacketId} review artifact available locally.` : 'Open local artifact previews before routing to the approval gate.',
+      label: 'Review artifact',
+      detail: reviewReady
+        ? `${reviewPacketId} review artifact available locally.`
+        : isSampleArtifactPreview
+          ? 'Review the sample packet preview before loading buyer proof.'
+          : 'Review packet preview only; inspect local PDF/source evidence, then run the sequence before Proposals.',
       state: activeArtifact ? 'active' : reviewReady ? 'ready' : 'available',
       action: reviewReady
-        ? { key: 'open-artifact-draft', label: 'Open draft PDF' }
-        : { key: 'open-artifact-preview', label: 'Open PDF preview' },
+        ? { key: 'review-artifact-draft', label: 'Review draft PDF', artifactKind: 'pdf', ariaLabel: 'Path shortcut: review draft PDF' }
+        : {
+            key: 'review-artifact-preview',
+            label: isSampleArtifactPreview ? 'Review sample packet' : 'Inspect packet preview',
+            artifactKind: 'pdf',
+            ariaLabel: isSampleArtifactPreview
+              ? 'Path shortcut: review sample packet'
+              : 'Path shortcut: inspect packet preview',
+          },
     },
     {
       key: 'review',
-      label: 'Review',
-      detail: reviewReady ? 'Operator approval in Proposals.' : 'Draft gate locked.',
+      label: 'Operator approval',
+      detail: reviewReady ? 'Open Proposals on this draft; buyer send remains gated there.' : reviewPathLockReason,
       state: reviewReady ? 'ready' : 'locked',
       action: reviewReady ? { key: 'open-proposals-review', label: 'Open review' } : null,
     },
     {
       key: 'send',
-      label: 'Send',
-      detail: 'Buyer send blocked until approved.',
+      label: 'Buyer send',
+      detail: 'Buyer send blocked until approved by a Proposals operator.',
+      state: 'blocked',
+    },
+  ];
+  const reviewPathStepTone = (state) => {
+    if (state === 'blocked') return 'critical';
+    if (state === 'ready' || state === 'active' || state === 'available') return 'accent';
+    return 'neutral';
+  };
+  const runFacts = [
+    {
+      key: 'proof',
+      label: 'buyer proof',
+      value: hasBrief ? 'loaded' : 'missing',
+      detail: hasBrief ? reviewSignal : 'paste proof or use sample',
+      state: hasBrief ? 'ready' : 'missing',
+    },
+    {
+      key: 'buyer',
+      label: 'active buyer',
+      value: hasBrief ? reviewSubject : 'none loaded',
+      detail: hasBrief ? reviewContextSource : 'no sample or handoff selected',
+      state: hasBrief ? 'ready' : 'missing',
+    },
+    {
+      key: 'packet',
+      label: 'review packet',
+      value: hasBrief ? reviewPacketId : 'sample packet',
+      detail: reviewReady ? 'draft artifact ready' : hasBrief ? 'local preview until run completes' : 'review path only',
+      state: reviewReady ? 'ready' : 'preview',
+    },
+    {
+      key: 'send',
+      label: 'buyer send',
+      value: 'blocked',
+      detail: 'requires Proposals approval',
       state: 'blocked',
     },
   ];
 
-  const openArtifact = (kind) => {
-    setArtifactPanel(kind);
+  const toggleArtifact = (kind) => {
+    setArtifactPanel(current => current === kind ? null : kind);
+  };
+  const focusArtifactPreview = () => {
+    requestAnimationFrame(() => {
+      globalThis.scrollConsoleNodeIntoView?.(artifactPreviewRef.current, { block: 'nearest' });
+      artifactPreviewRef.current?.focus?.({ preventScroll: true });
+    });
   };
   const copyReviewPacketId = async (artifact) => {
     if (!artifact?.artifactId) return;
@@ -4049,6 +4929,78 @@ function GeneratePage({ setRoute }) {
       globalThis.toast('Review packet ID', { sub: artifact.artifactId, tone:'accent' });
     }
   };
+  const normalizeReviewLookup = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  const reviewLookupMatches = (candidate) => {
+    const needle = normalizeReviewLookup(reviewSubject);
+    const haystack = normalizeReviewLookup(candidate);
+    if (!needle || !haystack) return false;
+    if (haystack.includes(needle) || needle.includes(haystack)) return true;
+    const tokens = needle.split(' ').filter(token => token.length > 3);
+    if (tokens.length === 0) return false;
+    return tokens.some(token => haystack.includes(token));
+  };
+  const generatedReviewAmount = () => {
+    const artifactTotal = Number(artifactPayload?.sections?.pricing?.total);
+    if (Number.isFinite(artifactTotal) && artifactTotal > 0) {
+      return formatProposalTotal(artifactTotal / 1000);
+    }
+    const matchingCompany = (globalThis.GTM.companies || [])
+      .find(c => reviewLookupMatches(`${c.id || ''} ${c.name || ''}`));
+    if (matchingCompany?.dealSize) return matchingCompany.dealSize;
+    const matchingProposal = (globalThis.GTM.proposals || [])
+      .find(p => reviewLookupMatches(`${p.id || ''} ${p.co || ''}`) && !/tbd|pricing pending/i.test(String(p.amount || '')));
+    if (matchingProposal?.amount) return matchingProposal.amount;
+    return 'pricing pending';
+  };
+  const buildGeneratedReviewProposal = () => {
+    const generatedId = `GEN-${artifactIdSlug(reviewSubject).replace(/_/g, '-').slice(0, 32)}`;
+    return {
+      id: generatedId,
+      co: reviewSubject,
+      owner: 'agent-02',
+      stage: 'drafting',
+      amount: generatedReviewAmount(),
+      sections: 5,
+      accepted: 0,
+      sent: 'local draft',
+      viewed: 'not sent',
+      blockers: [],
+      executionId: reviewPacketId,
+      projectName: `${reviewSubject} proposal review draft`,
+      riskScore: null,
+      auditScore: null,
+      artifacts: [
+        {
+          type: 'pdf',
+          path: `review/${reviewPacketId}/proposal.pdf`,
+          webPath: artifacts.pdf.path,
+        },
+        {
+          type: 'json',
+          path: `review/${reviewPacketId}/source-evidence.json`,
+          webPath: artifacts.json.path,
+        },
+        {
+          type: 'pdf_internal',
+          path: `review/${reviewPacketId}/audit-report.pdf`,
+          webPath: artifacts.pdf.path,
+        },
+      ],
+    };
+  };
+  const upsertGeneratedReviewProposal = () => {
+    const proposals = Array.isArray(globalThis.GTM.proposals)
+      ? globalThis.GTM.proposals
+      : (globalThis.GTM.proposals = []);
+    const generated = buildGeneratedReviewProposal();
+    const existing = proposals.find(p => p.executionId === generated.executionId || p.id === generated.id);
+    if (existing) return existing;
+    proposals.unshift(generated);
+    return generated;
+  };
 
   const reviewInProposals = () => {
     // Prefer the most recently active handoff context to pick the matching
@@ -4057,23 +5009,37 @@ function GeneratePage({ setRoute }) {
     // when the operator had just generated a v3 from a different call or
     // addressed blockers on a different buyer's proposal.
     const proposals = globalThis.GTM.proposals || [];
-    const matchByName = (needle) => {
+    const matchByName = (needle, options = {}) => {
       if (!needle) return null;
       const n = String(needle).toLowerCase().split(/\s+/).find(Boolean);
       if (!n) return null;
-      return proposals.find(p => `${p.id} ${p.co}`.toLowerCase().includes(n)) || null;
+      const matches = proposals.filter(p => `${p.id} ${p.co}`.toLowerCase().includes(n));
+      if (options.excludeGenerated) {
+        return matches.find(p => !String(p.id || '').startsWith('GEN-')) || matches[0] || null;
+      }
+      return matches[0] || null;
     };
     const matchById = (id) => (id ? proposals.find(p => p.id === id) : null);
     // Read from lastHandoffRef rather than the live banner state — the
     // banners auto-clear when reviewReady becomes true, but the buyer
     // identity captured by the most-recent handoff is what should drive
     // the routing.
-    const handoff = lastHandoffRef.current || {};
+    const handoff = activeHandoffApplies ? (lastHandoffRef.current || {}) : {};
+    const hasReviewHandoff = Boolean(handoff.kind);
+    let generatedReviewProposal = null;
+    const ensureGeneratedReviewProposal = () => {
+      if (!reviewReady) return null;
+      if (!generatedReviewProposal) generatedReviewProposal = upsertGeneratedReviewProposal();
+      return generatedReviewProposal;
+    };
+    ensureGeneratedReviewProposal();
     const reviewProposal =
-      matchById(handoff.proposalId) ||
-      matchByName(handoff.co) ||
-      matchByName(handoff.callCo) ||
-      matchByName('acme') ||
+      (hasReviewHandoff ? matchById(handoff.proposalId) : null) ||
+      (hasReviewHandoff ? matchByName(handoff.co, { excludeGenerated: true }) : null) ||
+      (hasReviewHandoff ? matchByName(handoff.callCo, { excludeGenerated: true }) : null) ||
+      (!hasReviewHandoff ? ensureGeneratedReviewProposal() : null) ||
+      matchByName(reviewSubject) ||
+      ensureGeneratedReviewProposal() ||
       proposals.find(p => isOpenProposalStage(p.stage)) ||
       proposals[0];
     if (!reviewProposal) {
@@ -4085,6 +5051,7 @@ function GeneratePage({ setRoute }) {
       extra: {
         ...globalThis.AppContext.get().extra,
         generated_artifact_id: reviewPacketId,
+        generated_review_proposal: generatedReviewProposal,
         triggered_from: 'generate-artifact-review',
       },
     });
@@ -4106,6 +5073,36 @@ function GeneratePage({ setRoute }) {
     { delay: 180,  level: 'ok',   msg: `audit.signed: artifact_id=${reviewPacketId} · trace ok` },
     { delay: 220,  level: 'ok',   msg: 'pipeline.done: proposal ready for review →' },
   ];
+  const RUN_STAGE_LABELS = [
+    ['intake', 'Brief parsed', 'Buyer proof becomes a typed request.'],
+    ['extract-client', 'Client extracted', 'Account, stakeholder, and ask are named.'],
+    ['extract-signals', 'Signals extracted', 'Pain, urgency, budget, and constraints are separated.'],
+    ['enrichment-context', 'Context enriched', 'CRM and console handoff context are attached.'],
+    ['enrichment-icp', 'ICP checked', 'Fit and routing confidence are scored.'],
+    ['pricing', 'Pricing modeled', 'Pilot band, payback, and margin assumptions are set.'],
+    ['compliance', 'Compliance scanned', 'Recording, scope, and risk flags are surfaced.'],
+    ['scope', 'Scope drafted', 'SOW phases and acceptance gates are assembled.'],
+    ['pdf', 'PDF rendered', 'Brand template produces the review packet.'],
+    ['audit', 'Audit signed', 'Artifact ID and trace are bound together.'],
+    ['ready', 'Review unlocked', 'Proposals receives the operator approval handoff.'],
+  ];
+  const runStageState = (index) => {
+    if (reviewReady || runStageIndex >= RUN_STAGE_LABELS.length) return 'complete';
+    if (isGenerating) {
+      if (runStageIndex == null) return index === 0 ? 'running' : 'queued';
+      if (index < runStageIndex) return 'complete';
+      if (index === runStageIndex) return 'running';
+      return 'queued';
+    }
+    if (hasBrief) return index === 0 ? 'ready' : 'queued';
+    return 'locked';
+  };
+  const runStageTone = (state) => {
+    if (state === 'complete') return 'healthy';
+    if (state === 'running') return 'warn';
+    if (state === 'ready') return 'accent';
+    return 'neutral';
+  };
 
   const stream = (msg, level = 'info') => {
     globalThis.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg, level } }));
@@ -4113,9 +5110,8 @@ function GeneratePage({ setRoute }) {
 
   const handleGenerate = async () => {
     if (!inputText.trim()) {
-      setBriefError('Paste buyer context or load the HVAC sample before generating a review draft.');
-      focusBuyerBrief();
-      return globalThis.toast('Input required', { sub: 'Buyer proof is required before the draft engine runs.', tone: 'critical' });
+      promptForBuyerProof();
+      return;
     }
     const generationId = generationIdRef.current + 1;
     generationIdRef.current = generationId;
@@ -4125,10 +5121,11 @@ function GeneratePage({ setRoute }) {
     setArtifactPanel(null);
     setArtifactPayload(null);
     setArtifactState('idle');
+    setRunStageIndex(0);
     globalThis.dispatchEvent(new CustomEvent('gtm:stream-reset'));
     stream('pipeline.start: review draft requested · validating buyer brief');
     const payload = JSON.stringify({ input: inputText });
-    stream(`request.posting: POST /api/generate · ${payload.length} bytes${globalThis.DEMO_MODE ? ' · DEMO_MODE' : ''}`);
+    stream(`request.posting: POST /api/generate · ${payload.length} bytes${globalThis.DEMO_MODE ? ' · local sample replay' : ''}`);
     globalThis.toast('Sequence Initializing...', { tone: 'accent' });
     const generateRequest = () => fetch('/api/generate', {
       method: 'POST',
@@ -4137,16 +5134,18 @@ function GeneratePage({ setRoute }) {
     });
     const replayDemoSequence = () => {
       let cumulative = 0;
-      for (const evt of DEMO_STREAM) {
+      for (const [index, evt] of DEMO_STREAM.entries()) {
         cumulative += evt.delay;
         setTimeout(() => {
           if (generationIdRef.current !== generationId) return;
+          setRunStageIndex(index + 1);
           globalThis.dispatchEvent(new CustomEvent('gtm:stream', { detail: { msg: evt.msg, level: evt.level } }));
         }, cumulative);
       }
       setTimeout(() => {
         if (generationIdRef.current !== generationId) return;
         stream(`pipeline.complete: artifact_id=${reviewPacketId} · 7 pages · ready for review`, 'ok');
+        setRunStageIndex(DEMO_STREAM.length);
         setIsGenerating(false);
         setReviewReady(true);
         globalThis.toast('Proposal generated', { sub: `${reviewSubject} · 7 pages · ready to review`, tone: 'accent' });
@@ -4178,8 +5177,10 @@ function GeneratePage({ setRoute }) {
       // still unlocks the review surface after a short grace period so the
       // operator is not trapped behind transport latency.
       stream('pipeline.live: backend stream open — events will appear above', 'info');
+      setRunStageIndex(2);
       setTimeout(() => {
         if (generationIdRef.current !== generationId) return;
+        setRunStageIndex(DEMO_STREAM.length);
         setIsGenerating(false);
         setReviewReady(true);
       }, 1500);
@@ -4190,8 +5191,16 @@ function GeneratePage({ setRoute }) {
       setIsGenerating(false);
     }
   };
+  const handleDraftAction = () => {
+    if (!hasBrief) {
+      promptForBuyerProof();
+      return;
+    }
+    void handleGenerate();
+  };
 
-  const autoSample = async () => {
+  const autoSample = async (options = {}) => {
+    const shouldFocus = options.focus === true;
     try {
       const res = await fetch('/fixtures/sample.json');
       const data = await res.json();
@@ -4199,14 +5208,40 @@ function GeneratePage({ setRoute }) {
         invalidateDraftForBriefChange();
         setInputText(data.text);
         setBriefError('');
-        focusBuyerBrief();
+        if (shouldFocus) focusBuyerBrief();
       }
     } catch (e) {
       invalidateDraftForBriefChange();
       setInputText("CLIENT: Acme HVAC Services\n\nCONTEXT: Regional HVAC contractor (~30 employees, residential + light commercial). 22% of after-hours calls go to voicemail; 40% of those callers do not call back the next day.\n\nGOAL: Voice agent that answers after-hours, gathers caller details (name, address, urgency, problem class), and SMS-routes urgency-tagged dispatches to the on-call tech.\n\nSTACK: HouseCallPro for dispatch, Twilio for inbound SMS, Outlook 365 calendars. No current AI surface.\n\nBUDGET SIGNAL: Comparable peers spending $1.5–2.5k/mo on dispatch tooling. Owner has approved 1 quarter pilot if ROI math holds (target payback < 6 months).\n\nCOMPLIANCE: No PHI. Standard call-recording disclosure required (TX two-party).\n\nDEMO ASK: Generate proposal + SOW + AI risk report.");
       setBriefError('');
-      focusBuyerBrief();
+      if (shouldFocus) focusBuyerBrief();
     }
+  };
+  const artifactPrimaryActionLabel = reviewReady
+    ? 'Continue review'
+    : isGenerating
+      ? 'Generating draft'
+      : hasBrief
+        ? 'Generate review draft'
+        : 'Use sample buyer proof';
+  const artifactPrimaryActionTitle = reviewReady
+    ? 'Open this generated review packet in Proposals'
+    : isGenerating
+      ? 'The draft engine is already running'
+      : hasBrief
+        ? 'Run the draft engine before opening Proposals review'
+        : 'Load the sample buyer proof so this preview can become a generated review draft';
+  const handleArtifactPrimaryAction = () => {
+    if (reviewReady) {
+      reviewInProposals();
+      return;
+    }
+    if (isGenerating) return;
+    if (hasBrief) {
+      void handleGenerate();
+      return;
+    }
+    void autoSample({ focus: false });
   };
 
   // Public-link auto-play: README and external CTAs deep-link to
@@ -4223,7 +5258,7 @@ function GeneratePage({ setRoute }) {
       autoPlayStateRef.current = 'loading-brief';
       url.searchParams.delete('demo');
       globalThis.history.replaceState(globalThis.history.state, '', `${url.pathname}${url.search}${url.hash}`);
-      autoSample();
+      autoSample({ focus: false });
     } catch (_) {
       /* URL API unavailable */
     }
@@ -4240,13 +5275,14 @@ function GeneratePage({ setRoute }) {
       <PageHeader
         eyebrow="proposal sequence"
         title="Generate Proposal"
-        sub="Paste buyer context, generate a review draft, and keep the operator gate in the console. Nothing sends until the draft is reviewed."
+        sub="Buyer proof, draft engine, local review artifact, then Proposals approval."
         actions={<>
-          <button className="btn btn--ghost btn--sm" onClick={autoSample}><I3.Doc size={12}/>Use sample brief</button>
+          <button className="btn btn--ghost btn--sm" onClick={autoSample}><I3.Doc size={12}/>Use sample buyer proof</button>
           <button
             className="btn btn--primary btn--sm"
-            onClick={handleGenerate}
-            disabled={!hasBrief || isGenerating}
+            onClick={handleDraftAction}
+            disabled={isGenerating}
+            aria-controls={!hasBrief ? 'generate-buyer-brief' : undefined}
             aria-describedby={hasBrief ? undefined : 'generate-brief-required-note'}
             title={hasBrief ? undefined : 'Buyer proof is required before the draft engine runs.'}
           >
@@ -4254,6 +5290,25 @@ function GeneratePage({ setRoute }) {
           </button>
         </>}
       />
+
+      <section className="generate-run-status" aria-labelledby="generate-run-status-title">
+        <h2 id="generate-run-status-title" className="sr-only">Proposal run status</h2>
+        <div className="generate-run-strip" data-testid="generate-run-strip" aria-label="Proposal run status">
+          {runFacts.map(fact => (
+            <div
+              key={fact.key}
+              className="generate-run-fact"
+              data-state={fact.state}
+              data-testid={`generate-run-fact-${fact.key}`}
+              aria-label={`${fact.label}: ${fact.value}. ${fact.detail}`}
+            >
+              <span>{fact.label}</span>
+              <strong>{fact.value}</strong>
+              <small>{fact.detail}</small>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="generate-sequence" aria-label="Proposal generation sequence" data-testid="generate-sequence">
         {sequenceSteps.map(step => (
@@ -4263,14 +5318,25 @@ function GeneratePage({ setRoute }) {
               <strong>{step.title}</strong>
               <p>{step.sub}</p>
             </div>
+            {step.action && (
+              <button
+                type="button"
+                className="btn btn--ghost btn--xs generate-step__action"
+                aria-controls="generate-buyer-brief"
+                aria-describedby={step.action.describedBy}
+                onClick={step.action.onClick}
+              >
+                {step.action.label}
+              </button>
+            )}
             <Badge tone={step.tone}>{step.state}</Badge>
           </div>
         ))}
       </section>
 
       <div className="generate-grid">
-        <Card title="buyer brief" className="card--accent generate-brief-card">
-          {newRunBanner && (
+        <Card title="buyer proof" className="card--accent generate-brief-card">
+          {newRunBanner && activeHandoffApplies && effectiveHandoff.kind === 'new-run' && (
             <div className="generate-handoff-banner" data-testid="generate-new-run-banner" role="status" style={{
               padding: '10px 12px',
               marginBottom: 12,
@@ -4296,7 +5362,7 @@ function GeneratePage({ setRoute }) {
               >Dismiss banner</button>
             </div>
           )}
-          {addressBlockersBanner && (
+          {addressBlockersBanner && activeHandoffApplies && effectiveHandoff.kind === 'address-blockers' && (
             <div className="generate-handoff-banner" data-testid="generate-address-blockers-banner" role="status" style={{
               padding: '10px 12px',
               marginBottom: 12,
@@ -4327,7 +5393,7 @@ function GeneratePage({ setRoute }) {
               >Dismiss banner</button>
             </div>
           )}
-          {proposalV3Banner && (
+          {proposalV3Banner && activeHandoffApplies && effectiveHandoff.kind === 'proposal-v3' && (
             <div className="generate-handoff-banner" data-testid="generate-proposal-v3-banner" role="status" style={{
               padding: '10px 12px',
               marginBottom: 12,
@@ -4337,7 +5403,7 @@ function GeneratePage({ setRoute }) {
               fontSize: 12,
             }}>
               <div style={{fontWeight: 700, marginBottom: 4}}>
-                Generating proposal v3 from {proposalV3Banner.callId || 'active call'}
+                Generating revised proposal from {proposalV3Banner.callId || 'active call'}
                 {proposalV3Banner.callCo ? ` · ${proposalV3Banner.callCo}` : ''}
               </div>
               <div className="muted" data-testid="generate-proposal-v3-summary">
@@ -4354,6 +5420,7 @@ function GeneratePage({ setRoute }) {
             </div>
           )}
           <textarea
+            id="generate-buyer-brief"
             ref={briefRef}
             value={inputText}
             onChange={e => {
@@ -4368,11 +5435,12 @@ function GeneratePage({ setRoute }) {
           />
           {briefError && <div id="generate-brief-error" className="generate-brief-error" role="alert">{briefError}</div>}
           <div className="generate-actions">
-            <button className="btn btn--ghost btn--sm" onClick={autoSample}>Load HVAC sample</button>
+            <button className="btn btn--ghost btn--sm" onClick={autoSample}>Use sample buyer proof</button>
             <button
               className="btn btn--primary btn--sm"
-              onClick={handleGenerate}
-              disabled={!hasBrief || isGenerating}
+              onClick={handleDraftAction}
+              disabled={isGenerating}
+              aria-controls={!hasBrief ? 'generate-buyer-brief' : undefined}
               aria-describedby={hasBrief ? undefined : 'generate-brief-required-note'}
               title={hasBrief ? undefined : 'Buyer proof is required before the draft engine runs.'}
             >
@@ -4383,15 +5451,45 @@ function GeneratePage({ setRoute }) {
         </Card>
 
         <Card title="sequence trace" className="generate-trace-card">
+          <div className="generate-runtime-map" data-testid="generate-runtime-map" aria-label="Eleven step proposal pipeline">
+            {RUN_STAGE_LABELS.map(([key, label, detail], index) => {
+              const state = runStageState(index);
+              return (
+                <div
+                  key={key}
+                  className="generate-runtime-stage"
+                  data-testid="generate-runtime-stage"
+                  data-stage-key={key}
+                  data-state={state}
+                >
+                  <span className="generate-runtime-stage__index">{String(index + 1).padStart(2, '0')}</span>
+                  <div>
+                    <strong>{label}</strong>
+                    <p>{detail}</p>
+                  </div>
+                  <Badge tone={runStageTone(state)}>{state}</Badge>
+                </div>
+              );
+            })}
+          </div>
           <window.ConsolePanel title="live · pipeline.stream" lines={null} useLiveStream={true} />
         </Card>
 
         <Card
           title="artifact review"
           action={
-            <button className="btn btn--primary btn--sm generate-review-cta" disabled={!reviewReady} onClick={reviewInProposals}>
-              Review in Proposals
-            </button>
+            <div className="generate-review-cta-wrap">
+              <button
+                className="btn btn--primary btn--sm generate-review-cta"
+                disabled={!reviewReady}
+                onClick={reviewInProposals}
+                aria-describedby={!reviewReady ? 'generate-review-cta-help' : undefined}
+                title={reviewCtaLockReason || undefined}
+              >
+                Review in Proposals
+              </button>
+              {!reviewReady && <span id="generate-review-cta-help" className="generate-review-cta-help">{reviewCtaLockReason}</span>}
+            </div>
           }
           accent={reviewReady ? 'accent' : undefined}
           className="generate-review-card"
@@ -4399,9 +5497,18 @@ function GeneratePage({ setRoute }) {
           <div className="artifact-review">
             <div className="artifact-review__state">
               <Badge tone={reviewReady ? 'healthy' : 'neutral'}>{reviewReady ? 'ready' : 'waiting'}</Badge>
-              <span>{reviewReady ? 'Draft is ready for operator review.' : 'Run the sequence to unlock the proposal review gate.'}</span>
+              <span>{reviewStateCopy}</span>
               {!reviewReady && (
-                <button type="button" className="btn btn--ghost btn--xs artifact-review__jump" onClick={focusBuyerBrief}>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--xs artifact-review__jump"
+                  aria-controls="generate-buyer-brief"
+                  aria-describedby={!hasBrief ? 'generate-brief-required-note' : undefined}
+                  onClick={() => {
+                    if (hasBrief) focusBuyerBrief();
+                    else promptForBuyerProof();
+                  }}
+                >
                   {hasBrief ? 'Edit buyer proof' : 'Add buyer proof'}
                 </button>
               )}
@@ -4419,10 +5526,13 @@ function GeneratePage({ setRoute }) {
                       type="button"
                       className="btn btn--ghost btn--xs artifact-review__path-action"
                       data-testid={`generate-review-path-action-${step.action.key}`}
-                      aria-pressed={step.action.key.includes('artifact') ? artifactPanel === 'pdf' : undefined}
+                      aria-label={step.action.ariaLabel}
+                      aria-controls={step.action.artifactKind ? 'generate-artifact-drawer' : undefined}
+                      aria-expanded={step.action.artifactKind ? artifactPanel === step.action.artifactKind : undefined}
+                      aria-pressed={step.action.artifactKind ? artifactPanel === step.action.artifactKind : undefined}
                       onClick={() => {
-                        if (step.action.key.includes('artifact')) {
-                          openArtifact('pdf');
+                        if (step.action.artifactKind) {
+                          toggleArtifact(step.action.artifactKind);
                         } else if (step.action.key === 'open-proposals-review') {
                           reviewInProposals();
                         }
@@ -4435,8 +5545,8 @@ function GeneratePage({ setRoute }) {
               ))}
             </div>
             <div className="artifact-review__links">
-              <button type="button" className="btn btn--ghost btn--sm" aria-pressed={artifactPanel === 'pdf'} onClick={() => openArtifact('pdf')}><I3.Doc size={12}/>{reviewReady ? 'Review draft PDF artifact' : 'Review local PDF artifact'}</button>
-              <button type="button" className="btn btn--ghost btn--sm" aria-pressed={artifactPanel === 'json'} onClick={() => openArtifact('json')}><I3.Bracket size={12}/>{reviewReady ? 'Inspect draft source evidence' : 'Inspect local source artifact'}</button>
+              <button type="button" className="btn btn--ghost btn--sm" aria-controls="generate-artifact-drawer" aria-expanded={artifactPanel === 'pdf'} aria-pressed={artifactPanel === 'pdf'} onClick={() => toggleArtifact('pdf')}><I3.Doc size={12}/>{pdfArtifactLinkLabel}</button>
+              <button type="button" className="btn btn--ghost btn--sm" aria-controls="generate-artifact-drawer" aria-expanded={artifactPanel === 'json'} aria-pressed={artifactPanel === 'json'} onClick={() => toggleArtifact('json')}><I3.Bracket size={12}/>{sourceArtifactLinkLabel}</button>
             </div>
             <div className="artifact-review__quality">
               {[
@@ -4454,7 +5564,7 @@ function GeneratePage({ setRoute }) {
               <div>
                 <div className="eyebrow eyebrow--accent">review packet</div>
                 <strong>Proposal, source evidence, and quality gate stay together.</strong>
-                <p>Use the local artifact previews before routing the draft into Proposals for operator approval.</p>
+                <p>{reviewPacketCopy}</p>
               </div>
             </div>
           </div>
@@ -4462,7 +5572,7 @@ function GeneratePage({ setRoute }) {
       </div>
 
       {activeArtifact && (
-        <div ref={artifactPanelRef} className="workflow-popout workflow-popout--single generate-artifact-panel" role="region" aria-label="Proposal artifact review drawer">
+        <div id="generate-artifact-drawer" ref={artifactPanelRef} className="workflow-popout workflow-popout--single generate-artifact-panel" role="region" aria-label="Proposal artifact review drawer" tabIndex={-1}>
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
@@ -4486,7 +5596,7 @@ function GeneratePage({ setRoute }) {
                   </div>
                   <div>
                     <span className="eyebrow">gate</span>
-                    <code className="mono">{activeArtifact.gate}</code>
+                    <code className="mono" data-testid="generate-artifact-gate">{activeArtifact.gate}</code>
                   </div>
                   <div>
                     <span className="eyebrow">artifact mode</span>
@@ -4494,21 +5604,38 @@ function GeneratePage({ setRoute }) {
                   </div>
                 </div>
                 <div className="artifact-drawer__source">
-                  <span className="eyebrow">local source path</span>
-                  <code className="artifact-drawer__path">{activeArtifact.path}</code>
+                  <span className="eyebrow">review source</span>
+                  <strong data-testid="generate-artifact-path-label">{activeArtifact.pathLabel}</strong>
+                  <code className="artifact-drawer__path" data-testid="generate-artifact-path">{reviewArtifactPathLabel(activeArtifact.path)}</code>
+                  <small>{activeArtifact.pathDetail}</small>
                 </div>
                 <div className="artifact-drawer__pathway" data-testid="generate-artifact-review-path">
                   {reviewPathSteps.map((step, idx) => (
-                    <div key={step.label} data-state={step.state}>
+                    <div
+                      key={step.label}
+                      data-state={step.state}
+                      data-testid={`generate-artifact-drawer-step-${step.key}`}
+                    >
                       <span className="artifact-review__path-index">{idx + 1}</span>
-                      <strong>{step.label}</strong>
+                      <div className="artifact-drawer__path-copy">
+                        <strong>{step.label}</strong>
+                        <p>{step.detail}</p>
+                      </div>
+                      <Badge tone={reviewPathStepTone(step.state)}>{step.state}</Badge>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="artifact-drawer__review">
+              <div
+                ref={artifactPreviewRef}
+                className="artifact-drawer__review"
+                role="region"
+                aria-label={`${activeArtifact.kind} review preview`}
+                data-testid="generate-artifact-review-preview"
+                tabIndex={-1}
+              >
                 {activeArtifact.kind === 'PDF' ? (
-                  <iframe title={activeArtifact.previewTitle || 'Proposal PDF review preview'} src={activeArtifact.path}></iframe>
+                  <iframe {...demoPdfFrameProps(activeArtifact.previewTitle || 'Proposal PDF review preview', activeArtifact.previewPath || activeArtifact.path)}></iframe>
                 ) : artifactState === 'loading' ? (
                   <div className="lead-artifact-empty">Loading source evidence...</div>
                 ) : (
@@ -4517,7 +5644,28 @@ function GeneratePage({ setRoute }) {
               </div>
               <div className="artifact-drawer__actions">
                 <button className="btn btn--ghost btn--sm" onClick={() => copyReviewPacketId(activeArtifact)}><I3.Doc size={12}/>Copy review packet ID</button>
-                <button className="btn btn--primary btn--sm" disabled={!reviewReady} onClick={reviewInProposals}>Continue review</button>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  data-testid="generate-focus-artifact-preview"
+                  aria-controls="generate-artifact-drawer"
+                  onClick={focusArtifactPreview}
+                >
+                  {activeArtifact.kind === 'PDF' ? <I3.Doc size={12}/> : <I3.Bracket size={12}/>}
+                  Focus {activeArtifact.kind === 'PDF' ? 'PDF' : 'source evidence'} preview
+                </button>
+                <button
+                  className="btn btn--primary btn--sm"
+                  data-testid="generate-artifact-primary-action"
+                  disabled={isGenerating}
+                  title={artifactPrimaryActionTitle}
+                  onClick={handleArtifactPrimaryAction}
+                >
+                  {artifactPrimaryActionLabel}
+                </button>
+                <span className="artifact-drawer__local-note" data-testid="generate-artifact-local-note">
+                  Preview stays inside the console drawer; artifact path is review metadata. {reviewReady ? 'Proposals review is now unlocked.' : hasBrief ? 'Generate the draft to unlock Proposals review.' : 'Load buyer proof to turn this sample into a review draft.'}
+                </span>
               </div>
             </div>
           </div>

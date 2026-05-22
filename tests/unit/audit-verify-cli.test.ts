@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'audit-verify.mjs');
+const bunExecutable = process.env.BUN_EXECUTABLE || 'bun';
 
 let testDbPath: string;
 let AuditLogger: any;
@@ -62,7 +63,7 @@ async function seedChain(rowCount: number) {
 function runCli(): { code: number; stdout: string; stderr: string } {
   // Use bun explicitly: lib/audit was migrated .js → .ts and node cannot resolve a `.js` specifier to a `.ts` source.
   try {
-    const stdout = execFileSync('bun', [scriptPath, `--db=${testDbPath}`], {
+    const stdout = execFileSync(bunExecutable, [scriptPath, `--db=${testDbPath}`], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
