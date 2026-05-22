@@ -10,11 +10,25 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentColor": "#ff5f00",
   "showConsole": true,
   "sidebarCollapsed": false,
-  "fontDisplay": "Outfit",
+  "fontDisplay": "Bricolage Grotesque",
   "showLiveDot": true
 }/*EDITMODE-END*/;
 
-const ROUTES = ['home', 'generate', 'pipeline', 'funnel', 'calls', 'proposals', 'evals', 'agents', 'simulator', 'email-composer', 'verticals', 'replay', 'settings'];
+const ROUTES = [
+  'home',
+  'generate',
+  'pipeline',
+  'funnel',
+  'calls',
+  'proposals',
+  'evals',
+  'agents',
+  'simulator',
+  'email-composer',
+  'verticals',
+  'replay',
+  'settings',
+];
 
 function readHistoryMetadata(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
@@ -41,6 +55,23 @@ function nextStepFromHistoryStatus(status) {
   if (s === 'failed') return 'Repair failed generation';
   if (s === 'running' || s === 'queued') return 'Generation in progress';
   return 'Review intake context';
+}
+
+function humanizeSlug(s) {
+  const wordOverrides = {
+    ai: 'AI',
+    crm: 'CRM',
+    gtm: 'GTM',
+    hvac: 'HVAC',
+    mgmt: 'Management',
+    rcs: 'RCS',
+    sms: 'SMS',
+  };
+  return String(s || '')
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map(w => wordOverrides[w.toLowerCase()] || (w[0].toUpperCase() + w.slice(1)))
+    .join(' ');
 }
 
 function routeFromLocation() {
@@ -121,7 +152,10 @@ function App() {
   useE(() => {
     document.documentElement.setAttribute('data-theme', tw.theme);
     document.documentElement.style.setProperty('--sunset-500', tw.accentColor);
-    document.documentElement.style.setProperty('--font-display', `'${tw.fontDisplay}', system-ui, sans-serif`);
+    const displayChain = tw.fontDisplay === 'Bricolage Grotesque'
+      ? "'Bricolage Grotesque','Outfit',system-ui,sans-serif"
+      : `'${tw.fontDisplay}','Bricolage Grotesque',system-ui,sans-serif`;
+    document.documentElement.style.setProperty('--font-display', displayChain);
   }, [tw.theme, tw.accentColor, tw.fontDisplay]);
 
   // Fetch real backend data. Important: when the API returns an empty
@@ -147,11 +181,14 @@ function App() {
           return;
         }
         window.GTM._isDemoFallback = false;
-        window.GTM.companies = history.map(h => {
+        const seedCompanies = Array.isArray(window.GTM._seedCompanies)
+          ? window.GTM._seedCompanies
+          : (window.GTM._seedCompanies = window.GTM.companies.slice());
+        const historyCompanies = history.map(h => {
           const metadata = readHistoryMetadata(h.metadata);
           return ({
             id: h.slug || h.id,
-            name: metadata.client_name || h.client_slug,
+            name: metadata.client_name || humanizeSlug(h.client_slug) || h.client_slug,
             industry: metadata.process_name || 'Generated proposal',
             size: '-',
             region: '-',
@@ -172,6 +209,14 @@ function App() {
             artifacts: h.artifacts || []
           });
         });
+        // Keep the curated pipeline seeds visible alongside generated-run
+        // history. Mission Control hot-lead rows can be clicked before or
+        // after history loads; replacing the seed companies made those
+        // clicks route to Pipeline with a selected id the detail pane could
+        // no longer resolve.
+        const historyCompanyIds = new Set(historyCompanies.map(c => c.id));
+        const preservedSeedCompanies = seedCompanies.filter(c => !historyCompanyIds.has(c.id));
+        window.GTM.companies = [...preservedSeedCompanies, ...historyCompanies];
         // Preserve the curated data.js seeds as a baseline so the Banyan /
         // Verdant / Arcadia / Thornfield demo proposals stay visible
         // alongside any history-derived entries. History entries with the
@@ -182,16 +227,6 @@ function App() {
         const seedProposals = Array.isArray(window.GTM._seedProposals)
           ? window.GTM._seedProposals
           : (window.GTM._seedProposals = window.GTM.proposals.slice());
-        // Humanize a kebab-case slug (`harbor-property-mgmt`) into a
-        // proper Title-Case display name when metadata.client_name is
-        // missing. Production history entries can ship without
-        // client_name; rendering the raw slug as the company looks
-        // unfinished and contradicts the brand.
-        const humanizeSlug = (s) => String(s || '')
-          .split(/[-_]+/)
-          .filter(Boolean)
-          .map(w => w[0].toUpperCase() + w.slice(1))
-          .join(' ');
         const historyProposals = history.map(h => {
           const metadata = readHistoryMetadata(h.metadata);
           return ({
@@ -274,7 +309,7 @@ function App() {
           <window.TweakColor label="Accent" value={tw.accentColor}
             onChange={(v) => setTweak('accentColor', v)}/>
           <window.TweakSelect label="Display font" value={tw.fontDisplay}
-            options={['Outfit','Bricolage Grotesque','JetBrains Mono','Inter']}
+            options={['Bricolage Grotesque','Outfit','JetBrains Mono','Inter']}
             onChange={(v) => setTweak('fontDisplay', v)}/>
         </window.TweakSection>
         <window.TweakSection label="Layout">

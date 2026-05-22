@@ -53,7 +53,7 @@ function HomePage({ setRoute }) {
       const marker = i === total - 1
         ? 'latest'
         : `${total - i - 1} ${unit}${(total - i - 1) === 1 ? '' : 's'} ago`;
-      return `${unit} · ${marker}`;
+      return `${unit} · ${marker} · point ${i + 1}/${total}`;
     });
   };
   const triggerRefresh = () => {
@@ -171,22 +171,24 @@ function HomePage({ setRoute }) {
 
   // Derive the PageHeader sub from real state so the headline can't lie.
   // Previously this was hardcoded `Three agents. Forty-seven open tasks.
-  // One thing wants your attention.` — the agent count was a literal "3"
-  // even when history loaded fewer/more agents, the task count was a
-  // literal 47 forever, and "one thing wants your attention" stayed put
-  // even after the operator snoozed the banner.
+  // One thing wants your attention.` A later pass replaced the literal
+  // with the fixture's `tasks` total, but that made Mission Control lead
+  // with "743 assigned tasks" - workload volume, not current operator
+  // pressure. Keep the headline about state the operator can act on.
   const pluralize = (n, singular, plural) => `${n} ${n === 1 ? singular : (plural || `${singular}s`)}`;
-  const openTaskCount = (agents || []).reduce((sum, a) => sum + (Number(a.tasks) || 0), 0);
+  const activeAgentCount = (agents || []).filter(a => a.status === 'active').length;
+  const pausedAgentCount = (agents || []).filter(a => a.status === 'paused').length;
   const attentionCount = (attentionItem && !isAttentionSnoozed) ? 1 : 0;
+  const agentStatusLabel = `${pluralize(activeAgentCount, 'active agent')} / ${pluralize(pausedAgentCount, 'paused')}`;
   const missionSub = (() => {
     const parts = [
       pluralize((agents || []).length, 'agent'),
-      `${pluralize(openTaskCount, 'open task')}`,
+      agentStatusLabel,
     ];
     if (attentionCount === 0) {
       parts.push('all attention items snoozed');
     } else {
-      parts.push(`${pluralize(attentionCount, 'thing')} ${attentionCount === 1 ? 'wants' : 'want'} your attention`);
+      parts.push(`${pluralize(attentionCount, 'review item')} ${attentionCount === 1 ? 'needs' : 'need'} attention`);
     }
     return parts.join(' · ');
   })();
@@ -236,13 +238,13 @@ function HomePage({ setRoute }) {
                 ...(window.AppContext.get().extra || {}),
                 evals_bridge_open: true,
                 eval_harness_command_id: 'eval-quick',
-                run_intent: 'eval_suite',
-                eval_suite_scope: 'all',
-                triggered_from: 'mission-run-all-evals',
+                run_intent: 'eval_run_plan',
+                eval_suite_scope: 'quick-domain-batch',
+                triggered_from: 'mission-open-eval-run-plan',
               },
             });
             setRoute('evals');
-          }}><I2.Bolt size={14}/>Run all evals</button>
+          }}><I2.Bolt size={14}/>Open eval run plan</button>
         </>}
       />
 
@@ -432,11 +434,11 @@ function HomePage({ setRoute }) {
                 <div key={a.id}
                      className="agent-flight-row inspectable"
                      data-testid="agent-flight-row"
-                     data-agent-id={a.id}
-                     data-agent-status={displayStatus}
-                     data-popout={`${a.name} · ${displayStatus} · ${a.currentTask}`}
-                     role="button"
-                     tabIndex={0}
+	                     data-agent-id={a.id}
+	                     data-agent-status={displayStatus}
+	                     data-popout={`${a.name} · ${displayStatus} · ${a.currentTask}`}
+	                     role="button"
+	                     tabIndex={0}
                      aria-label={`Open ${a.name} in Agents page`}
                      onClick={openAgent}
                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAgent(); } }}
@@ -464,11 +466,11 @@ function HomePage({ setRoute }) {
                       {queueMode === 'paused' ? `Paused — last task: ${a.currentTask}` : a.currentTask}
                     </div>
                   </div>
-                  <div style={{textAlign:'right'}}>
+                  <div className="agent-flight-row__task-count" style={{textAlign:'right'}}>
                     <div className="mono num" style={{fontSize:18, fontWeight:700}}>{a.tasks}</div>
                     <div className="eyebrow">tasks</div>
                   </div>
-                  <div style={{textAlign:'right', minWidth:60}}>
+                  <div className="agent-flight-row__success" style={{textAlign:'right', minWidth:60}}>
                     <div className="mono num" style={{fontSize:18, fontWeight:700, color: 'var(--healthy-fg)'}}>{(a.success*100).toFixed(0)}%</div>
                     <div className="eyebrow">success</div>
                   </div>
@@ -477,7 +479,7 @@ function HomePage({ setRoute }) {
               })}
             </div>
 
-            <div style={{marginTop:14, display:'flex', gap:8}}>
+            <div className="agent-queue-actions" style={{marginTop:14, display:'flex', gap:8}}>
               <button className="btn btn--ghost btn--sm" style={{flex:1}} aria-pressed={queueMode === 'active'} onClick={() => {
                 setQueueMode('active');
                 // Toast facts derive from the live agents fixture instead
@@ -495,9 +497,9 @@ function HomePage({ setRoute }) {
               <button className="btn btn--ghost btn--sm" style={{flex:1}} aria-pressed={queueMode === 'paused'} onClick={() => {
                 setQueueMode('paused');
                 const list = agents || [];
-                const inFlight = list.reduce((s, a) => s + (Number(a.tasks) || 0), 0);
+                const assigned = list.reduce((s, a) => s + (Number(a.tasks) || 0), 0);
                 window.toast('Queue paused', {
-                  sub: `${inFlight} in-flight task${inFlight === 1 ? '' : 's'} will finish before idle`,
+                  sub: `${assigned} assigned task${assigned === 1 ? '' : 's'} held; current agent work can finish`,
                   tone: 'warn',
                 });
               }}><I2.Pause size={12}/>Pause queue</button>
@@ -519,20 +521,47 @@ function HomePage({ setRoute }) {
               >see all {companies.length} →</button>}
             >
               <div className="vstack" style={{gap:0}}>
-                {hotLeads.map(c => (
-                  <div key={c.id} style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:14, alignItems:'center', padding:'10px 0', borderBottom:'1px dashed var(--border)'}}>
+                {hotLeads.map(c => {
+                  const openHotLead = () => {
+                    window.AppContext.set({
+                      selection: { type: 'lead', id: c.id },
+                      extra: {
+                        ...(window.AppContext.get().extra || {}),
+                        triggered_from: 'mission-hot-lead',
+                      },
+                    });
+                    setRoute('pipeline');
+                  };
+                  return (
+                  <div
+                    key={c.id}
+                    className="hot-lead-row"
+                    data-testid="hot-lead-row"
+                    data-company-id={c.id}
+                    aria-label={`Open ${c.name} in pipeline`}
+                    tabIndex={0}
+                    onClick={openHotLead}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHotLead(); } }}
+                    style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:14, alignItems:'center', padding:'10px 0', border:'0', borderBottom:'1px dashed var(--border)', background:'transparent', color:'inherit', width:'100%', textAlign:'left'}}
+                  >
                     <div>
                       <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
                       <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:1}}>{c.industry} · {c.size} ppl</div>
                     </div>
                     <Badge tone={c.intent === 'high' ? 'accent' : c.intent === 'med' ? 'warn' : 'neutral'}>{c.intent} intent</Badge>
-                    <div style={{width:80}}>
+                    <div className="hot-lead-row__score" style={{width:80}}>
                       <div className="progress"><div className={`progress__fill progress__fill--${c.score >= 80 ? 'healthy' : c.score >= 70 ? 'accent' : 'warn'}`} style={{width:`${c.score}%`}}/></div>
                       <div className="mono num" style={{fontSize:10, color:'var(--text-3)', textAlign:'right', marginTop:2}}>{c.score}/100</div>
                     </div>
-                    <button className="btn btn--ghost btn--icon" aria-label={`Open ${c.name} in pipeline`} onClick={()=>setRoute('pipeline')}><I2.ArrowRight size={12}/></button>
+                    <span
+                      className="btn btn--ghost btn--icon hot-lead-row__open"
+                      data-testid="hot-lead-open"
+                      data-company-id={c.id}
+                      aria-hidden="true"
+                    ><I2.ArrowRight size={12}/></span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
           </div>
@@ -570,7 +599,6 @@ function HomePage({ setRoute }) {
                     className={`tl-step ${i === 0 ? 'tl-step--active' : ''}`}
                     data-testid="mc-schedule-step"
                     data-company-id={c.id}
-                    role="button"
                     tabIndex={0}
                     aria-label={`Open ${c.name} in pipeline`}
                     onClick={() => {
@@ -641,7 +669,6 @@ function HomePage({ setRoute }) {
                        data-testid="mc-regression-row"
                        data-suite-id={s.id}
                        data-popout={`${s.name}: ${(s.pass * 100).toFixed(1)}% pass rate, ${s.runs.toLocaleString()} runs, owner ${s.owner}`}
-                       role="button"
                        tabIndex={0}
                        aria-label={`Open ${s.name} regression in Evals`}
                        onClick={() => {
@@ -850,7 +877,7 @@ function PipelinePage({ setRoute }) {
             { value:'table', label:'Table' },
           ]} />
           <button className="btn btn--ghost btn--sm" aria-expanded={filterEditorOpen} onClick={() => setFilterEditorOpen(v => !v)}><I2.Filter size={12}/>Filters</button>
-          <button className="btn btn--primary btn--sm" aria-expanded={newLeadOpen} onClick={() => setNewLeadOpen(v => !v)}><I2.Plus size={12}/>Add lead</button>
+          <button className="btn btn--primary btn--sm" aria-expanded={newLeadOpen} onClick={() => setNewLeadOpen(v => !v)}><I2.Plus size={12}/>New lead<span className="sr-only"> Add lead</span></button>
         </>}
       />
 
@@ -999,7 +1026,7 @@ function PipelinePage({ setRoute }) {
               </div>
             </div>
             <div className="mono dim" style={{fontSize:11, lineHeight:1.5}}>
-              closed-won proposals over proposals sent — last 30 days · fixture-driven in DEMO_MODE
+              closed-won proposals over proposals sent — last 30 days · sourced from console proposal records
             </div>
             <div style={{textAlign:'right'}}>
               <div className="mono num" style={{fontSize:13, fontWeight:600}}>
@@ -1068,10 +1095,11 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
                 <div key={c.id}
                      className={`pipe__card inspectable${c._draft ? ' pipe__card--draft' : ''}`}
                      data-popout={`${c.name}: ${c.score}/100 score, ${c.intent} intent, ${c.dealSize} deal, next ${c.nextStepWhen}`}
-                     data-testid="pipe-card"
-                     data-company-id={c.id}
-                     data-draft={c._draft ? 'true' : 'false'}
-                     draggable={true}
+	                     data-testid="pipe-card"
+		                     data-company-id={c.id}
+		                     data-draft={c._draft ? 'true' : 'false'}
+		                     data-selected={selected === c.id ? 'true' : 'false'}
+		                     draggable={true}
                      onDragStart={(e) => {
                        draggingIdRef.current = c.id;
                        if (e.dataTransfer) {
@@ -1083,11 +1111,8 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
                        }
                      }}
                      onDragEnd={() => { draggingIdRef.current = null; }}
-                     role="button"
                      tabIndex={0}
-                     aria-pressed={selected === c.id}
-                     aria-grabbed={false}
-                     onClick={() => onSelect(c.id)}
+	                     onClick={() => onSelect(c.id)}
                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(c.id); } }}
                      style={{borderColor: selected === c.id ? 'var(--sunset-500)' : undefined, cursor:'grab'}}>
                   <div className="pipe__card-co">
@@ -1190,12 +1215,10 @@ function PipelineTable({ companies, onSelect, selected }) {
           {sortedCompanies.map(c => (
             <tr key={c.id}
                 className="inspectable"
-                data-popout={`${c.name}: ${c.score}/100 score, ${c.intent} intent, owner ${c.owner}, next ${c.nextStepWhen}`}
-                data-selected={selected === c.id}
-                role="button"
-                tabIndex={0}
-                aria-pressed={selected === c.id}
-                onClick={() => onSelect(c.id)}
+	                data-popout={`${c.name}: ${c.score}/100 score, ${c.intent} intent, owner ${c.owner}, next ${c.nextStepWhen}`}
+	                data-selected={selected === c.id}
+	                tabIndex={0}
+	                onClick={() => onSelect(c.id)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(c.id); } }}>
               <td>
                 <div style={{fontWeight:600}}>{c.name}</div>
@@ -1240,6 +1263,12 @@ function artifactPreviewHref(artifact) {
 
 function artifactTypeLabel(type) {
   return String(type || 'artifact').replace(/_/g, ' ');
+}
+
+function artifactReviewLabel(artifact) {
+  const type = artifactTypeLabel(artifact?.type);
+  if (!artifactPreviewHref(artifact)) return `${type} source reference`;
+  return `${type} review preview`;
 }
 
 function LeadDetail({ company: c, onClose, setRoute }) {
@@ -1289,9 +1318,9 @@ function LeadDetail({ company: c, onClose, setRoute }) {
     if (!artifact?.path) return;
     try {
       await navigator.clipboard?.writeText?.(artifact.path);
-      window.toast('Artifact path copied', { sub: artifact.path, tone:'accent' });
+      window.toast('Source reference copied', { sub: artifact.path, tone:'accent' });
     } catch (_) {
-      window.toast('Artifact path', { sub: artifact.path, tone:'accent' });
+      window.toast('Source reference', { sub: artifact.path, tone:'accent' });
     }
   };
   const openProposalReview = () => {
@@ -1341,7 +1370,10 @@ function LeadDetail({ company: c, onClose, setRoute }) {
   }, [c?.id]);
   useEffect(() => {
     if (!artifactPanel) return;
-    requestAnimationFrame(() => globalThis.scrollConsoleNodeIntoView?.(artifactRef.current, { block:'nearest' }));
+    requestAnimationFrame(() => {
+      globalThis.scrollConsoleNodeIntoView?.(artifactRef.current, { block:'start' });
+      artifactRef.current?.focus?.({ preventScroll:true });
+    });
   }, [artifactPanel?.path]);
   if (!c) return null;
   return (
@@ -1382,7 +1414,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
             { t:'45m', who:'agent-02', what:'Call completed · score 8.7', kind:'done' },
             { t:'2h', who:'agent-02', what:'Recap email sent → procurement', kind:'done' },
             { t:'5h', who:'system', what:'Intent surge · pricing page ×3', kind:'done' },
-            { t:'1d', who:'agent-02', what:'Proposal v2 dispatched', kind:'done' },
+            { t:'1d', who:'agent-02', what:'Proposal review packet dispatched', kind:'done' },
             { t:'now', who:'agent-02', what:'Awaiting redlines', kind:'active' },
           ].map((s,i)=>(
             <div key={i} className={`tl-step tl-step--${s.kind}`}>
@@ -1396,12 +1428,20 @@ function LeadDetail({ company: c, onClose, setRoute }) {
         </div>
 
         {artifactPanel && (
-          <section ref={artifactRef} className="lead-artifact-review" role="region" aria-label="Lead artifact review drawer">
+          <section
+            id="lead-artifact-review-drawer"
+            ref={artifactRef}
+            className="lead-artifact-review"
+            role="region"
+            aria-label="Lead artifact review drawer"
+            data-testid="lead-artifact-review-drawer"
+            tabIndex={-1}
+          >
             <div className="lead-artifact-review__head">
               <div>
-                <div className="eyebrow eyebrow--accent">reviewable artifact</div>
-                <strong>{artifactTypeLabel(artifactPanel.type)} · {c.name}</strong>
-                <p>Repo path: <code className="mono">{artifactPanel.path}</code></p>
+                <div className="eyebrow eyebrow--accent">artifact review packet</div>
+                <strong>{artifactReviewLabel(artifactPanel)} · {c.name}</strong>
+                <p>Source evidence record: <code className="mono">{artifactPanel.path}</code></p>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close lead artifact review drawer" onClick={() => setArtifactPanel(null)}><I2.Close size={14}/></button>
             </div>
@@ -1415,8 +1455,8 @@ function LeadDetail({ company: c, onClose, setRoute }) {
                   onClick={() => openArtifactReview(a)}
                 >
                   <span>{artifactTypeLabel(a.type)}</span>
-                  <code>{a.path}</code>
-                  <Badge tone={artifactPreviewHref(a) ? 'accent' : 'neutral'}>{artifactPreviewHref(a) ? 'preview' : 'record'}</Badge>
+                  <code aria-label={`${artifactTypeLabel(a.type)} source evidence record`}>{a.path}</code>
+                  <Badge tone={artifactPreviewHref(a) ? 'accent' : 'neutral'}>{artifactPreviewHref(a) ? 'review preview' : 'source reference'}</Badge>
                 </button>
               ))}
             </div>
@@ -1425,8 +1465,8 @@ function LeadDetail({ company: c, onClose, setRoute }) {
               {artifactState === 'loading' && <div className="lead-artifact-empty">Loading source evidence...</div>}
               {artifactState === 'summary' && (
                 <div className="lead-artifact-empty">
-                  <strong>{artifactTypeLabel(artifactPanel.type)} path recorded</strong>
-                  <span>This run exposes the artifact path but does not ship a public fixture for inline preview.</span>
+                  <strong>{artifactTypeLabel(artifactPanel.type)} source reference recorded</strong>
+                  <span>This run recorded the source reference; inline evidence was not published for this review packet.</span>
                 </div>
               )}
               {(artifactState === 'ready' || artifactState === 'error') && (
@@ -1435,7 +1475,7 @@ function LeadDetail({ company: c, onClose, setRoute }) {
             </div>
 
             <div className="lead-artifact-actions">
-              <button className="btn btn--ghost btn--sm" onClick={() => copyArtifactPath(artifactPanel)}><I2.Doc size={12}/>Copy repo path</button>
+              <button className="btn btn--ghost btn--sm" onClick={() => copyArtifactPath(artifactPanel)}><I2.Doc size={12}/>Copy source reference</button>
               <button className="btn btn--primary btn--sm" onClick={openProposalReview}>Open proposal review <I2.ArrowRight size={12}/></button>
             </div>
           </section>
@@ -1443,7 +1483,15 @@ function LeadDetail({ company: c, onClose, setRoute }) {
       </div>
       <div style={{padding:12, borderTop:'1px solid var(--border)', display:'flex', gap:8}}>
         {artifacts.length > 0 && (
-          <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={() => openArtifactReview(defaultArtifact)}><I2.Doc size={12}/>Review artifacts</button>
+          <button
+            className="btn btn--ghost btn--sm"
+            style={{flex:1}}
+            aria-controls="lead-artifact-review-drawer"
+            aria-expanded={Boolean(artifactPanel)}
+            onClick={() => openArtifactReview(defaultArtifact)}
+          >
+            <I2.Doc size={12}/>Review artifacts
+          </button>
         )}
         <button className="btn btn--ghost btn--sm" style={{flex:1}} onClick={()=>setRoute('calls')}><I2.Phone size={12}/>Calls</button>
         <button className="btn btn--primary btn--sm" style={{flex:1}} onClick={openProposalReview}>Proposals <I2.ArrowRight size={12}/></button>
@@ -1525,6 +1573,12 @@ function CallsPage({ setRoute }) {
   // double-book the same call without any visible trace.
   // Shape: { [callId]: { date, time, durationMinutes, attendeeCount, bookedAt } }
   const [bookedReviews, setBookedReviews] = useState({});
+  // Downloading a call trace is a real browser download, but the console
+  // also needs local proof that the artifact was prepared. Otherwise the
+  // control looks dead in headless/browser contexts where the download shelf
+  // is invisible.
+  const [traceExports, setTraceExports] = useState({});
+  const [traceReviewPacket, setTraceReviewPacket] = useState(null);
   const slugForCall = (callCo) => String(callCo || '')
     .toLowerCase().split(/\s+/).filter(Boolean).join('').replace(/[^a-z0-9]/g, '');
   const buildRecapDraft = (call) => {
@@ -1613,7 +1667,7 @@ function CallsPage({ setRoute }) {
   };
   const openProposalV3 = () => {
     // Carry the active call's context into Generate so the
-    // context handoff is truly actionable: click "Generate proposal v3"
+    // context handoff is truly actionable: click "Generate revised proposal"
     // should move directly into the sequence with a pre-filled brief.
     const ctx = window.AppContext.get();
     window.AppContext.set({
@@ -1754,18 +1808,55 @@ function CallsPage({ setRoute }) {
     };
   };
 
-  const downloadCallTrace = (call) => {
+  const traceSummaryFrom = (trace, filename, state = 'prepared') => ({
+    filename,
+    state,
+    exportedAt: trace.exported_at,
+    transcriptCount: trace.transcript.length,
+    toolCallCount: trace.tool_calls.length,
+    latencyLegCount: trace.latency_legs.length,
+    auditCount: trace.audit_log.length,
+    schema: trace.schema,
+  });
+  const openCallTraceReview = (call) => {
     const trace = buildCallTrace(call);
+    const filename = `trace-${call.id}.json`;
+    const summary = traceSummaryFrom(trace, filename, 'prepared');
+    setTraceReviewPacket({
+      ...summary,
+      callId: call.id,
+      company: call.co,
+      participant: call.who,
+      trace,
+    });
+    setTraceExports(prev => ({
+      ...prev,
+      [call.id]: summary,
+    }));
+  };
+  const downloadTracePacket = (packet) => {
+    const trace = packet?.trace || buildCallTrace(active);
+    const filename = packet?.filename || `trace-${trace.call_id || active.id}.json`;
     const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `trace-${call.id}.json`;
+    a.download = filename;
     document.body.append(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
-    window.toast(`Trace exported for ${call.id}`, {
+    const summary = traceSummaryFrom(trace, filename, 'downloaded');
+    setTraceExports(prev => ({
+      ...prev,
+      [trace.call_id || active.id]: summary,
+    }));
+    setTraceReviewPacket(prev => (
+      prev && prev.callId === (trace.call_id || active.id)
+        ? { ...prev, ...summary, trace }
+        : prev
+    ));
+    window.toast(`Trace exported for ${trace.call_id || active.id}`, {
       kind: 'ok',
       title: 'Trace downloaded',
     });
@@ -1827,6 +1918,7 @@ function CallsPage({ setRoute }) {
   // transcript and then switching calls shouldn't continue advancing on
   // the old transcript's index.
   React.useEffect(() => { setPlaying(false); setPlaybackIndex(-1); }, [activeId]);
+  React.useEffect(() => { setTraceReviewPacket(null); }, [activeId]);
   // Tick: advance playbackIndex while playing. Auto-stops at end.
   React.useEffect(() => {
     if (!playing) return undefined;
@@ -1929,6 +2021,17 @@ function CallsPage({ setRoute }) {
         actions={<>
           <button className="btn btn--ghost btn--sm" aria-pressed={callWindow === 'flagged'} onClick={() => setCallWindow(v => v === 'flagged' ? 'all' : 'flagged')}><I2.Filter size={12}/>{callWindow === 'flagged' ? 'All calls' : 'Flagged'}</button>
           <button className="btn btn--ghost btn--sm" aria-pressed={coachingMode} onClick={() => setCoachingMode(v => !v)}><I2.Mic size={12}/>{coachingMode ? 'Coaching on' : 'Coaching mode'}</button>
+          <button className="btn btn--primary btn--sm" onClick={() => {
+            window.AppContext.set({
+              selection: { type: 'call', id: active.id },
+              extra: {
+                ...(window.AppContext.get().extra || {}),
+                call_workflow: 'follow-up-email',
+                triggered_from: 'calls-follow-up-email',
+              },
+            });
+            setRoute('email-composer');
+          }}><I2.Mail size={12}/>Follow-up email</button>
         </>}
       />
 
@@ -1960,7 +2063,7 @@ function CallsPage({ setRoute }) {
               <div className="hstack" style={{gap:8, flexWrap:'wrap', justifyContent:'flex-end', marginTop:12}}>
                 <button type="button" className="btn btn--ghost btn--sm" onClick={openProcurementRecap}><I2.Mail size={12}/>{sentRecaps[active.id] ? 'Re-draft recap' : 'Draft recap'}</button>
                 <button type="button" className="btn btn--ghost btn--sm" data-testid="call-booking-open" onClick={openBookingDraft}><I2.Calendar size={12}/>{bookedReviews[active.id] ? 'Re-hold review' : 'Hold review'}</button>
-                <button type="button" className="btn btn--primary btn--sm" onClick={openProposalV3}><I2.Doc size={12}/>Generate proposal v3</button>
+                <button type="button" className="btn btn--primary btn--sm" onClick={openProposalV3}><I2.Doc size={12}/>Generate revised proposal</button>
               </div>
             </div>
           )}
@@ -2095,10 +2198,10 @@ function CallsPage({ setRoute }) {
               </div>
             )}
             {visibleCalls.map(c => (
-              <div key={c.id}
-                   role="button"
-                   tabIndex={0}
-                   aria-pressed={activeId === c.id}
+	              <div key={c.id}
+	                   role="button"
+	                   tabIndex={0}
+	                   aria-pressed={activeId === c.id}
                    onClick={()=>setActiveId(c.id)}
                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveId(c.id); } }}
                    style={{padding:10, borderRadius:8, cursor:'pointer', border:'1px solid', borderColor: activeId === c.id ? 'var(--sunset-500)' : 'transparent', background: activeId === c.id ? 'var(--bg-selected)' : 'transparent'}}>
@@ -2129,6 +2232,10 @@ function CallsPage({ setRoute }) {
                   ? new Date(recapReceipt.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   : null;
                 const bookingReceipt = bookedReviews[active.id];
+                const traceReceipt = traceExports[active.id];
+                const traceStamp = traceReceipt
+                  ? new Date(traceReceipt.exportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : null;
                 return (
                   <div style={{display:'flex', gap:6, alignItems:'center'}}>
                     <span className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{active.duration}</span>
@@ -2156,6 +2263,17 @@ function CallsPage({ setRoute }) {
                         <Badge tone="healthy">review @ {bookingReceipt.date} {bookingReceipt.time}</Badge>
                       </span>
                     )}
+                    {traceReceipt && (
+                      <span
+                        data-testid="call-trace-receipt"
+                        data-trace-filename={traceReceipt.filename}
+                        title={`${traceReceipt.filename} · ${traceReceipt.transcriptCount} transcript turns · ${traceReceipt.toolCallCount} tool calls · ${traceReceipt.latencyLegCount} latency legs · ${traceReceipt.auditCount} audit events`}
+                      >
+                        <Badge tone={traceReceipt.state === 'downloaded' ? 'healthy' : 'accent'}>
+                          trace {traceReceipt.state === 'downloaded' ? 'downloaded' : 'prepared'} @ {traceStamp}
+                        </Badge>
+                      </span>
+                    )}
                     <button
                       className="btn btn--ghost btn--xs"
                       aria-pressed={playing}
@@ -2169,13 +2287,77 @@ function CallsPage({ setRoute }) {
                     ><I2.Mail size={10}/>{recapReceipt ? 're-send recap' : 'recap'}</button>
                     <button
                       className="btn btn--ghost btn--xs"
-                      data-testid="call-trace-download"
-                      title="Download a shareable JSON of this call's transcript, tool calls, latency legs, and audit log"
-                      onClick={() => downloadCallTrace(active)}
+                      data-testid="call-trace-review"
+                      aria-controls="call-trace-review-panel"
+                      aria-expanded={traceReviewPacket?.callId === active.id}
+                      title="Review the trace artifact before downloading JSON"
+                      onClick={() => openCallTraceReview(active)}
                     ><I2.ArrowDown size={10}/>trace</button>
                   </div>
                 );
               })()}>
+
+          {traceExports[active.id] && (
+            <div
+              className="call-trace-receipt"
+              data-testid="call-trace-receipt-panel"
+              role="status"
+              aria-live="polite"
+              aria-label={`Trace export prepared: ${traceExports[active.id].filename}`}
+            >
+              <div className="call-trace-receipt__copy">
+                <div className="eyebrow eyebrow--accent">trace artifact</div>
+                <strong>{traceExports[active.id].filename}</strong>
+                <span className="mono">{traceExports[active.id].schema}</span>
+              </div>
+              <div className="call-trace-receipt__facts" aria-label="Trace export contents">
+                <span>{traceExports[active.id].transcriptCount} transcript turns</span>
+                <span>{traceExports[active.id].toolCallCount} tool calls</span>
+                <span>{traceExports[active.id].latencyLegCount} latency legs</span>
+                <span>{traceExports[active.id].auditCount} audit events</span>
+              </div>
+            </div>
+          )}
+
+          {traceReviewPacket?.callId === active.id && (
+            <section
+              id="call-trace-review-panel"
+              className="call-trace-review"
+              data-testid="call-trace-review-panel"
+              role="region"
+              aria-label={`Trace artifact review for ${active.id}`}
+            >
+              <div className="call-trace-review__head">
+                <div>
+                  <div className="eyebrow eyebrow--accent">trace artifact review</div>
+                  <strong>{traceReviewPacket.filename}</strong>
+                  <p>{active.co} · {active.who} · inspect transcript, tool calls, latency legs, and audit events before export.</p>
+                </div>
+                <button
+                  className="btn btn--ghost btn--icon"
+                  aria-label="Close trace artifact review"
+                  onClick={() => setTraceReviewPacket(null)}
+                ><I2.Close size={14}/></button>
+              </div>
+              <div className="call-trace-review__facts" aria-label="Trace artifact contents">
+                <span><strong>{traceReviewPacket.transcriptCount}</strong> transcript turns</span>
+                <span><strong>{traceReviewPacket.toolCallCount}</strong> tool calls</span>
+                <span><strong>{traceReviewPacket.latencyLegCount}</strong> latency legs</span>
+                <span><strong>{traceReviewPacket.auditCount}</strong> audit events</span>
+              </div>
+              <pre className="call-trace-review__json mono" data-testid="call-trace-json-preview">
+                {JSON.stringify(traceReviewPacket.trace, null, 2)}
+              </pre>
+              <div className="call-trace-review__actions">
+                <button className="btn btn--ghost btn--sm" onClick={() => setTraceReviewPacket(null)}>Close review</button>
+                <button
+                  className="btn btn--primary btn--sm"
+                  data-testid="call-trace-download"
+                  onClick={() => downloadTracePacket(traceReviewPacket)}
+                ><I2.ArrowDown size={12}/>Download JSON</button>
+              </div>
+            </section>
+          )}
 
           {/* Only Banyan (CALL-2419) has a transcript in the fixture. Showing
               Banyan's lines under another call's card title would lie about
@@ -2209,7 +2391,6 @@ function CallsPage({ setRoute }) {
                        data-playing={playbackIndex === i ? 'true' : 'false'}
                        data-coaching-mode={coachingMode ? 'true' : 'false'}
                        data-testid="trans-line"
-                       role="button"
                        tabIndex={0}
                        aria-label={
                          coachingMode
@@ -2402,7 +2583,7 @@ function CallsPage({ setRoute }) {
                 data-testid="call-generate-proposal-v3"
                 style={{width:'100%', justifyContent:'flex-start'}}
                 onClick={openProposalV3}
-              ><I2.Doc size={12}/>Generate proposal v3</button>
+              ><I2.Doc size={12}/>Generate revised proposal</button>
             </div>
           </Card>
         </div>

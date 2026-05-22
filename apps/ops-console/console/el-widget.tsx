@@ -143,6 +143,7 @@ globalThis.buildAgentContext = function buildAgentContext(ctx) {
 /* Lazy-load the official ConvAI web component, exactly once. */
 let _widgetLoaded = false;
 const _convaiConfigErrors = new Map();
+let _convaiRuntimeConfigError = null;
 function convaiErrorText(args) {
   return args.map(arg => {
     if (typeof arg === 'string') return arg;
@@ -152,20 +153,78 @@ function convaiErrorText(args) {
   }).join(' ');
 }
 
+function recordConvaiConfigError(agentId, message) {
+  const detail = { agentId, message };
+  if (agentId === '*') _convaiRuntimeConfigError = detail;
+  else _convaiConfigErrors.set(agentId, detail);
+  globalThis.dispatchEvent(new CustomEvent('gtm:convai-config-error', { detail }));
+}
+
+function getConvaiConfigError(agentId) {
+  return _convaiConfigErrors.get(agentId)?.message || _convaiRuntimeConfigError?.message || null;
+}
+
+function isConvaiRuntimeConfigError(text) {
+  const normalized = String(text || '').toLowerCase();
+  return (normalized.includes('cannot read properties of undefined') && normalized.includes('languagecode'))
+    || (normalized.includes('languagecode') && normalized.includes('undefined'))
+    || normalized.includes('response does not contain widget_config');
+}
+
+function isConvaiAbortNoise(text) {
+  return /Cannot fetch config for agent\s+[a-zA-Z0-9_-]+: signal is aborted/i.test(text)
+    || /AbortError/i.test(text);
+}
+
 function installConvaiErrorBridge() {
   if (globalThis.__gtmConvaiErrorBridgeInstalled) return;
   globalThis.__gtmConvaiErrorBridgeInstalled = true;
+  if (globalThis.navigator && !globalThis.navigator.languageCode) {
+    try {
+      Object.defineProperty(globalThis.navigator, 'languageCode', {
+        configurable: true,
+        get: () => String(globalThis.navigator.language || 'en-US').split(/[-_]/)[0] || 'en',
+      });
+    } catch (_) {}
+  }
+  if (globalThis.Intl?.Locale && !('languageCode' in globalThis.Intl.Locale.prototype)) {
+    try {
+      Object.defineProperty(globalThis.Intl.Locale.prototype, 'languageCode', {
+        configurable: true,
+        get() { return this.language || String(this.baseName || 'en').split(/[-_]/)[0] || 'en'; },
+      });
+    } catch (_) {}
+  }
   const originalError = console.error.bind(console);
   console.error = (...args) => {
     const text = convaiErrorText(args);
     const match = text.match(/Cannot fetch config for agent\s+([a-zA-Z0-9_-]+)/i);
+    if (isConvaiAbortNoise(text)) {
+      return;
+    }
     if (match) {
-      const detail = { agentId: match[1], message: text };
-      _convaiConfigErrors.set(match[1], detail);
-      globalThis.dispatchEvent(new CustomEvent('gtm:convai-config-error', { detail }));
+      recordConvaiConfigError(match[1], text);
+      return;
+    } else if (isConvaiRuntimeConfigError(text)) {
+      recordConvaiConfigError('*', text);
+      return;
     }
     originalError(...args);
   };
+  const handleRuntimeFailure = (event) => {
+    const message = convaiErrorText([
+      event.reason || event.error || event.message || 'ElevenLabs widget config did not load.',
+    ]);
+    if (isConvaiAbortNoise(message)) {
+      event.preventDefault?.();
+      return;
+    }
+    if (!isConvaiRuntimeConfigError(message)) return;
+    recordConvaiConfigError('*', message);
+    event.preventDefault?.();
+  };
+  globalThis.addEventListener('unhandledrejection', handleRuntimeFailure);
+  globalThis.addEventListener('error', handleRuntimeFailure);
 }
 
 function loadConvaiWidget() {
@@ -277,10 +336,11 @@ globalThis.ConvaiWidget = function ConvaiWidget({
   const effectivePrompt = prompt ?? reg?.system_prompt;
   const effectiveVoiceId = voiceId ?? reg?.voice_id;
   const effectiveSyntaxHighlightTheme = syntaxHighlightTheme ?? surfaceOv.syntaxHighlightTheme;
-  const [ready, setReady] = React.useState(isConvaiReady());
+  const useDemoWidget = Boolean(globalThis.__GTMOpsUseMockConvai);
+  const [ready, setReady] = React.useState(useDemoWidget || isConvaiReady());
   const [unreachable, setUnreachable] = React.useState(false);
   const [configError, setConfigError] = React.useState(() => (
-    agent_id ? _convaiConfigErrors.get(agent_id)?.message || null : null
+    agent_id ? getConvaiConfigError(agent_id) : null
   ));
   const openLocalAgentAdmin = (triggeredFrom, panel = 'context') => {
     const ctxExtra = globalThis.AppContext?.get?.().extra || {};
@@ -295,7 +355,10 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     globalThis.dispatchEvent(new CustomEvent('gtm:route', { detail: { route: 'agents' } }));
   };
 
-  React.useEffect(() => { loadConvaiWidget(); }, []);
+  React.useEffect(() => {
+    if (useDemoWidget) return;
+    loadConvaiWidget();
+  }, [useDemoWidget]);
 
   React.useEffect(() => {
     installConvaiErrorBridge();
@@ -304,11 +367,10 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     // it). The previous version only set on hit, never cleared, so an error
     // for a prior agent stayed sticky across agent-picker switches and
     // misrendered the new agent's widget as a config failure.
-    const existing = _convaiConfigErrors.get(agent_id);
-    setConfigError(existing?.message || null);
+    setConfigError(getConvaiConfigError(agent_id));
     const onConfigError = (event) => {
       const detail = event.detail || {};
-      if (detail.agentId === agent_id) {
+      if (detail.agentId === agent_id || detail.agentId === '*') {
         setConfigError(detail.message || 'ElevenLabs widget config did not load.');
       }
     };
@@ -335,6 +397,32 @@ globalThis.ConvaiWidget = function ConvaiWidget({
 
   React.useEffect(() => {
     if (!agent_id || !ready) return undefined;
+    if (useDemoWidget) {
+      const el = document.createElement('elevenlabs-convai');
+      el.classList.add('convai-widget-host', 'convai-widget-host--demo');
+      el.setAttribute('agent-id', agent_id);
+      if (agentKey) el.dataset.agentKey = agentKey;
+      if (reg?.display_name) el.dataset.agentName = reg.display_name;
+      if (reg?.role) el.dataset.agentRole = reg.role;
+      if (surface) el.dataset.surface = surface;
+      el.innerHTML = `
+        <div class="convai-demo-card">
+          <div class="eyebrow eyebrow--accent">local ConvAI demo</div>
+          <strong>${reg?.display_name || 'ElevenLabs agent'}</strong>
+          <p>${effectiveFirstMessage || 'Console-local widget mock.'}</p>
+        </div>
+      `;
+      widgetRef.current = el;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+        containerRef.current.append(el);
+      }
+      onMount && onMount(el);
+      return () => {
+        try { el.remove(); } catch (_) {}
+        widgetRef.current = null;
+      };
+    }
     const el = document.createElement('elevenlabs-convai');
     el.classList.add('convai-widget-host');
     el.setAttribute('agent-id', agent_id);
@@ -459,7 +547,7 @@ globalThis.ConvaiWidget = function ConvaiWidget({
     effectiveSpeakingText, effectiveFirstMessage, effectivePrompt,
     effectiveVoiceId, serverLocation,
     markdownLinkAllowedHosts, effectiveSyntaxHighlightTheme, JSON.stringify(widgetAttrs),
-    height, width, ready, agentKey, surface,
+    height, width, ready, agentKey, surface, useDemoWidget,
   ]);
 
   /* Push dynamic variables + override config every time context changes. */

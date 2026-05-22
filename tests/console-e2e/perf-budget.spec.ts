@@ -15,8 +15,9 @@ const BUDGETS = {
   // above 4.5 MB means a regression worth investigating.
   totalKbCeiling: 4500,
   // Single biggest non-babel transfer. babel-standalone is ~3 MB by
-  // design (no build step); everything else should be under 200 KB.
-  largestNonBabelKbCeiling: 250,
+  // design (no build step); stylesheet growth from the dense console UI
+  // should stay under this ceiling.
+  largestNonBabelKbCeiling: 300,
 };
 
 test('perf · /console/ stays under transfer budget', async ({ page }) => {

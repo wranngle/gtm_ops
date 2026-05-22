@@ -1,6 +1,6 @@
 /**
- * Trace export — operators click "trace" on the active call card and a
- * portable JSON downloads with the four canonical arrays
+ * Trace export — operators review the active call trace packet before a
+ * portable JSON download with the four canonical arrays
  * (transcript, tool_calls, latency_legs, audit_log). The shape is
  * pinned so downstream replay/grading consumers stay stable.
  */
@@ -8,20 +8,31 @@ import { test, expect } from './helpers.js';
 import { promises as fs } from 'node:fs';
 
 test.describe('call-trace export', () => {
-  test('Download trace button writes a JSON with the canonical arrays', async ({ openConsole }) => {
+  test('Trace action opens a review packet before JSON export', async ({ openConsole }) => {
     const page = await openConsole();
     await page.goto('/console/?route=calls', { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="call-trace-download"]')), null, { timeout: 30_000 });
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="call-trace-review"]')), null, { timeout: 30_000 });
 
-    const button = page.locator('[data-testid="call-trace-download"]');
-    await expect(button).toBeVisible();
+    const reviewButton = page.locator('[data-testid="call-trace-review"]');
+    await expect(reviewButton).toBeVisible();
+    await expect(reviewButton).toHaveAttribute('aria-expanded', 'false');
+    await reviewButton.click();
+
+    const panel = page.locator('[data-testid="call-trace-review-panel"]');
+    await expect(panel).toBeVisible();
+    await expect(reviewButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(panel).toContainText('trace artifact review');
+    await expect(panel).toContainText('gtm-ops.call-trace.v1');
+    await expect(panel.locator('[data-testid="call-trace-json-preview"]')).toContainText('"transcript"');
+    await expect(page.locator('[data-testid="call-trace-receipt"]')).toContainText(/trace prepared/i);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      button.click(),
+      panel.locator('[data-testid="call-trace-download"]').click(),
     ]);
 
     expect(download.suggestedFilename()).toMatch(/^trace-CALL-\d+\.json$/);
+    await expect(page.locator('[data-testid="call-trace-receipt"]')).toContainText(/trace downloaded/i);
 
     const path = await download.path();
     expect(path).toBeTruthy();

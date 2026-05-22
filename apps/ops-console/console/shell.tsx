@@ -3,7 +3,7 @@
    Exposes globals via Object.assign(window, {...}) at end.
    ============================================================ */
 
-const { useState, useEffect, useRef, useMemo } = React;
+const { useState, useEffect, useRef, useMemo, useId } = React;
 const I = window.Icon;
 
 const EVAL_ADMIN_HANDOFF_EXTRA_KEYS = [
@@ -24,6 +24,19 @@ function clearEvalAdminHandoffExtra(extra = {}) {
   const next = { ...extra };
   EVAL_ADMIN_HANDOFF_EXTRA_KEYS.forEach(key => { delete next[key]; });
   return next;
+}
+
+function openAgentsWorkspace(setRoute, triggeredFrom = 'agents-workspace-nav') {
+  const ctx = window.AppContext?.get?.() || {};
+  const nextSelection = ctx.selection?.type === 'eval' ? null : ctx.selection;
+  window.AppContext?.set?.({
+    selection: nextSelection,
+    extra: {
+      ...clearEvalAdminHandoffExtra(ctx.extra || {}),
+      triggered_from: triggeredFrom,
+    },
+  });
+  setRoute('agents');
 }
 
 /* ---------- Toast / notification system ---------- */
@@ -195,7 +208,7 @@ function ToastHost() {
    Tab inside while open, and restores focus to the trigger on close.
    This keeps click-outside-to-close behavior (pure aria-modal would
    block that) while giving keyboard users a sane experience. */
-function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320, label }) {
+function Popover({ open, onClose, anchorRef, children, align = 'right', width = 320, label, id }) {
   const [pos, setPos] = useState(null);
   const popRef = useRef(null);
   const previousFocusRef = useRef(null);
@@ -255,12 +268,13 @@ function Popover({ open, onClose, anchorRef, children, align = 'right', width = 
   }, [open]);
 
   if (!open || !pos) return null;
-  return (
-    <div ref={popRef} className="popover" role="dialog" aria-label={label || 'Popover'}
+  const popoverNode = (
+    <div id={id} ref={popRef} className="popover" role="dialog" aria-label={label || 'Popover'}
          style={{ top: pos.top, left: pos.left, width }}>
       {children}
     </div>
   );
+  return ReactDOM.createPortal ? ReactDOM.createPortal(popoverNode, document.body) : popoverNode;
 }
 
 /* ---------- Sidebar ---------- */
@@ -296,15 +310,17 @@ function Sidebar({ route, setRoute, collapsed }) {
     // 0.75 without a recent delta change.
     evals: D.evalSuites.filter(D.isEvalRegressing || (s => s.delta < 0 || s.pass < 0.75)).length,
   };
-  const items = [
+  const workspaceItems = [
     { id:'home',      label:'Mission Control', icon:I.Home },
     { id:'generate',  label:'Generate',        icon:I.Plus },
     { id:'pipeline',  label:'Pipeline',        icon:I.Pipeline, count: counts.pipeline },
-    { id:'funnel',    label:'Funnel',          icon:I.Filter },
     { id:'calls',     label:'Calls',           icon:I.Phone,    count: counts.calls },
     { id:'proposals', label:'Proposals',       icon:I.Doc,      count: counts.proposals },
     { id:'evals',     label:'Evals',           icon:I.Beaker,   count: counts.evals || null },
     { id:'agents',    label:'Agents',          icon:I.Bot },
+  ];
+  const toolItems = [
+    { id:'funnel',    label:'Funnel',          icon:I.Filter },
     { id:'simulator', label:'Simulator',       icon:I.Phone },
     { id:'email-composer', label:'Follow-up email', icon:I.Mail },
     { id:'verticals', label:'Verticals',       icon:I.Bolt },
@@ -332,6 +348,35 @@ function Sidebar({ route, setRoute, collapsed }) {
     });
     setRoute('agents');
   };
+  const renderNavItem = (it) => (
+    <a key={it.id}
+         href={`?route=${it.id}`}
+         className="sb__item"
+         data-active={route === it.id}
+         aria-label={`${it.label}${it.count != null ? ` ${it.count}` : ''}`}
+         aria-current={route === it.id ? 'page' : undefined}
+         onClick={(event) => {
+           event.preventDefault();
+           if (it.id === 'agents') {
+             openAgentsWorkspace(setRoute);
+             return;
+           }
+           setRoute(it.id);
+         }}
+         onKeyDown={(event) => {
+           if (event.key !== ' ') return;
+           event.preventDefault();
+           if (it.id === 'agents') {
+             openAgentsWorkspace(setRoute);
+             return;
+           }
+           setRoute(it.id);
+         }}>
+      <it.icon className="sb__icon" size={16} />
+      <span className="sb__label">{it.label}</span>
+      {it.count != null && <span className="sb__count">{it.count}</span>}
+    </a>
+  );
 
   return (
     <aside className="sb">
@@ -347,57 +392,60 @@ function Sidebar({ route, setRoute, collapsed }) {
         )}
       </div>
 
-      <div className="sb__section">workspace</div>
-      <nav className="sb__nav">
-        {items.map(it => (
-          <button key={it.id}
-               type="button"
-               className="sb__item"
-               data-active={route === it.id}
-               aria-label={`${it.label}${it.count != null ? ` ${it.count}` : ''}`}
-               aria-current={route === it.id ? 'page' : undefined}
-               onClick={() => setRoute(it.id)}>
-            <it.icon className="sb__icon" size={16} />
-            <span className="sb__label">{it.label}</span>
-            {it.count != null && <span className="sb__count">{it.count}</span>}
-          </button>
-        ))}
-      </nav>
+      <div className="sb__content">
+        <div className="sb__section">workspace</div>
+        <nav className="sb__nav" aria-label="Workspace navigation">
+          {workspaceItems.map(renderNavItem)}
+        </nav>
 
-      <div className="sb__section">agents</div>
-      <nav className="sb__nav" aria-label="ElevenLabs agents">
-        {agents.map(a => {
-          const isActive = route === 'agents' && activeAgentKey === a.id;
-          return (
-            <button key={a.id}
-                 type="button"
-                 className="sb__item"
-                 data-active={isActive}
-                 data-agent-key={a.id}
-                 aria-label={`${a.label} ${a.surface}${isActive ? ' (active in playground)' : ''}`}
-                 aria-current={isActive ? 'true' : undefined}
-                 onClick={() => selectAgent(a.id)}>
-              <span className="sb__icon" aria-hidden="true">
-                <window.ElevenUI.Orb
-                  size={16}
-                  state={isActive ? 'talking' : 'idle'}
-                  color1={a.color1}
-                  color2={a.color2}
-                  label={`${a.label} · ${isActive ? 'active' : 'idle'}`}
-                />
-              </span>
-              <span className="sb__label">{a.label}</span>
-              <span className="mono dim" style={{fontSize: 9}}>{a.surface}</span>
-            </button>
-          );
-        })}
-      </nav>
+        <div className="sb__section">agents</div>
+        <nav className="sb__nav" aria-label="ElevenLabs agents">
+          {agents.map(a => {
+            const isActive = route === 'agents' && activeAgentKey === a.id;
+            return (
+              <a key={a.id}
+                   href="?route=agents"
+                   className="sb__item"
+                   data-active={isActive}
+                   data-agent-key={a.id}
+                   aria-label={`${a.label} ${a.surface}${isActive ? ' (active in playground)' : ''}`}
+                   aria-current={isActive ? 'true' : undefined}
+                   onClick={(event) => { event.preventDefault(); selectAgent(a.id); }}
+                   onKeyDown={(event) => { if (event.key === ' ') { event.preventDefault(); selectAgent(a.id); } }}>
+                <span className="sb__icon" aria-hidden="true">
+                  <window.ElevenUI.Orb
+                    size={16}
+                    state={isActive ? 'talking' : 'idle'}
+                    color1={a.color1}
+                    color2={a.color2}
+                    label={`${a.label} · ${isActive ? 'active' : 'idle'}`}
+                  />
+                </span>
+                <span className="sb__label">{a.label}</span>
+                <span className="mono dim" style={{fontSize: 9}}>{a.surface}</span>
+              </a>
+            );
+          })}
+        </nav>
 
-      <button className="sb__footer"
-           type="button"
+        <div className="sb__section">tools</div>
+        <nav className="sb__nav" aria-label="Console tools">
+          {toolItems.map(renderNavItem)}
+        </nav>
+      </div>
+
+      <a className="sb__footer"
+           href="?route=settings"
            aria-label="Open My Account settings"
            data-active={route === 'settings'}
-           onClick={() => {
+           onClick={(event) => {
+             event.preventDefault();
+             setRoute('settings');
+             window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'account' } }));
+           }}
+           onKeyDown={(event) => {
+             if (event.key !== ' ') return;
+             event.preventDefault();
              setRoute('settings');
              window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'account' } }));
            }}>
@@ -408,7 +456,7 @@ function Sidebar({ route, setRoute, collapsed }) {
             <div className="sb__user-org">helix · admin</div>
           </div>
         )}
-      </button>
+      </a>
     </aside>
   );
 }
@@ -417,7 +465,9 @@ function Sidebar({ route, setRoute, collapsed }) {
 function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setCollapsed }) {
   const labels = {
     home:'Mission Control', generate:'Generate Proposal', pipeline:'Pipeline', funnel:'Funnel', calls:'Calls',
-    proposals:'Proposals', evals:'Evals', agents:'Agents', settings:'Settings',
+    proposals:'Proposals', evals:'Evals', agents:'Agents', simulator:'Simulator',
+    'email-composer':'Follow-up email', verticals:'Verticals', replay:'Replay',
+    settings:'Settings',
   };
   const [notifOpen, setNotifOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
@@ -440,11 +490,21 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
 
   const notifs = buildTopbarNotifications(D);
   const runActions = [
-    { icon:I.Phone, label:'Outbound discovery', sub:'opens lead intake · agent-01 Hunter', route:'pipeline', toast:'Outbound discovery opened', intent:'outbound_discovery', extra:{ pipeline_panel:'new-lead' } },
-    { icon:I.Mail,  label:'Multi-thread sequence', sub:'opens high-intent saved view', route:'pipeline', toast:'Multi-thread sequence opened', intent:'multi_thread_sequence', extra:{ pipeline_panel:'filters', pipeline_filter:'high' } },
-    { icon:I.Doc,   label:'Generate proposal', sub:'prefills buyer proof from latest call', route:'generate', toast:'Proposal generator opened', intent:'proposal_generation', extra: proposalRunExtra },
-    { icon:I.Beaker,label:'Trigger eval suite', sub:'opens harness bridge · Cmd+E', route:'evals', toast:'Eval harness opened', intent:'eval_suite', extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick' } },
-    { icon:I.Refresh, label:'Re-score stale leads', sub:'opens pipeline saved views', route:'pipeline', toast:'Lead re-score review opened', intent:'lead_rescore', extra:{ pipeline_panel:'filters', pipeline_filter:'all' } },
+    { icon:I.Phone, label:'Outbound discovery', sub:'opens Pipeline lead intake', route:'pipeline', intent:'outbound_discovery', extra:{ pipeline_panel:'new-lead' } },
+    { icon:I.Mail,  label:'Multi-thread sequence', sub:'opens Pipeline high-intent saved view', route:'pipeline', intent:'multi_thread_sequence', extra:{ pipeline_panel:'filters', pipeline_filter:'high' } },
+    {
+      icon:I.Doc,
+      label:'Generate proposal',
+      sub: proposalRunCall?.id
+        ? `opens Generate with ${proposalRunCall.id} buyer proof`
+        : 'opens Generate for manual buyer proof',
+      route:'generate',
+      intent:'proposal_generation',
+      selection: proposalRunCall?.id ? { type:'call', id: proposalRunCall.id } : null,
+      extra: proposalRunExtra,
+    },
+    { icon:I.Beaker,label:'Open eval run plan', sub:'opens local eval run plan', route:'evals', intent:'eval_run_plan', extra:{ evals_bridge_open:true, eval_harness_command_id:'eval-quick', eval_suite_scope:'quick-domain-batch' } },
+    { icon:I.Refresh, label:'Review stale lead scores', sub:'opens Pipeline scoring saved view', route:'pipeline', intent:'lead_rescore', extra:{ pipeline_panel:'filters', pipeline_filter:'all' } },
   ];
   const openNotification = (n) => {
     // Guard the selection even though notifications are derived from live
@@ -481,6 +541,7 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
   const startRun = (o) => {
     const ctx = window.AppContext.get();
     window.AppContext.set({
+      selection: Object.prototype.hasOwnProperty.call(o, 'selection') ? o.selection : ctx.selection,
       extra: {
         ...(ctx.extra || {}),
         ...(o.extra || {}),
@@ -491,19 +552,57 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
     setRoute(o.route);
     setRunOpen(false);
   };
+  const openNotificationSettings = () => {
+    const ctx = window.AppContext.get();
+    window.AppContext.set({
+      extra: {
+        ...(ctx.extra || {}),
+        settings_tab: 'integrations',
+        triggered_from: 'topbar-notifications-footer',
+      },
+    });
+    setNotificationsRead(true);
+    setNotifOpen(false);
+    setRoute('settings');
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } }));
+    });
+  };
+  const homeCrumbProps = {
+    className: 'tb__crumb tb__crumb--brand',
+    children: 'Wranngle',
+  };
+  const workspaceCrumbContent = (
+    <>
+      gtm_ops<span className="tb__crumb--workspace-suffix"> console</span>
+    </>
+  );
 
   return (
     <header className="tb">
       <button className="btn btn--ghost btn--icon" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar" aria-label="Toggle sidebar">
         <I.Menu size={16} />
       </button>
-      <div className="tb__crumbs">
-        <button className="tb__crumb tb__crumb--brand" disabled={route === 'home'} onClick={() => setRoute('home')}>Wranngle</button>
+      <nav className="tb__crumbs" aria-label="Console breadcrumb">
+        {route === 'home'
+          ? <span {...homeCrumbProps} />
+          : <button {...homeCrumbProps} type="button" onClick={() => setRoute('home')} aria-label="Go to Mission Control" />}
         <span className="tb__sep">/</span>
-        <button className="tb__crumb tb__crumb--workspace" disabled={route === 'home'} onClick={() => setRoute('home')}>gtm_ops console</button>
+        {route === 'home'
+          ? <span className="tb__crumb tb__crumb--workspace">{workspaceCrumbContent}</span>
+          : (
+            <button
+              className="tb__crumb tb__crumb--workspace"
+              type="button"
+              onClick={() => setRoute('home')}
+              aria-label="Go to gtm_ops console home"
+            >
+              {workspaceCrumbContent}
+            </button>
+          )}
         <span className="tb__sep">/</span>
-        <span className="tb__crumb tb__crumb--active">{labels[route]}</span>
-      </div>
+        <span className="tb__crumb tb__crumb--active" aria-current="page">{labels[route]}</span>
+      </nav>
       {window.GTM?._isDemoFallback && (
         <span className="tb__demo-pill" role="status" aria-label="Demo data — backend returned no historic runs">
           <span className="dot dot--accent" style={{width:5,height:5}} aria-hidden="true"/>
@@ -520,36 +619,55 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
 
       <div className="tb__actions">
         <button ref={notifRef} className="btn btn--ghost btn--icon tb__bell" title="Notifications" aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-expanded={notifOpen}
+                aria-controls="notifications-popover"
                 onClick={() => setNotifOpen(o => !o)}>
           <I.Bell size={16} />
           {!notificationsRead && <span className="tb__bell-dot"/>}
         </button>
         <button className="btn btn--ghost btn--icon"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => {
+                  const nextTheme = theme === 'dark' ? 'light' : 'dark';
+                  setTheme(nextTheme);
+                  window.toast(`Theme changed · ${nextTheme}`, {
+                    sub: 'Console appearance updated',
+                    tone: 'accent',
+                  });
+                }}
                 title="Toggle theme"
                 aria-label="Toggle color theme">
           {theme === 'dark' ? <I.Sun size={16} /> : <I.Moon size={16} />}
+          <span className="sr-only">{theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}</span>
         </button>
-        <button ref={runRef} className="btn btn--primary" onClick={() => setRunOpen(o => !o)}>
-          <I.Plus size={14} /> New run <I.ChevronDown size={12} style={{marginLeft:2,opacity:.85}}/>
+        <button
+          ref={runRef}
+          className="btn btn--primary tb__run"
+          aria-haspopup="dialog"
+          aria-expanded={runOpen}
+          aria-controls="new-run-popover"
+          onClick={() => setRunOpen(o => !o)}
+        >
+          <I.Plus size={14} />
+          <span className="tb__run-label">New run</span>
+          <span className="tb__run-chevron" aria-hidden="true"><I.ChevronDown size={12} /></span>
         </button>
       </div>
 
-      <Popover open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
+      <Popover id="notifications-popover" open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={notifRef} width={360} label="Notifications">
         <div className="pop__hd">
           <span>Notifications</span>
           <span className="mono dim" style={{fontSize:10}}>{notificationsRead ? '0 new' : `${notifs.length} new`}</span>
         </div>
         <div className="pop__list">
           {notifs.map(n => (
-            <div key={n.id} className="pop__row" role="button" tabIndex={0}
+            <button key={n.id} type="button" className="pop__row"
                  data-notification-id={n.id}
                  data-notification-route={n.route}
                  data-selection-type={n.selection?.type || ''}
                  data-selection-id={n.selection?.id || ''}
                  aria-label={`${n.act}: ${n.title}`}
-                 onClick={() => openNotification(n)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}>
+                 onClick={() => openNotification(n)}>
               <span className={`dot dot--${n.tone === 'neutral' ? 'idle' : n.tone}`} style={{width:7,height:7,marginTop:6}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{n.title}</div>
@@ -557,29 +675,27 @@ function Topbar({ route, setRoute, openPalette, theme, setTheme, collapsed, setC
               </div>
               <span className="mono dim" style={{fontSize:10}}>{n.t}</span>
               <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
-            </div>
+            </button>
           ))}
         </div>
         <div className="pop__ft">
           <button className="btn btn--ghost btn--xs" onClick={() => { setNotificationsRead(true); setNotifOpen(false); }}>Mark all read</button>
-          <button className="btn btn--ghost btn--xs" onClick={() => { setRoute('settings'); window.dispatchEvent(new CustomEvent('gtm:settings-tab', { detail: { tab: 'integrations' } })); setNotifOpen(false); }}>Settings</button>
+          <button className="btn btn--ghost btn--xs" onClick={openNotificationSettings}>Settings</button>
         </div>
       </Popover>
 
-      <Popover open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={300} label="Start a run">
+      <Popover id="new-run-popover" open={runOpen} onClose={() => setRunOpen(false)} anchorRef={runRef} width={300} label="Start a run">
         <div className="pop__hd"><span>Start a run</span></div>
         <div className="pop__list">
           {runActions.map(o => (
-            <div key={o.label} className="pop__row" role="button" tabIndex={0}
-                 onClick={() => startRun(o)}
-                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRun(o); } }}>
+            <button key={o.label} type="button" className="pop__row" onClick={() => startRun(o)}>
               <o.icon size={14} />
               <div style={{flex:1}}>
                 <div style={{fontSize:13, fontWeight:600}}>{o.label}</div>
                 <div style={{fontSize:11, color:'var(--text-3)'}}>{o.sub}</div>
               </div>
               <I.ArrowRight size={12} style={{color:'var(--text-3)'}}/>
-            </div>
+            </button>
           ))}
         </div>
       </Popover>
@@ -623,7 +739,10 @@ function CommandPalette({ open, setOpen, setRoute }) {
         (a, b) => ((Number(b.flags) || 0) + (Number(b.deflections) || 0)) - ((Number(a.flags) || 0) + (Number(a.deflections) || 0))
       )[0] || null;
       if (!target) {
-        window.toast('No calls to recap', { sub: 'D.calls is empty', tone: 'warn' });
+        window.toast('No calls to recap', {
+          sub: 'Record or import a call before drafting a follow-up.',
+          tone: 'warn',
+        });
         return;
       }
       const ctx = window.AppContext.get();
@@ -650,21 +769,27 @@ function CommandPalette({ open, setOpen, setRoute }) {
       { group:'Navigation', icon:I.Home,     label:'Go to Mission Control', meta:'⏎', do: () => setRoute('home') },
       { group:'Navigation', icon:I.Plus,     label:'Go to Generate Proposal', meta:'draft gate', do: () => setRoute('generate') },
       { group:'Navigation', icon:I.Pipeline, label:'Go to Pipeline',        meta:'⏎', do: () => setRoute('pipeline') },
+      { group:'Navigation', icon:I.Pipeline, label:'Go to Funnel',          meta:'booking → revenue', do: () => setRoute('funnel') },
       { group:'Navigation', icon:I.Phone,    label:'Go to Calls',           meta:'⏎', do: () => setRoute('calls') },
       { group:'Navigation', icon:I.Doc,      label:'Go to Proposals',       meta:'⏎', do: () => setRoute('proposals') },
       { group:'Navigation', icon:I.Beaker,   label:'Go to Evals',           meta:'⏎', do: () => setRoute('evals') },
-      { group:'Navigation', icon:I.Bot,      label:'Go to Agents',          meta:'⏎', do: () => setRoute('agents') },
+      { group:'Navigation', icon:I.Bot,      label:'Go to Agents',          meta:'⏎', do: () => openAgentsWorkspace(setRoute, 'command-palette-agents-nav') },
+      { group:'Navigation', icon:I.Phone,    label:'Go to Simulator',       meta:'call-to-proposal trace', do: () => setRoute('simulator') },
+      { group:'Navigation', icon:I.Mail,     label:'Go to Follow-up Email', meta:'local draft review', do: () => setRoute('email-composer') },
+      { group:'Navigation', icon:I.Database, label:'Go to Verticals',       meta:'workspace presets', do: () => setRoute('verticals') },
+      { group:'Navigation', icon:I.Bracket,  label:'Go to Replay',          meta:'failure analysis', do: () => setRoute('replay') },
       { group:'Navigation', icon:I.Cog,      label:'Go to Settings',        meta:'⏎', do: () => setRoute('settings') },
       { group:'Actions', icon:I.Mic,    label:'Talk to Sales Coach',       meta:'opens dock', do: () => { document.querySelector('.coach-launcher')?.click(); } },
       { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'opens intake', do: openOutboundRun },
-      { group:'Actions', icon:I.Bolt,    label:'Trigger eval suite',        meta:'run plan', do: () => {
+      { group:'Actions', icon:I.Bolt,    label:'Open eval run plan',        meta:'manifest', do: () => {
         const ctx = window.AppContext.get();
         window.AppContext.set({
           extra: {
             ...(ctx.extra || {}),
             evals_bridge_open: true,
             eval_harness_command_id: 'eval-quick',
-            run_intent: 'eval_suite',
+            eval_suite_scope: 'quick-domain-batch',
+            run_intent: 'eval_run_plan',
             triggered_from: 'command-palette',
           },
         });
@@ -761,7 +886,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
         );
         if (focusables.length === 0) { e.preventDefault(); return; }
         const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+        const last = focusables.item(focusables.length - 1);
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault(); last.focus();
         } else if (!e.shiftKey && document.activeElement === last) {
@@ -783,8 +908,8 @@ function CommandPalette({ open, setOpen, setRoute }) {
     <div className="cp-overlay" onClick={() => setOpen(false)}>
       <div ref={dialogRef} className="cp" role="dialog" aria-modal="true" aria-label="Command palette"
            onClick={e => e.stopPropagation()}>
-        <input ref={inputRef} className="cp__input" placeholder="Type a command, lead, or call ID…"
-               aria-label="Search commands, leads, or call IDs"
+        <input ref={inputRef} className="cp__input" placeholder="Type a command, route, lead, or call ID…"
+               aria-label="Search commands, routes, leads, or call IDs"
                value={q} onChange={e => setQ(e.target.value)} />
         <div className="cp__list">
           {Object.entries(groups).map(([g, list]) => (
@@ -792,15 +917,16 @@ function CommandPalette({ open, setOpen, setRoute }) {
               <div className="cp__group">{g}</div>
               {list.map(it => {
                 idx += 1;
-                const isActive = idx === active;
+                const rowIndex = idx;
+                const isActive = rowIndex === active;
                 return (
-                  <div key={it.label} className="cp__row" data-active={isActive}
-                       onMouseEnter={() => setActive(idx)}
+                  <button key={it.label} type="button" className="cp__row" data-active={isActive}
+                       onMouseEnter={() => setActive(rowIndex)}
                        onClick={() => { it.do?.(); setOpen(false); }}>
                     <span className="cp__row-icon"><it.icon size={14} /></span>
                     <span>{it.label}</span>
                     <span className="cp__row-meta">{it.meta}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -864,18 +990,32 @@ function scrollConsoleNodeIntoView(node, options = {}) {
 
 function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w = 120, label, pointLabels }) {
   const [hovered, setHovered] = useState(null);
-  const min = Math.min(...data), max = Math.max(...data);
+  const tooltipId = typeof useId === 'function' ? useId() : `spark-${Math.random().toString(36).slice(2)}`;
+  const values = Array.isArray(data) ? data.map(Number).filter(Number.isFinite) : [];
+  if (values.length === 0) {
+    return (
+      <span
+        className="spark-wrap spark-wrap--empty"
+        role="img"
+        aria-label={label ? `${label}: no trend data available` : 'No trend data available'}
+        data-active-label="No trend data"
+      >
+        <span className="spark-empty">No trend data</span>
+      </span>
+    );
+  }
+  const min = Math.min(...values), max = Math.max(...values);
   const span = max - min || 1;
-  const step = data.length > 1 ? w / (data.length - 1) : 0;
-  const pts = data.map((v, i) => [data.length > 1 ? i * step : w / 2, h - ((v - min) / span) * (h - 4) - 2]);
+  const step = values.length > 1 ? w / (values.length - 1) : 0;
+  const pts = values.map((v, i) => [values.length > 1 ? i * step : w / 2, h - ((v - min) / span) * (h - 4) - 2]);
   const path = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
   const area = `${path} L${w},${h} L0,${h} Z`;
-  const latest = data.at(-1);
-  const first = data.at(0);
+  const latest = values.at(-1);
+  const first = values.at(0);
   const delta = latest - first;
   const labelText = String(label || '');
   const percentLabeled = /(?:%|percent|pct|rate|pass-rate|conversion)/i.test(labelText);
-  const isPercentSeries = percentLabeled && data.every(v => Number.isFinite(v) && Math.abs(v) <= 1);
+  const isPercentSeries = percentLabeled && values.every(v => Math.abs(v) <= 1);
   const rounded = (value, places = 2) => {
     if (!Number.isFinite(value)) return value;
     const factor = 10 ** places;
@@ -888,31 +1028,44 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
   };
   const deltaLabel = (value) => {
     const next = rounded(value, isPercentSeries ? 4 : 2);
+    if (isPercentSeries) {
+      const points = rounded(next * 100, 1);
+      const normalized = Object.is(points, -0) ? 0 : points;
+      const sign = normalized > 0 ? '+' : normalized < 0 ? '-' : '';
+      return `${sign}${Math.abs(normalized).toFixed(1)}pp`;
+    }
     return `${next > 0 ? '+' : ''}${fmt(next)}`;
   };
   const seriesLabel = labelText.split(':')[0].trim() || 'Trend';
-  const summary = label || `${seriesLabel}: ${data.length} periods, ${fmt(first)} to ${fmt(latest)}; range ${fmt(min)} to ${fmt(max)}; delta ${deltaLabel(delta)}`;
+  const summary = label || `${seriesLabel}: ${values.length} periods, ${fmt(first)} to ${fmt(latest)}; range ${fmt(min)} to ${fmt(max)}; delta ${deltaLabel(delta)}`;
   const detailedLabels = Array.isArray(pointLabels)
     ? pointLabels
     : [];
   const pointLabel = (i) => {
+    const periodLabel = `period ${i + 1}/${values.length}`;
     const context = detailedLabels[i]
       ? String(detailedLabels[i]).trim()
-      : data.length === 1
-        ? 'single sample'
-        : `point ${i + 1}/${data.length}`;
-    const fallbackRecency = detailedLabels[i] ? '' : i === data.length - 1 ? ' · latest' : '';
-    const movement = i > 0 ? `${deltaLabel(data[i] - data[i - 1])} vs prior` : 'baseline';
-    return `${seriesLabel} · ${context}${fallbackRecency}: ${fmt(data[i])} · ${movement}`;
+      : values.length === 1
+        ? (isPercentSeries ? periodLabel : 'single sample')
+        : (isPercentSeries ? periodLabel : `point ${i + 1}/${values.length}`);
+    const fallbackRecency = detailedLabels[i] ? '' : i === values.length - 1 ? ' · latest' : '';
+    const movement = i > 0 ? `${deltaLabel(values[i] - values[i - 1])} vs prior` : 'baseline';
+    return `${seriesLabel} · ${context}${fallbackRecency}: ${fmt(values[i])} · ${movement}`;
   };
-  const pointLabelValues = data.map((_, i) => pointLabel(i));
-  const clampIndex = (i) => Math.max(0, Math.min(data.length - 1, i));
-  const tooltipEdge = hovered === 0 ? 'start' : hovered === data.length - 1 ? 'end' : 'middle';
+  const pointLabelValues = values.map((_, i) => pointLabel(i));
+  const clampIndex = (i) => Math.max(0, Math.min(values.length - 1, i));
+  const activePointRatio = hovered == null ? null : (pts[hovered]?.[0] || 0) / w;
+  const activePointLabel = hovered == null ? '' : pointLabelValues[hovered];
+  const tooltipEdge = activePointRatio != null && activePointRatio < 0.28
+    ? 'start'
+    : activePointRatio != null && activePointRatio > 0.72
+      ? 'end'
+      : 'middle';
   const inspectPointFromX = (clientX, target) => {
     const rect = target.getBoundingClientRect();
-    if (!rect.width || data.length === 0) return;
+    if (!rect.width || values.length === 0) return;
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    setHovered(clampIndex(Math.round(ratio * (data.length - 1))));
+    setHovered(clampIndex(Math.round(ratio * (values.length - 1))));
   };
   const onKeyDown = (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Escape'].includes(e.key)) return;
@@ -926,10 +1079,10 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
       return;
     }
     if (e.key === 'End') {
-      setHovered(data.length - 1);
+      setHovered(values.length - 1);
       return;
     }
-    const current = hovered == null ? data.length - 1 : hovered;
+    const current = hovered == null ? values.length - 1 : hovered;
     const direction = e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 1;
     setHovered(clampIndex(current + direction));
   };
@@ -937,13 +1090,15 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
     <span
       className="spark-wrap"
       role="group"
-      aria-label={`${summary}. Use arrow keys to inspect each period.`}
+      aria-label={activePointLabel ? `${summary}. Inspecting ${activePointLabel}. Use arrow keys to inspect each period.` : `${summary}. Use arrow keys to inspect each period.`}
+      aria-describedby={hovered != null ? tooltipId : undefined}
       tabIndex={0}
       data-active-index={hovered ?? undefined}
+      data-active-label={activePointLabel}
       onPointerMove={(e) => inspectPointFromX(e.clientX, e.currentTarget)}
       onPointerLeave={() => setHovered(null)}
       onMouseLeave={() => setHovered(null)}
-      onFocus={() => setHovered(v => v == null ? data.length - 1 : v)}
+      onFocus={() => setHovered(v => v == null ? values.length - 1 : v)}
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHovered(null); }}
       onKeyDown={onKeyDown}
     >
@@ -964,6 +1119,15 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
       ))}
       {hovered != null && (
         <span
+          className="spark-scrubber"
+          data-testid="sparkline-scrubber"
+          aria-hidden="true"
+          style={{ left: `${(pts[hovered][0] / w) * 100}%`, '--spark-color': color }}
+        />
+      )}
+      {hovered != null && (
+        <span
+          id={tooltipId}
           className="spark-tooltip"
           data-testid="sparkline-tooltip"
           data-edge={tooltipEdge}
@@ -1019,7 +1183,7 @@ function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accen
             color={sparkColor || 'var(--sunset-500)'}
             h={28}
             w={80}
-            label={`${label} trend: current ${value}${delta != null ? `, delta ${delta}` : ''}`}
+            label={`${label} trend: current ${value}${deltaText ? `, ${deltaText}` : ''}`}
             pointLabels={sparkLabels}
           />
         </div>

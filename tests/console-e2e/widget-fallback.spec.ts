@@ -148,6 +148,45 @@ test.describe('widget unreachability fallback', () => {
     expect(loadingOrReady).toBe(true);
   });
 
+  test('ConvAI runtime languageCode failure opens local admin recovery instead of leaking an uncaught widget error', async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => {
+      pageErrors.push(error.message);
+    });
+
+    await page.route('**/unpkg.com/@elevenlabs/convai-widget-embed@latest*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/javascript',
+        body: `
+          class MockConvai extends HTMLElement {
+            connectedCallback() {
+              const root = this.attachShadow({ mode: 'open' });
+              root.innerHTML = '<section><button type="button">Start coaching</button></section>';
+            }
+          }
+          if (!customElements.get('elevenlabs-convai')) {
+            customElements.define('elevenlabs-convai', MockConvai);
+          }
+          setTimeout(() => console.error(new TypeError("Cannot read properties of undefined (reading 'languageCode')")), 0);
+        `,
+      });
+    });
+    await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
+    await page.goto('/console/?route=agents', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
+
+    const configError = page.locator('[data-testid="convai-config-error"]');
+    await expect(configError).toBeVisible({ timeout: 10_000 });
+    await expect(configError).toContainText(/ElevenLabs config unavailable/i);
+    await expect(configError.locator('a[href*="elevenlabs"]')).toHaveCount(0);
+    expect(pageErrors.filter(message => /languageCode/i.test(message))).toEqual([]);
+
+    await configError.getByRole('button', { name: /Open local admin/i }).click();
+    await expect(page.locator('.tb__crumb--active')).toContainText('Agents');
+    await expect(page.locator('.agent-admin-quick__button:has-text("Context")')).toHaveAttribute('data-active', 'true');
+  });
+
   test('Agents page replaces a mounted-but-unconfigured widget with local admin recovery', async ({ page }) => {
     await page.addInitScript(() => { (globalThis as any).DEMO_MODE = true; });
     await page.goto('/console/?route=agents', { waitUntil: 'domcontentloaded' });

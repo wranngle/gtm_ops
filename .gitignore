@@ -18,6 +18,7 @@ build/
 
 # Project-local runtime
 .assessment.cache
+.artifacts/
 logs/
 !apps/ops-console/fixtures/logs/
 .agent-runs/

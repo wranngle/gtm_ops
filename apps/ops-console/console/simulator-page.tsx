@@ -1,17 +1,17 @@
 /* ============================================================
-   Live Call Simulator — deterministic canned-trace replay.
+   Live Call Simulator — deterministic local trace replay.
    Click "Start simulation" → agent/caller turns reveal one at a
    time on a fixed cadence, then the 8-step proposal pipeline
    replays underneath, ending with `proposal: generated`.
 
-   Fixture: apps/ops-console/fixtures/canned-call.jsonl
+   Source trace: apps/ops-console/fixtures/canned-call.jsonl
    Schema reused from round-1 PR #170 (transcript turns with
    {ts, role, text} + pipeline stage rows + final marker).
    Pinned to /api/simulator-fixture so the static console can
    ship the JSONL alongside the bundle.
    ============================================================ */
 
-const SIMULATOR_FIXTURE_URL = 'fixtures/canned-call.jsonl';
+const SIMULATOR_FIXTURE_URL = '../fixtures/canned-call.jsonl';
 const SIMULATOR_TURN_DELAY_MS = 1500;
 const SIMULATOR_PIPELINE_DELAY_MS = 600;
 
@@ -44,13 +44,13 @@ function CallSimulator({ fixturePath = SIMULATOR_FIXTURE_URL }) {
     let cancelled = false;
     setPhase('loading');
     fetch(fixturePath)
-      .then(r => r.ok ? r.text() : Promise.reject(new Error(`fixture ${r.status}`)))
+      .then(r => r.ok ? r.text() : Promise.reject(new Error(`local call trace returned HTTP ${r.status}`)))
       .then(text => {
         if (cancelled) return;
         setData(parseSimulatorFixture(text));
         setPhase('idle');
       })
-      .catch(e => { if (!cancelled) { setError(String(e)); setPhase('error'); } });
+      .catch(e => { if (!cancelled) { setError(e?.message || String(e)); setPhase('error'); } });
     return () => { cancelled = true; };
   }, [fixturePath]);
 
@@ -84,10 +84,10 @@ function CallSimulator({ fixturePath = SIMULATOR_FIXTURE_URL }) {
   }, [phase, pipelineIdx, data]);
 
   if (phase === 'error') {
-    return <div className="sim sim--error" role="alert">Fixture failed to load: {error}</div>;
+    return <div className="sim sim--error" role="alert">Local trace failed to load: {error}</div>;
   }
   if (!data) {
-    return <div className="sim sim--loading">Loading canned trace…</div>;
+    return <div className="sim sim--loading">Loading local call trace...</div>;
   }
 
   const visibleTurns = data.turns.slice(0, turnIdx + 1);
@@ -148,7 +148,7 @@ function SimulatorPage({ setRoute }) {
       <PageHeader
         eyebrow="workspace · simulator"
         title="Simulator"
-        sub="Deterministic canned trace — click Start to watch a full call drive a proposal end-to-end."
+        sub="Replay a local call trace and watch qualification, pricing, and proposal review assemble in sequence."
       />
       <CallSimulator/>
     </div>

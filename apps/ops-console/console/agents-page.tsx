@@ -76,6 +76,23 @@ function AgentsPage({ setRoute }) {
   }, [resolveVisibleKey]);
   const active = globalThis.AGENT_REGISTRY.byKey(activeKey) || visibleAgents[0];
   const appExtra = appCtx.extra || {};
+  const humanizeEvalToken = (value) => String(value || '')
+    .split(/[,|]/)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => part
+      .replace(/^asr$/i, 'ASR')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b([a-z])/g, (_, char) => char.toUpperCase())
+      .replace(/\bAsr\b/g, 'ASR'))
+    .join(', ') || 'none';
+  const evidenceArtifactLabel = (path) => {
+    const raw = String(path || '').trim();
+    if (!raw) return 'local review packet';
+    const filename = raw.split('/').filter(Boolean).pop() || raw;
+    const stem = filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+    return stem ? `local review packet · ${stem}` : 'local review packet';
+  };
   const clearEvalHandoffExtra = (extra = {}) => {
     const next = { ...extra };
     [
@@ -103,6 +120,8 @@ function AgentsPage({ setRoute }) {
         evidencePath: appExtra.eval_evidence_path || appExtra.eval_run?.result_path || '../fixtures/eval-runs.json',
       }
     : null;
+  const evalFailedAxesLabel = humanizeEvalToken(evalContextHandoff?.failedAxes);
+  const evalEvidenceLabel = evidenceArtifactLabel(evalContextHandoff?.evidencePath);
   React.useEffect(() => {
     if (!evalContextHandoff || adminPanel !== 'context') return undefined;
     const frame = requestAnimationFrame(() => {
@@ -113,19 +132,23 @@ function AgentsPage({ setRoute }) {
   const openAdminSection = (id, source = 'tab') => {
     const nextPanel = id || 'prompt';
     setAdminPanel(nextPanel);
+    const label = {
+      prompt: 'Prompt',
+      voice: 'Voice',
+      tools: 'Tools',
+      context: 'Context',
+      history: 'History',
+      safety: 'Safety',
+    }[nextPanel] || 'Admin';
     if (source === 'shortcut') {
-      const label = {
-        prompt: 'Prompt',
-        voice: 'Voice',
-        tools: 'Tools',
-        context: 'Context',
-        history: 'History',
-        safety: 'Safety',
-      }[nextPanel] || 'Admin';
-      setAdminFocusNotice(`${active?.display_name || 'Agent'} local admin focused · ${label}`);
+      setAdminFocusNotice(`${active?.display_name || 'Agent'} local admin focused · ${label} · ${new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' })}`);
+      globalThis.toast(`${active?.display_name || 'Agent'} local admin focused`, {
+        sub: label,
+        tone: 'accent',
+      });
     }
     requestAnimationFrame(() => {
-      globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: 'nearest' });
+      globalThis.scrollConsoleNodeIntoView?.(adminCardRef.current, { block: source === 'shortcut' ? 'start' : 'nearest' });
       if (source === 'shortcut') adminCardRef.current?.focus?.({ preventScroll: true });
     });
   };
@@ -136,6 +159,23 @@ function AgentsPage({ setRoute }) {
       extra: {
         ...clearEvalHandoffExtra(ctx.extra || {}),
         triggered_from: 'agents-return-to-eval',
+      },
+    });
+    setRoute?.('evals');
+  };
+  const reviewEvalEvidence = () => {
+    if (!evalContextHandoff?.evidencePath) {
+      returnToEvalRun();
+      return;
+    }
+    const ctx = globalThis.AppContext.get();
+    globalThis.AppContext.set({
+      selection: ctx.selection?.type === 'eval' ? ctx.selection : appCtx.selection,
+      extra: {
+        ...clearEvalHandoffExtra(ctx.extra || {}),
+        triggered_from: 'agents-open-eval-evidence',
+        eval_open_artifact_path: evalContextHandoff.evidencePath,
+        eval_open_artifact_run: evalContextHandoff.scenario,
       },
     });
     setRoute?.('evals');
@@ -221,6 +261,10 @@ function AgentsPage({ setRoute }) {
       </div>
     );
   }
+  const declaredTools = Array.isArray(active.tools) ? active.tools : [];
+  const sessionToolsLabel = declaredTools.length
+    ? `${declaredTools.length} local`
+    : 'none declared';
 
   return (
     <div className="page page--wide">
@@ -257,19 +301,27 @@ function AgentsPage({ setRoute }) {
             <div className="eyebrow eyebrow--accent">eval run context</div>
             <strong>{evalContextHandoff.scenario}</strong>
             <p>
-              {evalContextHandoff.verdict} · {evalContextHandoff.score} · failed axes: {evalContextHandoff.failedAxes}
+              {evalContextHandoff.verdict} · {evalContextHandoff.score} · failed axes: {evalFailedAxesLabel}
             </p>
           </div>
           <div className="agent-eval-handoff__meta">
             <span>review context <code className="mono">{evalContextHandoff.context}</code></span>
-            <span>run evidence <code className="mono">{evalContextHandoff.evidencePath}</code></span>
+            <span>run evidence <code className="mono">{evalEvidenceLabel}</code></span>
           </div>
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            data-testid="agent-return-to-eval-run-top"
-            onClick={returnToEvalRun}
-          ><I3.Beaker size={12}/>Back to Evals</button>
+          <div className="agent-eval-handoff__actions">
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              data-testid="agent-review-eval-evidence-top"
+              onClick={reviewEvalEvidence}
+            ><I3.Doc size={12}/>Review evidence</button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              data-testid="agent-return-to-eval-run-top"
+              onClick={returnToEvalRun}
+            ><I3.Beaker size={12}/>Back to Evals</button>
+          </div>
         </section>
       )}
 
@@ -420,6 +472,14 @@ function AgentsPage({ setRoute }) {
                     >{t.label}</button>
                   ))}
                 </div>
+                {adminFocusNotice && (
+                  <div
+                    className="agent-admin-focus-status agent-admin-focus-status--quick"
+                    data-testid="agent-local-admin-quick-status"
+                    role="status"
+                    aria-live="polite"
+                  >{adminFocusNotice}</div>
+                )}
               </div>
             </div>
             <div className="eval-convai-frame agent-playground-convai" role="region" aria-label={`${active.display_name} playground chat`} data-testid="agent-playground-convai">
@@ -428,11 +488,11 @@ function AgentsPage({ setRoute }) {
                   <div className="eyebrow eyebrow--accent">ElevenLabs session</div>
                   <strong>{active.display_name}</strong>
                 </div>
-                <Badge tone="accent">embedded</Badge>
+                <Badge tone="accent">local wrapper</Badge>
                 <div className="agent-session-strip__grid">
                   <span>route <code className="mono">{appCtx.route}</code></span>
                   <span>context <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code></span>
-                  <span>tools <code className="mono">{(active.tools || []).length || 3} local</code></span>
+                  <span>tools <code className="mono" data-testid="agent-session-tools">{sessionToolsLabel}</code></span>
                 </div>
               </div>
               {/* surface="agent_playground" pulls textOnly + expanded +
@@ -561,9 +621,9 @@ function AgentsPage({ setRoute }) {
                   </div>
                 )}
                 {adminPanel === 'tools' && (
-                  Array.isArray(active.tools) && active.tools.length > 0 ? (
+                  declaredTools.length > 0 ? (
                     <div className="agent-admin-grid" data-testid="agent-tools-list">
-                      {active.tools.map(tool => (
+                      {declaredTools.map(tool => (
                         <div key={tool.name} data-testid="agent-tool-row" data-tool-name={tool.name}>
                           <div className="eyebrow">Client tool</div>
                           <div className="agent-admin-block mono">{tool.name}</div>
@@ -591,19 +651,27 @@ function AgentsPage({ setRoute }) {
                           <div className="eyebrow eyebrow--accent">eval run context</div>
                           <strong>{evalContextHandoff.scenario}</strong>
                           <p>
-                            {evalContextHandoff.verdict} · {evalContextHandoff.score} · failed axes: {evalContextHandoff.failedAxes}
+                            {evalContextHandoff.verdict} · {evalContextHandoff.score} · failed axes: {evalFailedAxesLabel}
                           </p>
                         </div>
                         <div className="agent-eval-handoff__meta">
                           <span>review context <code className="mono">{evalContextHandoff.context}</code></span>
-                          <span>run evidence <code className="mono">{evalContextHandoff.evidencePath}</code></span>
+                          <span>run evidence <code className="mono">{evalEvidenceLabel}</code></span>
                         </div>
-                        <button
-                          type="button"
-                          className="btn btn--ghost btn--sm"
-                          data-testid="agent-return-to-eval-run"
-                          onClick={returnToEvalRun}
-                        ><I3.Beaker size={12}/>Back to Evals</button>
+                        <div className="agent-eval-handoff__actions">
+                          <button
+                            type="button"
+                            className="btn btn--primary btn--sm"
+                            data-testid="agent-review-eval-evidence"
+                            onClick={reviewEvalEvidence}
+                          ><I3.Doc size={12}/>Review evidence</button>
+                          <button
+                            type="button"
+                            className="btn btn--ghost btn--sm"
+                            data-testid="agent-return-to-eval-run"
+                            onClick={returnToEvalRun}
+                          ><I3.Beaker size={12}/>Back to Evals</button>
+                        </div>
                       </section>
                     )}
                     {contextSync && (
@@ -732,7 +800,7 @@ function AgentsPage({ setRoute }) {
 
               <div className="divider"/>
 
-              <div style={{display: 'flex', gap: 8, justifyContent: 'flex-end'}}>
+              <div className="agent-admin-actions">
                 <button className="btn btn--ghost btn--sm" onClick={() => setAdminPanel('tools')}>
                   <I3.Cog size={12}/>Tools
                 </button>

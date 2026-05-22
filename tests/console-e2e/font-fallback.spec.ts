@@ -46,6 +46,38 @@ test('every --font-* token chains to a system family fallback', async ({ page })
   }
 });
 
+test('console display typography uses the canonical Wranngle face without cramped tracking', async ({ openConsole }) => {
+  const page = await openConsole();
+  const typography = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const read = (selector: string) => {
+      const element = document.querySelector(selector) as HTMLElement | null;
+      const style = element ? getComputedStyle(element) : null;
+      return {
+        fontFamily: style?.fontFamily || '',
+        letterSpacing: style?.letterSpacing || '',
+      };
+    };
+
+    return {
+      displayToken: root.getPropertyValue('--font-display').trim(),
+      pageTitle: read('.ph__title'),
+      statValue: read('.stat__value'),
+      shellBrand: read('.sb__logo'),
+    };
+  });
+
+  expect(typography.displayToken).toMatch(/^'Bricolage Grotesque',\s*'Outfit',\s*system-ui,\s*sans-serif$/);
+  for (const [name, sample] of Object.entries({
+    pageTitle: typography.pageTitle,
+    statValue: typography.statValue,
+    shellBrand: typography.shellBrand,
+  })) {
+    expect(sample.fontFamily, `${name} should inherit the console display face`).toMatch(/Bricolage Grotesque/i);
+    expect(sample.letterSpacing, `${name} should not use negative tracking`).toMatch(/^(normal|0px)$/);
+  }
+});
+
 test('console renders with system-font fallback when Google Fonts is blocked', async ({ page }) => {
   await page.route('**/fonts.googleapis.com/**', async (route) => route.abort('blockedbyclient'));
   await page.route('**/fonts.gstatic.com/**', async (route) => route.abort('blockedbyclient'));
