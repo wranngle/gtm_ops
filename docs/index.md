@@ -19,5 +19,6 @@ Product runtime documentation. The system of record is here, in this repo — if
 ## References
 
 - [`references/layered-domain-architecture.md`](references/layered-domain-architecture.md) — per-domain import-direction rule, enforced by `scripts/lint-layered-architecture.sh`
+- [`references/pdf-generation.md`](references/pdf-generation.md) — PyMuPDF proposal rendering contract and install path
 - [`references/sqlite-query-stability.md`](references/sqlite-query-stability.md) — `ORDER BY` tiebreaker rule, range-end +1ms fix, retry-shim convention for the residual `node-sqlite3` cache-visibility race, and the planned `better-sqlite3` migration
 - [`references/security-tooling.md`](references/security-tooling.md) — RBAC coverage lint, `audit:verify` CLI, audit metadata redaction, dev auth shim resolution order, CSP report Pages Function, Express response-header middleware

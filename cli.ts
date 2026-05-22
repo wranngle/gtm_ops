@@ -25,6 +25,24 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const PORT = process.env.PORT || 3000;
 const SERVER_URL = `http://localhost:${PORT}`;
 
+function replacePathExtension(filePath, extension) {
+  const parsed = path.parse(filePath);
+  return path.join(parsed.dir, `${parsed.name}${extension}`);
+}
+
+function replaceHtmlPathExtension(filePath, extension) {
+  const lowerPath = filePath.toLowerCase();
+  if (lowerPath.endsWith('.html')) {
+    return `${filePath.slice(0, -5)}${extension}`;
+  }
+
+  if (lowerPath.endsWith('.htm')) {
+    return `${filePath.slice(0, -4)}${extension}`;
+  }
+
+  return `${filePath}${extension}`;
+}
+
 /**
  * Check if the history server is running
  */
@@ -123,6 +141,7 @@ Usage:
 
 Commands:
   generate <input>    Generate presales documents from input file
+  render:html <json>  Render an existing pipeline schema/context to HTML
   eval:<subcommand>   Evaluation framework commands
 
 Generation:
@@ -140,6 +159,11 @@ Generate Options:
   --structured   Force treat input as structured JSON questionnaire data
                  (bypasses LLM extraction for faster processing)
 
+Render HTML Options:
+  --template <path>  HTML/Mustache template path (default: templates/presales_report.html)
+  --output <path>    Output HTML path (default: beside input as .html)
+  --pdf              Also render a PDF from the generated HTML
+
 Evaluation Commands:
   eval:stats     Show corpus and evaluation statistics
   eval:list      List case studies in corpus
@@ -156,6 +180,7 @@ Environment Variables:
 Examples:
   wranngle generate input/acme-corp-rfp.txt
   wranngle generate input/healthcare_intake.json --structured
+  wranngle render:html output/acme/schema.json --pdf
   wranngle eval:stats
   wranngle eval:batch --output report.json
 `;
@@ -196,6 +221,52 @@ async function main() {
     }
 
     await handleEvalCommand(subcommand, evalArgs, options);
+    process.exit(0);
+  }
+
+  if (command === 'render:html') {
+    let inputPath = null;
+    let outputPath = null;
+    let templatePath = path.join(__dirname, 'templates', 'presales_report.html');
+    let renderPdf = false;
+
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '--template' && args[i + 1]) {
+        templatePath = args[++i];
+      } else if (args[i] === '--output' && args[i + 1]) {
+        outputPath = args[++i];
+      } else if (args[i] === '--pdf') {
+        renderPdf = true;
+      } else {
+        inputPath ||= args[i];
+      }
+    }
+
+    if (!inputPath) {
+      console.error('Error: render:html requires a pipeline schema/context JSON file');
+      process.exit(1);
+    }
+
+    if (!fs.existsSync(inputPath)) {
+      console.error(`Error: Input file not found: ${inputPath}`);
+      process.exit(1);
+    }
+
+    const schema = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+    const defaultOutputPath = replacePathExtension(inputPath, '.html');
+    const htmlPath = outputPath || defaultOutputPath;
+    const { generatePresalesHtmlReport, writeHtmlReport } = await import('./lib/html-report-generator.js');
+    const { html } = generatePresalesHtmlReport(schema, { templatePath });
+    const written = writeHtmlReport(htmlPath, html);
+    console.log(`HTML report saved: ${written.path} (${(written.size / 1024).toFixed(1)} KB)`);
+
+    if (renderPdf) {
+      const { generatePDF } = await import('./lib/pdf-generator.js');
+      const pdfPath = replaceHtmlPathExtension(written.path, '.pdf');
+      const pdf = await generatePDF(written.path, pdfPath);
+      console.log(`PDF report saved: ${pdf.pdfPath} (${pdf.sizeDisplay}, ${pdf.pageCount} pages)`);
+    }
+
     process.exit(0);
   }
 
