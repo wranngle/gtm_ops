@@ -165,9 +165,10 @@ function getConvaiConfigError(agentId) {
 }
 
 function isConvaiRuntimeConfigError(text) {
-  return /Cannot read properties of undefined .*languageCode/i.test(text)
-    || /languageCode.*undefined/i.test(text)
-    || /Response does not contain widget_config/i.test(text);
+  const normalized = String(text || '').toLowerCase();
+  return (normalized.includes('cannot read properties of undefined') && normalized.includes('languagecode'))
+    || (normalized.includes('languagecode') && normalized.includes('undefined'))
+    || normalized.includes('response does not contain widget_config');
 }
 
 function isConvaiAbortNoise(text) {

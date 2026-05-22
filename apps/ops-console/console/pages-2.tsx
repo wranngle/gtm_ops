@@ -78,8 +78,7 @@ function evalScenarioTitle(value) {
 function evalAxisTitle(value) {
   return evalScenarioTitle(value)
     .replace(/\bAsr\b/g, 'ASR')
-    .replace(/\bTtfb\b/g, 'TTFB')
-    .replace(/\bP95\b/g, 'P95');
+    .replace(/\bTtfb\b/g, 'TTFB');
 }
 
 function evalReviewContextLabel(run, suite) {
