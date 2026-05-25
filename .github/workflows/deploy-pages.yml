@@ -49,7 +49,7 @@ jobs:
             echo "CLOUDFLARE_API_TOKEN repo secret is required for Cloudflare Pages deploys." >&2
             exit 1
           fi
-      - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd  # v3.15.0
+      - uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0  # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: d75d18b5b799b0a7f59a4987c7006131
