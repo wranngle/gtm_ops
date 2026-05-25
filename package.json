@@ -82,7 +82,7 @@
     "bun-types": "1.3.14",
     "eslint-config-xo-typescript": "^9.0.0",
     "tsx": "^4.7.0",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "vitest": "^4.0.16",
     "xo": "2.0.2"
   },
