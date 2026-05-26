@@ -66,7 +66,7 @@ DevDependencies (`@playwright/test`, `vitest`, `tsx`, `xo`, `typescript`, `@fake
 |---|---|---|---|
 | `import sqlite3 from 'sqlite3'` | `lib/db.ts`, `lib/audit.ts`, `lib/branding.ts`, `lib/admin.ts`, `lib/gdpr.ts`, `lib/usage.ts`, `lib/rbac.ts` | 7+ files | Native addon — won't bundle; rewrite to D1 |
 | `child_process.spawn` to `scripts/render-pdf-pymupdf.py` | `lib/pdf-generator.ts` | 1 bridge | Python/native MuPDF renderer — no Workers equivalent |
-| `fs.{readFileSync,writeFileSync,existsSync,statSync,mkdirSync}` | `lib/pipeline.ts`, `lib/pdf-generator.ts`, `lib/extract.ts`, `lib/gdpr.ts`, `lib/file_utils.ts`, `lib/versioning.ts`, `lib/integration-research.ts`, `lib/health.ts`, `lib/validate.ts`, `lib/html-polish.ts`, `lib/estimate.ts`, `lib/pricing-calculator.ts` | 12+ files, 80+ call sites | Workers has no `fs` — replace with bundled imports / R2 / KV |
+| `fs.{readFileSync,writeFileSync,existsSync,statSync,mkdirSync}` | `lib/pipeline.ts`, `lib/pdf-generator.ts`, `lib/extract.ts`, `lib/gdpr.ts`, `lib/file-utils.ts`, `lib/versioning.ts`, `lib/integration-research.ts`, `lib/health.ts`, `lib/validate.ts`, `lib/html-polish.ts`, `lib/estimate.ts`, `lib/pricing-calculator.ts` | 12+ files, 80+ call sites | Workers has no `fs` — replace with bundled imports / R2 / KV |
 | `child_process.spawn` | `server.ts:/api/restart`, `lib/pipeline.ts` | 2 sites | No Workers equivalent — delete the route, rework pipeline subprocess pattern |
 | `EventEmitter` + `setInterval` SSE | `server.ts:/api/stream` | 1 site | Doesn't survive across isolates — needs DO + WebSocket |
 | Append-only file hash chain | `lib/audit.ts` | hash chain integrity | Needs DO ordering or schema relaxation |
