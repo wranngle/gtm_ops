@@ -10,7 +10,7 @@
    round-1 PR #171 badge--healthy / badge--neutral pattern.
    ============================================================ */
 
-function VerticalSwitcher({ initialId, onChange }) {
+function VerticalSwitcher({ initialId, onChange }: { initialId?: any; onChange?: any } = {}) {
   const presets = window.VERTICAL_PRESETS || [];
   const defaultId = initialId || window.readPersistedVerticalId?.() || window.DEFAULT_VERTICAL_ID;
   const [active, setActive] = React.useState(defaultId);

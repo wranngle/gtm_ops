@@ -40,7 +40,7 @@ function openAgentsWorkspace(setRoute, triggeredFrom = 'agents-workspace-nav') {
 }
 
 /* ---------- Toast / notification system ---------- */
-const __toastListeners = new Set();
+const __toastListeners = new Set<(t: any) => void>();
 window.toast = function toast(msg, opts = {}) {
   __toastListeners.forEach(fn => fn({ id: Date.now() + Math.random(), msg, ...opts }));
 };
@@ -71,7 +71,7 @@ function formatProposalTotal(totalK) {
   return `$${totalK.toFixed(Math.abs(totalK) >= 100 ? 0 : 1).replace(/\.0$/, '')}K`;
 }
 
-function pluralizeCount(n, singular, plural) {
+function pluralizeCount(n, singular, plural?) {
   return `${n} ${n === 1 ? singular : (plural || `${singular}s`)}`;
 }
 
@@ -184,7 +184,7 @@ function ToastHost() {
       setTimeout(() => setItems(xs => xs.filter(x => x.id !== t.id)), t.duration || 3200);
     };
     __toastListeners.add(fn);
-    return () => __toastListeners.delete(fn);
+    return () => { __toastListeners.delete(fn); };
   }, []);
   return (
     <div className="toast-host">
@@ -779,7 +779,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
       { group:'Navigation', icon:I.Database, label:'Go to Verticals',       meta:'workspace presets', do: () => setRoute('verticals') },
       { group:'Navigation', icon:I.Bracket,  label:'Go to Replay',          meta:'failure analysis', do: () => setRoute('replay') },
       { group:'Navigation', icon:I.Cog,      label:'Go to Settings',        meta:'⏎', do: () => setRoute('settings') },
-      { group:'Actions', icon:I.Mic,    label:'Talk to Sales Coach',       meta:'opens dock', do: () => { document.querySelector('.coach-launcher')?.click(); } },
+      { group:'Actions', icon:I.Mic,    label:'Talk to Sales Coach',       meta:'opens dock', do: () => { (document.querySelector('.coach-launcher') as HTMLElement)?.click(); } },
       { group:'Actions', icon:I.Plus,    label:'New outbound run',          meta:'opens intake', do: openOutboundRun },
       { group:'Actions', icon:I.Bolt,    label:'Open eval run plan',        meta:'manifest', do: () => {
         const ctx = window.AppContext.get();
@@ -899,9 +899,9 @@ function CommandPalette({ open, setOpen, setRoute }) {
   }, [open, items, active, setOpen]);
 
   if (!open) return null;
-  const groups = items.reduce((acc, it) => {
+  const groups = items.reduce((acc: Record<string, any[]>, it) => {
     (acc[it.group] = acc[it.group] || []).push(it); return acc;
-  }, {});
+  }, {} as Record<string, any[]>);
 
   let idx = -1;
   return (
@@ -944,7 +944,7 @@ function CommandPalette({ open, setOpen, setRoute }) {
 }
 
 /* ---------- Shared widgets ---------- */
-function scrollConsoleNodeIntoView(node, options = {}) {
+function scrollConsoleNodeIntoView(node, options: any = {}) {
   if (!node?.getBoundingClientRect) return;
   const { block = 'nearest', behavior = 'auto', padding = 16 } = options;
   const isScrollable = (el) => {
@@ -1114,7 +1114,7 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
           data-point-label={pointLabelValues[i]}
           data-active={hovered === i ? 'true' : 'false'}
           onPointerEnter={() => setHovered(i)}
-          style={{ left: `${(p[0] / w) * 100}%`, top: `${(p[1] / h) * 100}%`, '--spark-color': color }}
+          style={{ left: `${(p[0] / w) * 100}%`, top: `${(p[1] / h) * 100}%`, '--spark-color': color } as any}
         />
       ))}
       {hovered != null && (
@@ -1122,7 +1122,7 @@ function Sparkline({ data, color = 'var(--sunset-500)', fill = true, h = 40, w =
           className="spark-scrubber"
           data-testid="sparkline-scrubber"
           aria-hidden="true"
-          style={{ left: `${(pts[hovered][0] / w) * 100}%`, '--spark-color': color }}
+          style={{ left: `${(pts[hovered][0] / w) * 100}%`, '--spark-color': color } as any}
         />
       )}
       {hovered != null && (
@@ -1233,7 +1233,7 @@ function Card({ title, action, children, accent, className = '' }: { title?: any
    the bottom when new lines arrive (unless the user has scrolled up,
    so they can review history without being yanked away). */
 const CONSOLE_PANEL_CAP = 200;
-function ConsolePanel({ lines, title = 'live · agent.feed' }) {
+function ConsolePanel({ lines, title = 'live · agent.feed', useLiveStream }: { lines?: any; title?: any; useLiveStream?: any }) {
   const [liveLines, setLiveLines] = React.useState([]);
   const [streamState, setStreamState] = React.useState(() => (window.DEMO_MODE ? 'ready' : 'connecting'));
   const bodyRef = React.useRef(null);

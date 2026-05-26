@@ -337,7 +337,7 @@ function normalizeEvalRun(raw) {
       .filter(([name, value]) => name !== 'aggregate_score' && typeof value === 'number')
       .map(([name, value]) => ({
         name,
-        pass: value >= 0.72,
+        pass: (value as number) >= 0.72,
         weight: 1,
         detail: `scalar score ${evalPct(value)}`,
       }))
@@ -702,7 +702,7 @@ function EvalsPage({ setRoute }) {
     setSuiteBuilderOpen(false);
     setArtifactPath(activeRun.result_path);
   };
-  const selectEvalRun = (run, options = {}) => {
+  const selectEvalRun = (run, options: any = {}) => {
     if (!run?.scenario_id) return;
     setActiveRunId(run.scenario_id);
     if (!options.initial) setRunDetailOpened(true);
@@ -4714,8 +4714,8 @@ function GeneratePage({ setRoute }) {
       sections: loadedPayload.sections ? Object.keys(loadedPayload.sections) : [],
       note: loadedPayload._demo_note || 'Synthetic source packet used only for local review preview.',
     };
-    if (!effectiveHandoff.kind && loadedPayload.title) {
-      reviewPreviewSource.title = loadedPayload.title;
+    if (!effectiveHandoff.kind && (loadedPayload as any).title) {
+      (reviewPreviewSource as any).title = (loadedPayload as any).title;
     }
     const base = {
       artifact_id: activeArtifact.artifactId,
@@ -5015,7 +5015,7 @@ function GeneratePage({ setRoute }) {
     // when the operator had just generated a v3 from a different call or
     // addressed blockers on a different buyer's proposal.
     const proposals = globalThis.GTM.proposals || [];
-    const matchByName = (needle, options = {}) => {
+    const matchByName = (needle, options: any = {}) => {
       if (!needle) return null;
       const n = String(needle).toLowerCase().split(/\s+/).find(Boolean);
       if (!n) return null;
@@ -5205,7 +5205,7 @@ function GeneratePage({ setRoute }) {
     void handleGenerate();
   };
 
-  const autoSample = async (options = {}) => {
+  const autoSample = async (options: any = {}) => {
     const shouldFocus = options.focus === true;
     try {
       const res = await fetch('/fixtures/sample.json');
