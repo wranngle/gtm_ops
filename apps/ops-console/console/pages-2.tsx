@@ -3823,10 +3823,14 @@ function AccountSettings() {
 }
 
 /* gtm_ops SaaS tiers — kept in lockstep with wranngle.com / data/offerings.ts.
-   If the website tiers move, update this list and the matching parity test. */
+   The `offeringId` field is the canonical id used by wranngle.com (gtm-ops-trial /
+   gtm-ops-plus / gtm-ops-pro); the local `id` is the URL- and test-selector-safe
+   short form. If the website tiers move, update this list, refresh the fixture
+   at tests/unit/fixtures/wranngle-com-offerings.json, and re-run the parity test. */
 const GTM_OPS_TIERS = [
   {
     id: 'trial',
+    offeringId: 'gtm-ops-trial',
     name: 'Trial',
     monthly: 0,
     annualMonthly: 0,
@@ -3844,6 +3848,7 @@ const GTM_OPS_TIERS = [
   },
   {
     id: 'plus',
+    offeringId: 'gtm-ops-plus',
     name: 'Plus',
     monthly: 20,
     annualMonthly: 16.67,
@@ -3857,16 +3862,18 @@ const GTM_OPS_TIERS = [
       'Lead intake forms',
       'Full audit log',
       'n8n webhook integration',
+      'Gemini-powered extraction',
       'Email support',
     ],
   },
   {
     id: 'pro',
+    offeringId: 'gtm-ops-pro',
     name: 'Pro',
     monthly: 99,
     annualMonthly: 82.5,
     badge: null,
-    cta: 'Talk to Sales',
+    cta: 'Talk to Cody',
     blurb: 'For teams who need SSO, custom domains, and unlimited throughput. Built for ops orgs shipping hundreds of proposals.',
     features: [
       'Unlimited proposals',
