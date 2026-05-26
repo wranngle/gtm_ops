@@ -1161,7 +1161,7 @@ function statDeltaLabel(delta) {
   return `${signed}${suffix} vs last week`;
 }
 
-function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accent }) {
+function Stat({ label, value, delta, tone, spark, sparkColor, sparkLabels, accent }: { label?: any; value?: any; delta?: any; tone?: any; spark?: any; sparkColor?: any; sparkLabels?: any; accent?: any }) {
   const deltaValue = statDeltaNumber(delta);
   const deltaText = statDeltaLabel(delta);
   const dir = deltaValue > 0 ? 'up' : deltaValue < 0 ? 'down' : null;
@@ -1196,7 +1196,7 @@ function Badge({ children, tone = 'neutral' }) {
   return <span className={`badge badge--${tone}`}>{children}</span>;
 }
 
-function PageHeader({ eyebrow, title, sub, actions }) {
+function PageHeader({ eyebrow, title, sub, actions }: { eyebrow?: any; title?: any; sub?: any; actions?: any }) {
   return (
     <header className="ph">
       <div>
@@ -1209,7 +1209,7 @@ function PageHeader({ eyebrow, title, sub, actions }) {
   );
 }
 
-function Card({ title, action, children, accent, className = '' }) {
+function Card({ title, action, children, accent, className = '' }: { title?: any; action?: any; children?: any; accent?: any; className?: string }) {
   const accentClass = accent ? `card--${accent}` : '';
   return (
     <div className={`card ${accentClass} ${className}`}>

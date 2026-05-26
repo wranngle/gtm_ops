@@ -1,0 +1,18 @@
+{
+  "// purpose": "Typecheck the ops-console UMD/babel-standalone app (apps/ops-console/console/*.tsx). React loads as a <script> UMD global, not an import, so jsx is 'react' (classic createElement) and _console-globals.d.ts declares the ambient globals. Relaxed (noImplicitAny off) — the goal is catching real logic errors in 550KB of UI code, not a strict ESM rewrite. Wired via `bun run typecheck:console`.",
+  "compilerOptions": {
+    "jsx": "react",
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "allowJs": true,
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["react"]
+  },
+  "include": ["console/**/*.tsx", "console/**/*.ts"]
+}

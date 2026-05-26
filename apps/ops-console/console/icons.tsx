@@ -1,6 +1,6 @@
 /* Inline SVG icon set — stroke-based, 16/20px, currentColor */
 window.Icon = (function () {
-  const make = (path, opts={}) => function Icon(props={}) {
+  const make = (path: any, opts: any = {}) => function Icon(props: { size?: any; stroke?: any; fill?: any; style?: any; className?: any } = {}) {
     const size = props.size || 16;
     const stroke = props.stroke || 1.7;
     return React.createElement('svg', {

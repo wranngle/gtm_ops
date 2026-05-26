@@ -256,7 +256,7 @@ function TweakSection({ label, children }) {
   );
 }
 
-function TweakRow({ label, value, children, inline = false }) {
+function TweakRow({ label, value, children, inline = false }: { label?: any; value?: any; children?: any; inline?: boolean }) {
   return (
     <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
       <div className="twk-lbl">
