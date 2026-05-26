@@ -20,7 +20,7 @@ Total `/api/*` + `/health` + `/ready` handlers: 52.
 |---|---|---|---|
 | Health/ready (no DB) | 4 | `/health`, `/ready`, `/api/health`, `/api/admin/health` | Trivial — minutes |
 | GET reads of small relational data | 22 | `/api/history`, `/api/usage/{summary,detail,costs}`, `/api/audit-logs`, `/api/webhooks`, `/api/branding`, `/api/admin/dashboard`, `/api/roles`, `/api/eval/{stats,runs,runs/:id,cases}`, `/api/eval-runs`, `/api/workspace/:id/users`, `/api/gdpr/consent`, `/api/documents/:executionId/versions{,/:version}`, `/api/documents/:executionId/diff/:v1/:v2`, `/api/audit-logs/{export,verify,:logId}`, `/api/webhooks/{:id,:id/deliveries}`, `/api/gdpr/export/:jobId`, `/api/branding/domain/verify` | D1 query rewrite, 1–2 hrs each |
-| POST mutations on small tables | 11 | `/api/webhooks` (create), `/api/webhooks/:id` (PATCH), `/api/webhooks/:id` (DELETE), `/api/webhooks/:id/test`, `/api/branding` (POST), `/api/users/:id/role`, `/api/workspace/:id/invite`, `/api/workspace/:wid/users/:uid` (DELETE), `/api/gdpr/{consent,export,delete,delete/cancel}`, `/api/documents/:executionId/rollback/:version`, `/api/audit-logs/cleanup` | D1 + zod validation; portable |
+| POST mutations on small tables | 11 | `/api/webhooks` (create), `/api/webhooks/:id` (PATCH), `/api/webhooks/:id` (DELETE), `/api/webhooks/:id/test`, `/api/branding` (POST), `/api/users/:id/role`, `/api/workspace/:id/invite`, `/api/workspace/:wid/users/:uid` (DELETE), `/api/gdpr/{consent,export,delete,delete/cancel}`, `/api/documents/:executionId/rollback/:version`, `/api/audit-logs/cleanup` | D1 + arktype validation; portable |
 | Multipart upload | 1 | `/api/branding/logo` | Needs R2 + Workers `request.formData()` rewrite |
 | File streaming | 2 | `/api/gdpr/export/:jobId/download`, `/api/artifacts/:executionId`, `/api/logs/:executionId` | Move to R2 + signed URLs |
 | Audit-log hash chain | 1 | `/api/audit-logs/verify` (GET) — depends on append-only ordering | Needs Durable Object or schema relaxation |
@@ -38,23 +38,27 @@ Tagged against Workers runtime compatibility (`compatibility_flags = ["nodejs_co
 
 | Dependency | Version | Status | Notes |
 |---|---|---|---|
-| `@google/genai` | ^1.0.0 | GREEN | Pure HTTP; works on Workers fetch |
-| `ajv` | ^8.12.0 | GREEN | Pure JS, ESM-compatible |
-| `ajv-formats` | ^2.1.1 | GREEN | Pure JS |
-| `cors` | 2.8.5 | YELLOW | Express middleware; not used directly on Pages — replace with manual headers in each handler |
+| `@google/genai` | ^2.6.0 | GREEN | Pure HTTP; works on Workers fetch |
+| `ajv` | 8.20.0 | GREEN | Pure JS, ESM-compatible |
+| `ajv-formats` | ^3.0.1 | GREEN | Pure JS |
+| `arktype` | 2.2.0 | GREEN | Pure JS; replaced `zod` for runtime validation |
 | `dotenv` | ^16.3.1 | YELLOW | Not needed — Pages reads env from bindings/`wrangler.toml`; remove from runtime path |
-| `eventsource` | ^2.0.2 | GREEN | Client-side SSE; only relevant if Workers-as-client |
+| `eventsource` | ^4.1.0 | GREEN | Client-side SSE; only relevant if Workers-as-client |
 | `express` | ^4.18.2 | RED | Replace per-route with `PagesFunction` handler shape |
-| `express-rate-limit` | 8.2.1 | RED | In-memory rate limit doesn't survive Workers isolates — use Cloudflare Rate Limiting binding or KV-backed counter |
 | `mustache` | ^4.2.0 | GREEN | Pure JS templating |
-| `open` | ^10.0.0 | RED | Spawns OS-level browser; CLI-only — exclude from Pages bundle |
 | PyMuPDF (`requirements.txt`) | >=1.27.2,<1.28 | **RED (blocker)** | Python/native MuPDF renderer; no Workers path. Keep generation on a Node/Python host or call a separate generator service |
 | `sql.js` | ^1.13.0 | YELLOW | WASM SQLite; runs on Workers but bundle size + no persistence make it unsuitable for prod |
-| `sqlite3` | ^5.1.7 | **RED (blocker)** | Native addon; will not load. Replace with D1 binding |
-| `uuid` | ^9.0.1 | GREEN | Pure JS; or use `crypto.randomUUID()` |
-| `zod` | ^3.22.4 | GREEN | Pure JS; works as-is |
+| `sqlite3` | ^6.0.1 | **RED (blocker)** | Native addon; will not load. Replace with D1 binding |
+| `uuid` | ^14.0.0 | GREEN | Pure JS; or use `crypto.randomUUID()` |
 
-DevDependencies (`@playwright/test`, `vitest`, `tsx`, `xo`, `typescript`, `@faker-js/faker`, `arktype`, `bun-types`, `eslint-config-xo-typescript`) are out of the runtime bundle and don't affect feasibility.
+Dropped since this doc was last refreshed (no longer in the runtime graph):
+
+- ~~`cors`~~ — removed in #204 (never imported anywhere; YELLOW handler-header pivot moot).
+- ~~`express-rate-limit`~~ — removed in #204 (never imported anywhere; RED in-memory rate-limit pivot moot).
+- ~~`open`~~ — removed in #203 (never imported anywhere; RED CLI-only path moot).
+- ~~`zod`~~ — replaced by `arktype` 2.2.0 (per `feat: TypeScript regime alignment + zod→arktype + generate-route CI fix`, #143). Same GREEN feasibility.
+
+DevDependencies (`@playwright/test`, `vitest`, `tsx`, `xo`, `typescript`, `@faker-js/faker`, `bun-types`, `eslint-config-xo-typescript`) are out of the runtime bundle and don't affect feasibility.
 
 **Hard blockers in production code paths (not just deps):**
 
@@ -79,7 +83,7 @@ DevDependencies (`@playwright/test`, `vitest`, `tsx`, `xo`, `typescript`, `@fake
 
 The recommended path is **hybrid, in three layers**:
 
-1. **Pages Functions + D1 — read/CRUD layer (~1 day).** Port the 22 GET reads and 11 small-table mutations. Replace `sqlite3` with D1 bindings. Replace `express-rate-limit` with Cloudflare Rate Limiting. Delete `/api/restart`. Move `/api/branding/logo` upload to R2. Move `/output`, `/exports` to R2 with signed URLs.
+1. **Pages Functions + D1 — read/CRUD layer (~1 day).** Port the 22 GET reads and 11 small-table mutations. Replace `sqlite3` with D1 bindings. If/when rate limiting is reintroduced, use Cloudflare Rate Limiting (don't bring back `express-rate-limit`). Delete `/api/restart`. Move `/api/branding/logo` upload to R2. Move `/output`, `/exports` to R2 with signed URLs.
 
 2. **Durable Objects — ordering-sensitive layer (~1 day).** Reimplement audit-log hash-chain append on a single DO instance (serializes writes, preserves chain integrity). Reimplement `/api/stream` via DO + WebSocket fan-out, OR drop SSE and switch UI to short-polling.
 
