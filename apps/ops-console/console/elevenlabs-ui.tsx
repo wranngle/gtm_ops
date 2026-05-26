@@ -11,6 +11,8 @@ function ELOrb({ state = 'idle', size = 44, color1, color2, label = 'ElevenLabs 
   return (
     <span
       className={`el-orb el-orb--${state}`}
+      data-component="eleven-orb"
+      data-state={state}
       aria-label={label}
       role="img"
       style={{
@@ -30,7 +32,7 @@ function ELBarVisualizer({ bars = [], active = false, tone = 'accent' }) {
   const fallback = [0.25, 0.52, 0.35, 0.78, 0.46, 0.63, 0.31, 0.58, 0.42, 0.74, 0.28, 0.5];
   const values = bars.length ? bars : fallback;
   return (
-    <div className={`el-bars el-bars--${tone} ${active ? 'is-active' : ''}`} aria-hidden="true">
+    <div className={`el-bars el-bars--${tone} ${active ? 'is-active' : ''}`} data-component="eleven-bar-visualizer" data-active={active ? 'true' : 'false'} aria-hidden="true">
       {values.slice(0, 18).map((v, i) => (
         <span key={i} style={{ height: `${Math.max(10, Math.min(100, v * 100))}%`, animationDelay: `${i * 48}ms` }}/>
       ))}
@@ -136,6 +138,67 @@ function ELTranscriptViewer({ run, detail, replaying, onReplay }) {
   );
 }
 
+function ELAgentPanel({ children, className = '' }) {
+  return (
+    <div
+      className={`el-agent-panel agent-playground-frame ${className}`.trim()}
+      data-component="eleven-agent-panel"
+    >
+      {children}
+    </div>
+  );
+}
+
+function ELAgentPanelHead({ orb, title, subtitle, visualizer }) {
+  return (
+    <div className="el-agent-panel__head" data-component="eleven-agent-panel-head">
+      {orb}
+      <div>
+        <div style={{fontWeight: 700, fontSize: 14}}>{title}</div>
+        {subtitle && <div className="mono dim" style={{fontSize: 10}}>{subtitle}</div>}
+      </div>
+      {visualizer}
+    </div>
+  );
+}
+
+function ELContextBar({ icon, children, badge, testid }) {
+  return (
+    <div
+      className="el-conversation-bar"
+      data-component="eleven-context-bar"
+      role="status"
+      aria-live="polite"
+      data-testid={testid}
+    >
+      {icon}
+      <span>{children}</span>
+      {badge}
+    </div>
+  );
+}
+
+function ELSessionStrip({ eyebrow, title, badge, items = [], ariaLabel }) {
+  return (
+    <div
+      className="agent-session-strip"
+      data-component="eleven-session-strip"
+      aria-label={ariaLabel}
+    >
+      <div>
+        <div className="eyebrow eyebrow--accent">{eyebrow}</div>
+        <strong>{title}</strong>
+      </div>
+      {badge}
+      <div className="agent-session-strip__grid">
+        {items.map((it, i) => (
+          <span key={i}>{it}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 Object.assign(globalThis, {
   ElevenUI: {
     Orb: ELOrb,
@@ -144,5 +207,9 @@ Object.assign(globalThis, {
     Message: ELMessage,
     Conversation: ELConversation,
     TranscriptViewer: ELTranscriptViewer,
+    AgentPanel: ELAgentPanel,
+    AgentPanelHead: ELAgentPanelHead,
+    ContextBar: ELContextBar,
+    SessionStrip: ELSessionStrip,
   },
 });
