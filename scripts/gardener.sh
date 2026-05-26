@@ -27,7 +27,7 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 2
 
-DOCS=(README.md ARCHITECTURE.md DESIGN.md CONTRIBUTING.md SECURITY.md AGENTS.md WORKFLOW.md AUTOMATION.md CODE_OF_CONDUCT.md)
+DOCS=(README.md ARCHITECTURE.md DESIGN.md CONTRIBUTING.md SECURITY.md AGENTS.md WORKFLOW.md CODE_OF_CONDUCT.md)
 for f in docs/*.md docs/**/*.md apps/ops-console/README.md; do
   [[ -f "$f" ]] && DOCS+=("$f")
 done
