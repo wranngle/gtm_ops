@@ -7,7 +7,7 @@
    Voice Button, Bar Visualizer) in repo-native CSS/React.
    ============================================================ */
 
-function ELOrb({ state = 'idle', size = 44, color1, color2, label = 'ElevenLabs agent state' }) {
+function ELOrb({ state = 'idle', size = 44, color1, color2, label = 'ElevenLabs agent state' }: { state?: string; size?: number; color1?: any; color2?: any; label?: string }) {
   return (
     <span
       className={`el-orb el-orb--${state}`}
