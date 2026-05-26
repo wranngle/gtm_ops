@@ -18,6 +18,20 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Shape of the JSON bodies these LLM providers return (Groq chat-completions
+// + Gemini generateContent). `response.json()` is typed `any` under Node/Bun
+// fetch types but `unknown` under the Cloudflare Workers fetch types this
+// module is also compiled against (functions/tsconfig.json) — annotating the
+// parsed body keeps the access sites type-safe in both worlds.
+type LlmJsonResponse = {
+  error?: { message?: string };
+  choices?: Array<{ message?: { content?: string } }>;
+  usage?: { total_tokens?: number };
+  usageMetadata?: { totalTokenCount?: number };
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  [key: string]: unknown;
+};
+
 // ============================================================================
 // SCHEMAS
 // ============================================================================
@@ -315,13 +329,13 @@ export class GroqAdapter {
           throw new Error('Request too large for all Groq models');
         }
 
-        const data = await response.json();
+        const data = await response.json() as LlmJsonResponse;
         if (!response.ok) {
           throw new Error(`Groq API error ${response.status}: ${data.error?.message || response.statusText}`);
         }
 
         const text = data.choices?.[0]?.message?.content || '';
-        if (data.usage) this.stats.tokensUsed += data.usage.total_tokens;
+        if (data.usage) this.stats.tokensUsed += data.usage.total_tokens || 0;
         this.stats.requestCount++;
 
         let jsonText = text.trim();
@@ -546,7 +560,7 @@ export class LLMExecutor {
           throw new Error(`Gemini API error ${response.status}: ${errorText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as LlmJsonResponse;
         const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const tokens = data.usageMetadata?.totalTokenCount || 0;
         this.stats.promptsExecuted++;
@@ -885,7 +899,7 @@ export class BatchLLMExecutor {
           throw new Error(`Gemini API error ${response.status}: ${errorText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as LlmJsonResponse;
         const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const tokens = data.usageMetadata?.totalTokenCount || 0;
         this.stats.apiCalls++;
