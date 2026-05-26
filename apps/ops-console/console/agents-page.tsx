@@ -412,36 +412,39 @@ function AgentsPage({ setRoute }) {
         <div className="vstack" style={{gap: 18, minWidth: 0}}>
           <Card title={`playground · ${active.display_name}`} accent="accent" className="agent-playground-card">
             {/* The playground frames the raw ConvAI web component with the
-                local ElevenLabs UI primitives (Orb, BarVisualizer, status
-                bar) so the operator gets the same visual contract here as
-                in the eval lab — not a bare embedded widget. */}
-            <div className="el-agent-panel agent-playground-frame">
-              <div className="el-agent-panel__head">
-                <window.ElevenUI.Orb
-                  size={48}
-                  state="idle"
-                  color1={active.avatar_color_1}
-                  color2={active.avatar_color_2}
-                  label={`${active.display_name} playground state`}
-                />
-                <div>
-                  <div style={{fontWeight: 700, fontSize: 14}}>{active.display_name}</div>
-                  <div className="mono dim" style={{fontSize: 10}}>{active.role} · {active.mode}</div>
-                </div>
-                <window.ElevenUI.BarVisualizer
-                  active={false}
-                  tone="accent"
-                  bars={[.32,.58,.41,.74,.5,.36,.66,.45,.82,.4,.58,.3]}
-                />
-              </div>
-              <div className="el-conversation-bar" role="status" aria-live="polite" data-testid="agent-context-bar">
-                <I3.Mic size={14}/>
-                <span>
-                  Console context packet: <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code>
-                  {' '}from <code className="mono">{appCtx.route || 'agents'}</code>
-                </span>
-                <Badge tone="accent">ready</Badge>
-              </div>
+                local ElevenLabs UI primitives (AgentPanel, AgentPanelHead,
+                ContextBar, SessionStrip) so the operator gets the same
+                visual contract here as in the eval lab — not a bare
+                embedded widget, and not bespoke per-surface divs. */}
+            <window.ElevenUI.AgentPanel>
+              <window.ElevenUI.AgentPanelHead
+                orb={(
+                  <window.ElevenUI.Orb
+                    size={48}
+                    state="idle"
+                    color1={active.avatar_color_1}
+                    color2={active.avatar_color_2}
+                    label={`${active.display_name} playground state`}
+                  />
+                )}
+                title={active.display_name}
+                subtitle={`${active.role} · ${active.mode}`}
+                visualizer={(
+                  <window.ElevenUI.BarVisualizer
+                    active={false}
+                    tone="accent"
+                    bars={[.32,.58,.41,.74,.5,.36,.66,.45,.82,.4,.58,.3]}
+                  />
+                )}
+              />
+              <window.ElevenUI.ContextBar
+                icon={<I3.Mic size={14}/>}
+                badge={<Badge tone="accent">ready</Badge>}
+                testid="agent-context-bar"
+              >
+                Console context packet: <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code>
+                {' '}from <code className="mono">{appCtx.route || 'agents'}</code>
+              </window.ElevenUI.ContextBar>
               <div className="agent-admin-quick" aria-label="Local agent admin shortcuts">
                 <div className="agent-admin-quick__head">
                   <div>
@@ -481,20 +484,19 @@ function AgentsPage({ setRoute }) {
                   >{adminFocusNotice}</div>
                 )}
               </div>
-            </div>
+            </window.ElevenUI.AgentPanel>
             <div className="eval-convai-frame agent-playground-convai" role="region" aria-label={`${active.display_name} playground chat`} data-testid="agent-playground-convai">
-              <div className="agent-session-strip" aria-label="Active ElevenLabs session packet">
-                <div>
-                  <div className="eyebrow eyebrow--accent">ElevenLabs session</div>
-                  <strong>{active.display_name}</strong>
-                </div>
-                <Badge tone="accent">local wrapper</Badge>
-                <div className="agent-session-strip__grid">
-                  <span>route <code className="mono">{appCtx.route}</code></span>
-                  <span>context <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code></span>
-                  <span>tools <code className="mono" data-testid="agent-session-tools">{sessionToolsLabel}</code></span>
-                </div>
-              </div>
+              <window.ElevenUI.SessionStrip
+                eyebrow="ElevenLabs session"
+                title={active.display_name}
+                badge={<Badge tone="accent">local wrapper</Badge>}
+                ariaLabel="Active ElevenLabs session packet"
+                items={[
+                  <>route <code className="mono">{appCtx.route}</code></>,
+                  <>context <code className="mono">{contextLines} {contextLines === 1 ? 'line' : 'lines'}</code></>,
+                  <>tools <code className="mono" data-testid="agent-session-tools">{sessionToolsLabel}</code></>,
+                ]}
+              />
               {/* surface="agent_playground" pulls textOnly + expanded +
                   dismissible + theme + the playground-specific
                   firstMessage out of agents-registry.js#surfaces, where
