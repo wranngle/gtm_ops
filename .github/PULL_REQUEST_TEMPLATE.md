@@ -5,7 +5,7 @@
 ## Change type
 
 - [ ] Documentation / knowledge base
-- [ ] Product code (`lib/`, `server.js`, `cli.js`, `apps/ops-console/`)
+- [ ] Product code (`lib/`, `server.ts`, `cli.ts`, `apps/ops-console/`)
 - [ ] PDF templates / brand tokens (`templates/`, `tokens/`, `DESIGN.md`)
 - [ ] Cloudflare Pages Functions (`functions/api/`)
 - [ ] ElevenLabs ConvAI integration (`apps/ops-console/console/el-widget.jsx`, `agents-registry.js`, `agents-page.jsx`)
