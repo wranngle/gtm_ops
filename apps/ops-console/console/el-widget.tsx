@@ -13,7 +13,7 @@ globalThis.AppContext = (function () {
     selection: null,
     extra: {},
   };
-  const listeners = new Set();
+  const listeners = new Set<(s: any) => void>();
   function get() { return state; }
   function set(patch) {
     state = { ...state, ...patch };
@@ -179,7 +179,7 @@ function isConvaiAbortNoise(text) {
 function installConvaiErrorBridge() {
   if (globalThis.__gtmConvaiErrorBridgeInstalled) return;
   globalThis.__gtmConvaiErrorBridgeInstalled = true;
-  if (globalThis.navigator && !globalThis.navigator.languageCode) {
+  if (globalThis.navigator && !(globalThis.navigator as any).languageCode) {
     try {
       Object.defineProperty(globalThis.navigator, 'languageCode', {
         configurable: true,

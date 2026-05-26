@@ -20,7 +20,7 @@ function ELOrb({ state = 'idle', size = 44, color1, color2, label = 'ElevenLabs 
         height: size,
         '--orb-c1': color1 || 'var(--sunset-500)',
         '--orb-c2': color2 || 'var(--violet-500)',
-      }}
+      } as any}
     >
       <span className="el-orb__ring"/>
       <span className="el-orb__core"/>

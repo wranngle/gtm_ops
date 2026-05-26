@@ -112,7 +112,7 @@ function mockLlmCompose(prompt) {
   return { subject, body };
 }
 
-function composeFollowupEmail(trace, crmContext) {
+function composeFollowupEmail(trace, crmContext = undefined) {
   const prompt = buildEmailPrompt(trace, crmContext);
   const { subject, body } = mockLlmCompose(prompt);
   return {

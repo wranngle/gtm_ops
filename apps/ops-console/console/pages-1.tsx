@@ -77,7 +77,7 @@ function HomePage({ setRoute }) {
   // (ms since epoch) per banner id. Banner is hidden while now() < expiry.
   // Previously "Snooze 1h" only fired a toast and the banner stayed, which
   // contradicted the verb and made the affordance feel fake.
-  const [snoozedBanners, setSnoozedBanners] = useState({});
+  const [snoozedBanners, setSnoozedBanners] = useState<Record<string, any>>({});
   // Derive the attention surface from live fixture state instead of the
   // previous hardcoded "agent-03 paused on Arcadia call · pricing objection
   // (3 deflections)" strings + hardcoded CALL-2417 review handoff. The banner
@@ -175,7 +175,7 @@ function HomePage({ setRoute }) {
   // with the fixture's `tasks` total, but that made Mission Control lead
   // with "743 assigned tasks" - workload volume, not current operator
   // pressure. Keep the headline about state the operator can act on.
-  const pluralize = (n, singular, plural) => `${n} ${n === 1 ? singular : (plural || `${singular}s`)}`;
+  const pluralize = (n, singular, plural?) => `${n} ${n === 1 ? singular : (plural || `${singular}s`)}`;
   const activeAgentCount = (agents || []).filter(a => a.status === 'active').length;
   const pausedAgentCount = (agents || []).filter(a => a.status === 'paused').length;
   const attentionCount = (attentionItem && !isAttentionSnoozed) ? 1 : 0;
@@ -1071,7 +1071,7 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOverStageId !== stage.id) setDragOverStageId(stage.id); }}
             onDragLeave={(e) => {
               // Only clear if we're leaving the column (not hopping between children).
-              if (e.currentTarget.contains(e.relatedTarget)) return;
+              if (e.currentTarget.contains(e.relatedTarget as Node)) return;
               if (dragOverStageId === stage.id) setDragOverStageId(null);
             }}
             onDrop={(e) => {

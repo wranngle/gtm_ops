@@ -75,6 +75,8 @@ jobs:
         run: bun run typecheck
       - name: Typecheck Cloudflare Pages Functions
         run: bun run typecheck:functions
+      - name: Typecheck ops-console UMD app
+        run: bun run typecheck:console
       - name: Run vitest
         run: bun run test:run
 

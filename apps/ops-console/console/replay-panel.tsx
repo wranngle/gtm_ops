@@ -38,7 +38,7 @@ function parseReplayFixtureSrc(text) {
 }
 
 function alignReplayStages(actual, counterfactual) {
-  const steps = new Set();
+  const steps = new Set<any>();
   for (const s of actual) steps.add(s.step);
   for (const s of counterfactual) steps.add(s.step);
   return [...steps].sort((a, b) => a - b).map(step => {
