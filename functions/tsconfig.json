@@ -1,0 +1,16 @@
+{
+  "// purpose": "Typecheck the Cloudflare Pages Functions (functions/api/*, functions/_lib/*). These run on the Workers runtime, so they need @cloudflare/workers-types globals (D1Database, KVNamespace, PagesFunction, navigator, …). They also import shared code from lib/ which uses node globals (process), so node types are included too. Wired via `bun run typecheck:functions`.",
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "lib": ["es2022"],
+    "types": ["@cloudflare/workers-types", "node", "bun-types"]
+  },
+  "include": ["**/*.ts", "../lib/**/*.ts"]
+}

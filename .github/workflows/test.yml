@@ -73,6 +73,8 @@ jobs:
         run: bun audit --audit-level=high
       - name: Typecheck
         run: bun run typecheck
+      - name: Typecheck Cloudflare Pages Functions
+        run: bun run typecheck:functions
       - name: Run vitest
         run: bun run test:run
 
