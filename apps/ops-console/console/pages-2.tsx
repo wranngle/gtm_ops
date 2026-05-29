@@ -1170,7 +1170,6 @@ function EvalsPage({ setRoute }) {
           <form className="workflow-popout__pane" onSubmit={submitSuiteDraft}>
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
-                <div className="eyebrow eyebrow--accent">new eval suite</div>
                 <div className="workflow-popout__title">Draft a local scenario pack</div>
                 <div className="muted" style={{fontSize:12}}>
                   Create the suite inside the console first. It becomes a draft row, then the harness run plan opens with the domain eval command selected.
@@ -1447,7 +1446,6 @@ function EvalsPage({ setRoute }) {
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
-                <div className="eyebrow eyebrow--accent">local run plan</div>
                 <div className="workflow-popout__title">Manifest command handoff</div>
                 <div className="muted" style={{fontSize:12}}>
                   Run plan loaded from the console manifest.
@@ -3272,7 +3270,6 @@ function WranngleOfferingsParity() {
               <div style={{fontWeight:700, fontSize:13}}>{item.name}</div>
               <div className="mono dim" style={{fontSize:10}}>{item.price}</div>
             </div>
-            <Badge tone="healthy">covered</Badge>
             <p>{item.coverage}</p>
           </div>
         ))}
