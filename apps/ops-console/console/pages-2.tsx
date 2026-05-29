@@ -1171,9 +1171,6 @@ function EvalsPage({ setRoute }) {
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
                 <div className="workflow-popout__title">Draft a local scenario pack</div>
-                <div className="muted" style={{fontSize:12}}>
-                  Create the suite inside the console first. It becomes a draft row, then the harness run plan opens with the domain eval command selected.
-                </div>
               </div>
               <button type="button" className="btn btn--ghost btn--icon" aria-label="Close new eval suite builder" onClick={() => setSuiteBuilderOpen(false)}><I3.Close size={14}/></button>
             </div>
@@ -1447,10 +1444,6 @@ function EvalsPage({ setRoute }) {
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
                 <div className="workflow-popout__title">Manifest command handoff</div>
-                <div className="muted" style={{fontSize:12}}>
-                  Run plan loaded from the console manifest.
-                  Outputs return here as review evidence and stay attached to the selected eval artifact.
-                </div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close eval run plan" onClick={() => setBridgeOpen(false)}><I3.Close size={14}/></button>
             </div>
@@ -1637,7 +1630,6 @@ function EvalsPage({ setRoute }) {
               <div>
                 <div className="eyebrow eyebrow--accent">evidence artifact</div>
                 <div className="workflow-popout__title">{evalScenarioTitle(artifactScenario)}</div>
-                <div className="muted" style={{fontSize:12}}>Evidence is loaded inside the console first. The local source reference is review metadata; the raw payload stays below as supporting detail.</div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close artifact panel" onClick={() => setArtifactPath(null)}><I3.Close size={14}/></button>
             </div>
@@ -3147,7 +3139,6 @@ function IntegrationsSettings() {
               <div style={{width:36, height:36, background:'var(--bg-elev)', border:'1px solid var(--border)', borderRadius:8, display:'grid', placeItems:'center', fontFamily:'var(--font-display)', fontWeight:700, fontSize:14, color:'var(--accent-fg)'}}>{c.icon}</div>
               <div>
                 <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
-                <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{c.sub}</div>
               </div>
               <Badge tone={status === 'connected' ? 'healthy' : status === 'syncing' ? 'warn' : status === 'available' ? 'accent' : 'neutral'}>{status}</Badge>
               <button
@@ -3169,9 +3160,7 @@ function IntegrationsSettings() {
             <form className="workflow-popout__pane" onSubmit={(e) => { e.preventDefault(); onSaveActions(); }} aria-label={`${activeConfig.name} mapping form`}>
               <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
                 <div>
-                  <div className="eyebrow eyebrow--accent">{isConnected ? 'configuration' : 'connect + map'}</div>
                   <div className="workflow-popout__title">{activeConfig.name}</div>
-                  <div className="muted" style={{fontSize:12}}>{activeConfig.what}</div>
                   {lastTest && (
                     <div className="mono dim" data-testid="integration-last-test" style={{fontSize:10, marginTop:4}}>
                       last test sync · {new Date(lastTest).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}
@@ -3182,7 +3171,7 @@ function IntegrationsSettings() {
               </div>
               <div className="integration-config-grid">
                 <div>
-                  <div className="eyebrow">actions permitted ({enabledCount}/{activeConfig.canDo.length})</div>
+                  <div className="eyebrow">actions permitted</div>
                   <div className="vstack" style={{gap:6, marginTop:6}}>
                     {activeConfig.canDo.map(action => (
                       <label key={action} className="form-row form-row--inline" style={{margin:0}}>
@@ -3943,7 +3932,6 @@ function BillingSettings() {
       </Card>
       {planOpen && (
         <Card title="change plan · gtm_ops tiers">
-          <div className="muted" style={{fontSize:12, marginBottom:12}}>Tiers mirror wranngle.com. Annual saves 17% vs monthly.</div>
           <div className="tier-grid" data-testid="billing-tier-grid">
             {GTM_OPS_TIERS.map(tier => {
               const active = tier.id === currentTierId;

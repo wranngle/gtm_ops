@@ -546,12 +546,10 @@ function HomePage({ setRoute }) {
                   >
                     <div>
                       <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
-                      <div className="mono" style={{fontSize:11, color:'var(--text-3)', marginTop:1}}>{c.industry} · {c.size} ppl</div>
                     </div>
                     <Badge tone={c.intent === 'high' ? 'accent' : c.intent === 'med' ? 'warn' : 'neutral'}>{c.intent} intent</Badge>
                     <div className="hot-lead-row__score" style={{width:80}}>
                       <div className="progress"><div className={`progress__fill progress__fill--${c.score >= 80 ? 'healthy' : c.score >= 70 ? 'accent' : 'warn'}`} style={{width:`${c.score}%`}}/></div>
-                      <div className="mono num" style={{fontSize:10, color:'var(--text-3)', textAlign:'right', marginTop:2}}>{c.score}/100</div>
                     </div>
                     <span
                       className="btn btn--ghost btn--icon hot-lead-row__open"
@@ -864,7 +862,7 @@ function PipelinePage({ setRoute }) {
           const high = all.filter(c => c.intent === 'high' && isActive(c)).length;
           const drafts = all.filter(c => c._draft).length;
           const draftSuffix = drafts > 0 ? ` · ${drafts} draft${drafts === 1 ? '' : 's'}` : '';
-          return `${all.length} leads · ${active} active · ${high} high-intent${draftSuffix}. Drag a card across stage columns to advance the deal.`;
+          return `${all.length} leads · ${active} active · ${high} high-intent${draftSuffix}`;
         })()}
         actions={<>
           <Segmented value={filter} onChange={setFilter} options={[
@@ -2040,7 +2038,6 @@ function CallsPage({ setRoute }) {
             <div className="workflow-popout__pane">
               <div className="eyebrow eyebrow--accent">coaching mode</div>
               <div className="workflow-popout__title">{active.id} notes armed</div>
-              <div className="muted" style={{fontSize:12}}>Transcript rows now create coaching notes against {active.co}. Flagged lines are prioritized for the sales coach context.</div>
             </div>
           )}
           {callWorkflow && callWorkflow.kind === 'human review' && (
