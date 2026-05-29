@@ -145,11 +145,7 @@ function CallSimulator({ fixturePath = SIMULATOR_FIXTURE_URL }) {
 function SimulatorPage({ setRoute }) {
   return (
     <div className="page page--simulator">
-      <PageHeader
-        eyebrow="workspace · simulator"
-        title="Simulator"
-        sub="Replay a local call trace and watch qualification, pricing, and proposal review assemble in sequence."
-      />
+      <PageHeader title="Simulator"/>
       <CallSimulator/>
     </div>
   );

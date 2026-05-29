@@ -232,11 +232,7 @@ function EmailComposer({ fixturePath = EMAIL_COMPOSER_FIXTURE_URL }) {
 function EmailComposerPage({ setRoute }) {
   return (
     <div className="page page--email-composer">
-      <PageHeader
-        eyebrow="workspace / follow-up"
-        title="Follow-up Email"
-        sub="Review the post-call draft from source trace and CRM context before any buyer send is queued."
-      />
+      <PageHeader title="Follow-up Email"/>
       <EmailComposer/>
     </div>
   );
