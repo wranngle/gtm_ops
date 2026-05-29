@@ -217,11 +217,7 @@ function ReplayPanel({ fixturePath = REPLAY_FIXTURE_URL }) {
 function ReplayPage({ setRoute }) {
   return (
     <div className="page page--replay">
-      <PageHeader
-        eyebrow="workspace · replay"
-        title="Failure-mode replay"
-        sub="Pick a failed call and watch the actual run alongside the counterfactual under the fallback policy."
-      />
+      <PageHeader title="Failure-mode replay"/>
       <ReplayPanel/>
     </div>
   );

@@ -255,7 +255,6 @@ function FunnelStageReview({ row, rows, setRoute }) {
     >
       <div className="funnel-stage-review__head">
         <div>
-          <div className="eyebrow eyebrow--accent">stage review</div>
           <h2>{row.label}</h2>
           <p>{review.handoffLabel}</p>
         </div>
@@ -330,9 +329,7 @@ function FunnelPage({ setRoute }) {
   return (
     <div className="page page--funnel" data-testid="funnel-page">
       <PageHeader
-        eyebrow="workspace · funnel"
         title="Funnel"
-        sub="Inspect call-to-contract conversion using the same local run context as Pipeline, Calls, and Proposals."
         actions={(
           <button
             type="button"

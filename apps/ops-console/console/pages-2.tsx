@@ -2530,7 +2530,6 @@ function ProposalsPage({ setRoute }) {
   return (
     <div className="page page--proposals">
       <PageHeader
-        eyebrow={`${D.proposals.length} proposals · ${openProposalCount} open · ${proposalTotal} total`}
         title="Proposals"
         sub={(() => {
           // Derive sub from live proposals state. Previous "auto-assembled
@@ -3008,8 +3007,7 @@ function SettingsPage({ setRoute }) {
 
   return (
     <div className="page">
-      <PageHeader eyebrow="workspace · helix" title="Settings"
-        sub="The controls behind the autonomy."
+      <PageHeader title="Settings"
         actions={
           <button className="btn btn--ghost btn--sm" onClick={() => setRoute && setRoute('agents')}>
             <I3.Bot size={12}/>Manage agents →
@@ -5279,9 +5277,7 @@ function GeneratePage({ setRoute }) {
   return (
     <div className="page page--generate">
       <PageHeader
-        eyebrow="proposal sequence"
         title="Generate Proposal"
-        sub="Buyer proof, draft engine, local review artifact, then Proposals approval."
         actions={<>
           <button className="btn btn--ghost btn--sm" onClick={autoSample}><I3.Doc size={12}/>Use sample buyer proof</button>
           <button

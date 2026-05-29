@@ -83,11 +83,7 @@ function VerticalSwitcher({ initialId, onChange }: { initialId?: any; onChange?:
 function VerticalsPage({ setRoute }) {
   return (
     <div className="page page--verticals">
-      <PageHeader
-        eyebrow="workspace · presets"
-        title="Verticals"
-        sub="Pick the vertical preset for this workspace. Swapping swaps the agent system prompt, proposal template, and voice id together."
-      />
+      <PageHeader title="Verticals"/>
       <VerticalSwitcher/>
     </div>
   );
