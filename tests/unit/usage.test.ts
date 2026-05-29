@@ -8,22 +8,29 @@
  * - Pagination
  */
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEST_DB_PATH = path.join(__dirname, '..', '..', 'config', 'usage_test.db');
+// Each test gets its own SQLite file. The old approach reused a single
+// path (config/usage_test.db) and relied on beforeEach unlink + afterEach
+// unlink to keep tests isolated — which raced under any load, because
+// sqlite3's Database.close() returns before the OS file handle is fully
+// flushed, so a prior test's connection could still be writing rows the
+// next test's aggregator then read. Result: usage.test.ts flaked
+// intermittently on every PR's CI (and ~1-in-5 even when run alone).
+// Unique paths per test = no shared state = no race.
+let TEST_DB_PATH: string;
 
 let UsageTracker: any;
 let EventType: any;
 let COST_CONFIG: any;
 
 beforeEach(async () => {
-  // Clean up test database
-  if (fs.existsSync(TEST_DB_PATH)) {
-    fs.unlinkSync(TEST_DB_PATH);
-  }
+  TEST_DB_PATH = path.join(
+    os.tmpdir(),
+    `gtm-ops-usage-test-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.db`,
+  );
 
   const module = await import('../../lib/usage.js');
   UsageTracker = module.UsageTracker;
@@ -32,8 +39,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  // Clean up test database
-  if (fs.existsSync(TEST_DB_PATH)) {
+  // Best-effort cleanup; not load-bearing for correctness anymore since
+  // every test starts on its own path.
+  if (TEST_DB_PATH && fs.existsSync(TEST_DB_PATH)) {
     try {
       fs.unlinkSync(TEST_DB_PATH);
     } catch {
