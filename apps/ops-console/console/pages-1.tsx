@@ -886,7 +886,6 @@ function PipelinePage({ setRoute }) {
           <button className="workflow-popout__close btn btn--ghost btn--icon" aria-label="Close pipeline workflow panel" onClick={() => { setFilterEditorOpen(false); setNewLeadOpen(false); }}><I2.Close size={14}/></button>
           {filterEditorOpen && (
             <div className="workflow-popout__pane">
-              <div className="eyebrow eyebrow--accent">saved views</div>
               <div className="workflow-popout__title">Pipeline filters</div>
               <div className="workflow-popout__grid" data-testid="pipeline-filters-grid">
                 {(() => {
@@ -920,7 +919,6 @@ function PipelinePage({ setRoute }) {
           )}
           {newLeadOpen && (
             <form className="workflow-popout__pane" onSubmit={submitNewLead} aria-label="Add lead form" data-testid="new-lead-form">
-              <div className="eyebrow eyebrow--accent">intake</div>
               <div className="workflow-popout__title">Add lead</div>
               <div className="field">
                 <div className="field__label" id="new-lead-domain-label">Domain</div>
