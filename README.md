@@ -1,122 +1,150 @@
 # gtm_ops
 
-> ### Try it in 60s
->
-> **[Launch the canned proposal trace →](https://app.wranngle.com/console/?route=generate&demo=1)**
->
-> Click once. The Generate page auto-loads the HVAC sample brief and replays the 11-step pipeline (intake → extract → enrichment → pricing → compliance → scope → PDF render → audit). No backend, no signup, no operator interaction. Lands on a ready-to-review proposal in about 60 seconds.
->
-> *(A 60-second screencapture GIF rendered by [`wranngle/auto_demo`](https://github.com/wranngle/auto_demo) drops in here once the demo CI publishes it.)*
+A presales pipeline that turns a raw lead brief into a priced, branded PDF
+proposal, plus an operator console (ops-console) to drive and review the runs.
+One repo, one runnable thing. It runs the full flow static against bundled
+fixtures (`DEMO_MODE`) or against a live backend.
 
-Voice-AI-led GTM motion runtime. An inbound voice agent enriches the lead from CRM context, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console — one repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
+This is a personal operator lab from Wranngle. It is pre-revenue with no external
+users. Treat it as a working build, not a hosted product.
 
-## What's in here
+## Live demo
 
-- **`apps/ops-console/`** — operator UI: React (loaded via UMD + babel-standalone, no build step) for the main `/console/`; `/evaluation/` is a compatibility redirect into `/console/?route=evals`, and `/eval-runs/` remains the static harness output surface. Same code runs static (`DEMO_MODE`) or against the live backend. Includes the **Agents** route and the **Evals** regression lab — live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake agents wired to app context.
-- **`lib/`** — intake, CRM enrichment, post-call processing, LLM extraction, branded PDF generation, audit log surface, evaluation hooks.
-- **`lib/html-report-generator.ts`** — explicit context → Mustache template → HTML report boundary; PDFs render from this HTML artifact.
-- **`server.ts`** — Express `/api/*` surface (live mode, full Express backend).
-- **`functions/api/`** — Cloudflare Pages Functions mirror of the same `/api/*` surface so the Pages deploy is full-stack. Pages Functions read from D1 first and fall back to the bundled fixtures when D1 is empty or unbound.
-- **`cli.ts`** — presales pipeline CLI.
-- **`templates/`** — branded PDF templates rendered with `tokens/`.
-- **`tokens/`** — machine-readable extracts of the brand system (`tokens.css`, `tokens.json`, `tokens.tailwind.js`); see [`DESIGN.md`](DESIGN.md) for the long-form spec.
+A static build is deployed to Cloudflare Pages at
+[app.wranngle.com/console](https://app.wranngle.com/console/). It runs the whole
+flow in `DEMO_MODE` against the JSON fixtures in
+`apps/ops-console/fixtures/`, so there is no backend, signup, or real data.
 
-The n8n workflow library is the single source of truth at [`wranngle/n8n`](https://github.com/wranngle/n8n) — not duplicated here.
+The Generate page replays a canned pipeline trace, so you can watch the
+proposal flow (intake to extraction to pricing to PDF) without wiring an LLM
+key. Direct link:
+[Generate, demo trace](https://app.wranngle.com/console/?route=generate&demo=1).
 
-## Demo
+## What actually runs
 
-The deployed Pages site at [`app.wranngle.com`](https://app.wranngle.com) (Cloudflare Pages project `gtm-ops`, also reachable at `gtm-ops.pages.dev`) runs in DEMO_MODE end-to-end against the bundled fixtures. The bare `/` and `/index.html` on `gtm-ops.pages.dev` 301 to `app.wranngle.com` so the wranngle.com landing demo button reaches the console without a middleman page. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. The Generate page replays a canned 11-step pipeline trace so you can see the proposal flow without a live backend. A 3-minute architecture walkthrough video lives at the project's README on GitHub when published.
+The pipeline (`lib/pipeline.ts`, driven by `cli.ts generate` or the Express
+`/api/*` routes):
 
-## Architecture
+- **Extraction** (`lib/extract.ts`) parses unstructured text (an info dump,
+  interview notes, an RFP) into a structured intake packet using an LLM. The
+  provider is Google Gemini (`@google/genai`) with a Groq adapter and a model
+  fallback order in `src/services/llm.ts`. LLM JSON is validated and the parse
+  boundary is unit-tested.
+- **Enrichment** (`lib/enrichment.ts`) is a provider waterfall (n8n/Clay
+  webhook, People Data Labs, Abstract, Enrich.so). Every provider is optional;
+  with no API keys set it returns the input unchanged.
+- **Pricing and estimation** (`lib/estimate.ts`, `lib/pricing-calculator.ts`,
+  `lib/milestone-builder.ts`) compute effort, phases, ROI, and line items.
+- **Render** (`lib/html-report-generator.ts`, `templates/`) builds HTML from an
+  explicit context via Mustache, then `lib/pdf-generator.ts` shells out to a
+  Python PyMuPDF runner (`scripts/render-pdf-pymupdf.py`) to produce the PDF.
+  In `DEMO_MODE` each sheet is stamped `SYNTHETIC FIXTURE - NOT A REAL QUOTE`.
+- **Post-call rollup** (`lib/post-call.ts`) takes a finished call fixture
+  (transcript plus tool calls) and emits a deterministic, lexicon-based
+  sentiment chip for the call-trace row. It does not run a live call; it scores
+  a transcript.
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the product layers (intake → enrichment → voice → post-call → presales → ops-console) and how this repo connects to its satellites:
+Around the pipeline:
 
-- [`wranngle/voice_ai_agent_evals`](https://github.com/wranngle/voice_ai_agent_evals) — eval harness wired to the live ElevenLabs agent
-- [`wranngle/n8n`](https://github.com/wranngle/n8n) — full sanitized n8n workflow library
+- **`server.ts`** is an Express backend exposing `/api/*` with RBAC
+  (`lib/rbac.ts`, viewer/admin roles), audit logging (`lib/audit.ts`), webhooks
+  (`lib/webhooks.ts`), usage tracking (`lib/usage.ts`), GDPR export/consent
+  (`lib/gdpr.ts`), and branding (`lib/branding.ts`). It binds to loopback by
+  default.
+- **`functions/api/*`** is a Cloudflare Pages Functions mirror of the same
+  `/api/*` surface. Each route reads from D1 first and falls back to the bundled
+  fixtures when D1 is empty or unbound.
+- **`apps/ops-console/`** is the operator UI: React loaded via UMD plus
+  babel-standalone (no build step). The same code runs static (`DEMO_MODE`) or
+  against the backend. Routes include Generate, Evals, Agents, and Funnel.
+- **`lib/evaluation/*`** is an eval harness (corpus, runner, comparator, masker,
+  autofix) wired to `cli.ts eval:*` commands.
 
-The app-to-harness boundary is encoded in [`eval-harness.manifest.json`](eval-harness.manifest.json)
-and documented in [`docs/eval-harness-contract.md`](docs/eval-harness-contract.md).
-`gtm_ops` owns app fixtures and Playwright/Vitest semantics; the harness consumes
-the manifest and normalizes results.
+The ElevenLabs Sales Coach and Sarah Intake agents mount as ConvAI **widgets**
+embedded in the console (Agents route, Evals lab, coach launcher) when the
+`@elevenlabs/convai-widget-embed` script loads. If it cannot load (CSP, offline),
+the container shows a fallback message and a deep link to the agent. These are
+front-end embeds, not a backend voice pipeline in this repo.
 
 ## Running it
 
-**Live mode** (full Express backend):
+**Live mode** (Express backend):
 
 ```bash
 bun install
-bun run start  # Express server on :3000
+bun run start            # Express on :3000, loopback by default
 ```
+
+Generate from the CLI:
+
+```bash
+bun run generate <input.txt> <output_dir/>
+```
+
+PDF rendering needs Python with PyMuPDF (`pip install -r requirements.txt`).
 
 **Static / DEMO_MODE** (no backend, fixture-driven UI):
 
 ```bash
 cd apps/ops-console
-python3 -m http.server 4173   # then open http://localhost:4173/console/
+python3 -m http.server 4173    # then open http://localhost:4173/console/
 ```
 
-In `DEMO_MODE`, every `/api/*` call falls through to JSON in `apps/ops-console/fixtures/`. The same UI runs in both modes. A small "demo data" pill appears in the topbar when the backend returns no historic runs.
-
-**ElevenLabs Sales Coach + Sarah Intake** mount as live ConvAI widgets from the coach launcher, Agents route, and Evals regression lab when `unpkg.com/@elevenlabs/convai-widget-embed` is reachable. If the embed script can't load (corporate network, strict CSP), the widget container shows a fallback message + deep link to the agent on `elevenlabs.io`. Append `?admin=1` to the `/console/` URL to reveal admin-only agents.
+In `DEMO_MODE` every `/api/*` call falls through to JSON in
+`apps/ops-console/fixtures/`. A "demo data" pill appears in the topbar when the
+backend returns no historic runs. Append `?admin=1` to the `/console/` URL to
+reveal admin-only agents.
 
 ## Tests
 
+The suite is real: 65 Vitest unit files, 29 Playwright console specs, plus
+PDF/report and integration tests.
+
 ```bash
-bun run typecheck         # tsc --noEmit
-bun run test:run          # vitest unit tests (~10s)
-bun run test:console      # Playwright UI suite — 100+ tests
-bun run test:e2e          # Playwright PDF/report suite
-bun run eval:harness      # optional: run this repo through voice_ai_agent_evals
+bun run typecheck        # tsc --noEmit
+bun run test:run         # Vitest unit tests
+bun run test:console     # Playwright console UI suite
+bun run test:e2e         # Playwright PDF/report suite
+bun run eval:full        # run the eval corpus through lib/evaluation
 ```
 
-CI runs `static`, `unit`, and `console-e2e` jobs on every PR (see `.github/workflows/test.yml`).
+CI runs static, unit, and console-e2e jobs on every PR
+(`.github/workflows/test.yml`).
 
-## Brand system
+## Deploy (Cloudflare Pages)
 
-[`DESIGN.md`](DESIGN.md) is the canonical brand system. Token extracts in [`tokens/`](tokens/) (`tokens.css`, `tokens.json`, `tokens.tailwind.js`) are the machine-readable surface — vendor those into consumer repos rather than copy the long-form spec.
+`apps/ops-console/` deploys to Cloudflare Pages (project `gtm-ops`). Every
+`/api/*` route is served by a Pages Function under `functions/api/*`, D1-backed
+where bindings exist and falling back to fixtures otherwise. The `DEMO_MODE`
+shim also intercepts `/api/*` client-side, so the site stays interactive with no
+backend.
+
+```bash
+bun run deploy           # production
+bun run deploy:preview   # preview branch
+bun run pages:dev        # local CF Pages emulator
+```
+
+Config lives in `wrangler.toml`, `apps/ops-console/_headers`, and
+`apps/ops-console/_redirects`. The full Express runtime (`bun run start`) is an
+alternative when you need long-running streams or heavier PDF rendering than
+Pages Functions allow.
+
+## Layout
+
+- `lib/`: pipeline, extraction, enrichment, pricing, PDF bridge, RBAC, audit,
+  webhooks, GDPR, evaluation.
+- `src/`: consolidated TypeScript transforms and the LLM service.
+- `apps/ops-console/`: operator UI and its fixtures.
+- `functions/api/`: Cloudflare Pages Functions mirror of `/api/*`.
+- `templates/`, `tokens/`: branded PDF templates and design-token extracts.
+- `tests/`: Vitest and Playwright suites.
+
+The n8n workflow library is not duplicated here; it lives at
+[`wranngle/n8n`](https://github.com/wranngle/n8n). The brand system spec lives in
+[`DESIGN.md`](DESIGN.md); machine-readable extracts are in
+[`tokens/`](tokens/).
 
 ## License
 
-See [`LICENSE`](./LICENSE).
-
-## Deploy (Cloudflare Pages — full-stack)
-
-`apps/ops-console/` deploys to Cloudflare Pages, and every `/api/*` route is
-served by a Pages Function under `functions/api/*` (D1-backed where bindings
-are configured, falling back to the bundled fixtures otherwise). The DEMO_MODE
-shim in each HTML page also intercepts `/api/*` client-side, so the site stays
-interactive even if no backend is wired.
-
-### One-time setup
-
-```bash
-npx wrangler login                                  # browser OAuth
-wrangler pages project create gtm-ops --production-branch main
-```
-
-Or connect the GitHub repo in the Cloudflare dashboard:
-- Build command: *(none — static)*
-- Build output directory: `apps/ops-console`
-- Root directory: `/`
-
-### Deploy
-
-```bash
-bun run deploy                                      # production
-bun run deploy:preview                              # preview branch
-bun run pages:dev                                   # local CF Pages emulator
-```
-
-### Files
-
-- [`wrangler.toml`](wrangler.toml) — Pages config (`pages_build_output_dir = "apps/ops-console"`)
-- [`apps/ops-console/_headers`](apps/ops-console/_headers) — security + cache headers (X-Frame-Options, immutable tokens, fixture caching)
-- [`apps/ops-console/_redirects`](apps/ops-console/_redirects) — `/api/*` → `/fixtures/*.json` fallback for non-shim consumers
-
-### Live Express alternative (separate hosting)
-
-The full Express runtime (`bun run start`) is a node-friendlier alternative to
-the Pages Functions deploy when you need things Pages Functions can't easily
-do — long-running streams, native binary deps, big-memory PDF rendering.
-Options: Fly.io, Render, Railway. Pages Functions remain the canonical
-deploy target.
+MIT. See [`LICENSE`](./LICENSE).
