@@ -2,7 +2,7 @@
 
 > ### Try it in 60s
 >
-> **[Launch the canned proposal trace →](https://app.wranngle.com/console/?route=generate&demo=1)**
+> **[Launch the canned proposal trace →](https://gtm-ops.pages.dev/console/?route=generate&demo=1)**
 >
 > Click once. The Generate page auto-loads the HVAC sample brief and replays the 11-step pipeline (intake → extract → enrichment → pricing → compliance → scope → PDF render → audit). No backend, no signup, no operator interaction. Lands on a ready-to-review proposal in about 60 seconds.
 
@@ -14,7 +14,7 @@ Voice-agent GTM runtime. An inbound voice agent enriches the lead from CRM conte
 - **`lib/`**: intake, CRM enrichment, post-call processing, LLM extraction, branded PDF generation, audit log surface, evaluation hooks.
 - **`lib/html-report-generator.ts`**: explicit context → Mustache template → HTML report boundary; PDFs render from this HTML artifact.
 - **`server.ts`**: Express `/api/*` surface (live mode, full Express backend).
-- **`functions/api/`**: Cloudflare Pages Functions mirror of the same `/api/*` surface so the Pages deploy is full-stack. Pages Functions read from D1 first and fall back to the bundled fixtures when D1 is empty or unbound.
+- **`functions/api/`**: Cloudflare Pages Functions that port a selected subset of the `/api/*` surface so the Pages deploy can answer those routes server-side. These functions read from D1 first and fall back to the bundled fixtures when D1 is empty or unbound. Unported routes fall through to the fixture/static shims, and `/api/generate` stays Express-only on a separate host.
 - **`cli.ts`**: presales pipeline CLI.
 - **`templates/`**: branded PDF templates rendered with `tokens/`.
 - **`tokens/`**: machine-readable extracts of the brand system (`tokens.css`, `tokens.json`, `tokens.tailwind.js`); see [`DESIGN.md`](DESIGN.md) for the long-form spec.
@@ -23,7 +23,7 @@ The n8n workflow library is the single source of truth at [`wranngle/n8n`](https
 
 ## Demo
 
-The deployed Pages site at [`app.wranngle.com`](https://app.wranngle.com) (Cloudflare Pages project `gtm-ops`, also reachable at `gtm-ops.pages.dev`) runs in DEMO_MODE end-to-end against the bundled fixtures. `/` and `/index.html` redirect to `/console/`; app.wranngle.com is the canonical custom domain. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. The Generate page replays a canned 11-step pipeline trace so you can see the proposal flow without a live backend.
+The deployed Pages site (Cloudflare Pages project `gtm-ops`) serves on two hosts: [`app.wranngle.com`](https://app.wranngle.com) is the canonical custom domain, and `gtm-ops.pages.dev` is the preview host. `/` and `/index.html` redirect to `/console/`. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. DEMO_MODE only activates on `*.pages.dev` hosts (including `gtm-ops.pages.dev`), on `file://`, or on a local static server. In that mode the page intercepts `/api/*` and serves the bundled fixtures, so the Generate page replays a canned 11-step pipeline trace without a live backend.
 
 ## Architecture
 
@@ -79,11 +79,13 @@ See [`LICENSE`](./LICENSE).
 
 ## Deploy (Cloudflare Pages, full-stack)
 
-`apps/ops-console/` deploys to Cloudflare Pages, and every `/api/*` route is
-served by a Pages Function under `functions/api/*` (D1-backed where bindings
-are configured, falling back to the bundled fixtures otherwise). The DEMO_MODE
-shim in each HTML page also intercepts `/api/*` client-side, so the site stays
-interactive even if no backend is wired.
+`apps/ops-console/` deploys to Cloudflare Pages, and a selected subset of
+`/api/*` routes is served by Pages Functions under `functions/api/*` (D1-backed
+where bindings are configured, falling back to the bundled fixtures otherwise).
+Unported routes fall through to the fixture/static shims, and `/api/generate`
+stays Express-only on a separate host. The DEMO_MODE shim in each HTML page
+also intercepts `/api/*` client-side, so the site stays interactive even if no
+backend is wired.
 
 ### One-time setup
 
