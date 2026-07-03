@@ -23,7 +23,7 @@ import {
   listEvaluationRuns,
 } from './corpus.js';
 import { runEvaluation, runBatchEvaluation, checkReadiness } from './runner.js';
-import { harvestFromContent, validateExtraction, detectVendor } from './harvester.js';
+import { harvestFromContent, fetchPageContent, validateExtraction, detectVendor } from './harvester.js';
 import { getEvalStats } from './index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -358,26 +358,32 @@ async function cmdHarvest(options = {}) {
 
   if (!options.url) {
     console.error(`${c.red}Error: --url is required${c.reset}`);
-    console.log(`\nUsage: wranngle eval:harvest --url <url> --content <file>`);
-    console.log(`\nExample:`);
+    console.log(`\nUsage: wranngle eval:harvest --url <url> [--content <file>]`);
+    console.log(`\nExamples:`);
+    console.log(`  wranngle eval:harvest --url https://vapi.ai/case-studies/dental`);
     console.log(`  wranngle eval:harvest --url https://vapi.ai/case-studies/dental --content dental.md`);
     process.exit(1);
   }
 
-  if (!options.content) {
-    console.error(`${c.red}Error: --content is required${c.reset}`);
-    console.log(`\nProvide a file with the case study page content (text or markdown).`);
-    console.log(`You can use WebFetch or copy-paste from the browser.`);
-    process.exit(1);
-  }
-
-  // Read content file
+  // Content source: explicit file wins; otherwise fetch the URL directly
+  // (JS-rendered SPAs may still need --content with copy-pasted text).
   let content;
-  try {
-    content = fs.readFileSync(options.content, 'utf8');
-  } catch (error) {
-    console.error(`${c.red}Error reading content file: ${error.message}${c.reset}`);
-    process.exit(1);
+  if (options.content) {
+    try {
+      content = fs.readFileSync(options.content, 'utf8');
+    } catch (error) {
+      console.error(`${c.red}Error reading content file: ${error.message}${c.reset}`);
+      process.exit(1);
+    }
+  } else {
+    console.log(`${c.dim}No --content file given — fetching ${options.url}…${c.reset}`);
+    try {
+      content = await fetchPageContent(options.url);
+    } catch (error) {
+      console.error(`${c.red}Error fetching URL: ${error.message}${c.reset}`);
+      console.log(`\nIf the page is JS-rendered, save its text and re-run with --content <file>.`);
+      process.exit(1);
+    }
   }
 
   console.log(`URL:     ${options.url}`);

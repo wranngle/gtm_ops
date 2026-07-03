@@ -172,18 +172,56 @@ export function detectVendor(url: string): Vendor {
 // =============================================================================
 
 /**
- * Fetch page content (placeholder - integrate with actual fetch)
- *
- * In production, this would use:
- * - WebFetch MCP tool
- * - Puppeteer for JS-rendered pages
- * - API calls for structured data sources
+ * Strip HTML down to readable text: drop script/style/comment noise, keep
+ * block-level breaks so the LLM sees paragraph structure, decode the common
+ * entities. Deliberately dependency-free — case-study pages are article-like;
+ * JS-rendered SPAs still need manual content via harvestFromContent().
  */
-async function fetchPageContent(_url: string): Promise<string> {
-	// For now, this is a placeholder that requires manual content input
-	// In production, integrate with WebFetch or similar
+export function htmlToText(html: string): string {
+	return html
+		.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+		.replace(/<style[\s\S]*?<\/style>/gi, ' ')
+		.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+		.replace(/<!--[\s\S]*?-->/g, ' ')
+		.replace(/<\/(p|div|section|article|li|h[1-6]|tr|blockquote)>/gi, '\n')
+		.replace(/<br\s*\/?>/gi, '\n')
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#0?39;/g, "'")
+		.replace(/[ \t]+/g, ' ')
+		.replace(/\s*\n\s*(\n\s*)+/g, '\n\n')
+		.trim();
+}
 
-	throw new Error('Automatic fetching not implemented. Please provide page content manually via harvestFromContent().');
+/**
+ * Fetch page content over HTTP (global fetch; Bun / Node ≥18). HTML responses
+ * are stripped to text; markdown/plain/JSON bodies pass through unchanged.
+ */
+export async function fetchPageContent(url: string): Promise<string> {
+	const response = await fetch(url, {
+		headers: {
+			accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8',
+			'user-agent': 'gtm-ops-harvester/1.0 (+case-study corpus builder)',
+		},
+		redirect: 'follow',
+		signal: AbortSignal.timeout(30_000),
+	});
+	if (!response.ok) {
+		throw new Error(`Fetch failed for ${url}: HTTP ${response.status}`);
+	}
+
+	const contentType = response.headers.get('content-type') || '';
+	const body = await response.text();
+	const text = contentType.includes('html') ? htmlToText(body) : body.trim();
+	if (!text) {
+		throw new Error(`Fetched ${url} but extracted no text content — provide it manually via harvestFromContent().`);
+	}
+
+	return text;
 }
 
 // =============================================================================

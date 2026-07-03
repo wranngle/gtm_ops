@@ -612,6 +612,78 @@ export class BrandingManager {
   }
 
   /**
+   * Verify a workspace's custom domain against live DNS.
+   *
+   * Registers the domain if needed (idempotent), resolves the TXT record at
+   * `_wranngle-verify.<domain>` and the domain's CNAME, and marks the stored
+   * row VERIFIED when both match. DNS failures (NXDOMAIN, SERVFAIL, timeout)
+   * read as not-yet-verified checks, never as thrown errors, and a previously
+   * VERIFIED row is not downgraded on a transient DNS miss.
+   *
+   * @param {string} workspaceId - Workspace ID
+   * @param {string} domain - Domain name
+   * @param {object|null} resolvers - Injectable {resolveTxt, resolveCname}
+   *   (providers boundary for tests; defaults to node:dns/promises)
+   * @returns {Promise<object>}
+   */
+  async verifyCustomDomain(workspaceId, domain, resolvers = null) {
+    const registration = await this.addCustomDomain(workspaceId, domain);
+    if (!registration.success) {
+      return { success: false, error: registration.error };
+    }
+
+    const dns = resolvers || await import('node:dns/promises');
+    const normalizedDomain = domain.toLowerCase().trim();
+    const expectedToken = registration.verification_token;
+    const txtRecordName = `_wranngle-verify.${normalizedDomain}`;
+    const cnameTarget = 'app.wranngle.com';
+
+    let txtFound = [];
+    try {
+      txtFound = (await dns.resolveTxt(txtRecordName)).map((chunks) => chunks.join(''));
+    } catch {
+      // Record absent (NXDOMAIN etc.) — a pending check, not an error
+    }
+    const txtOk = txtFound.includes(expectedToken);
+
+    let cnameFound = [];
+    try {
+      cnameFound = (await dns.resolveCname(normalizedDomain)).map((value) => value.replace(/\.$/, ''));
+    } catch {
+      // Same: missing CNAME reads as not-yet-configured
+    }
+    const cnameOk = cnameFound.includes(cnameTarget);
+
+    if (txtOk && cnameOk && registration.status !== DomainStatus.VERIFIED) {
+      await this.updateDomainStatus(registration.domain_id, DomainStatus.VERIFIED);
+    }
+
+    const row = await this._get(
+      'SELECT * FROM custom_domains WHERE id = ?',
+      [registration.domain_id]
+    );
+    const status = row?.status || registration.status;
+
+    return {
+      success: true,
+      domain: normalizedDomain,
+      verified: status === DomainStatus.VERIFIED,
+      ssl_active: row?.ssl_issued === 1,
+      status,
+      verification_token: expectedToken,
+      cname_target: cnameTarget,
+      checks: {
+        txt: { name: txtRecordName, expected: expectedToken, found: txtFound, ok: txtOk },
+        cname: { name: normalizedDomain, expected: cnameTarget, found: cnameFound, ok: cnameOk },
+      },
+      instructions: {
+        txt: { type: 'TXT', name: txtRecordName, value: expectedToken, ttl: 3600 },
+        cname: { type: 'CNAME', name: normalizedDomain, value: cnameTarget, ttl: 3600 },
+      },
+    };
+  }
+
+  /**
    * Get workspace by custom domain
    * @param {string} domain - Domain name
    * @returns {Promise<object|null>}

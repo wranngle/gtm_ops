@@ -207,6 +207,7 @@ export function generateProjectIdentity(intake, options = {}) {
     project_slug: projectSlug,
     process_name: processName,
     document_slug: documentSlug,
+    revision: options.revision || 1,
     friendly_name: friendlyName,
     process_date: processDate.toISOString(),
     process_date_display: formatDateDisplay(processDate),

@@ -744,39 +744,15 @@ app.get('/api/branding/domain/verify', requireRole(Role.OWNER, Role.ADMIN), gene
       return res.status(400).json({ error: 'Domain is required' });
     }
 
-    // Generate a deterministic verification token based on workspace and domain
-    const crypto = await import('crypto');
-    const hash = crypto.createHash('sha256').update(`${workspace_id || 'default'}-${domain}`).digest('hex');
-    const verificationToken = `wrn-verify-${hash.slice(0, 12)}`;
+    // Real verification: registers the domain (idempotent), resolves the TXT
+    // + CNAME records via node:dns/promises, and persists VERIFIED on match —
+    // see BrandingManager.verifyCustomDomain for the lifecycle.
+    const result = await getBrandingManager().verifyCustomDomain(workspace_id || 'default', domain);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
 
-    // In a real implementation, we would:
-    // 1. Check DNS TXT record for the verification token
-    // 2. Check if CNAME points to our proxy
-    // For now, return pending status with instructions
-
-    // Mock verification logic - in production this would do actual DNS lookup
-    const branding = await getBrandingManager().getBranding(workspace_id || 'default');
-    const isVerified = branding.custom_domain === domain && branding.domain_verified;
-
-    res.json({
-      domain,
-      verified: isVerified || false,
-      ssl_active: isVerified || false,
-      verification_token: verificationToken,
-      cname_target: 'proxy.wranngle.app',
-      instructions: {
-        cname: {
-          type: 'CNAME',
-          name: domain.split('.')[0],
-          value: 'proxy.wranngle.app'
-        },
-        txt: {
-          type: 'TXT',
-          name: `_wranngle-verification.${domain.split('.')[0]}`,
-          value: verificationToken
-        }
-      }
-    });
+    res.json(result);
   } catch (error) {
     console.error('[BRANDING] Domain verify error:', error.message);
     res.status(500).json({ error: error.message });
