@@ -40,6 +40,71 @@ emails, and proposal artifacts visually coherent.
 
 ---
 
+## 1.5 Visual Restraint (doctrine)
+
+The Wranngle aesthetic is **calm density**: many real signals, zero filler. Operators
+scan, they do not read. The job of every label, badge, subtitle, and status pill is to
+earn its bytes against the next refactor. Default to remove.
+
+This section is enforceable. The ui skill (`~/.agents/skills/ui/SKILL.md`) carries the
+generic version; what follows is gtm_ops-specific.
+
+### Principles
+
+1. **Trust the form.** If a heading names what the page is, drop the kicker label above it.
+   If a row's color already shows its state, drop the badge.
+2. **Subtitles must add new information.** A subtitle that paraphrases the title is deleted.
+   Keep subtitles only when they encode timeframe, scope, count, or constraint the title
+   cannot.
+3. **One status mechanism per concept.** A row is either dimmed, badged, iconed, or labeled
+   — never two for the same state. Pick the quietest signal that still works.
+4. **No eyebrow above clear section heads.** The `eyebrow` and `eyebrow--accent` classes are
+   for category context the heading itself cannot carry. They are not decoration. If the
+   heading reads cleanly without the kicker, drop the kicker.
+5. **Move ancillary metadata to second-tier surfaces.** Timestamps, run IDs, voice IDs, tags
+   belong in modals, popovers, expanded rows, or detail panes. Default surface stays calm;
+   depth is opt-in.
+6. **No icon + word for the same idea.** A universal glyph (✓, ✕, ⋯, ←, ⚙) carries its
+   label. The word stays only when accessibility audits show the icon alone is ambiguous.
+7. **Drop hedges; capitalize commitments.** Replace "may sync soon" with "Syncing". Replace
+   "Review the post-call draft from source trace and CRM context before any buyer send is
+   queued" with — nothing. If a label can be deleted without breaking comprehension, delete
+   it.
+8. **Environment indicators belong in the URL, not the chrome.** `app.wranngle.com` is
+   production; `?demo=1` is fixture mode. Do not double-paint a "demo data" pill on every
+   page when the URL already carries the signal.
+9. **Negative space is a feature.** Leave whole rows or panels blank when the alternative
+   is filler. Three meaningful elements beat twelve evenly weighted ones.
+
+### gtm_ops-specific anchors
+
+- **`<PageHeader>` props** (`apps/ops-console/console/shell.tsx`) — `eyebrow` is opt-in.
+  Pass it only when category context is genuinely missing from the title. `sub` is opt-in.
+  Pass it only when it carries timeframe, scope, count, or constraint not in the title.
+- **`Badge` component** (40+ instances at last audit) — use for state that is not yet
+  encoded in row color, type, or position. Do not use to restate.
+- **`tb__demo-pill` and `DEMO_MODE` chrome** — the URL is the indicator. Hide the pill in
+  production paths; keep it only on routes where staging vs prod could be ambiguous.
+- **`eyebrow` / `eyebrow--accent` micro-labels** — legitimate as `<dt>`-style field
+  labels in form/detail layouts. Not legitimate as kickers above already-clear `<h*>`s.
+- **Sunset Orange `--s500`** — reserved for primary commitment (CTAs, the live progress
+  arc, mark). Do not spread it across status pills, eyebrows, or background washes.
+
+### Review checklist
+
+When adding or reviewing UI in this repo:
+
+- [ ] Does the title alone communicate the page? If yes, drop `sub`.
+- [ ] Does the section heading communicate its category? If yes, drop the eyebrow.
+- [ ] Does any badge restate what row color, position, or type already carries? If yes,
+      remove the badge.
+- [ ] Does any icon + word pair the same idea? If yes, keep only one (icon usually wins).
+- [ ] Could any timestamp, ID, or tag move to a detail pane or hover popover? If yes, move
+      it.
+- [ ] Could any whole label be deleted without losing information? If yes, delete it.
+
+---
+
 ## 2. Color Tokens
 
 All colors documented as HEX. Convert to HSL only at the consumption layer

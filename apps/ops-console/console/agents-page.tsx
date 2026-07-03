@@ -269,9 +269,7 @@ function AgentsPage({ setRoute }) {
   return (
     <div className="page page--wide">
       <PageHeader
-        eyebrow={`${visibleAgents.length} agents wired · ElevenLabs ConvAI${isAdmin ? ' · admin' : ''}`}
         title="Agents"
-        sub="Each agent is a real ElevenLabs ConvAI agent. Use the playground to talk to it; the admin panel summarizes its binding inside the GTM app."
         actions={<>
           <button
             className="btn btn--primary btn--sm"
@@ -333,7 +331,6 @@ function AgentsPage({ setRoute }) {
           aria-label="New ElevenLabs agent setup"
         >
           <div className="agent-new-setup__copy">
-            <div className="eyebrow eyebrow--accent">new agent setup</div>
             <h2>Build the local wrapper before leaving the console.</h2>
             <p>Define the route surface, allowed client tools, context contract, and safety boundary here. The dashboard link remains the only external escape hatch for deep ElevenLabs edits.</p>
           </div>
