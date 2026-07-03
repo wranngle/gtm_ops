@@ -30,7 +30,9 @@ pages_build_output_dir = "apps/ops-console"
 #
 #   wrangler d1 create presales-d1               # → bind as DB on the project
 #   wrangler kv namespace create TEMPLATES       # → bind as TEMPLATES
-#   (Browser Rendering: enable on the project + bind as BROWSER)
+#     (forward-looking: no function code reads TEMPLATES yet)
+#   (Browser Rendering: enable on the project + bind as BROWSER —
+#     forward-looking: no function code reads BROWSER yet)
 #
 # Every ported Pages Function under functions/api/ detects when DB is
 # undefined (or bound but empty / throws) and serves the bundled fixture

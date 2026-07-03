@@ -5,6 +5,9 @@
 
 export type Env = {
   DB?: D1Database;
+  // Forward-looking bindings from the wrangler.toml operator steps — typed so
+  // the dashboard wiring compiles the day a consumer lands; nothing reads
+  // TEMPLATES or BROWSER yet.
   TEMPLATES?: KVNamespace;
   BROWSER?: Fetcher;
   GEMINI_API_KEY?: string;

@@ -38,7 +38,7 @@
     "eval:quick": "bun --env-file=.env cli.ts eval:batch --limit 5",
     "eval:full": "bun --env-file=.env cli.ts eval:batch",
     "eval:report": "bun --env-file=.env cli.ts eval:report --verbose",
-    "eval:harness": "bun ../voice_ai_agent_evals/scripts/run-gtm-ops-adapter.ts --root ."
+    "eval:harness": "test -f ../voice_ai_agent_evals/scripts/run-gtm-ops-adapter.ts || { echo 'eval:harness needs wranngle/voice_ai_agent_evals cloned as a sibling of this repo'; exit 1; }; bun ../voice_ai_agent_evals/scripts/run-gtm-ops-adapter.ts --root ."
   },
   "keywords": [
     "gtm",
