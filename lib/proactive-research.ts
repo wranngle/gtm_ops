@@ -19,6 +19,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { executeLLMJson } from '../src/services/llm.js';
 import { ResearchDB } from './research-db.js';
+import { performDeepResearch } from './research-tools.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -310,6 +311,13 @@ export async function researchIntegrationWithLLM(integrationName, forceLLM = fal
   // Category match or unknown - need LLM with Deep Research
   console.log(`🔍 Deep Research (Web Grounding): ${integrationName}${nativeNodeInfo?.is_category ? ' (category)' : ' (unknown)'}`);
 
+  // Real retrieved web results (Exa/Tavily) when EXA_API_KEY / TAVILY_API_KEY are
+  // configured; silent no-op (empty findings, no network) otherwise.
+  const webFindings = await performDeepResearch(`${integrationName} API documentation n8n integration`);
+  const webContext = webFindings.context
+    ? `\nREAL WEB SEARCH RESULTS (retrieved via Exa/Tavily — treat as primary evidence; use search only to fill gaps):${webFindings.context}\n`
+    : '';
+
   // Construct prompt with Deep Research instructions simulating the full n8n research suite
   const prompt = `You are a technical researcher analyzing API integrations for n8n workflow development.
 
@@ -326,7 +334,7 @@ USE GOOGLE SEARCH to simulate a multi-source investigation across the following 
 8. **Developer Blogs/Articles**: Look for "How to connect ${integrationName} to n8n" guides.
 9. **Status Pages**: Check for historical uptime/reliability issues.
 10. **Reddit/Social**: Look for unfiltered developer sentiment and complaints.
-
+${webContext}
 Integration Name: ${integrationName}
 
 ${nativeNodeInfo ? `KNOWN n8n CONTEXT (verify this):
