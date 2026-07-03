@@ -155,7 +155,7 @@ gtm_ops/
 ├── public/                  # static asset root for server.ts (live Express mode)
 ├── config/
 │   └── branding.example.json
-├── migrations/              # SQL schema (live-mode persistence)
+├── migrations/              # SQL schema (live-mode persistence; see docs/DATA-MODEL.md)
 ├── tokens/                  # tokens.css, tokens.json, tokens.tailwind.js
 ├── docs/
 │   └── references/          # stack contracts (incl. doc-gardener.md)

@@ -8,6 +8,7 @@ Current:
 - [`pdf-generation.md`](pdf-generation.md) — PyMuPDF proposal rendering contract and install path
 - [`sqlite-query-stability.md`](sqlite-query-stability.md) — `ORDER BY` tiebreaker, range-end +1ms, retry shim for the `node-sqlite3` cache-visibility race, planned `better-sqlite3` migration
 - [`security-tooling.md`](security-tooling.md) — RBAC coverage lint, audit-chain CLI, audit metadata redaction, dev auth shim, CSP report Pages Function, response-header middleware
+- [`doc-gardener.md`](doc-gardener.md) — weekly markdown staleness + broken-link scan contract (`scripts/gardener.sh`)
 
 Policy for adding new references:
 
