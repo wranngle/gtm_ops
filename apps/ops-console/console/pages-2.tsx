@@ -337,7 +337,7 @@ function normalizeEvalRun(raw) {
       .filter(([name, value]) => name !== 'aggregate_score' && typeof value === 'number')
       .map(([name, value]) => ({
         name,
-        pass: value >= 0.72,
+        pass: (value as number) >= 0.72,
         weight: 1,
         detail: `scalar score ${evalPct(value)}`,
       }))
@@ -702,7 +702,7 @@ function EvalsPage({ setRoute }) {
     setSuiteBuilderOpen(false);
     setArtifactPath(activeRun.result_path);
   };
-  const selectEvalRun = (run, options = {}) => {
+  const selectEvalRun = (run, options: any = {}) => {
     if (!run?.scenario_id) return;
     setActiveRunId(run.scenario_id);
     if (!options.initial) setRunDetailOpened(true);
@@ -1170,11 +1170,7 @@ function EvalsPage({ setRoute }) {
           <form className="workflow-popout__pane" onSubmit={submitSuiteDraft}>
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
-                <div className="eyebrow eyebrow--accent">new eval suite</div>
                 <div className="workflow-popout__title">Draft a local scenario pack</div>
-                <div className="muted" style={{fontSize:12}}>
-                  Create the suite inside the console first. It becomes a draft row, then the harness run plan opens with the domain eval command selected.
-                </div>
               </div>
               <button type="button" className="btn btn--ghost btn--icon" aria-label="Close new eval suite builder" onClick={() => setSuiteBuilderOpen(false)}><I3.Close size={14}/></button>
             </div>
@@ -1447,12 +1443,7 @@ function EvalsPage({ setRoute }) {
           <div className="workflow-popout__pane">
             <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
               <div>
-                <div className="eyebrow eyebrow--accent">local run plan</div>
                 <div className="workflow-popout__title">Manifest command handoff</div>
-                <div className="muted" style={{fontSize:12}}>
-                  Run plan loaded from the console manifest.
-                  Outputs return here as review evidence and stay attached to the selected eval artifact.
-                </div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close eval run plan" onClick={() => setBridgeOpen(false)}><I3.Close size={14}/></button>
             </div>
@@ -1639,7 +1630,6 @@ function EvalsPage({ setRoute }) {
               <div>
                 <div className="eyebrow eyebrow--accent">evidence artifact</div>
                 <div className="workflow-popout__title">{evalScenarioTitle(artifactScenario)}</div>
-                <div className="muted" style={{fontSize:12}}>Evidence is loaded inside the console first. The local source reference is review metadata; the raw payload stays below as supporting detail.</div>
               </div>
               <button className="btn btn--ghost btn--icon" aria-label="Close artifact panel" onClick={() => setArtifactPath(null)}><I3.Close size={14}/></button>
             </div>
@@ -2530,7 +2520,6 @@ function ProposalsPage({ setRoute }) {
   return (
     <div className="page page--proposals">
       <PageHeader
-        eyebrow={`${D.proposals.length} proposals · ${openProposalCount} open · ${proposalTotal} total`}
         title="Proposals"
         sub={(() => {
           // Derive sub from live proposals state. Previous "auto-assembled
@@ -3008,8 +2997,7 @@ function SettingsPage({ setRoute }) {
 
   return (
     <div className="page">
-      <PageHeader eyebrow="workspace · helix" title="Settings"
-        sub="The controls behind the autonomy."
+      <PageHeader title="Settings"
         actions={
           <button className="btn btn--ghost btn--sm" onClick={() => setRoute && setRoute('agents')}>
             <I3.Bot size={12}/>Manage agents →
@@ -3151,7 +3139,6 @@ function IntegrationsSettings() {
               <div style={{width:36, height:36, background:'var(--bg-elev)', border:'1px solid var(--border)', borderRadius:8, display:'grid', placeItems:'center', fontFamily:'var(--font-display)', fontWeight:700, fontSize:14, color:'var(--accent-fg)'}}>{c.icon}</div>
               <div>
                 <div style={{fontSize:13, fontWeight:600}}>{c.name}</div>
-                <div className="mono" style={{fontSize:11, color:'var(--text-3)'}}>{c.sub}</div>
               </div>
               <Badge tone={status === 'connected' ? 'healthy' : status === 'syncing' ? 'warn' : status === 'available' ? 'accent' : 'neutral'}>{status}</Badge>
               <button
@@ -3173,9 +3160,7 @@ function IntegrationsSettings() {
             <form className="workflow-popout__pane" onSubmit={(e) => { e.preventDefault(); onSaveActions(); }} aria-label={`${activeConfig.name} mapping form`}>
               <div style={{display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start'}}>
                 <div>
-                  <div className="eyebrow eyebrow--accent">{isConnected ? 'configuration' : 'connect + map'}</div>
                   <div className="workflow-popout__title">{activeConfig.name}</div>
-                  <div className="muted" style={{fontSize:12}}>{activeConfig.what}</div>
                   {lastTest && (
                     <div className="mono dim" data-testid="integration-last-test" style={{fontSize:10, marginTop:4}}>
                       last test sync · {new Date(lastTest).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}
@@ -3186,7 +3171,7 @@ function IntegrationsSettings() {
               </div>
               <div className="integration-config-grid">
                 <div>
-                  <div className="eyebrow">actions permitted ({enabledCount}/{activeConfig.canDo.length})</div>
+                  <div className="eyebrow">actions permitted</div>
                   <div className="vstack" style={{gap:6, marginTop:6}}>
                     {activeConfig.canDo.map(action => (
                       <label key={action} className="form-row form-row--inline" style={{margin:0}}>
@@ -3274,7 +3259,6 @@ function WranngleOfferingsParity() {
               <div style={{fontWeight:700, fontSize:13}}>{item.name}</div>
               <div className="mono dim" style={{fontSize:10}}>{item.price}</div>
             </div>
-            <Badge tone="healthy">covered</Badge>
             <p>{item.coverage}</p>
           </div>
         ))}
@@ -3948,7 +3932,6 @@ function BillingSettings() {
       </Card>
       {planOpen && (
         <Card title="change plan · gtm_ops tiers">
-          <div className="muted" style={{fontSize:12, marginBottom:12}}>Tiers mirror wranngle.com. Annual saves 17% vs monthly.</div>
           <div className="tier-grid" data-testid="billing-tier-grid">
             {GTM_OPS_TIERS.map(tier => {
               const active = tier.id === currentTierId;
@@ -4714,8 +4697,8 @@ function GeneratePage({ setRoute }) {
       sections: loadedPayload.sections ? Object.keys(loadedPayload.sections) : [],
       note: loadedPayload._demo_note || 'Synthetic source packet used only for local review preview.',
     };
-    if (!effectiveHandoff.kind && loadedPayload.title) {
-      reviewPreviewSource.title = loadedPayload.title;
+    if (!effectiveHandoff.kind && (loadedPayload as any).title) {
+      (reviewPreviewSource as any).title = (loadedPayload as any).title;
     }
     const base = {
       artifact_id: activeArtifact.artifactId,
@@ -5015,7 +4998,7 @@ function GeneratePage({ setRoute }) {
     // when the operator had just generated a v3 from a different call or
     // addressed blockers on a different buyer's proposal.
     const proposals = globalThis.GTM.proposals || [];
-    const matchByName = (needle, options = {}) => {
+    const matchByName = (needle, options: any = {}) => {
       if (!needle) return null;
       const n = String(needle).toLowerCase().split(/\s+/).find(Boolean);
       if (!n) return null;
@@ -5205,7 +5188,7 @@ function GeneratePage({ setRoute }) {
     void handleGenerate();
   };
 
-  const autoSample = async (options = {}) => {
+  const autoSample = async (options: any = {}) => {
     const shouldFocus = options.focus === true;
     try {
       const res = await fetch('/fixtures/sample.json');
@@ -5279,9 +5262,7 @@ function GeneratePage({ setRoute }) {
   return (
     <div className="page page--generate">
       <PageHeader
-        eyebrow="proposal sequence"
         title="Generate Proposal"
-        sub="Buyer proof, draft engine, local review artifact, then Proposals approval."
         actions={<>
           <button className="btn btn--ghost btn--sm" onClick={autoSample}><I3.Doc size={12}/>Use sample buyer proof</button>
           <button

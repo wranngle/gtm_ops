@@ -3,7 +3,8 @@
  * an empty array (fresh deploy, no historic runs), the console must
  * NOT wipe the demo fallback data; otherwise a brand-new visitor sees
  * empty kanbans, blank proposals, no hot leads, and concludes the app
- * is broken. A "demo data" pill in the topbar tells them why.
+ * is broken. The fallback flag is observable via `window.GTM._isDemoFallback`;
+ * we no longer paint a topbar pill — the URL/route carries the signal.
  */
 import { test, expect } from './helpers.js';
 
@@ -30,25 +31,6 @@ test('empty /api/history preserves demo fallback companies + proposals', async (
   expect(counts.companies, 'companies wiped to empty').toBeGreaterThan(0);
   expect(counts.proposals, 'proposals wiped to empty').toBeGreaterThan(0);
   expect(counts.isFallback, '_isDemoFallback flag not set').toBe(true);
-});
-
-test('demo-data pill is visible in the topbar when fallback is active', async ({ page }) => {
-  // The console runs in DEMO_MODE on the static test server (port !== 3000),
-  // so /api/history is rewritten to ../fixtures/history.json before the network.
-  // Mock both: the fixture path catches DEMO_MODE; the /api path catches live mode.
-  await page.route('**/fixtures/history.json', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-  });
-  await page.route('**/api/history', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-  });
-  await page.goto('/console/');
-  await page.waitForFunction(() => Boolean(document.querySelector('.app')), null, { timeout: 30_000 });
-  await page.waitForTimeout(500);
-  // Force a small re-render so React picks up the flag if needed.
-  await page.locator('.sb__item:has-text("Pipeline")').first().click();
-  await expect(page.locator('.tb__demo-pill')).toBeVisible();
-  await expect(page.locator('.tb__demo-pill')).toContainText(/demo data/i);
 });
 
 test('Pipeline route shows real cards (not "— empty —") with empty history', async ({ page }) => {
