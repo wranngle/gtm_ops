@@ -10,10 +10,8 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import os from 'os';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let AdminManager: any;
 let MetricType: any;
@@ -24,13 +22,7 @@ let admin: any;
 
 beforeEach(async () => {
   // Create unique database path for each test
-  testDbPath = path.join(
-    __dirname,
-    '..',
-    '..',
-    'config',
-    `admin_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`
-  );
+  testDbPath = path.join(os.tmpdir(), `admin_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`);
 
   const module = await import('../../lib/admin.js');
   AdminManager = module.AdminManager;

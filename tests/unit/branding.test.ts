@@ -9,10 +9,8 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import os from 'os';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let BrandingManager: any;
 let DefaultBranding: any;
@@ -29,13 +27,7 @@ let testDbPath: string;
 let branding: any;
 
 beforeEach(async () => {
-  testDbPath = path.join(
-    __dirname,
-    '..',
-    '..',
-    'config',
-    `branding_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`
-  );
+  testDbPath = path.join(os.tmpdir(), `branding_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`);
 
   const module = await import('../../lib/branding.js');
   BrandingManager = module.BrandingManager;

@@ -41,6 +41,11 @@ CI runs `static` (typecheck), `unit`, and `console-e2e` jobs on every PR — see
 [`.github/workflows/test.yml`](../.github/workflows/test.yml). Keep local
 commands and CI in lockstep; if you add a suite, wire it there.
 
+`bun run lint` (xo) is **advisory-only, not CI-gated**: its config went
+unloaded for months (`xo.config.cjs` is not a filename xo resolves — now fixed
+as `xo.config.js`), so the first honest run surfaced a ~15k-finding stylistic
+backlog. Gate it in CI only after that backlog is burned down deliberately.
+
 ## Priority tags
 
 Tests are tagged with priority levels in their names:

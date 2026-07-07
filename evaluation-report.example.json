@@ -1,34 +1,59 @@
 {
-  "_comment": "evaluation-report.example.json — synthetic placeholder for the gitignored evaluation-report.json. Copy to evaluation-report.json (or regenerate via the eval pipeline). Gitignored because real eval reports embed customer intake data; this placeholder shows only the schema.",
-  "_shape": "Eval report emitted by the presales pipeline. Captures pipeline scores per stage and per generated document for a single client run.",
-  "report_id": "eval_demo_2026-01-15",
-  "generated_at": "2026-01-15T12:00:00Z",
-  "client": {
-    "name": "Acme Corp",
-    "slug": "acme-corp",
-    "tier": "standard"
+  "_comment": "evaluation-report.example.json — synthetic placeholder for the gitignored evaluation-report.json that `bun run eval:quick` / `eval:full` (cli.ts eval:batch) writes at the repo root. Real reports embed customer intake data; this placeholder shows only the schema, with one completed and one failed case.",
+  "_shape": "{ summary, results, dimension_performance, flaw_frequency } — summary + results from lib/evaluation/runner.ts runBatchEvaluation (per-case scores from lib/evaluation/comparator.ts compare); dimension_performance mirrors summary.dimension_performance ([] unless populated); flaw_frequency mirrors summary.top_flaws.",
+  "summary": {
+    "batch_id": "00000000-0000-4000-8000-000000000000",
+    "total_cases": 2,
+    "completed": 1,
+    "failed": 1,
+    "skipped": 0,
+    "started_at": "2026-01-15T12:00:00.000Z",
+    "completed_at": "2026-01-15T12:03:20.000Z",
+    "run_ids": ["run_demo_0001", "run_demo_0002"],
+    "mean_score": 72.4,
+    "min_score": 72.4,
+    "max_score": 72.4,
+    "score_distribution": { "excellent": 0, "good": 1, "fair": 0, "poor": 0 },
+    "top_flaws": [
+      { "code": "TIER_UNDERESTIMATE", "count": 1, "percent": 100 }
+    ]
   },
-  "pipeline_run": {
-    "input_file": "input/sample-intake.txt",
-    "output_dir": "output/acme-corp/",
-    "duration_ms": 45000,
-    "status": "ok"
-  },
-  "stage_scores": {
-    "extract": {"passed": true, "duration_ms": 8000, "notes": "all required fields present"},
-    "research": {"passed": true, "duration_ms": 12000, "notes": "tier=standard, confidence=0.85"},
-    "project_plan": {"passed": true, "duration_ms": 9000, "notes": "4 milestones"},
-    "proposal": {"passed": true, "duration_ms": 7000, "notes": "ROI computed"},
-    "audit": {"passed": true, "duration_ms": 6000, "notes": "scorecard rendered"},
-    "render": {"passed": true, "duration_ms": 2000, "notes": "all 4 sheets rendered"},
-    "polish": {"passed": true, "duration_ms": 1000, "notes": "no rewrites needed"}
-  },
-  "document_checks": {
-    "audit": {"display_fields_complete": true, "no_undefined_values": true},
-    "project_plan": {"display_fields_complete": true, "no_undefined_values": true},
-    "proposal": {"display_fields_complete": true, "no_undefined_values": true, "roi_payback_months": 3.0, "annual_savings_display": "$120,000"},
-    "scope": {"display_fields_complete": true, "no_undefined_values": true}
-  },
-  "verdict": "pass",
-  "warnings": []
+  "results": [
+    {
+      "case_study_id": "cs_dental_demo",
+      "run_id": "run_demo_0001",
+      "status": "completed",
+      "aggregate_score": 72.4,
+      "scores": {
+        "dimensions": [
+          { "dimension": "tier_match", "score": 0.5, "weight": 0.2, "weighted_score": 0.1, "rationale": "Proposed standard; ground truth ran complex", "details": {} },
+          { "dimension": "integration_coverage", "score": 0.8, "weight": 0.25, "weighted_score": 0.2, "rationale": "4 of 5 systems identified", "details": {} },
+          { "dimension": "agent_type_alignment", "score": 1, "weight": 0.15, "weighted_score": 0.15, "rationale": "Voice agent matches ground truth", "details": {} },
+          { "dimension": "pricing_reasonableness", "score": 0.7, "weight": 0.2, "weighted_score": 0.14, "rationale": "Within 30% of actual price", "details": {} },
+          { "dimension": "timeline_realism", "score": 0.6, "weight": 0.1, "weighted_score": 0.06, "rationale": "Two weeks shorter than actual delivery", "details": {} },
+          { "dimension": "feature_coverage", "score": 0.9, "weight": 0.1, "weighted_score": 0.09, "rationale": "Callback + booking capabilities present", "details": {} }
+        ],
+        "aggregate_score": 72.4,
+        "summary": "Strong integration and feature coverage; tier under-called"
+      },
+      "flaws": ["TIER_UNDERESTIMATE"],
+      "autofix": {
+        "fixed_score": 81.2,
+        "improvement": 8.8,
+        "remediations": ["Bumped tier to complex based on integrated-system count"],
+        "remaining_flaws": []
+      }
+    },
+    {
+      "case_study_id": "cs_hvac_demo",
+      "run_id": "run_demo_0002",
+      "status": "failed",
+      "error": "Pipeline execution failed: missing required intake fields",
+      "duration_ms": 1200
+    }
+  ],
+  "dimension_performance": [],
+  "flaw_frequency": [
+    { "code": "TIER_UNDERESTIMATE", "count": 1, "percent": 100 }
+  ]
 }

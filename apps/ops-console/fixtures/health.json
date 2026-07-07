@@ -6,11 +6,13 @@
   "demo_mode": true,
   "commit": "demo",
   "branch": "demo",
+  "runtime": "fixture",
+  "db_bound": false,
   "uptime_s": 0,
   "checks": {
     "fixtures": "present",
     "db": "n/a",
     "model": "gemini-2.0-flash"
   },
-  "_note": "Static fixture served by Cloudflare Pages _redirects (/api/health -> /fixtures/health.json) when DEMO_MODE has no live server. Mirrors the union of the live /api/health JSON shape (server.ts: commit + uptime_s; functions/api/health.ts: commit + branch). `ok` + `checks` block was added alongside the new /api/version endpoint so uptime probers see a structured readiness signal."
+  "_note": "Static fixture served by Cloudflare Pages _redirects (/api/health -> /fixtures/health.json) when DEMO_MODE has no live server. Mirrors the union of the live /api/health JSON shape (server.ts: commit + uptime_s; functions/api/health.ts: commit + branch + runtime + db_bound). `ok` + `checks` block was added alongside the new /api/version endpoint so uptime probers see a structured readiness signal."
 }

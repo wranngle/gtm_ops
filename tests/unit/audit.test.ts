@@ -10,10 +10,8 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import os from 'os';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let AuditLogger: any;
 let AuditAction: any;
@@ -22,13 +20,7 @@ let testDbPath: string;
 
 beforeEach(async () => {
   // Create unique database path for each test
-  testDbPath = path.join(
-    __dirname,
-    '..',
-    '..',
-    'config',
-    `audit_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`
-  );
+  testDbPath = path.join(os.tmpdir(), `audit_test_${Date.now()}_${Math.random().toString(36).slice(2)}.db`);
 
   const module = await import('../../lib/audit.js');
   AuditLogger = module.AuditLogger;
