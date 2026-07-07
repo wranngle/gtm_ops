@@ -92,8 +92,6 @@ describe('ARCHITECTURE content reflects reality', () => {
     'tests/',
     'DESIGN.md',
     'README.md',
-    'CONTRIBUTING.md',
-    'SECURITY.md',
     'LICENSE',
   ];
   for (const p of claimedPaths) {

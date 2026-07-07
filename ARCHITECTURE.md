@@ -138,8 +138,6 @@ gtm_ops/
 ├── DESIGN.md                # canonical brand system (long-form)
 ├── ARCHITECTURE.md          # this file
 ├── README.md
-├── CONTRIBUTING.md
-├── SECURITY.md
 ├── LICENSE
 ├── apps/ops-console/        # operator UI — React (UMD + babel-standalone)
 │                            # main /console/ + /evaluation/ redirect + static /eval-runs/

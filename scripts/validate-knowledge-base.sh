@@ -10,15 +10,8 @@ required_files=(
   "ARCHITECTURE.md"
   "README.md"
   "DESIGN.md"
-  "CODE_OF_CONDUCT.md"
-  "CONTRIBUTING.md"
   "LICENSE"
-  "SECURITY.md"
-  ".github/PULL_REQUEST_TEMPLATE.md"
   ".github/dependabot.yml"
-  ".github/ISSUE_TEMPLATE/bug_report.yml"
-  ".github/ISSUE_TEMPLATE/feature_request.yml"
-  ".github/ISSUE_TEMPLATE/config.yml"
   "docs/index.md"
   "docs/generated/README.md"
   "docs/product-specs/index.md"
@@ -117,7 +110,7 @@ while IFS=$'\t' read -r doc target; do
     markdown_link_failed=1
   fi
 done < <(
-  find AGENTS.md .agents/AGENTS.md README.md ARCHITECTURE.md DESIGN.md SECURITY.md CONTRIBUTING.md docs \
+  find AGENTS.md .agents/AGENTS.md README.md ARCHITECTURE.md DESIGN.md docs \
     \( -path 'docs/generated/*' -o -path 'docs/references/*.png' \) -prune \
     -o -type f -name '*.md' -print 2>/dev/null \
     | sort \
