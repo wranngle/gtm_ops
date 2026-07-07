@@ -90,7 +90,9 @@
     "xo": "2.0.2"
   },
   "overrides": {
-    "ip-address": "10.1.1",
-    "fast-uri": "^3.1.2"
+    "ws": "^8.21.0",
+    "protobufjs": "^7.6.1",
+    "vite": "^8.0.16",
+    "undici": "^6.27.0"
   }
 }
