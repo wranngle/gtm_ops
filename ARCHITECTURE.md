@@ -81,7 +81,7 @@ Structured LLM extraction over the post-call payload produces a typed proposal. 
 
 Internal operational UI for non-technical operators. Three surfaces:
 
-- `index.html` — public landing page (Get-a-real-run lead form)
+- `index.html` — public landing page (Get-a-real-run lead form). Not routed on Pages hosts: bare-root and `/index.html` redirect to `/console/` (see `_redirects`), so it survives for external linking; its form posts to `functions/api/leads.ts`, which forwards to n8n when `N8N_LEADS_WEBHOOK` is configured and no-ops otherwise
 - `console/` — main React (UMD + babel-standalone, no build step) operator UI; routes home / pipeline / calls / proposals / evals (harness workbench + contextual ElevenLabs regression lab) / **agents** (live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake) / settings / generate
 - `evaluation/` — compatibility redirect into `/console/?route=evals`; the eval dashboard is native to the console shell
 - `eval-runs/` — per-run harness output surface

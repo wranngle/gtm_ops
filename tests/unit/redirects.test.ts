@@ -40,10 +40,18 @@ describe('apps/ops-console/_redirects', () => {
     expect(text).toMatch(/^\/index\.html\s+\/console\/\s+301\b/m);
   });
 
-  it('keeps the legacy /api/eval-runs alias to the fixture', () => {
-    // Defensive: the UI briefly used /api/eval-runs before the canonical
-    // /api/eval/runs landed in server.ts. The 302 alias is what keeps
-    // any deep link in the wild from 404'ing.
-    expect(text).toMatch(/^\/api\/eval-runs\s+\/fixtures\/eval-runs\.json\s+302\b/m);
+  it('carries no /api/* rules — the Pages Function catch-all owns that surface', () => {
+    // The old `/api/* → /fixtures/:splat.json 302` wildcard (and the
+    // /api/eval-runs alias) fired on the production host too, converting
+    // unported-route 404s into 200s of demo data. functions/api/[[path]].ts
+    // now decides per-host: fixture fallback on preview hosts, honest JSON
+    // 404 on production. Legacy /api/eval-runs deep links are served by the
+    // dedicated functions/api/eval-runs.ts.
+    expect(text).not.toMatch(/^\/api\//m);
+  });
+
+  it('the /api catch-all function backing the removed wildcard exists', () => {
+    expect(existsSync(resolve(root, 'functions', 'api', '[[path]].ts'))).toBe(true);
+    expect(existsSync(resolve(root, 'lib', 'api-fallback.ts'))).toBe(true);
   });
 });

@@ -1018,6 +1018,22 @@ app.get('/api/stream', (req, res) => {
   req.on('close', () => { clearInterval(heartbeat); logEmitter.off('log', onLog); });
 });
 
+app.get('/api/funnel', generalLimiter, (req, res) => {
+  // Funnel rollup for the console Funnel page (which hard-fails on !res.ok).
+  // No live aggregation source exists yet — calls live in ElevenLabs and
+  // proposals in history — so serve the synthetic funnel with an explicit
+  // `source` marker the page surfaces as a label. Mirrors
+  // functions/api/funnel.ts; replace both with a real rollup when call-event
+  // persistence lands.
+  try {
+    const funnelPath = path.join(__dirname, 'apps', 'ops-console', 'fixtures', 'funnel.json');
+    const funnel = JSON.parse(fsSync.readFileSync(funnelPath, 'utf8'));
+    res.json({ ...funnel, source: 'fixture' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/sample', generalLimiter, async (req, res) => {
   const inputDir = path.join(__dirname, 'input');
   const samples = ['upwork_job_post.txt', 'healthcare_intake.txt', 'test_receptionist.txt'];

@@ -63,12 +63,23 @@
 /fixtures/*
   Cache-Control: public, max-age=3600
 
-# Don't cache HTML — let users see deploys immediately
+# Don't cache HTML — let users see deploys immediately. Directory-style
+# entrypoints (/console/, /eval-runs/, /evaluation/) don't match /*.html, so
+# they get explicit rules; /console/* also covers the no-build TSX/CSS the
+# console loads at runtime, which must track each deploy exactly.
 /
   Cache-Control: public, max-age=0, must-revalidate
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 /*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/console/
+  Cache-Control: public, max-age=0, must-revalidate
+/console/*
+  Cache-Control: public, max-age=0, must-revalidate
+/eval-runs/
+  Cache-Control: public, max-age=0, must-revalidate
+/evaluation/
   Cache-Control: public, max-age=0, must-revalidate
 
 # Sitemap / robots — short cache so updates propagate

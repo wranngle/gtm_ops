@@ -1246,19 +1246,35 @@ function ConsolePanel({ lines, title = 'live · agent.feed', useLiveStream }: { 
       // Live mode: EventSource over /api/stream. Static DEMO_MODE replays
       // synthetic gtm:stream events instead, so do not show a transport
       // failure before the operator has launched a sequence.
+      let consecutiveErrors = 0;
       es = new EventSource('/api/stream');
-      es.onopen = () => setStreamState('streaming');
+      es.onopen = () => {
+        consecutiveErrors = 0;
+        setStreamState('streaming');
+      };
       es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
           if (data.msg) append(data.msg, data.level);
         } catch (_) { /* ignore malformed payloads */ }
       };
-      // Surface transport errors in live mode so the user sees the panel
-      // went silent for an actual reason (CSP block, server hangup).
+      // Surface the first transport error so the user sees the panel went
+      // silent for a reason (CSP block, server hangup). Two consecutive
+      // failures without a successful open means this host has no
+      // /api/stream (the SSE feed is Express-only; the Pages deploy lacks
+      // it) — stop the EventSource retry loop and fall back to the local
+      // gtm:stream fan-out below, the same feed DEMO_MODE uses, so the
+      // panel reads ready instead of erroring forever.
       es.onerror = () => {
-        setStreamState('disconnected');
-        append('stream.error: EventSource disconnected (will retry on next tick)', 'err');
+        consecutiveErrors += 1;
+        if (consecutiveErrors === 1) {
+          setStreamState('disconnected');
+          append('stream.error: EventSource disconnected (will retry)', 'err');
+          return;
+        }
+        es.close();
+        setStreamState('ready');
+        append('stream.offline: /api/stream unavailable on this host · using local event feed', 'warn');
       };
     }
     // Demo mode + manual fan-out: any code can dispatch

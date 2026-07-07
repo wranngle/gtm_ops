@@ -14,12 +14,17 @@
     <meta name="theme-color" content="#12111a">
     <link rel="stylesheet" href="../tokens/tokens.css">
 
-    <!-- DEMO_MODE: file://, *.pages.dev host, or window.DEMO_MODE → fixtures from ../fixtures/ -->
+    <!-- DEMO_MODE: file://, *.pages.dev host, local static server, or window.DEMO_MODE → fixtures from ../fixtures/ -->
     <script>
       (function () {
         var host = (window.location.hostname || '').toLowerCase();
         var isPagesDemo = /\.pages\.dev$/.test(host);
-        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo;
+        // Same clause as console/index.html: a local static server (any port
+        // except the Express :3000, unless ?live) is a demo host too.
+        var isLocalStatic = (host === 'localhost' || host === '127.0.0.1' || host === '::1') &&
+          window.location.port !== '3000' &&
+          !new URLSearchParams(window.location.search).has('live');
+        var DEMO_MODE = (window.location.protocol === 'file:') || window.DEMO_MODE === true || isPagesDemo || isLocalStatic;
         window.DEMO_MODE = DEMO_MODE;
         if (!DEMO_MODE) return;
         var nativeFetch = window.fetch.bind(window);
@@ -73,9 +78,9 @@
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
         .header h1 { font-size: 22px; font-weight: 700; }
-        .header .nav { display: flex; gap: 16px; font-size: 13px; color: #847d9a; }
+        .header .nav { display: flex; gap: 16px; font-size: 13px; color: #aaa4b8; }
         .header .subtitle {
-            font-size: 12px; color: #847d9a; margin-top: 4px;
+            font-size: 12px; color: #aaa4b8; margin-top: 4px;
             font-family: var(--font-mono);
         }
 
@@ -113,7 +118,7 @@
         }
         .filter-bar label {
             font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
-            color: #847d9a;
+            color: #aaa4b8;
         }
         .filter-bar select, .filter-bar input {
             background: var(--night-800); border: 1px solid rgba(255,255,255,0.1);
@@ -143,7 +148,7 @@
             color: #e0dce8;
         }
         .run-card .meta {
-            font-size: 11px; color: #847d9a; margin-top: 4px;
+            font-size: 11px; color: #aaa4b8; margin-top: 4px;
             font-family: var(--font-mono);
         }
         .run-card .meta .sep { color: rgba(255,255,255,0.18); margin: 0 8px; }
@@ -153,8 +158,12 @@
             font-size: 10px; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .badge.pass { background: rgba(93,140,97,0.18); color: var(--color-healthy); }
-        .badge.fail { background: rgba(207,60,105,0.18); color: var(--violet-500); }
+        /* Badge text is 10px — WCAG AA needs 4.5:1. The raw brand tones
+           (--color-healthy 3.35:1, --violet-500 2.98:1 on their tinted dark
+           backgrounds) stay for borders and large stat text; small badge
+           text uses lifted variants that clear AA. */
+        .badge.pass { background: rgba(93,140,97,0.18); color: #8fbf93; }
+        .badge.fail { background: rgba(207,60,105,0.18); color: #f27a9d; }
 
         .score-cell {
             font-family: var(--font-mono); font-size: 13px;
@@ -167,7 +176,7 @@
         }
         .score-bar .fill { height: 100%; border-radius: 2px; }
 
-        .timestamp { font-family: var(--font-mono); font-size: 11px; color: #847d9a; }
+        .timestamp { font-family: var(--font-mono); font-size: 11px; color: #aaa4b8; }
         .link-btn {
             background: transparent; border: 1px solid rgba(255,255,255,0.1);
             color: var(--sunset-500); padding: 4px 10px; border-radius: 6px;
@@ -180,7 +189,7 @@
         }
 
         .empty {
-            color: #847d9a; font-style: italic; padding: 32px;
+            color: #aaa4b8; font-style: italic; padding: 32px;
             text-align: center;
         }
 
@@ -360,7 +369,7 @@
         }
 
         function scoreColor(score) {
-            if (score == null) return '#847d9a';
+            if (score == null) return '#aaa4b8';
             if (score >= 0.7) return 'var(--color-healthy)';
             if (score >= 0.4) return '#e8a735';
             return 'var(--violet-500)';
@@ -399,8 +408,8 @@
                 const cardClass = verdict === 'pass' ? 'pass' : (verdict === 'fail' ? 'fail' : '');
                 const resultPath = r.result_path || (r.scenario_id ? `../fixtures/runs/${r.scenario_id}.json` : '#');
                 return `
-                    <div class="run-card ${cardClass} ${r.scenario_id === activeScenario ? 'active' : ''}" role="button" tabindex="0" data-scenario="${escapeHtml(r.scenario_id)}" aria-pressed="${r.scenario_id === activeScenario}">
-                        <div>
+                    <div class="run-card ${cardClass} ${r.scenario_id === activeScenario ? 'active' : ''}" data-scenario="${escapeHtml(r.scenario_id)}">
+                        <div class="run-card__select" role="button" tabindex="0" aria-pressed="${r.scenario_id === activeScenario}">
                             <div class="scenario">${escapeHtml(r.scenario_id || '(unnamed)')}</div>
                             <div class="meta">
                                 <span>${escapeHtml(r.agent_id || '--')}</span>
@@ -419,6 +428,10 @@
                     </div>
                 `;
             }).join('');
+            // The button role lives on the inner select region, NOT the card:
+            // a role="button" must not contain focusable content, and each
+            // card carries a real <a> to result.json. Mouse users can still
+            // click anywhere on the card (minus the link).
             list.querySelectorAll('.run-card').forEach(card => {
                 const select = () => {
                     activeScenario = card.getAttribute('data-scenario');
@@ -428,7 +441,7 @@
                     if (event.target.closest('a')) return;
                     select();
                 });
-                card.addEventListener('keydown', (event) => {
+                card.querySelector('.run-card__select').addEventListener('keydown', (event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         select();
@@ -501,6 +514,9 @@
         async function load() {
             try {
                 const resp = await fetch('/api/eval-runs');
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status} — no live eval-runs source on this host`);
+                }
                 const data = await resp.json();
                 allRuns = Array.isArray(data) ? data : (data.runs || []);
                 allRuns.sort((a, b) => {

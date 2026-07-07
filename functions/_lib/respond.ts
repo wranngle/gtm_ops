@@ -5,6 +5,10 @@
 
 export type Env = {
   DB?: D1Database;
+  // Pages-provided static asset binding (always present on deployed Pages;
+  // optional here for local test harnesses). Used by the /api catch-all to
+  // serve fixture fallbacks on preview hosts.
+  ASSETS?: Fetcher;
   // Forward-looking bindings from the wrangler.toml operator steps — typed so
   // the dashboard wiring compiles the day a consumer lands; nothing reads
   // TEMPLATES or BROWSER yet.

@@ -6,9 +6,12 @@
    button) and produces a deterministic post-call follow-up email
    {subject, body} for preview in the ops-console.
 
-   The LLM client is mocked. A real client would replace
-   `mockLlmCompose` with a fetch to /api/llm or the agents SDK;
-   the prompt shape (`buildEmailPrompt`) is the same regardless.
+   The LLM client is mocked ON EVERY HOST, deliberately: /api/llm
+   exists nowhere yet (neither server.ts nor functions/api). A real
+   client would replace `mockLlmCompose` with a fetch to /api/llm or
+   the agents SDK behind a capability check; the prompt shape
+   (`buildEmailPrompt`) is the same regardless, and the composer UI
+   labels output as a template preview until then.
 
    In-bundle pattern: loaded via <script type="text/babel"> in
    index.html alongside the other console TSX files, and exposes
