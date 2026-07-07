@@ -59,6 +59,16 @@ already deleted); branches kept as archival refs.
 ## Dependabot
 
 - `dependabot/npm_and_yarn/dev-47af7a6c5f` (`@cloudflare/workers-types`
-  patch bump) — applied locally.
+  patch bump) — applied locally; the same bump also landed upstream as #216.
 - `dependabot/npm_and_yarn/types/react-19.2.15` — declined: the console runs
-  React 18.3.1 UMD; `@types/react` stays on the runtime's major.
+  React 18.3.1 UMD; `@types/react` stays on the runtime's major. Upstream
+  merged it anyway as #217 during the suspension; the reinstatement
+  reconciliation reverted to 18 with hard evidence — types 19 breaks
+  `typecheck:console` (TS2741 `children` errors in shell.tsx).
+
+## Post-reinstatement note (2026-07-07)
+
+GitHub access returned and `git fetch --prune` removed the remote-tracking
+refs for every branch whose PR had merged (all previously classified above as
+"content already in main" — no loss). The seven `wip/*` snapshot refs this
+document mines from all survive on the remote.
