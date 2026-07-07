@@ -95,29 +95,31 @@ scan_file() {
   done < <(strip_comments "$file")
 }
 
-if [[ ! -d packages ]]; then
-  printf 'time-in-providers lint: no packages/ directory; nothing to check\n'
-  exit 0
-fi
+# ---------------------------------------------------------------------------
+# Flat-layout enforcement — gtm_ops has no packages/ tree (yet). The types
+# layer here is lib/schemas/ + src/schemas/: schema modules must stay
+# deterministic (no wall-clock, no randomness) so validation results are
+# reproducible in tests without monkey-patching globals. The broader
+# providers-only rule applies once domains are extracted into packages/*/src/.
+# ---------------------------------------------------------------------------
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  scan_file "$file" "types (lib/src schemas)"
+done < <(find lib/schemas src/schemas -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
 
-found_any=0
-for pkg in packages/*/; do
-  src_root="$pkg/src"
-  [[ -d "$src_root" ]] || continue
-  found_any=1
+if [[ -d packages ]]; then
+  for pkg in packages/*/; do
+    src_root="$pkg/src"
+    [[ -d "$src_root" ]] || continue
 
-  while IFS= read -r file; do
-    [[ -z "$file" ]] && continue
-    rel="${file#"$src_root"/}"
-    layer="${rel%%/*}"
-    [[ "$layer" == "providers" ]] && continue
-    scan_file "$file" "$layer"
-  done < <(find "$src_root" -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
-done
-
-if (( found_any == 0 )); then
-  printf 'time-in-providers lint: no packages with src/ found; nothing to check\n'
-  exit 0
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      rel="${file#"$src_root"/}"
+      layer="${rel%%/*}"
+      [[ "$layer" == "providers" ]] && continue
+      scan_file "$file" "$layer"
+    done < <(find "$src_root" -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
+  done
 fi
 
 if (( violations > 0 )); then
@@ -125,4 +127,4 @@ if (( violations > 0 )); then
   exit 1
 fi
 
-printf 'time-in-providers lint passed\n'
+printf 'time-in-providers lint passed (types layer: lib/schemas + src/schemas)\n'

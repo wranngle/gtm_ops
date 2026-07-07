@@ -94,6 +94,26 @@ scan_file() {
       fi
     fi
 
+    # 1b. `export const NAME = type(...)` / `scope(...)` (arktype) — same
+    # PascalCase + Schema rule as the Zod form above. gtm_ops schemas are
+    # arktype-first; the Zod branch stays for extracted packages.
+    if [[ "$cleaned" =~ ^[[:space:]]*export[[:space:]]+const[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(type|scope)\( ]]; then
+      local ark_name="${BASH_REMATCH[1]}"
+      if ! [[ "$ark_name" =~ ^[A-Z][A-Za-z0-9]*Schema$ ]]; then
+        local ark_first="${ark_name:0:1}"
+        local ark_rest="${ark_name:1}"
+        local ark_suggested
+        if [[ "$ark_name" == *Schema ]]; then
+          ark_suggested="${ark_first^^}${ark_rest}"
+        else
+          ark_suggested="${ark_first^^}${ark_rest}Schema"
+        fi
+        emit_violation "$file" "$lineno" \
+          "arktype schema constant \"${ark_name}\" is not PascalCase + Schema suffix" \
+          "rename to \"${ark_suggested}\" (export const ${ark_suggested} = type(…))"
+      fi
+    fi
+
     # 2. `export type NAME = z.infer<typeof YSchema>` — NAME and YSchema both
     # PascalCase, NAME == YSchema minus the "Schema" suffix.
     if [[ "$cleaned" =~ ^[[:space:]]*export[[:space:]]+type[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*z\.infer\<[[:space:]]*typeof[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\> ]]; then
@@ -130,23 +150,23 @@ scan_file() {
   done < <(strip_comments "$file")
 }
 
-if [[ ! -d packages ]]; then
-  printf 'naming-conventions lint: no packages/ directory; nothing to check\n'
-  exit 0
-fi
-
-found_any=0
+# ---------------------------------------------------------------------------
+# Flat-layout enforcement — gtm_ops has no packages/ tree (yet). The types
+# layer here is lib/schemas/ + src/schemas/ (arktype-first: the canonical
+# pair is `export const FooSchema = type(…)` + a PascalCase inferred type).
+# ---------------------------------------------------------------------------
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
-  found_any=1
   scan_file "$file"
-done < <(find packages -type f \( -name '*.ts' -o -name '*.tsx' \) \
-                       \( -path '*/src/types/*' -o -path '*/src/config/*' \) \
-         2>/dev/null)
+done < <(find lib/schemas src/schemas -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
 
-if (( found_any == 0 )); then
-  printf 'naming-conventions lint: no packages/*/src/{types,config}/ files found; nothing to check\n'
-  exit 0
+if [[ -d packages ]]; then
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    scan_file "$file"
+  done < <(find packages -type f \( -name '*.ts' -o -name '*.tsx' \) \
+                         \( -path '*/src/types/*' -o -path '*/src/config/*' \) \
+           2>/dev/null)
 fi
 
 if (( violations > 0 )); then
@@ -154,4 +174,4 @@ if (( violations > 0 )); then
   exit 1
 fi
 
-printf 'naming-conventions lint passed\n'
+printf 'naming-conventions lint passed (types layer: lib/schemas + src/schemas)\n'

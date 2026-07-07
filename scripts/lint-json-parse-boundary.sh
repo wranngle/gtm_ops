@@ -72,30 +72,36 @@ scan_file() {
 }
 
 if [[ ! -d packages ]]; then
-  printf 'json-parse-boundary lint: no packages/ directory; nothing to check\n'
-  exit 0
+  : # no packages/ yet — the flat-layout scan below still runs
 fi
 
-found_any=0
-for pkg in packages/*/; do
-  src_root="$pkg/src"
-  [[ -d "$src_root" ]] || continue
-  found_any=1
+# ---------------------------------------------------------------------------
+# Flat-layout enforcement — gtm_ops has no packages/ tree (yet). The types
+# layer here is lib/schemas/ + src/schemas/: schema modules declare parsed
+# shapes and validate already-parsed values; they must never call JSON.parse
+# themselves (raw bytes belong to the layer that brought them in — see
+# lib/extract.ts parseLLMJson for the LLM-output boundary convention).
+# ---------------------------------------------------------------------------
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  scan_file "$file" "types (lib/src schemas)"
+done < <(find lib/schemas src/schemas -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
 
-  while IFS= read -r file; do
-    [[ -z "$file" ]] && continue
-    rel="${file#"$src_root"/}"
-    layer="${rel%%/*}"
-    case "$layer" in
-      repo|config|providers) continue ;;
-    esac
-    scan_file "$file" "$layer"
-  done < <(find "$src_root" -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
-done
+if [[ -d packages ]]; then
+  for pkg in packages/*/; do
+    src_root="$pkg/src"
+    [[ -d "$src_root" ]] || continue
 
-if (( found_any == 0 )); then
-  printf 'json-parse-boundary lint: no packages with src/ found; nothing to check\n'
-  exit 0
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      rel="${file#"$src_root"/}"
+      layer="${rel%%/*}"
+      case "$layer" in
+        repo|config|providers) continue ;;
+      esac
+      scan_file "$file" "$layer"
+    done < <(find "$src_root" -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
+  done
 fi
 
 if (( violations > 0 )); then
@@ -103,4 +109,4 @@ if (( violations > 0 )); then
   exit 1
 fi
 
-printf 'json-parse-boundary lint passed\n'
+printf 'json-parse-boundary lint passed (types layer: lib/schemas + src/schemas)\n'

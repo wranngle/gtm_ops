@@ -68,6 +68,26 @@ packages/<domain>/
 
 Each layer directory contains an `index.ts` that re-exports its public surface. Internal modules within a layer can import freely from each other.
 
+## Current enforcement scope (flat layout)
+
+gtm_ops has **no `packages/` tree yet** — domains live flat under `lib/` and
+`src/`. Until extraction happens, the six lint scripts enforce the subset of
+this rule that is mechanically checkable in the current layout (each rule was
+verified to hold on the day it landed — a lint that is red on day one teaches
+agents to ignore it):
+
+| Script | Flat-layout rule |
+|---|---|
+| `lint-layered-architecture.sh` | types layer (`lib/schemas/` + `src/schemas/`) imports only within the schema trees; `lib/ src/ functions/` never import `server.ts`/`cli.ts`; the no-build console never imports `lib/ src/ functions/` |
+| `lint-file-size.sh` | 800-line hard cap (600 warn) over `lib/ src/ functions/`, with a **ratcheting grandfather table** for pre-existing oversized files — caps only shrink |
+| `lint-json-parse-boundary.sh` | no `JSON.parse` in the types layer (schemas consume parsed values) |
+| `lint-naming-conventions.sh` | arktype/Zod schema constants in the types layer are PascalCase + `Schema` suffix; no `IFoo` interfaces |
+| `lint-structured-logging.sh` | no `console.log/info/debug/trace` or raw stream writes in the types layer (`console.warn`/`error` allowed for validation-failure reporting) |
+| `lint-time-in-providers.sh` | no wall-clock/randomness in the types layer (deterministic validation) |
+
+The full per-layer scans described below activate automatically for any
+`packages/*/src/` tree the moment one exists.
+
 ## Lint contract
 
 `scripts/lint-layered-architecture.sh`:
