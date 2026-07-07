@@ -46,7 +46,10 @@ test('Generate page · run status is a separate band so header actions stay in t
 	await page.locator('.sb__item:has-text("Generate")').first().click();
 
 	await expect(page.locator('[data-testid="generate-run-strip"]')).toBeVisible();
-	await expect(page.locator('.ph__sub')).toContainText(/buyer proof, draft engine, local review artifact/i);
+	// The visual-restraint pass removed the Generate header's sub line (the
+	// run strip below carries the pipeline framing now) — pin its absence so
+	// a decorative subtitle doesn't quietly return.
+	await expect(page.locator('.page--generate .ph__sub')).toHaveCount(0);
 
 	const geometry = await page.evaluate(() => {
 		const header = document.querySelector<HTMLElement>('.page--generate .ph');

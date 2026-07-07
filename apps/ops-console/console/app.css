@@ -1651,6 +1651,15 @@ button.inspectable {
   gap: 8px;
   width: 100%;
 }
+@media (min-width: 761px) {
+  /* Reserve the right gutter the compact Generate coach launcher floats in
+     (its top of topbar+58px puts the 32px disc level with this strip);
+     without the reserve the launcher clips the 4th fact card. width, not
+     padding, so the strip's hit-box genuinely clears the launcher. */
+  .generate-run-strip {
+    width: calc(100% - 46px);
+  }
+}
 .generate-run-fact {
   min-width: 0;
   padding: 7px 9px;

@@ -5512,8 +5512,10 @@ test.describe('settings', () => {
 		await actionBoxes.first().uncheck();
 		await expect(save).toBeEnabled();
 		await expect(revert).toBeEnabled();
-		// Header count reflects the new enabled total.
-		await expect(page.locator('.eyebrow', {hasText: /actions permitted/i})).toContainText(`${actionCount - 1}/${actionCount}`);
+		// The visual-restraint pass stripped the live count from the drawer
+		// eyebrow (it reads plain "actions permitted" now); the count is still
+		// proven live via the save-toast assertion below.
+		await expect(page.locator('.eyebrow', {hasText: /actions permitted/i})).toBeVisible();
 
 		// Save toast carries the live count (proves the click read the form, not a static string).
 		await save.click();

@@ -44,7 +44,8 @@ test.describe('/evaluation/ console bridge', () => {
 		await page.getByTestId('eval-run-plan-open').click();
 		const runPlan = page.getByRole('region', {name: /local eval run plan details/i});
 		await expect(runPlan).toBeVisible();
-		await expect(runPlan).toContainText(/outputs return here as review evidence/i);
+		await expect(runPlan).toContainText(/manifest command handoff/i);
+		await expect(runPlan).toContainText(/open review evidence/i);
 		await expect(runPlan).not.toContainText(/\.\.\/voice_ai_agent_evals|harness repo/i);
 		await expect(page.getByTestId('eval-run-plan-open')).toHaveAttribute('aria-expanded', 'true');
 		await expect(page.getByTestId('eval-run-plan-summary')).toContainText(/quick gtm eval batch selected/i);
@@ -526,12 +527,12 @@ test.describe('/evaluation/ console bridge', () => {
 		const artifactPanel = page.getByTestId('eval-artifact-panel');
 		await expect(artifactPanel).toBeVisible();
 		await expect(artifactPanel).toContainText(/evidence artifact/i);
-		await expect(artifactPanel).toContainText(/local source reference is review metadata/i);
+		await expect(artifactPanel).toContainText(/local evidence reference/i);
 		await expect(artifactPanel).not.toContainText(/local path/i);
 		await expect(artifactPanel).not.toContainText(/evidence artifact path/i);
 		await expect(page.getByTestId('eval-artifact-path')).toContainText(/source evidence · [a-z\d-]+/i);
 		await expect(page.getByTestId('eval-artifact-path')).not.toContainText(/fixtures\/runs|eval-runs\.json/i);
-		await expect(artifactPanel).toContainText(/loaded inside the console/i);
+		await expect(artifactPanel).toContainText(/normalized payload/i);
 	});
 
 	test('eval artifact drawer stays inside the console column at mid width', async ({page}) => {
