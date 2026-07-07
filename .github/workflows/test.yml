@@ -87,7 +87,10 @@ jobs:
     # runner. Two SEPARATE runners is the actual lever (~20m -> ~10m).
     name: console e2e (playwright) [shard ${{ matrix.shard }}/${{ strategy.job-total }}]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 20 was calibrated for the pre-2026-07 suite; the pending-work sweep
+    # grew it past that budget on slower runners (shard 2 hit the timeout,
+    # reported as "cancelled"). 30 keeps hang protection with headroom.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
