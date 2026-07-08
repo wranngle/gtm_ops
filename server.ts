@@ -722,14 +722,21 @@ app.post('/api/branding/logo', requireRole(Role.OWNER, Role.ADMIN), generalLimit
     const logosDir = path.join(import.meta.dirname || process.cwd(), 'public', 'logos');
     await fs.mkdir(logosDir, { recursive: true });
 
-    // Generate unique filename. The extension is user-influenced (via the
-    // uploaded filename), so allowlist it — anything unexpected falls back to
-    // the mimetype default instead of flowing into the filesystem path
+    // Generate unique filename. The extension comes from a fixed
+    // mimetype→ext map — never from the uploaded filename — so no
+    // user-controlled string reaches the filesystem path at all
     // (CodeQL js/path-injection).
-    const rawExt = path.extname(filename);
-    const ext = /^\.(png|jpe?g|svg|webp|gif|ico)$/i.test(rawExt)
-      ? rawExt.toLowerCase()
-      : (mimetype === 'image/svg+xml' ? '.svg' : '.png');
+    const EXT_BY_MIMETYPE = {
+      'image/png': '.png',
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/svg+xml': '.svg',
+      'image/webp': '.webp',
+      'image/gif': '.gif',
+      'image/x-icon': '.ico',
+      'image/vnd.microsoft.icon': '.ico'
+    };
+    const ext = EXT_BY_MIMETYPE[mimetype] || '.png';
     const safeWorkspace = (workspace_id || 'default').replaceAll(/[^\w-]/gi, '_');
     const logoFilename = `${safeWorkspace}_logo_${Date.now()}${ext}`;
     const logoPath = path.join(logosDir, logoFilename);

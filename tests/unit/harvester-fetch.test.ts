@@ -31,6 +31,14 @@ describe('[P1] htmlToText', () => {
     expect(text.split('\n').map(l => l.trim()).filter(Boolean)).toEqual(['one', 'two', 'three']);
   });
 
+  it('[P1] strips script/style blocks whose end tag carries whitespace or attributes', () => {
+    // </script > and </script x> are valid end-tag spellings the exact-match
+    // filter missed (CodeQL js/bad-tag-filter).
+    const lines = (html: string) => htmlToText(html).split('\n').map(l => l.trim()).filter(Boolean);
+    expect(lines('<p>a</p><script>alert(1)</script >b')).toEqual(['a', 'b']);
+    expect(lines('<p>a</p><style type="text/css">.x{}</style foo="y">b')).toEqual(['a', 'b']);
+  });
+
   it('[P1] does not double-decode author-escaped entities (&amp; decodes last)', () => {
     // "&amp;lt;" is the author writing the literal text "&lt;" — it must NOT
     // collapse all the way to "<" (CodeQL js/double-escaping).
