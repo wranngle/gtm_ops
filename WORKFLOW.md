@@ -41,7 +41,7 @@ You are operating inside `gtm_ops`, an agent-first GTM operations repo. Complete
 
 ## Tech stack
 
-- Runtime: Bun + Express, with sql.js for in-memory SQLite; vitest for tests
+- Runtime: Bun + Express; persistence via `node-sqlite3` (`lib/db.ts`, see `docs/references/sqlite-query-stability.md`), with sql.js only in the pricing/estimate config readers; vitest for tests
 - Operator UI: `apps/ops-console/` (static + live modes), deployed to Cloudflare Pages (`wrangler.toml`, `_headers`, `_redirects`)
 - Domain libs under `lib/`: intake, enrichment, post-call, extraction, pdf, branding, audit, evaluation
 - Entrypoints: `server.ts`, `cli.ts`

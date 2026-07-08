@@ -151,7 +151,7 @@ function openFunnelStageEvidence(row, review, setRoute, data) {
   setRoute?.(review.route);
 }
 
-function FunnelChart({ stages, windowLabel, selectedStageId, onSelectStage }) {
+function FunnelChart({ stages, windowLabel, selectedStageId, onSelectStage, source }) {
   const rows = React.useMemo(() => computeFunnelRows(stages), [stages]);
   const overall = React.useMemo(() => computeFunnelOverall(stages), [stages]);
   const timeWindow = String(windowLabel || 'last 30 days').replaceAll('_', ' ');
@@ -176,8 +176,10 @@ function FunnelChart({ stages, windowLabel, selectedStageId, onSelectStage }) {
       <div className="funnel-chart__head">
         <div className="funnel-chart__copy">
           <div className="eyebrow eyebrow--accent">booking → revenue · {timeWindow}</div>
-          <div className="mono funnel-chart__sub">
-            Sourced from current console data · percent dropoff at each handoff
+          <div className="mono funnel-chart__sub" data-testid="funnel-source-label">
+            {source === 'fixture'
+              ? 'Synthetic demo data · no live funnel source on this host'
+              : 'Sourced from current console data'} · percent dropoff at each handoff
           </div>
         </div>
         <div className="badge badge--healthy" data-testid="funnel-overall-chip" data-funnel-overall-percent={overall.percent}>
@@ -305,7 +307,7 @@ function FunnelPage({ setRoute }) {
         const payload = await res.json();
         if (cancelled) return;
         const stages = Array.isArray(payload?.stages) ? payload.stages : [];
-        setData({ window: payload?.window || 'last_30_days', stages });
+        setData({ window: payload?.window || 'last_30_days', stages, source: payload?.source });
       } catch (err) {
         if (!cancelled) setError(String(err?.message || err));
       }
@@ -354,6 +356,7 @@ function FunnelPage({ setRoute }) {
           windowLabel={data?.window}
           selectedStageId={activeStageId}
           onSelectStage={setSelectedStageId}
+          source={data?.source}
         />
         <FunnelStageReview row={activeStage} rows={rows} setRoute={setRoute}/>
       </div>

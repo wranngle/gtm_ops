@@ -15,12 +15,9 @@
 /                 /console/                   301
 /index.html       /console/                   301
 
-# Friendly alias for the legacy `/api/eval-runs` URL the UI used briefly
-# before the canonical `/api/eval/runs` route landed in server.ts.
-/api/eval-runs    /fixtures/eval-runs.json    302
-
-# Fallback for unported /api/* GETs in DEMO_MODE → fixture equivalent.
-# (Pages Functions under functions/api/* take precedence — this only fires
-# when there is no Function and the static fall-through misses. The JS shim
-# in each HTML page also handles this client-side.)
-/api/*            /fixtures/:splat.json       302
+# No /api/* rules here on purpose: functions/api/[[path]].ts is the
+# catch-all for unported routes (fixture fallback on preview hosts, honest
+# JSON 404 on production). The old `/api/* → /fixtures/:splat.json 302`
+# wildcard fired on the production host too, converting unported-route 404s
+# into 200s of demo data. The JS shim in each HTML page still intercepts
+# /api/* client-side on DEMO_MODE hosts.

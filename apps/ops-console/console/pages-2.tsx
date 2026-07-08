@@ -5162,6 +5162,20 @@ function GeneratePage({ setRoute }) {
     try {
       const res = await generateRequest();
       stream(`request.response: HTTP ${res.status} ${res.statusText || ''}`.trim(), res.ok ? 'ok' : 'warn');
+      if (!res.ok) {
+        // Hosts without a generate backend (the Pages deploy answers 501 via
+        // functions/api/generate.ts) must NOT fake a ready-for-review state.
+        let detail = `HTTP ${res.status}`;
+        try {
+          const body = await res.json();
+          if (body?.error) detail = body.hint ? `${body.error} — ${body.hint}` : body.error;
+        } catch { /* non-JSON error body */ }
+        stream(`pipeline.unavailable: ${detail}`, 'err');
+        setBriefError(detail);
+        globalThis.toast('Generation unavailable on this host', { sub: detail, tone: 'critical' });
+        setIsGenerating(false);
+        return;
+      }
       // In live mode the backend keeps the stream open; the console
       // still unlocks the review surface after a short grace period so the
       // operator is not trapped behind transport latency.

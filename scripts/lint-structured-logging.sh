@@ -103,21 +103,36 @@ scan_package() {
   done < <(find "$src_root" -type f \( -name '*.ts' -o -name '*.tsx' \))
 }
 
-if [[ ! -d packages ]]; then
-  printf 'structured-logging lint: no packages/ directory; nothing to check\n'
-  exit 0
-fi
+# ---------------------------------------------------------------------------
+# Flat-layout enforcement — gtm_ops has no packages/ tree (yet). The types
+# layer here is lib/schemas/ + src/schemas/. Rule for schema modules:
+# console.log/info/debug/trace and raw stream writes are forbidden;
+# console.warn/console.error are ALLOWED, because the schema validators
+# (validateQuestionDatabase, safeValidate warn-mode, …) report
+# validation failures at the parse boundary — that is real signal, not log
+# drift. The full logger-provider rule applies once packages/*/src/ exists.
+# ---------------------------------------------------------------------------
+pkg_name="gtm_ops"
+while IFS= read -r src_file; do
+  [[ -z "$src_file" ]] && continue
+  while IFS=$'\t' read -r lineno cleaned; do
+    [[ -n "$cleaned" ]] || continue
 
-found_any=0
-for pkg in packages/*/; do
-  [[ -d "$pkg/src" ]] || continue
-  found_any=1
-  scan_package "${pkg%/}"
-done
+    if [[ "$cleaned" =~ console\.(log|info|debug|trace)[[:space:]]*\( ]]; then
+      emit_violation "$src_file" "$lineno" "types (lib/src schemas)" "console.${BASH_REMATCH[1]}" "$cleaned"
+    fi
 
-if (( found_any == 0 )); then
-  printf 'structured-logging lint: no packages with src/ found; nothing to check\n'
-  exit 0
+    if [[ "$cleaned" =~ process\.(stderr|stdout)\.write[[:space:]]*\( ]]; then
+      emit_violation "$src_file" "$lineno" "types (lib/src schemas)" "process.${BASH_REMATCH[1]}.write" "$cleaned"
+    fi
+  done < <(strip_comments "$src_file")
+done < <(find lib/schemas src/schemas -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null)
+
+if [[ -d packages ]]; then
+  for pkg in packages/*/; do
+    [[ -d "$pkg/src" ]] || continue
+    scan_package "${pkg%/}"
+  done
 fi
 
 if (( violations > 0 )); then
@@ -125,4 +140,4 @@ if (( violations > 0 )); then
   exit 1
 fi
 
-printf 'structured-logging lint passed\n'
+printf 'structured-logging lint passed (types layer: lib/schemas + src/schemas; warn/error allowed for validation reporting)\n'

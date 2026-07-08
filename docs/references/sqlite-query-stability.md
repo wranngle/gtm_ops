@@ -63,11 +63,13 @@ before the next call enters.
 Two responses:
 
 - **Tactical, in tests**: wrap the affected describe in
-  `{ retry: 2 }`. See `tests/unit/admin.test.ts` `[P1] Analytics`,
-  `[P1] System Health`, and `tests/unit/usage.test.ts`
-  `[P0] UsageTracker - Event Tracking` for the canonical shape — every
-  retry decorator should carry a comment naming the race and pointing
-  at the migration ticket.
+  `{ retry: 2 }`. See `tests/unit/admin.test.ts` `[P1] Analytics` and
+  `[P1] System Health` for the canonical shape — every retry decorator
+  should carry a comment naming the race and pointing at the migration
+  ticket. (`tests/unit/usage.test.ts` previously carried the shim; it
+  now isolates via per-test unique DB files under the OS tmpdir instead,
+  which removes the shared-file race entirely — prefer that pattern
+  where a test owns its DB lifecycle.)
 - **Strategic, in code**: migrate off `node-sqlite3` (callback-async,
   races possible) to `better-sqlite3` (synchronous API, race
   impossible by construction). Tracked in
@@ -94,7 +96,8 @@ format alone doesn't fix the heisenbug.
   `getActivityFeed`, `getSystemHealth`, `getHealthHistory`, +
   `getTimestampRange`
 - [`lib/usage.ts`](../../lib/usage.ts) — applied rule 1 in
-  `getUsageDetail`, retry shim in test
+  `getUsageDetail`; its test isolates via per-test unique DB files
+  instead of the retry shim
 - [`tests/unit/admin.test.ts`](../../tests/unit/admin.test.ts),
   [`tests/unit/usage.test.ts`](../../tests/unit/usage.test.ts) —
   canonical retry-shim shape

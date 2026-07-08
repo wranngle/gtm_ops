@@ -3194,10 +3194,13 @@ test.describe('proposals', () => {
 			};
 		});
 
-		await expect(page.locator('.ph__eyebrow')).toContainText(`${expected.total} proposals`);
-		await expect(page.locator('.ph__eyebrow')).toContainText(`${expected.open} open`);
-		await expect(page.locator('.ph__eyebrow')).toContainText(`${expected.totalLabel} total`);
-		await expect(page.locator('.ph__eyebrow')).not.toContainText(/active|2166k/i);
+		// The visual-restraint pass removed the proposals eyebrow (counts +
+		// dollar total). Real proposal state now surfaces in the header sub
+		// (blocker summary), the Segmented filter labels, and the list-card
+		// titles asserted below.
+		await expect(page.locator('.page--proposals .ph__sub')).toContainText(`${expected.total} proposal`);
+		await expect(page.locator('.ph__actions .seg__btn:has-text("All")')).toContainText(`All (${expected.total})`);
+		await expect(page.locator('.ph__actions .seg__btn:has-text("Open")')).toContainText(`Open (${expected.open})`);
 		await expect(page.locator('.sb__item:has-text("Proposals") .sb__count')).toHaveText(String(expected.open));
 		await expect(page.locator('.proposals-list-card .card__title')).toContainText(`all proposals · ${expected.total}`);
 
@@ -3702,7 +3705,7 @@ test.describe('evals', () => {
 		const artifactPanel = page.getByTestId('eval-artifact-panel');
 		await expect(artifactPanel).toBeVisible();
 		await expect(artifactPanel).toContainText(scenario);
-		await expect(artifactPanel).toContainText(/loaded inside the console/i);
+		await expect(artifactPanel).toContainText(/normalized payload/i);
 		const ctx = await page.evaluate(() => (globalThis as any).AppContext.get());
 		expect(ctx.extra.triggered_from).toBe('agents-open-eval-evidence');
 		expect(ctx.extra.eval_open_artifact_path).toBeUndefined();
@@ -4755,7 +4758,7 @@ test.describe('evals', () => {
 		await expect(localArtifactPanel).toBeVisible();
 		await expect(localArtifactPanel).toContainText(/evidence artifact/i);
 		await expect(localArtifactPanel).not.toContainText(/local path/i);
-		await expect(localArtifactPanel).toContainText(/loaded inside the console/i);
+		await expect(localArtifactPanel).toContainText(/normalized payload/i);
 
 		// Opening a local artifact intentionally replaces the run-plan panel.
 		await expect(popout).toHaveCount(0);
@@ -4768,7 +4771,7 @@ test.describe('evals', () => {
 		const popoutGrid = page.locator('[data-testid="eval-harness-popout-grid"]');
 		await expect(popoutGrid.locator('.workflow-tile')).toHaveCount(8);
 		await expect(popoutGrid.locator('[data-command-id="console-e2e"]')).toHaveAttribute('data-active', 'true');
-		await expect(popout).toContainText(/run plan loaded from the console manifest/i);
+		await expect(popout).toContainText(/manifest command handoff/i);
 		await expect(popout).not.toContainText(/eval-harness\.manifest\.json|voice_ai_agent_evals/);
 	});
 
@@ -5512,8 +5515,10 @@ test.describe('settings', () => {
 		await actionBoxes.first().uncheck();
 		await expect(save).toBeEnabled();
 		await expect(revert).toBeEnabled();
-		// Header count reflects the new enabled total.
-		await expect(page.locator('.eyebrow', {hasText: /actions permitted/i})).toContainText(`${actionCount - 1}/${actionCount}`);
+		// The visual-restraint pass stripped the live count from the drawer
+		// eyebrow (it reads plain "actions permitted" now); the count is still
+		// proven live via the save-toast assertion below.
+		await expect(page.locator('.eyebrow', {hasText: /actions permitted/i})).toBeVisible();
 
 		// Save toast carries the live count (proves the click read the form, not a static string).
 		await save.click();

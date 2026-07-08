@@ -1,5 +1,12 @@
 # TypeScript Typecheck Triage
 
+> **Resolved — historical snapshot.** Typecheck is now clean and CI-gated
+> (`bun run typecheck` in the `static` job of `.github/workflows/test.yml`;
+> the console and Pages Functions have their own configs via
+> `typecheck:console` / `typecheck:functions`). Kept for the triage
+> methodology; the error inventory below describes commit-era state, not
+> the present.
+
 Source: `bun run typecheck` against `tsconfig.json` (`tsc --noEmit`).
 Total errors: **488** (raw count of `error TS####:` occurrences).
 Methodology: ran the command in SYM-013 repro block, grouped by code and file. No code changed.

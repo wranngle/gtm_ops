@@ -23,7 +23,7 @@ The n8n workflow library is the single source of truth at [`wranngle/n8n`](https
 
 ## Demo
 
-The deployed Pages site (Cloudflare Pages project `gtm-ops`) serves on two hosts: [`app.wranngle.com`](https://app.wranngle.com) is the canonical custom domain, and `gtm-ops.pages.dev` is the preview host. `/` and `/index.html` redirect to `/console/`. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. DEMO_MODE only activates on `*.pages.dev` hosts (including `gtm-ops.pages.dev`), on `file://`, or on a local static server. In that mode the page intercepts `/api/*` and serves the bundled fixtures, so the Generate page replays a canned 11-step pipeline trace without a live backend.
+The deployed Pages site (Cloudflare Pages project `gtm-ops`) serves on two hosts: [`app.wranngle.com`](https://app.wranngle.com) is the canonical custom domain, and `gtm-ops.pages.dev` is the preview host. `/` and `/index.html` redirect to `/console/`. Open `/console/` to drive the operator UI, `/console/?route=evals` for the native eval dashboard, and `/eval-runs/` for the harness output surface. DEMO_MODE activates only on `*.pages.dev` hosts (including `gtm-ops.pages.dev`), on `file://`, or on a local static server. In that mode the page intercepts `/api/*` and serves the bundled fixtures, so the Generate page replays a canned 11-step pipeline trace without a live backend.
 
 ## Architecture
 

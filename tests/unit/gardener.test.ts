@@ -22,10 +22,12 @@ describe('doc gardener', () => {
     expect(existsSync(resolve(root, 'docs', 'references', 'doc-gardener.md'))).toBe(true);
   });
 
-  it('runs clean against the current tree (no WIP markers, no broken links)', () => {
+  // The scan shells out and walks every markdown file; under parallel test
+  // load it can exceed vitest's 10s default, so give the subprocess headroom.
+  it('runs clean against the current tree (no WIP markers, no broken links)', { timeout: 30_000 }, () => {
     const r = spawnSync('bash', [script], { cwd: root, encoding: 'utf8' });
     if (r.status !== 0) {
-       
+
       console.log('gardener output:\n' + r.stdout);
     }
     expect(r.status, `gardener emitted findings:\n${r.stdout}`).toBe(0);

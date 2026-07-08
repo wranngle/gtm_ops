@@ -125,10 +125,12 @@ export async function quickTierAssessment(intake: Intake): Promise<TierAssessmen
 
   // Extract systems/integrations from section_c
   const declaredSystems = intake.section_c_systems_handoffs?.q10_systems_involved || [];
-  const legacySystems = intake.project?.integrations || [];
+  // Legacy intakes carry integrations as { name } objects; consolidate by name so
+  // prompts and factors never render "[object Object]"
+  const legacySystemNames = (intake.project?.integrations || []).map((integration) => integration.name);
 
   // Combine and dedupe
-  const consolidatedSystems = [...new Set([...declaredSystems, ...legacySystems])];
+  const consolidatedSystems = [...new Set([...declaredSystems, ...legacySystemNames])];
 
   // Estimate complexity from system count
   const integrationCount = consolidatedSystems.length;
@@ -161,9 +163,29 @@ Return JSON:
 Return ONLY the JSON object.
 `;
 
-  const llmResponse = await executeLLMJson(tierAssessmentPrompt, { task: 'research' });
-  // Handle both old API (result.data) and new API (result is the data directly)
-  return (llmResponse?.data || llmResponse) as TierAssessment;
+  try {
+    const llmResponse = await executeLLMJson(tierAssessmentPrompt, { task: 'research' });
+    // Handle both old API (result.data) and new API (result is the data directly)
+    return (llmResponse?.data || llmResponse) as TierAssessment;
+  } catch (error) {
+    // Fallback to deterministic tier assessment when LLM is unavailable.
+    // Rate limits / API outages are pacing signals, not fatal — degrade gracefully
+    // instead of crashing the pipeline. (Ported from unified-presales-report research.js)
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[Tier Assessment] LLM unavailable (${message}), using deterministic fallback`);
+    return {
+      key: integrationCount <= 2 ? 'simple' : integrationCount <= 5 ? 'standard' : 'complex',
+      label: integrationCount <= 2 ? 'Simple Integration' : integrationCount <= 5 ? 'Standard Integration' : 'Complex Integration',
+      tier: estimatedComplexity,
+      baseHours: integrationCount <= 2 ? 40 : integrationCount <= 5 ? 80 : 120,
+      riskMultiplier: integrationCount > 5 ? 1.3 : integrationCount > 2 ? 1.15 : 1,
+      pricing_strategy: 'standard',
+      confidence: 0.6,
+      rationale: `Deterministic assessment based on ${integrationCount} systems (LLM unavailable)`,
+      factors: consolidatedSystems.slice(0, 5),
+      needs_deep_research: integrationCount > 5
+    };
+  }
 }
 
 // =============================================================================

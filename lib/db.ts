@@ -129,7 +129,8 @@ class SqliteAdapter {
 }
 
 /**
- * PostgreSQL Database Adapter (placeholder - requires 'pg' package)
+ * PostgreSQL Database Adapter (optional; 'pg' is loaded dynamically —
+ * install it when DATABASE_URL points at Postgres)
  */
 class PostgresAdapter {
   constructor(connectionString) {

@@ -1,13 +1,9 @@
 /** @type {import('xo').FlatXoConfig} */
 // Note: this file is the single source of truth for xo configuration in this
-// repo. The previous package.json#xo block was an eslintrc-style config that
-// xo 1.2.3 (flat-config era) rejects via the "eslintrc-incompat" key
-// 'overrides' at lint runtime. Per the regime in ~/.claude/CLAUDE.md, we do
-// NOT bump xo here; instead, we consolidate xo settings into this flat-config
-// file as an array of config items (xo 1.2.3 does not accept a top-level
-// `overrides` key; per-file overrides become additional array entries with
-// their own `files` glob).
-module.exports = [
+// repo. It MUST be named xo.config.{js,mjs,ts,mts} — xo 1.2.3 resolves only
+// those names (a previous xo.config.cjs was silently never loaded, so lint
+// ran on raw defaults and crashed). package.json is type:module, hence ESM.
+export default [
   {
     space: true,
     prettier: 'compat',
@@ -57,6 +53,10 @@ module.exports = [
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-redundant-type-constituents': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
+      // Crashes the lint run outright against TypeScript 6 type objects
+      // (ts-api-utils reads .flags off undefined — upstream incompat, not a
+      // finding). Re-enable when @typescript-eslint supports TS 6.
+      '@typescript-eslint/no-unsafe-enum-comparison': 'off',
       // Type-aware rules that produce high false-positive noise against the
       // dynamic-shape data flowing through gtm_ops (LLM JSON, Linear /
       // Composio payloads, plugin boundaries). Suppressed pending the
@@ -150,6 +150,11 @@ module.exports = [
     files: ['**/*.{ts,tsx,js,jsx,cjs,mjs}'],
     rules: {
       '@stylistic/indent-binary-ops': 'off',
+      // Must live in this final entry to win the precedence race (see note
+      // above): crashes the whole lint run against TypeScript 6 type objects
+      // (ts-api-utils reads .flags off undefined — upstream incompat, not a
+      // finding). Re-enable when @typescript-eslint supports TS 6.
+      '@typescript-eslint/no-unsafe-enum-comparison': 'off',
     },
   },
 ];

@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'config', 'history.db');
 
 export class HistoryManager {
-  constructor(dbPath = null) {
+  constructor(dbPath: string | null = null) {
     this.dbPath = dbPath || DEFAULT_DB_PATH;
     this.db = new sqlite3.Database(this.dbPath);
     this.init();
@@ -133,18 +133,20 @@ export class HistoryManager {
   async startExecution(projectIdentity, inputPath, inputHash) {
     const { client_slug, project_slug, project_name, document_slug } = projectIdentity;
     const project = await this.getProject(client_slug, project_slug, project_name);
-    // We assume the revision in projectIdentity is already correct because we called getNextRevision before
-    // But we can also double check or just extract it.
-    // Actually, we should store exactly what we generated.
-      
-    // Extract revision from slug or option?
-    // Better: pass revision explicitly?
-    // For now, let's assume the pipeline handles getting the revision number first.
-      
-    // We need to know the revision to store it. 
-    // Parsing it from slug: WRN-AI-client-proj-26r5 -> 5
-    const match = document_slug.match(/r(\d+)$/);
-    const revision = match ? Number.parseInt(match[1], 10) : 1;
+    // The identity carries the revision the pipeline computed via
+    // getNextRevision (generateProjectIdentity exposes it explicitly).
+    // Slug parsing (…-26r5 → 5) is only a fallback for legacy callers, and a
+    // slug that doesn't encode a revision is a loud warning, not a silent 1.
+    let revision = projectIdentity.revision;
+    if (!Number.isInteger(revision) || revision < 1) {
+      const match = document_slug.match(/r(\d+)$/);
+      if (match) {
+        revision = Number.parseInt(match[1], 10);
+      } else {
+        console.warn(`[History] No explicit revision and none parseable from slug "${document_slug}" — recording revision 1`);
+        revision = 1;
+      }
+    }
     const now = Date.now();
 
     return new Promise((resolve, reject) => {

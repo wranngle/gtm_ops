@@ -114,6 +114,8 @@ interface ProposalConfig {
 interface Measurement {
   id: string;
   name: string;
+  // Structured-input alias for name (some intake payloads emit metric_name)
+  metric_name?: string;
   metric_type: string;
   value: number;
   value_display: string;
@@ -407,7 +409,6 @@ function buildWorkflowMeasurements(measurements: MeasurementsData): Array<Record
 // Helper to get measurement name (handles both 'name' and 'metric_name' fields)
 function getMeasurementName(m: Measurement | null | undefined): string {
   if (!m) return '';
-  // @ts-ignore - metric_name is used in structured input path
   return m.name || m.metric_name || '';
 }
 

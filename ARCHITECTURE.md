@@ -81,7 +81,7 @@ Structured LLM extraction over the post-call payload produces a typed proposal. 
 
 Internal operational UI for non-technical operators. Three surfaces:
 
-- `index.html` — public landing page (Get-a-real-run lead form)
+- `index.html` — public landing page (Get-a-real-run lead form). Not routed on Pages hosts: bare-root and `/index.html` redirect to `/console/` (see `_redirects`), so it survives for external linking; its form posts to `functions/api/leads.ts`, which forwards to n8n when `N8N_LEADS_WEBHOOK` is configured and no-ops otherwise
 - `console/` — main React (UMD + babel-standalone, no build step) operator UI; routes home / pipeline / calls / proposals / evals (harness workbench + contextual ElevenLabs regression lab) / **agents** (live ElevenLabs ConvAI playgrounds for the Sales Coach + Sarah Intake) / settings / generate
 - `evaluation/` — compatibility redirect into `/console/?route=evals`; the eval dashboard is native to the console shell
 - `eval-runs/` — per-run harness output surface
@@ -138,8 +138,6 @@ gtm_ops/
 ├── DESIGN.md                # canonical brand system (long-form)
 ├── ARCHITECTURE.md          # this file
 ├── README.md
-├── CONTRIBUTING.md
-├── SECURITY.md
 ├── LICENSE
 ├── apps/ops-console/        # operator UI — React (UMD + babel-standalone)
 │                            # main /console/ + /evaluation/ redirect + static /eval-runs/
@@ -155,7 +153,7 @@ gtm_ops/
 ├── public/                  # static asset root for server.ts (live Express mode)
 ├── config/
 │   └── branding.example.json
-├── migrations/              # SQL schema (live-mode persistence)
+├── migrations/              # SQL schema (live-mode persistence; see docs/DATA-MODEL.md)
 ├── tokens/                  # tokens.css, tokens.json, tokens.tailwind.js
 ├── docs/
 │   └── references/          # stack contracts (incl. doc-gardener.md)

@@ -9,7 +9,5 @@ exact = true
 # Save lockfile in binary format (faster)
 save = true
 
-[test]
-# Jest-compatible test runner
-coverage = false
-coverageReporter = ["text", "lcov"]
+# No [test] block on purpose: tests run under vitest (bun run test:run), not
+# `bun test` — a config for bun's native runner would be dead weight.
