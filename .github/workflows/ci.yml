@@ -69,6 +69,6 @@ jobs:
       - name: Install PyMuPDF renderer dependency
         run: |
           python3 -m venv .venv
-          .venv/bin/python -m pip install -r requirements.txt
+          .venv/bin/python -m pip install --require-hashes -r requirements.txt
       - name: unit tests
         run: bun run test:run

@@ -65,7 +65,15 @@ jobs:
 
       - name: Arm auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Arm with the bootstrap-distributed PAT, not GITHUB_TOKEN: the
+          # eventual merge push is attributed to the arming token's actor,
+          # and pushes created by GITHUB_TOKEN never trigger `on: push`
+          # workflows (GitHub recursion guard) — which silently skipped the
+          # post-merge pipeline (security scan, deploy-pages, test,
+          # knowledge-base) on every automerged PR. Falls back to
+          # GITHUB_TOKEN where the secret is absent; dispatch the post-merge
+          # workflows manually in that case.
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           HEAD_REF: ${{ steps.pr.outputs.head_ref }}

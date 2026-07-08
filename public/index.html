@@ -1442,13 +1442,15 @@
         // innerHTML template literals below. Names, URLs, audit fields, and
         // error messages are attacker-influenceable (CodeQL js/xss-through-dom
         // / js/xss-through-exception) — escape at the sink, always.
+        // Global-regex .replace form on purpose: CodeQL's sanitizer heuristic
+        // recognizes this shape (string-literal replaceAll is not modeled).
         function esc(value) {
             return String(value ?? '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#39;');
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         const ansi_up = new AnsiUp();
@@ -2726,12 +2728,15 @@
             const startDate = document.getElementById('audit-start-date').value;
             const endDate = document.getElementById('audit-end-date').value;
 
-            let url = '/api/audit-logs/export?';
-            if (action) url += `action=${action}&`;
-            if (startDate) url += `start_date=${new Date(startDate).getTime()}&`;
-            if (endDate) url += `end_date=${new Date(endDate).getTime()}`;
+            // Literal path + URLSearchParams-encoded values only — raw
+            // concat of DOM input into location.href is a redirect/XSS sink
+            // (CodeQL js/xss-through-dom).
+            const params = new URLSearchParams();
+            if (action) params.set('action', action);
+            if (startDate) params.set('start_date', String(new Date(startDate).getTime()));
+            if (endDate) params.set('end_date', String(new Date(endDate).getTime()));
 
-            window.location.href = url;
+            window.location.href = `/api/audit-logs/export?${params.toString()}`;
         }
 
         async function verifyAuditIntegrity() {

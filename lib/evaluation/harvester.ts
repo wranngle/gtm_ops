@@ -179,9 +179,12 @@ export function detectVendor(url: string): Vendor {
  */
 export function htmlToText(html: string): string {
 	return html
-		.replace(/<script[\s\S]*?<\/script>/gi, ' ')
-		.replace(/<style[\s\S]*?<\/style>/gi, ' ')
-		.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+		// End tags matched as </tag\b[^>]*> so `</script >` / `</script x>`
+		// spellings can't leak block contents past the strip (CodeQL
+		// js/bad-tag-filter); over-matching is safe — matches are deleted.
+		.replace(/<script\b[\s\S]*?<\/script\b[^>]*>/gi, ' ')
+		.replace(/<style\b[\s\S]*?<\/style\b[^>]*>/gi, ' ')
+		.replace(/<noscript\b[\s\S]*?<\/noscript\b[^>]*>/gi, ' ')
 		.replace(/<!--[\s\S]*?-->/g, ' ')
 		.replace(/<\/(p|div|section|article|li|h[1-6]|tr|blockquote)>/gi, '\n')
 		.replace(/<br\s*\/?>/gi, '\n')
