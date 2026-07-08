@@ -637,9 +637,21 @@ function summarizeHTMLChanges(original, polished) {
     });
   }
 
-  // Simple text length comparison
-  const originalTextLength = original.replaceAll(/<[^>]*>/g, '').length;
-  const polishedTextLength = polished.replaceAll(/<[^>]*>/g, '').length;
+  // Simple text length comparison. Strip repeatedly until stable so nested
+  // fragments like "<scr<script>ipt>" fully collapse — single-pass stripping
+  // leaves reassembled tags behind (CodeQL js/incomplete-multi-character-
+  // sanitization). Output feeds a length metric only, never rendering.
+  const stripTags = (html) => {
+    let text = html;
+    let previous;
+    do {
+      previous = text;
+      text = text.replaceAll(/<[^>]*>/g, '');
+    } while (text !== previous);
+    return text;
+  };
+  const originalTextLength = stripTags(original).length;
+  const polishedTextLength = stripTags(polished).length;
   const lengthDiff = Math.abs(polishedTextLength - originalTextLength);
   const lengthChangePercent = (lengthDiff / originalTextLength * 100).toFixed(1);
 

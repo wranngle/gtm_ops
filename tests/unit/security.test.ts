@@ -208,6 +208,26 @@ describe('[P0] sanitizeInput - Input Sanitization', () => {
     expect(sanitized).not.toContain('onclick=');
   });
 
+  it('[P0] strips script blocks whose end tag carries whitespace or attributes', () => {
+    // </script > and </script foo="bar"> are valid end-tag spellings the old
+    // filter missed (CodeQL js/bad-tag-filter).
+    expect(sanitizeInput('a<script>alert(1)</script >b')).toBe('ab');
+    expect(sanitizeInput('a<script>alert(1)</script x="y">b')).toBe('ab');
+    expect(sanitizeInput('a<script type="module">alert(1)</script\t>b')).toBe('ab');
+  });
+
+  it('[P1] handles adversarial "on"-repetition input in linear time', () => {
+    // Bounded quantifiers keep the event-handler pattern O(n) — the unbounded
+    // form was O(n²) on this shape (CodeQL js/polynomial-redos).
+    const hostile = 'on'.repeat(100_000);
+    const start = performance.now();
+    const sanitized = sanitizeInput(hostile);
+    expect(performance.now() - start).toBeLessThan(1_000);
+    expect(sanitized).toBe(hostile); // no '=' anywhere → nothing stripped
+    // and the pattern still strips real handlers with spacing
+    expect(sanitizeInput('<img onmouseover   = "x()">')).not.toContain('onmouseover');
+  });
+
   it('[P1] should truncate input to max length', () => {
     // GIVEN: Very long input
     const input = 'a'.repeat(600000);

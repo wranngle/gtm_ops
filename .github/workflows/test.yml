@@ -63,7 +63,7 @@ jobs:
       - name: Install PyMuPDF renderer dependency
         run: |
           python3 -m venv .venv
-          .venv/bin/python -m pip install -r requirements.txt
+          .venv/bin/python -m pip install --require-hashes -r requirements.txt
       - name: Audit (bun audit, fails on high+ severity only)
         # `bun audit --audit-level=high` exits 1 if any high or critical
         # CVE is reachable in the install graph. Dependabot covers

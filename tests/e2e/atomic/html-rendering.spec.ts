@@ -303,7 +303,7 @@ test.describe('Atomic: ROI Rendering', () => {
 
       if (annualDisplay) {
         const bodyText = await page.locator('body').textContent();
-        expect(bodyText).toContain(annualDisplay.replace(/,/g, ','));
+        expect(bodyText).toContain(annualDisplay);
       }
     });
 

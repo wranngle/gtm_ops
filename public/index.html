@@ -1438,6 +1438,19 @@
     </div>
 
     <script>
+        // HTML-entity escape for every API-sourced string interpolated into
+        // innerHTML template literals below. Names, URLs, audit fields, and
+        // error messages are attacker-influenceable (CodeQL js/xss-through-dom
+        // / js/xss-through-exception) — escape at the sink, always.
+        function esc(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
         const ansi_up = new AnsiUp();
         const consoleEl = document.getElementById('console-output');
         const generateBtn = document.getElementById('generate-btn');
@@ -2409,14 +2422,14 @@
                         <tbody>
                             ${webhooks.map(w => `
                                 <tr>
-                                    <td>${w.name}</td>
-                                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.url}</td>
+                                    <td>${esc(w.name)}</td>
+                                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(w.url)}">${esc(w.url)}</td>
                                     <td>${(w.events || []).length} events</td>
                                     <td><span class="status-badge ${w.enabled ? 'active' : 'inactive'}">${w.enabled ? 'Active' : 'Inactive'}</span></td>
                                     <td>
-                                        <button class="btn-secondary btn-secondary--sm" onclick="showWebhookHistory(${w.id}, '${w.name.replace(/'/g, "\\'")}')">History</button>
-                                        <button class="btn-secondary btn-secondary--sm" onclick="testWebhook(${w.id})">Test</button>
-                                        <button class="btn-secondary btn-secondary--sm" onclick="deleteWebhook(${w.id})">Delete</button>
+                                        <button class="btn-secondary btn-secondary--sm" data-webhook-name="${esc(w.name)}" onclick="showWebhookHistory(${Number(w.id)}, this.dataset.webhookName)">History</button>
+                                        <button class="btn-secondary btn-secondary--sm" onclick="testWebhook(${Number(w.id)})">Test</button>
+                                        <button class="btn-secondary btn-secondary--sm" onclick="deleteWebhook(${Number(w.id)})">Delete</button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -2424,7 +2437,7 @@
                     </table>`;
             } catch (e) {
                 console.error('[WEBHOOKS] Load error:', e);
-                document.getElementById('webhooks-list').innerHTML = `<p style="color:var(--violet-500)">Error loading webhooks: ${e.message}</p>`;
+                document.getElementById('webhooks-list').innerHTML = `<p style="color:var(--violet-500)">Error loading webhooks: ${esc(e.message)}</p>`;
             }
         }
 
@@ -2581,19 +2594,19 @@
                         <tbody>
                             ${versions.map((v, idx) => `
                                 <tr>
-                                    <td>v${v.version}${idx === 0 ? ' <span style="color:var(--color-healthy);font-size:10px;">(current)</span>' : ''}</td>
-                                    <td>${v.type}</td>
+                                    <td>v${Number(v.version)}${idx === 0 ? ' <span style="color:var(--color-healthy);font-size:10px;">(current)</span>' : ''}</td>
+                                    <td>${esc(v.type)}</td>
                                     <td>${new Date(v.created_at).toLocaleString()}</td>
                                     <td>
-                                        ${idx < versions.length - 1 ? `<button class="btn-secondary btn-secondary--sm" onclick="showVersionDiff(${execId}, ${v.version}, ${versions[idx + 1].version}, '${type}')">Compare</button>` : ''}
-                                        ${idx > 0 ? `<button class="btn-secondary btn-secondary--sm" onclick="rollbackVersion(${execId}, ${v.version}, '${type}')">Rollback</button>` : ''}
+                                        ${idx < versions.length - 1 ? `<button class="btn-secondary btn-secondary--sm" onclick="showVersionDiff(${Number(execId)}, ${Number(v.version)}, ${Number(versions[idx + 1].version)}, '${esc(type)}')">Compare</button>` : ''}
+                                        ${idx > 0 ? `<button class="btn-secondary btn-secondary--sm" onclick="rollbackVersion(${Number(execId)}, ${Number(v.version)}, '${esc(type)}')">Rollback</button>` : ''}
                                     </td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>`;
             } catch (e) {
-                document.getElementById('versions-list').innerHTML = `<p style="color:var(--violet-500)">Error: ${e.message}</p>`;
+                document.getElementById('versions-list').innerHTML = `<p style="color:var(--violet-500)">Error: ${esc(e.message)}</p>`;
             }
         }
 
@@ -2695,16 +2708,16 @@
                             ${logs.map(l => `
                                 <tr>
                                     <td style="font-family:var(--font-mono);font-size:11px;">${new Date(l.timestamp).toLocaleString()}</td>
-                                    <td>${l.user_id || 'system'}</td>
-                                    <td>${l.action}</td>
-                                    <td>${l.resource_type || ''} ${l.resource_id || ''}</td>
+                                    <td>${esc(l.user_id || 'system')}</td>
+                                    <td>${esc(l.action)}</td>
+                                    <td>${esc(l.resource_type || '')} ${esc(l.resource_id || '')}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                     ${pagination.audit.total > pageSize ? renderPagination('audit', 'loadAuditLogs') : ''}`;
             } catch (e) {
-                document.getElementById('audit-logs-list').innerHTML = `<p style="color:var(--violet-500)">Error: ${e.message}</p>`;
+                document.getElementById('audit-logs-list').innerHTML = `<p style="color:var(--violet-500)">Error: ${esc(e.message)}</p>`;
             }
         }
 
