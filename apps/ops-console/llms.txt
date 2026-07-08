@@ -1,0 +1,21 @@
+# gtm_ops - Wranngle Proposal Console
+
+> gtm_ops is Wranngle Systems' lead-to-proposal runtime. It accepts leads from web chat, voice-agent notes, contact forms, webhooks, or CRM exports, normalizes and enriches the fields, fills typed proposal fields with structured extraction, renders a branded PDF, and writes every step to a replayable run log. The console at app.wranngle.com is the hosted instance.
+
+## Product
+
+- [Product page](https://wranngle.com/products/gtm-ops): plans, pricing, and feature list
+- [Source repository](https://github.com/wranngle/gtm_ops): runtime code, eval harness, and documentation
+
+Pricing: Trial free for 14 days (5 proposals); Plus $20/mo (50 proposals/mo, branded PDFs, webhook integration); Pro $99/mo (unlimited proposals, SSO, team workspaces).
+
+## Company
+
+- [Wranngle Systems](https://wranngle.com): AI voice agents, workflow automation, and business websites
+- [Company profile](https://wranngle.com/wranngle-systems.md): machine-readable company profile
+- [Full LLM context](https://wranngle.com/llms-full.txt): canonical single-fetch context for Wranngle Systems and founder Cody Arnold
+
+## Notes
+
+- Marketing, pricing, and documentation live on wranngle.com; this subdomain serves the console itself.
+- The `/api/` and `/fixtures/` paths are excluded from crawling via robots.txt.
