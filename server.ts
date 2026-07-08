@@ -19,6 +19,7 @@ import {
   generateLimiter,
   historyLimiter,
   generalLimiter,
+  globalLimiter,
   safeFilenameForHeader,
   resolveRequestId
 } from './lib/security.js';
@@ -68,6 +69,10 @@ app.use(express.json({ limit: '10mb' }));
 // Security middleware
 app.use(corsMiddleware);
 app.use(securityHeadersMiddleware);
+// App-wide burst ceiling ahead of every route — the per-route limiters
+// below remain the actual policy; this closes the no-limiter-at-all gap
+// on routes like /api/logs, /api/artifacts, and /api/stream.
+app.use(globalLimiter);
 app.use(inputValidationMiddleware);
 
 app.use(express.static('public'));
@@ -250,7 +255,7 @@ app.get('/api/history', historyLimiter, (req, res) => {
   }
 });
 
-app.get('/api/logs/:executionId', (req, res) => {
+app.get('/api/logs/:executionId', historyLimiter, (req, res) => {
   const { executionId } = req.params;
   history.db.get('SELECT output_dir FROM executions WHERE id = ?', [executionId], (err, row) => {
     if (err || !row || !row.output_dir) return res.status(404).json({ error: 'Logs not found' });
@@ -263,7 +268,7 @@ app.get('/api/logs/:executionId', (req, res) => {
   });
 });
 
-app.get('/api/artifacts/:executionId', (req, res) => {
+app.get('/api/artifacts/:executionId', historyLimiter, (req, res) => {
   const { executionId } = req.params;
   history.db.all('SELECT * FROM artifacts WHERE execution_id = ?', [executionId], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -717,8 +722,14 @@ app.post('/api/branding/logo', requireRole(Role.OWNER, Role.ADMIN), generalLimit
     const logosDir = path.join(import.meta.dirname || process.cwd(), 'public', 'logos');
     await fs.mkdir(logosDir, { recursive: true });
 
-    // Generate unique filename
-    const ext = path.extname(filename) || (mimetype === 'image/svg+xml' ? '.svg' : '.png');
+    // Generate unique filename. The extension is user-influenced (via the
+    // uploaded filename), so allowlist it — anything unexpected falls back to
+    // the mimetype default instead of flowing into the filesystem path
+    // (CodeQL js/path-injection).
+    const rawExt = path.extname(filename);
+    const ext = /^\.(png|jpe?g|svg|webp|gif|ico)$/i.test(rawExt)
+      ? rawExt.toLowerCase()
+      : (mimetype === 'image/svg+xml' ? '.svg' : '.png');
     const safeWorkspace = (workspace_id || 'default').replaceAll(/[^\w-]/gi, '_');
     const logoFilename = `${safeWorkspace}_logo_${Date.now()}${ext}`;
     const logoPath = path.join(logosDir, logoFilename);

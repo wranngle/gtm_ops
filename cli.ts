@@ -60,33 +60,24 @@ function isServerRunning() {
 }
 
 /**
- * Start the history server in background
- * Uses tsx for ESM/TypeScript support
+ * Start the history server in background.
+ * Bun runs TypeScript natively on every platform, so the runtime this repo
+ * already requires is spawned directly — argv-array, no shell. The previous
+ * Windows path went through `cmd.exe /c start … npx.cmd`, which flattens
+ * args into a shell string and lets a hostile install path inject commands
+ * (CodeQL js/shell-command-injection-from-environment).
  */
 function startServer() {
   const serverPath = path.join(__dirname, 'server.ts');
-  const isWindows = process.platform === 'win32';
-  
-  let child;
-  if (isWindows) {
-    // On Windows, use cmd /c start /b to launch in background more reliably
-    // This ensures it survives the parent process exiting.
-    child = spawn('cmd.exe', ['/c', 'start', '/b', 'npx.cmd', 'tsx', serverPath], {
-      cwd: __dirname,
-      detached: true,
-      stdio: 'ignore',
-      env: { ...process.env },
-      windowsHide: true
-    });
-  } else {
-    child = spawn('npx', ['tsx', serverPath], {
-      cwd: __dirname,
-      detached: true,
-      stdio: 'ignore',
-      env: { ...process.env }
-    });
-  }
-  
+
+  const child = spawn('bun', [serverPath], {
+    cwd: __dirname,
+    detached: true,
+    stdio: 'ignore',
+    env: { ...process.env },
+    windowsHide: true
+  });
+
   child.unref();
   return child.pid;
 }

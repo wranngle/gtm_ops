@@ -256,7 +256,9 @@ async function exerciseTarget(page: Page, target: ActionTarget) {
     return {covered: true, reason: 'target no longer present'};
   }
 
-  if (resolved.target.href && resolved.target.href !== '#' && !resolved.target.href.startsWith('javascript:')) {
+  // Executable-URL schemes are never "covered by being a link" — treat
+  // javascript:, data:, and vbscript: alike (CodeQL js/incomplete-url-scheme-check).
+  if (resolved.target.href && resolved.target.href !== '#' && !/^\s*(javascript|data|vbscript):/i.test(resolved.target.href)) {
     return { covered: true, reason: `link target ${resolved.target.href}` };
   }
 

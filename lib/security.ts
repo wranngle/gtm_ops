@@ -18,9 +18,15 @@ import cors from 'cors';
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const MAX_INPUT_LENGTH = 500_000; // 500k characters
 const SUSPICIOUS_PATTERNS = [
-  /<script\b[^>]*>[\s\S]*?<\/script>/gi,
+  // End tag matched as </script[^>]*> so `</script >` / `</script foo>`
+  // variants can't smuggle content past the filter (CodeQL js/bad-tag-filter);
+  // over-matching is safe here because matches are deleted, not rendered.
+  /<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi,
   /javascript:/gi,
-  /on\w+\s*=/gi, // onclick=, onerror=, etc.
+  // Quantifiers bounded so a failed match costs O(1) backtracking instead of
+  // O(n) — unbounded on\w+\s*= is O(n²) on adversarial "onononon…" input
+  // (CodeQL js/polynomial-redos). Real handler names are ≤ ~30 chars.
+  /on\w{1,60}\s{0,20}=/gi, // onclick=, onerror=, etc.
 ];
 
 // =============================================================================
@@ -271,6 +277,20 @@ export const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
   // Use default keyGenerator which handles IPv6 properly
+});
+
+/**
+ * App-wide fallback limiter, mounted with app.use() ahead of every route.
+ * Deliberately generous — per-minute burst ceiling, not a quota — so the
+ * stricter per-route limiters above stay the real policy while routes
+ * without an explicit limiter (logs, artifacts, stream, static) still have
+ * DoS backpressure instead of none.
+ */
+export const globalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
 // =============================================================================

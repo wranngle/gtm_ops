@@ -19,7 +19,6 @@ on:
 
 permissions:
   contents: read
-  deployments: write
 
 concurrency:
   group: deploy-pages
@@ -30,6 +29,11 @@ jobs:
     name: cloudflare pages deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      # Job-scoped, not top-level (Scorecard TokenPermissionsID): only this
+      # job records GitHub deployment status for the Pages environment.
+      deployments: write
     environment:
       name: production
       url: https://app.wranngle.com/

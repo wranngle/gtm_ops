@@ -41,7 +41,7 @@ jobs:
           python-version: "3.x"
       - name: yamllint
         run: |
-          pip install --quiet yamllint
+          pip install --quiet --require-hashes -r .github/requirements-ci.txt
           yamllint -c .yamllint.yml .
 
   # The `test` context is REQUIRED by the dotfiles universal branch gate
