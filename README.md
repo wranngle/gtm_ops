@@ -6,6 +6,8 @@
 >
 > Click once. The Generate page auto-loads the HVAC sample brief and replays the 11-step pipeline (intake → extract → enrichment → pricing → compliance → scope → PDF render → audit). No backend, no signup, no operator interaction. Lands on a ready-to-review proposal in about 60 seconds.
 
+![The gtm_ops console replaying the full proposal pipeline: brief parse through pricing, compliance, PDF render, and signed audit, ending on a draft ready for operator review](docs/hero.webp)
+
 Voice-agent GTM runtime. An inbound voice agent enriches the lead from CRM context, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console: one repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
 
 ## What's in here
