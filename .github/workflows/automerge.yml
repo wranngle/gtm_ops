@@ -65,15 +65,18 @@ jobs:
 
       - name: Arm auto-merge
         env:
-          # Arm with the bootstrap-distributed PAT, not GITHUB_TOKEN: the
+          # Prefer the bootstrap-distributed PAT over GITHUB_TOKEN: the
           # eventual merge push is attributed to the arming token's actor,
           # and pushes created by GITHUB_TOKEN never trigger `on: push`
           # workflows (GitHub recursion guard) — which silently skipped the
           # post-merge pipeline (security scan, deploy-pages, test,
-          # knowledge-base) on every automerged PR. Falls back to
-          # GITHUB_TOKEN where the secret is absent; dispatch the post-merge
-          # workflows manually in that case.
-          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+          # knowledge-base) on every automerged PR. The PAT is PROBED before
+          # use (a revoked secret 401s every arm — happened 2026-07-08 after
+          # the account suspension invalidated PROJECTS_TOKEN); a dead or
+          # absent PAT falls back to GITHUB_TOKEN with a loud warning that
+          # the post-merge pipeline needs a manual `gh workflow run`.
+          PAT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          FALLBACK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           HEAD_REF: ${{ steps.pr.outputs.head_ref }}
@@ -86,6 +89,14 @@ jobs:
           set -euo pipefail
           export PUPPETEER_SKIP_DOWNLOAD=true
           export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+          if [[ -n "${PAT_TOKEN:-}" ]] \
+            && curl -fsS -o /dev/null -H "Authorization: token $PAT_TOKEN" https://api.github.com/user; then
+            export GH_TOKEN="$PAT_TOKEN"
+            echo "arming with PAT (merge push will trigger on:push workflows)"
+          else
+            export GH_TOKEN="$FALLBACK_TOKEN"
+            echo "::warning::PROJECTS_TOKEN absent or invalid — arming with GITHUB_TOKEN. The merge push will NOT trigger on:push workflows (recursion guard); run 'gh workflow run security.yml deploy-pages.yml test.yml knowledge-base.yml --ref main' after merge, and re-mint the PAT (classic, repo+project scopes) via the bootstrap."
+          fi
           [[ -n "$PR_NUMBER" ]] || { echo "no PR number"; exit 0; }
           [[ "$IS_DRAFT" != "true" ]] || { echo "draft PR; skipping"; exit 0; }
 
