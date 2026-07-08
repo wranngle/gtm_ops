@@ -737,7 +737,10 @@ app.post('/api/branding/logo', requireRole(Role.OWNER, Role.ADMIN), generalLimit
       'image/vnd.microsoft.icon': '.ico'
     };
     const ext = EXT_BY_MIMETYPE[mimetype] || '.png';
-    const safeWorkspace = (workspace_id || 'default').replaceAll(/[^\w-]/gi, '_');
+    // Global-regex .replace + length cap: same sanitization as before, but in
+    // the shape CodeQL's taint models recognize (replaceAll is not modeled,
+    // so js/path-injection kept re-flagging the join below).
+    const safeWorkspace = (workspace_id || 'default').replace(/[^\w-]/g, '_').slice(0, 64);
     const logoFilename = `${safeWorkspace}_logo_${Date.now()}${ext}`;
     const logoPath = path.join(logosDir, logoFilename);
 
