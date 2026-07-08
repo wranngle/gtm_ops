@@ -737,12 +737,17 @@ app.post('/api/branding/logo', requireRole(Role.OWNER, Role.ADMIN), generalLimit
       'image/vnd.microsoft.icon': '.ico'
     };
     const ext = EXT_BY_MIMETYPE[mimetype] || '.png';
-    // Global-regex .replace + length cap: same sanitization as before, but in
-    // the shape CodeQL's taint models recognize (replaceAll is not modeled,
-    // so js/path-injection kept re-flagging the join below).
-    const safeWorkspace = (workspace_id || 'default').replace(/[^\w-]/g, '_').slice(0, 64);
+    const safeWorkspace = (workspace_id || 'default').replace(/[^\w-]/g, '_').slice(0, 64) || 'default';
     const logoFilename = `${safeWorkspace}_logo_${Date.now()}${ext}`;
-    const logoPath = path.join(logosDir, logoFilename);
+    // Resolve-and-contain: the slug replace above already strips separators,
+    // but the recognized barrier for js/path-injection is proving the
+    // resolved path stays inside the target directory — CodeQL's documented
+    // remediation for this query (replace-transforms are not path barriers).
+    const logosRoot = path.resolve(logosDir);
+    const logoPath = path.resolve(logosRoot, logoFilename);
+    if (!logoPath.startsWith(logosRoot + path.sep)) {
+      return res.status(400).json({ error: 'Invalid workspace identifier' });
+    }
 
     // Write file
     await fs.writeFile(logoPath, buffer);
