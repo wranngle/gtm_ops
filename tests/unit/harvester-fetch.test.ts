@@ -30,6 +30,13 @@ describe('[P1] htmlToText', () => {
     const text = htmlToText('<p>one</p><p>two</p><li>three</li>');
     expect(text.split('\n').map(l => l.trim()).filter(Boolean)).toEqual(['one', 'two', 'three']);
   });
+
+  it('[P1] does not double-decode author-escaped entities (&amp; decodes last)', () => {
+    // "&amp;lt;" is the author writing the literal text "&lt;" — it must NOT
+    // collapse all the way to "<" (CodeQL js/double-escaping).
+    expect(htmlToText('<p>use &amp;lt;br&amp;gt; here</p>')).toBe('use &lt;br&gt; here');
+    expect(htmlToText('<p>a &amp; b &lt; c</p>')).toBe('a & b < c');
+  });
 });
 
 describe('[P0] fetchPageContent', () => {

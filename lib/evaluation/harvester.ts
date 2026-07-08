@@ -187,11 +187,13 @@ export function htmlToText(html: string): string {
 		.replace(/<br\s*\/?>/gi, '\n')
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/&nbsp;/g, ' ')
-		.replace(/&amp;/g, '&')
 		.replace(/&lt;/g, '<')
 		.replace(/&gt;/g, '>')
 		.replace(/&quot;/g, '"')
 		.replace(/&#0?39;/g, "'")
+		// &amp; must decode LAST: doing it first turns author-escaped entities
+		// into live ones (&amp;lt; → &lt; → <), i.e. double-decoding.
+		.replace(/&amp;/g, '&')
 		.replace(/[ \t]+/g, ' ')
 		.replace(/\s*\n\s*(\n\s*)+/g, '\n\n')
 		.trim();
