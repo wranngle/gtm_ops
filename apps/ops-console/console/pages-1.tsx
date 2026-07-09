@@ -1125,7 +1125,7 @@ function PipelineKanban({ companies, stages, onSelect, selected, effectiveStage,
                   </div>
                 </div>
               ))}
-              {cards.length === 0 && <div className="dim mono" style={{fontSize:11, padding:'14px 6px', textAlign:'center'}}>— empty —</div>}
+              {cards.length === 0 && <div className="dim mono" style={{fontSize:11, padding:'14px 6px', textAlign:'center'}}>no leads in this stage yet</div>}
             </div>
           </div>
         );
