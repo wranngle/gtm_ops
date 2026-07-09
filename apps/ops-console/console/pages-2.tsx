@@ -1255,9 +1255,6 @@ function EvalsPage({ setRoute }) {
         <div className="eval-command-center__copy">
           <div className="eval-command-center__route" data-testid="eval-console-masthead">
             <h1 id="console-page-title">Evals</h1>
-            <div className="ph__eyebrow eval-command-center__scope-summary">
-              {[evalLoadedResultLabel, evalSuiteRunLabel, visibleEvalAgentLabel].filter(Boolean).join(' · ')}
-            </div>
             <div className="eval-command-center__route-stats" aria-label="Eval dashboard scope">
               {evalLoadedResultLabel && (
                 <span className="eval-command-center__route-stat" data-testid="eval-masthead-results">{evalLoadedResultLabel}</span>
