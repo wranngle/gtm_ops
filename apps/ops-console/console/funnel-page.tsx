@@ -159,7 +159,7 @@ function FunnelChart({ stages, windowLabel, selectedStageId, onSelectStage, sour
   if (rows.length === 0) {
     return (
       <div className="card funnel-chart funnel-chart--empty" data-testid="funnel-chart-empty">
-        <div className="mono dim">No funnel data loaded.</div>
+        <div className="mono dim">No funnel data yet. It fills in as leads move through the stages.</div>
       </div>
     );
   }
