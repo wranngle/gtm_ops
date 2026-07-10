@@ -13,7 +13,7 @@
 
 ![The gtm_ops console replaying the full proposal pipeline: brief parse through pricing, compliance, PDF render, and signed audit, ending on a draft ready for operator review](docs/hero.webp)
 
-Voice-agent GTM runtime. An inbound voice agent enriches the lead from CRM context, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console: one repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
+Voice-agent GTM runtime that turns an inbound call into a branded PDF proposal ready for operator review. The voice agent enriches the lead from CRM context, structured LLM extraction generates the proposal, every step writes audit logs, and operators review the result in the ops-console. One repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
 
 ## What's in here
 
@@ -85,10 +85,6 @@ CI runs `static`, `unit`, and `console-e2e` jobs on every PR (see `.github/workf
 
 [`DESIGN.md`](DESIGN.md) is the canonical brand system. Token extracts in [`tokens/`](tokens/) (`tokens.css`, `tokens.json`, `tokens.tailwind.js`) are the machine-readable surface: vendor those into consumer repos rather than copy the long-form spec.
 
-## License
-
-See [`LICENSE`](./LICENSE).
-
 ## Deploy (Cloudflare Pages, full-stack)
 
 `apps/ops-console/` deploys to Cloudflare Pages, and a selected subset of
@@ -132,3 +128,7 @@ the Pages Functions deploy when you need things Pages Functions can't easily
 do: long-running streams, native binary deps, big-memory PDF rendering.
 Options: Fly.io, Render, Railway. Pages Functions remain the canonical
 deploy target.
+
+## License
+
+See [`LICENSE`](./LICENSE).
