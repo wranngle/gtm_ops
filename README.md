@@ -1,5 +1,10 @@
 # gtm_ops
 
+[![CI](https://github.com/wranngle/gtm_ops/actions/workflows/ci.yml/badge.svg)](https://github.com/wranngle/gtm_ops/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/wranngle/gtm_ops?color=A371F7)](./LICENSE) ![Status](https://img.shields.io/badge/status-active-brightgreen.svg)
+
+> [!NOTE]
+> Active personal project. Used in my own workflow. Issues triaged on a personal-time cadence.
+
 > ### Try it in 60s
 >
 > **[Launch the canned proposal trace →](https://gtm-ops.pages.dev/console/?route=generate&demo=1)**
@@ -45,6 +50,11 @@ the manifest and normalizes results.
 
 ```bash
 bun install
+
+# PDF proposal rendering needs PyMuPDF (Python), same step CI runs:
+python3 -m venv .venv
+.venv/bin/python -m pip install --require-hashes -r requirements.txt
+
 bun run start  # Express server on :3000
 ```
 
