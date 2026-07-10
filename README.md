@@ -1,5 +1,10 @@
 # gtm_ops
 
+[![CI](https://github.com/wranngle/gtm_ops/actions/workflows/ci.yml/badge.svg)](https://github.com/wranngle/gtm_ops/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/wranngle/gtm_ops?color=A371F7)](./LICENSE) ![Status](https://img.shields.io/badge/status-active-brightgreen.svg)
+
+> [!NOTE]
+> Active personal project. Used in my own workflow. Issues triaged on a personal-time cadence.
+
 > ### Try it in 60s
 >
 > **[Launch the canned proposal trace →](https://gtm-ops.pages.dev/console/?route=generate&demo=1)**
@@ -8,7 +13,7 @@
 
 ![The gtm_ops console replaying the full proposal pipeline: brief parse through pricing, compliance, PDF render, and signed audit, ending on a draft ready for operator review](docs/hero.webp)
 
-Voice-agent GTM runtime. An inbound voice agent enriches the lead from CRM context, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console: one repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
+Voice-agent GTM runtime that turns an inbound call into a branded PDF proposal ready for operator review. The voice agent enriches the lead from CRM context, structured LLM extraction generates the proposal, every step writes audit logs, and operators review the result in the ops-console. One repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
 
 ## What's in here
 
@@ -45,6 +50,11 @@ the manifest and normalizes results.
 
 ```bash
 bun install
+
+# PDF proposal rendering needs PyMuPDF (Python), same step CI runs:
+python3 -m venv .venv
+.venv/bin/python -m pip install --require-hashes -r requirements.txt
+
 bun run start  # Express server on :3000
 ```
 
@@ -74,10 +84,6 @@ CI runs `static`, `unit`, and `console-e2e` jobs on every PR (see `.github/workf
 ## Brand system
 
 [`DESIGN.md`](DESIGN.md) is the canonical brand system. Token extracts in [`tokens/`](tokens/) (`tokens.css`, `tokens.json`, `tokens.tailwind.js`) are the machine-readable surface: vendor those into consumer repos rather than copy the long-form spec.
-
-## License
-
-See [`LICENSE`](./LICENSE).
 
 ## Deploy (Cloudflare Pages, full-stack)
 
@@ -122,3 +128,7 @@ the Pages Functions deploy when you need things Pages Functions can't easily
 do: long-running streams, native binary deps, big-memory PDF rendering.
 Options: Fly.io, Render, Railway. Pages Functions remain the canonical
 deploy target.
+
+## License
+
+See [`LICENSE`](./LICENSE).
