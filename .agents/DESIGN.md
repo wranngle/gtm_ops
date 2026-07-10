@@ -41,11 +41,11 @@ One sentence describing the aesthetic posture and product feeling.
 
 ### Color
 
-Canonical shadcn HSL variables for Sunset/Violet/Sand/Night:
-- Background: `0 0% 100%` (Light) / `240 10% 3.9%` (Dark - Night)
-- Primary: Violet `262 83.3% 57.8%`
-- Secondary: Sand `43 74.4% 49%`
-- Accent/Destructive: Sunset `11 82.5% 54.3%`
+Wranngle brand families (see the canonical `DESIGN.md` for full 11-step scales):
+- Primary (CTA / brand): Sunset `#ff5f00`
+- Secondary / critical / security accent: Violet `#cf3c69`
+- Neutral / background: Sand `#fcfaf5` (light page) / Night `#12111a` (dark page)
+- Text on light / dark surface: Night `#12111a`
 
 Light/dark parity is mandatory unless explicitly opted out.
 
@@ -65,8 +65,9 @@ Canonical Font Stack (matching gtm_ops):
 
 ### Radius
 
-Canonical Radii (matching wranngle_com):
-- 3px · 6px · 9px. Pick one per surface tier.
+Canonical Radii: 4 · 8 · 12 · 16 · 24 px. Pick one per surface tier. The
+signature asymmetric "lasso" corner (`24px 4px 24px 4px`) marks hero and
+feature panels.
 
 ### Motion (Framer Motion)
 
@@ -93,10 +94,10 @@ Document component variants here as they're chosen.
 ### Form / Input Components
 - Inputs, selects, and textareas must follow unified styling rules:
   - Border: 1px solid `border` color (typically subtle).
-  - Focus state: Ring with `Primary` color (Violet), 2px offset.
+  - Focus state: Ring with `Primary` color (Sunset), 2px offset.
   - Background: `Surface` or transparent.
-  - Radius: Must conform to the 3/6/9px scale (default 6px for standard inputs).
-  - Validation: Error state borders must use `Destructive` (Sunset).
+  - Radius: Must conform to the 4/8/12/16/24 scale (default 8px for standard inputs).
+  - Validation: Error state borders must use `Critical` (Violet).
 
 ## Layout primitives
 
@@ -120,7 +121,7 @@ Document component variants here as they're chosen.
 - Size scale: 16 · 20 · 24 · 32
 - Color-pairing rules:
   - Inactive/Subtle: Use `Subtle text` color.
-  - Active/Actionable: Use `Primary` (Violet) or inherit text color.
+  - Active/Actionable: Use `Primary` (Sunset) or inherit text color.
 
 ## Logo System
 
