@@ -5,7 +5,7 @@
   <img alt="gtm_ops" src="docs/brand/gtm_ops-wordmark-light.png" width="30%">
 </picture>
 
-#### voice intake · CRM enrichment · LLM extraction · branded PDF · audit trail · ops console
+#### voice intake · lead enrichment · LLM extraction · branded PDF · audit trail · ops console
 
 # Turn an inbound call into a branded PDF proposal
 
@@ -30,11 +30,11 @@
 
 ![The gtm_ops console replaying the full proposal pipeline: brief parse through pricing, compliance, PDF render, and signed audit, ending on a draft ready for operator review](docs/hero.webp)
 
-Voice-agent GTM runtime that turns an inbound call into a branded PDF proposal ready for operator review. The voice agent enriches the lead from CRM context, structured LLM extraction generates the proposal, every step writes audit logs, and operators review the result in the ops-console. One repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
+Voice-agent GTM runtime that turns an inbound call into a branded PDF proposal ready for operator review. An ElevenLabs agent takes the call, a provider waterfall enriches the lead, structured LLM extraction generates the proposal, every step writes audit logs, and operators review the result in the ops-console. One repo, one runnable thing, end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
 
 ```mermaid
 flowchart LR
-    A[Voice intake] --> B[CRM enrichment]
+    A[Voice intake] --> B[Lead enrichment]
     B --> C[LLM extraction]
     C --> D[PDF render]
     D --> E[Ops console]
@@ -43,7 +43,7 @@ flowchart LR
 ## 🧭 Features
 
 - 🧭 **Voice intake**: an ElevenLabs agent takes the call; the post-call webhook only processes payloads that pass HMAC-SHA256 signature verification.
-- 🧭 **CRM enrichment**: Pipedrive, HubSpot, and Salesforce-shaped adapters pull lead context into the draft before extraction runs.
+- 🧭 **Lead enrichment**: a provider waterfall adds context to each lead before extraction, falling through Clay (via an n8n webhook), People Data Labs, Abstract API, and Enrich.so until one answers. Fields you supply always win over enriched data.
 - 🧭 **Structured LLM extraction**: the transcript becomes typed proposal fields through an 11-step pipeline covering intake, extraction, enrichment, pricing, compliance, scope, PDF render, and audit.
 - 🧭 **Branded PDF**: PyMuPDF renders each proposal from branded HTML templates driven by the token system.
 - 🧭 **Audit trail**: every pipeline step writes an audit log the console surfaces.
@@ -68,14 +68,14 @@ Click once. The Generate page auto-loads the HVAC sample brief and replays the 1
 <table>
 <tr>
 <td align="center" width="20%"><b>Voice</b><br/>ElevenLabs conversational agent</td>
-<td align="center" width="20%"><b>CRM</b><br/>Pipedrive, HubSpot, Salesforce-shaped adapters</td>
+<td align="center" width="20%"><b>Enrichment</b><br/>Clay, People Data Labs, Abstract API, Enrich.so</td>
 <td align="center" width="20%"><b>Extraction</b><br/>structured LLM output</td>
 <td align="center" width="20%"><b>PDF</b><br/>PyMuPDF render</td>
 <td align="center" width="20%"><b>Review</b><br/>ops console over audit logs</td>
 </tr>
 </table>
 
-CRM adapter shapes name these systems; they are shapes, not certified integrations.
+Enrichment chains these providers as fallbacks; every other leg is a single vendor.
 
 ## 🚀 Getting started
 

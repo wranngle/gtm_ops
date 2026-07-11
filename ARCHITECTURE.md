@@ -1,6 +1,6 @@
 # Architecture
 
-`gtm_ops` is the unified runtime for a voice-AI-led GTM motion. One repo, one runnable thing: an inbound voice agent enriches a lead from CRM context, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console — runnable end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
+`gtm_ops` is the unified runtime for a voice-AI-led GTM motion. One repo, one runnable thing: an inbound voice agent takes the call, a provider waterfall enriches the lead, structured LLM extraction generates a branded PDF proposal, every step writes audit logs, and operators review the result in the ops-console — runnable end-to-end against synthetic fixtures (`DEMO_MODE`) or a live backend.
 
 ## Product layers
 
@@ -9,12 +9,12 @@
    Inbound channel ───▶ │  1. Lead intake      │
                         │  (form / inbound call)│
                         └──────────┬───────────┘
-                                   │ enrichment from CRM
+                                   │ enrichment
                                    ▼
                         ┌──────────────────────┐
-                        │  2. CRM enrichment   │
-                        │  (Pipedrive / HubSpot │
-                        │   / Salesforce shape)│
+                        │  2. Lead enrichment  │
+                        │  (Clay / PDL /       │
+                        │   Abstract / Enrich) │
                         └──────────┬───────────┘
                                    │ context to agent
                                    ▼
@@ -34,7 +34,7 @@
                         ┌──────────────────────┐
                         │  5. Presales pipeline│
                         │  (LLM extract → PDF  │
-                        │   → audit log → CRM) │
+                        │   → audit log)       │
                         └──────────┬───────────┘
                                    │
                                    ▼
@@ -52,9 +52,9 @@
 
 Accepts inbound forms and inbound voice calls. Normalizes both into a single `Lead` shape consumed by the rest of the pipeline. Hands off to enrichment before the agent greets the caller.
 
-### 2. CRM enrichment — `lib/enrichment/`
+### 2. Lead enrichment — `lib/enrichment/`
 
-Pulls account context from Pipedrive / HubSpot / Salesforce-shaped adapters. Normalized into `EnrichedLead`. The voice agent prompt incorporates this context server-side before its first turn — the caller is greeted by name, not asked to identify themselves.
+Enriches the lead through a provider waterfall: Clay (via an n8n webhook), then People Data Labs, Abstract API, and Enrich.so, each a fallback for the last. Normalized into `EnrichedLead`; fields already on the lead always win over enriched data. The voice agent prompt incorporates this context server-side before its first turn — the caller is greeted by name, not asked to identify themselves.
 
 ### 3. Voice agent and eval harness — external (ElevenLabs) + `voice_ai_agent_evals`
 
@@ -68,14 +68,13 @@ Receives ElevenLabs post-call webhooks at `/api/webhooks/post-call`. Verifies th
 
 - transcript + analysis → presales pipeline
 - structured payload → audit log
-- summary + booking outcome → CRM update via `lib/enrichment/`
 - regression payload → eval harness queue (consumed by `voice_ai_agent_evals` next run)
 
 Drop-and-log on signature failure; no retry. See `voice_ai_agent_evals/docs/webhook-security.md` for the verification pattern.
 
 ### 5. Presales pipeline — `lib/extraction/`, `lib/pdf_generator/`, `lib/branding/`, `lib/pricing/`, `lib/audit/`
 
-Structured LLM extraction over the post-call payload produces a typed proposal. The proposal is rendered as a branded PDF via `templates/` (using `tokens/` from this repo's design system). Branding is per-tenant via `lib/branding/`; in `DEMO_MODE` it reads `config/branding.example.json` directly, in live mode it reads SQLite. Every step writes to the audit log surface (`/api/audit-logs/*` in `server.ts`) — proposal generation, branding writes, webhook deliveries, and CRM updates are all replayable.
+Structured LLM extraction over the post-call payload produces a typed proposal. The proposal is rendered as a branded PDF via `templates/` (using `tokens/` from this repo's design system). Branding is per-tenant via `lib/branding/`; in `DEMO_MODE` it reads `config/branding.example.json` directly, in live mode it reads SQLite. Every step writes to the audit log surface (`/api/audit-logs/*` in `server.ts`) — proposal generation, branding writes, and webhook deliveries are all replayable.
 
 ### 6. Ops-console — `apps/ops-console/`
 
@@ -96,7 +95,7 @@ Three deploy modes serve the same UI:
 
 ### Audit log
 
-The `/api/audit-logs/*` surface is the integrity layer — not generic CRUD logging. Every proposal generation, branding write, webhook delivery, and CRM update lands here with a deterministic event ID and the originating request signature. This is RevOps-grade traceability, not application logging.
+The `/api/audit-logs/*` surface is the integrity layer — not generic CRUD logging. Every proposal generation, branding write, and webhook delivery lands here with a deterministic event ID and the originating request signature. This is RevOps-grade traceability, not application logging.
 
 ### Design system
 
