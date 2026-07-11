@@ -331,3 +331,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 # <<< dotfiles-managed gitignore <<<
+
+# Internal orchestration machinery (public-tree hygiene; keep below the managed block)
+WORKFLOW.md
+bin/symphony
