@@ -3043,9 +3043,14 @@ function IntegrationsSettings() {
   // Live status per integration; flipping disconnect/connect mutates this
   // map so the connected-count and the row badges actually reflect operator
   // actions instead of the static fixture.
+  // Connection state is real only when the backend is: DEMO_MODE seeds the
+  // sample workspace's illustrative statuses, live mode starts every
+  // integration as 'available' because gtm_ops ships no OAuth backend, so
+  // nothing is genuinely connected until an operator wires it.
+  const sampleMode = Boolean(globalThis.DEMO_MODE);
   const [statusMap, setStatusMap] = useState(() => {
     const init = {};
-    for (const c of INTEGRATION_CONNECTIONS) init[c.name] = c.status;
+    for (const c of INTEGRATION_CONNECTIONS) init[c.name] = sampleMode ? c.status : 'available';
     return init;
   });
   // Per-integration "actions permitted" map. The drawer's Save flushes
@@ -3126,8 +3131,15 @@ function IntegrationsSettings() {
   };
 
   return (
-    <Card title={`integrations · ${connectedCount} of ${INTEGRATION_CONNECTIONS.length} connected`}>
+    <Card title={sampleMode
+      ? `integrations · sample workspace · ${connectedCount} of ${INTEGRATION_CONNECTIONS.length} connected`
+      : `integrations · ${connectedCount} of ${INTEGRATION_CONNECTIONS.length} connected`}>
       <div className="vstack" style={{gap:10}}>
+        <div className="muted" data-testid="integrations-mode-note" style={{fontSize:11}}>
+          {sampleMode
+            ? 'Sample workspace. Connection states are illustrative, no third-party accounts are linked.'
+            : 'No integrations connected yet. Connect one to wire it up.'}
+        </div>
         {INTEGRATION_CONNECTIONS.map(c => {
           const status = statusMap[c.name];
           const isConnected = status === 'connected' || status === 'syncing';
