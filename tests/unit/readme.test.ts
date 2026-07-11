@@ -22,17 +22,22 @@ describe('README content reflects reality', () => {
   // path form) should actually exist. Skips known-external link anchors.
   const claimedPaths = [
     'apps/ops-console/',
-    'lib/',
-    'server.ts',
     'functions/api/',
-    'cli.ts',
-    'templates/',
     'tokens/',
+    'ARCHITECTURE.md',
     'DESIGN.md',
+    'LICENSE',
+    'eval-harness.manifest.json',
+    'requirements.txt',
     'wrangler.toml',
     'apps/ops-console/_headers',
     'apps/ops-console/_redirects',
-    '.github/workflows/test.yml',
+    'docs/hero.webp',
+    'docs/brand/gtm_ops-wordmark-light.png',
+    'docs/brand/gtm_ops-wordmark-dark.png',
+    'apps/ops-console/assets/screenshots/console-generate.png',
+    'apps/ops-console/assets/screenshots/console-evals.png',
+    'apps/ops-console/assets/screenshots/console-settings.png',
   ];
   for (const p of claimedPaths) {
     it(`mentions \`${p}\` and the path exists on disk`, () => {
@@ -43,7 +48,7 @@ describe('README content reflects reality', () => {
 
   // Every npm script the README documents in a code block should be a
   // real entry in package.json scripts.
-  const documentedScripts = ['start', 'typecheck', 'test:run', 'test:console', 'test:e2e', 'deploy', 'deploy:preview', 'pages:dev'];
+  const documentedScripts = ['start', 'typecheck', 'test:run', 'test:console', 'test:e2e', 'eval:harness', 'deploy', 'deploy:preview', 'pages:dev'];
   for (const s of documentedScripts) {
     it(`documents \`bun run ${s}\` and that script exists in package.json`, () => {
       expect(readme).toMatch(new RegExp(`bun run ${s.replace(/:/g, String.raw`\:`)}`));
